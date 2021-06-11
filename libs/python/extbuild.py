@@ -43,24 +43,28 @@ class build_ext(build_ext_orig):
                     "https://github.com/cdecker/lightning.git",
                     "src",
                 ],
-                cwd=cwd,
+                cwd=str(cwd),
             )
 
-        subprocess.check_call(["./configure", "CC=gcc"], cwd=cwd / "src")
+        subprocess.check_call(["./configure", "CC=gcc"], cwd=str(cwd / "src"))
+        #subprocess.check_call(["autoreconf", "--install"], cwd=str(cwd / "src" / "external" / "libwally-core"))
+        #subprocess.check_call(["autoreconf", "--install"], cwd=str(cwd / "src" / "external" / "libsodium"))
+        #subprocess.check_call(["./configure", "CC=gcc"], cwd=str(cwd / "src" / "external" / "libsodium"))
+        #subprocess.check_call(["make"], cwd=str(cwd / "src" / "external" / "libsodium"))
 
         # Selectively build some targets we rely on later
         subprocess.check_call([
             "make",
-            "lightningd/lightning_hsmd",
-        ], cwd=srcdir)
+        ], cwd=str(srcdir))
 
 
 # Absolute include dirs which we will later expand to full paths.
 include_dirs = [
     ".",
     "ccan/",
-    f"{external_target}/libbacktrace-build/",
+    "{external_target}/libbacktrace-build/".format(external_target=external_target),
     "external/libbacktrace/",
+    "external/libsodium/src/libsodium/include/",
     "external/libsodium/src/libsodium/include/sodium/",
     "external/libwally-core/",
     "external/libwally-core/include/",
@@ -197,8 +201,8 @@ sources = [
     "wire/wire_sync.c",
 ]
 
-include_dirs = [os.path.join("src", f) for f in include_dirs]
-sources = [os.path.join("src", f) for f in sources]
+include_dirs = [os.path.join(os.path.dirname(__file__), "src", f) for f in include_dirs]
+sources = [os.path.join(os.path.dirname(__file__), "src", f) for f in sources]
 
 configtuples = []
 if pathlib.Path('src/config.vars').exists():

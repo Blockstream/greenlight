@@ -46,6 +46,41 @@ present at a time, freeing others from that duty.
 The following is a quick walkthrough based on the python `glcli`
 command line tool to get you started:
 
+## Install `glcli` and the python API
+
+Since `glcli` consists both of a C extension, and a python library
+that wraps it we'll require a couple of dependencies to build the C
+extension. The following works on debian based distros, please check
+with your distro for the equivalent command and package names:
+
+```bash
+sudo apt-get install autoconf build-essential git libtool libsqlite3-dev libgmp-dev valgrind
+```
+
+The easiest way to install the library and the cli is through `pip`:
+
+```bash
+$ pip install git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
+```
+
+This will clone the repository in a temporary directory, build the C
+extension and install it in the current python environment. Notice
+that while the repository is set to private the command above will ask
+for your Github credentials. 
+
+Should this cause authentication issues, or not work you can also
+clone the repository and build the library manually:
+
+```bash
+git clone ssh://git@github.com/Blockstream/greenlight.git
+cd greenlight/libs/python/
+sudo python3 setup.py install
+```
+
+This may take some time to complete since it compiles a number of
+libraries, before compiling the key management library. We will
+eventually provide precompiled bundles.
+
 ## Register / recover an account
 
 Registration and recovery are managed by the scheduler, hence the
