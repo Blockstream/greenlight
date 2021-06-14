@@ -73,8 +73,7 @@ clone the repository and build the library manually:
 
 ```bash
 git clone ssh://git@github.com/Blockstream/greenlight.git
-cd greenlight/libs/python/
-sudo python3 setup.py install
+sudo pip install greenlight/libs/python/
 ```
 
 This may take some time to complete since it compiles a number of

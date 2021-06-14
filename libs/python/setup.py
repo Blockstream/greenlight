@@ -8,7 +8,7 @@ package_data = \
 {'': ['*'], 'glapi': ['bin/*']}
 
 install_requires = \
-['click>=7.1.2,<7.2.0', 'grpcio>=1.34.0,<1.35.0', 'protobuf>=3.15.8,<3.16.0', 'python2-secrets']
+['click>=7.1.2,<7.2.0', 'grpcio>=1.34.0,<1.35.0', 'protobuf>=3.15.8,<3.16.0', 'libhsmd>=0.10.0']
 
 entry_points = \
 {'console_scripts': ['glcli = glapi.cli:cli']}
@@ -29,7 +29,7 @@ setup_kwargs = {
     'entry_points': entry_points,
     'python_requires': '>=3.5,<4.0',
 }
-from extbuild import *
-build(setup_kwargs)
+#from extbuild import *
+#build(setup_kwargs)
 
 setup(**setup_kwargs)
