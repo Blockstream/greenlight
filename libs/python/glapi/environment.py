@@ -72,10 +72,10 @@ JgcYMvjjEsb17Lxhl9Ni6VgDqeXUaOFgUwkDewyarml2yY1oDv6CdrxV
 
 env = {
     # Used by glapi
-    "GL_GRPC_URI": "34.65.38.137:2601",
+    "GL_GRPC_URI": "35.236.110.178:2601",
 
     # Used by hagrid internally
-    "GL_SCHEDULER_GRPC_URI": "https://34.65.38.137:2601",
+    "GL_SCHEDULER_GRPC_URI": "https://35.236.110.178:2601",
 
     "GL_CERT_PATH": ".",
 }
