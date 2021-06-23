@@ -85,6 +85,11 @@ class NodeStub(object):
                 request_serializer=glapi_dot_greenlight__pb2.PayRequest.SerializeToString,
                 response_deserializer=glapi_dot_greenlight__pb2.Payment.FromString,
                 )
+        self.Keysend = channel.unary_unary(
+                '/greenlight.Node/Keysend',
+                request_serializer=glapi_dot_greenlight__pb2.KeysendRequest.SerializeToString,
+                response_deserializer=glapi_dot_greenlight__pb2.Payment.FromString,
+                )
         self.ListPayments = channel.unary_unary(
                 '/greenlight.Node/ListPayments',
                 request_serializer=glapi_dot_greenlight__pb2.ListPaymentsRequest.SerializeToString,
@@ -94,6 +99,11 @@ class NodeStub(object):
                 '/greenlight.Node/ListInvoices',
                 request_serializer=glapi_dot_greenlight__pb2.ListInvoicesRequest.SerializeToString,
                 response_deserializer=glapi_dot_greenlight__pb2.ListInvoicesResponse.FromString,
+                )
+        self.StreamIncoming = channel.unary_stream(
+                '/greenlight.Node/StreamIncoming',
+                request_serializer=glapi_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
+                response_deserializer=glapi_dot_greenlight__pb2.IncomingPayment.FromString,
                 )
         self.StreamHsmRequests = channel.unary_stream(
                 '/greenlight.Node/StreamHsmRequests',
@@ -215,6 +225,13 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Keysend(self, request, context):
+        """Send a spontaneous payment, optionally with some extra information.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ListPayments(self, request, context):
         """Retrieve a list of payment performed by this node.
 
@@ -235,6 +252,16 @@ class NodeServicer(object):
 
         The query can optionally be restricted to only return a
         single invoice matching the given criteria.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StreamIncoming(self, request, context):
+        """Stream incoming payments
+
+        Currently includes off-chain payments received matching an
+        invoice or spontaneus paymens through keysend.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -325,6 +352,11 @@ def add_NodeServicer_to_server(servicer, server):
                     request_deserializer=glapi_dot_greenlight__pb2.PayRequest.FromString,
                     response_serializer=glapi_dot_greenlight__pb2.Payment.SerializeToString,
             ),
+            'Keysend': grpc.unary_unary_rpc_method_handler(
+                    servicer.Keysend,
+                    request_deserializer=glapi_dot_greenlight__pb2.KeysendRequest.FromString,
+                    response_serializer=glapi_dot_greenlight__pb2.Payment.SerializeToString,
+            ),
             'ListPayments': grpc.unary_unary_rpc_method_handler(
                     servicer.ListPayments,
                     request_deserializer=glapi_dot_greenlight__pb2.ListPaymentsRequest.FromString,
@@ -334,6 +366,11 @@ def add_NodeServicer_to_server(servicer, server):
                     servicer.ListInvoices,
                     request_deserializer=glapi_dot_greenlight__pb2.ListInvoicesRequest.FromString,
                     response_serializer=glapi_dot_greenlight__pb2.ListInvoicesResponse.SerializeToString,
+            ),
+            'StreamIncoming': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamIncoming,
+                    request_deserializer=glapi_dot_greenlight__pb2.StreamIncomingFilter.FromString,
+                    response_serializer=glapi_dot_greenlight__pb2.IncomingPayment.SerializeToString,
             ),
             'StreamHsmRequests': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamHsmRequests,
@@ -571,6 +608,23 @@ class Node(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
+    def Keysend(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/greenlight.Node/Keysend',
+            glapi_dot_greenlight__pb2.KeysendRequest.SerializeToString,
+            glapi_dot_greenlight__pb2.Payment.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
     def ListPayments(request,
             target,
             options=(),
@@ -601,6 +655,23 @@ class Node(object):
         return grpc.experimental.unary_unary(request, target, '/greenlight.Node/ListInvoices',
             glapi_dot_greenlight__pb2.ListInvoicesRequest.SerializeToString,
             glapi_dot_greenlight__pb2.ListInvoicesResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def StreamIncoming(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamIncoming',
+            glapi_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
+            glapi_dot_greenlight__pb2.IncomingPayment.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

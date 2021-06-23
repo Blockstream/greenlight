@@ -76,9 +76,23 @@ git clone ssh://git@github.com/Blockstream/greenlight.git
 sudo pip install greenlight/libs/python/
 ```
 
-This may take some time to complete since it compiles a number of
-libraries, before compiling the key management library. We will
-eventually provide precompiled bundles.
+## Updating `glcli` and the libraries
+
+To update `glcli` you can either use `pip` directly:
+
+```bash 
+$ pip install -U --force-reinstall git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
+```
+
+or use the git repository:
+
+```bash
+git pull
+sudo pip install -U --force-reinstall greenlight/libs/python/
+```
+
+Version numbers will be bumped on a regular cadence, so
+`--force-reinstall` may not be required.
 
 ## Register / recover an account
 

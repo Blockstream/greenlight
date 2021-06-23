@@ -19,7 +19,7 @@ import secrets
 import struct
 import sys
 import time
-
+import json
 
 logger = logging.getLogger("glapi.cli")
 logger.setLevel(logging.DEBUG)
@@ -466,6 +466,7 @@ def fundchannel(ctx, nodeid, amount, minconf=1):
         pb.FundChannelRequest(
             node_id=unhexlify(nodeid),
             amount=pb.Amount(millisatoshi=amount),
+            announce=True,
         )
     )
     pbprint(res)
@@ -525,6 +526,67 @@ def destroy():
     os.unlink("device.crt")
     os.unlink("ca.pem")
     os.unlink("hsm_secret")
+
+
+@cli.command()
+@click.pass_context
+def stream_incoming(ctx):
+    """Listen for incoming payments and print details to stdout.
+    """
+    node = ctx.obj.get_node()
+    for e in node.StreamIncoming(pb.StreamIncomingFilter()):
+        pbprint(e)
+
+
+@cli.command()
+@click.argument('node_id')
+@click.argument('amount', type=int)
+@click.option("--routehints", required=False)
+@click.option("--extratlvs", required=False)
+@click.pass_context
+def keysend(ctx, node_id, amount, routehints, extratlvs):
+    """Send a spontaneous payment to the specified node.
+    """
+
+    # Convert the advanced arguments.
+    if routehints is not None:
+        arr = json.loads(routehints)
+        routehints = []
+        if not isinstance(arr, list):
+            raise click.UsageError("Routehints must be a JSON encoded list of lists of routehint hops")
+        for rharr in arr:
+            routehint = pb.Routehint(hops=[])
+            if not isinstance(rharr, list):
+                raise click.UsageError("Routehints must be a JSON encoded list of lists of routehint hops")
+            for rh in rharr:
+                r = pb.RoutehintHop(
+                    **rh
+                )
+                routehint.hops.extend(r)
+            routehints.append(routehint)
+
+    if extratlvs is not None:
+        arr = json.loads(extratlvs)
+        extratlvs = []
+        if not isinstance(extratlvs, list):
+            raise click.UsageError('--extratlvs must be a JSON encoded list of `{"type": 1234, "value": "DECAFBAD"}` entries')
+        for a in arr:
+            t = a['type']
+            v = unhexlify(a['value'])
+            extratlvs.append(pb.TlvField(
+                type=t,
+                value=v,
+            ))
+
+    print(extratlvs)
+    node = ctx.obj.get_node()
+    res = node.Keysend(pb.KeysendRequest(
+        node_id=unhexlify(node_id),
+        amount=pb.Amount(millisatoshi=amount),
+        routehints=routehints,
+        extratlvs=extratlvs,
+    ))
+    pbprint(res)
 
 
 if __name__ == "__main__":
