@@ -559,10 +559,11 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
             if not isinstance(rharr, list):
                 raise click.UsageError("Routehints must be a JSON encoded list of lists of routehint hops")
             for rh in rharr:
+                rh['node_id'] = unhexlify(rh['node_id'])
                 r = pb.RoutehintHop(
                     **rh
                 )
-                routehint.hops.extend(r)
+                routehint.hops.append(r)
             routehints.append(routehint)
 
     if extratlvs is not None:
