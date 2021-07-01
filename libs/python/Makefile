@@ -9,6 +9,11 @@ glapi/greenlight_pb2_grpc.py glapi/greenlight_pb2.py: proto/glapi/greenlight.pro
 	python -m grpc_tools.protoc ${PROTOC_OPTS} proto/glapi/greenlight.proto
 
 
+pygrpc:
+	cp ../../proto/greenlight.proto proto/glapi
+	cp ../../proto/scheduler.proto proto/glapi
+	python -m grpc_tools.protoc ${PROTOC_OPTS} proto/glapi/greenlight.proto
+	python -m grpc_tools.protoc ${PROTOC_OPTS} proto/glapi/scheduler.proto
 test:
 	virtualenv .tmpenv
 	(cd .tmpenv; bin/pip3 install -U pip setuptools wheel pep517)
