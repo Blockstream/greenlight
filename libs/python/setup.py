@@ -15,7 +15,7 @@ entry_points = \
 
 setup_kwargs = {
     'name': 'glapi',
-    'version': '0.0.2',
+    'version': '0.0.4',
     'description': '',
     'long_description': None,
     'author': 'Christian Decker',
