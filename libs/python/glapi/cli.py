@@ -7,12 +7,14 @@ from glapi.greenlight_pb2_grpc import NodeStub
 from glapi.identity import Identity
 from glapi.libhsmd import init as libhsmd_init, handle as libhsmd_handle
 from glapi.scheduler_pb2_grpc import SchedulerStub
+from google.protobuf.descriptor import FieldDescriptor
 from google.protobuf.json_format import MessageToJson
 from pathlib import Path
 from threading import Thread
 import click
 import functools
 import grpc
+import json
 import logging
 import os
 import secrets
@@ -211,16 +213,46 @@ class Context:
         return res.grpc_uri
 
 
+def pb2dict(p):
+    res = {}
+    for desc, val in p.ListFields():
+        if desc.type == FieldDescriptor.TYPE_MESSAGE:
+            if desc.label == FieldDescriptor.LABEL_REPEATED:
+                val = [pb2dict(v) for v in val]
+            else:
+                val = pb2dict(val)
+        res[desc.name] = val
+
+    # Fill in the default variables so we don't end up with changing
+    # keys all the time.
+    for desc in p.DESCRIPTOR.fields:
+        if desc.name in res:
+            continue
+        if desc.label == FieldDescriptor.LABEL_REPEATED:
+            res[desc.name] = []
+        elif desc.type == FieldDescriptor.TYPE_MESSAGE:
+            res[desc.name] = {}
+        else:
+            res[desc.name] = desc.default_value
+
+    return res
+
+
+def dict2jsondict(d):
+    """Hexlify all binary fields so they can be serialized with `json.dumps`
+    """
+    if isinstance(d, list):
+        return [dict2jsondict(e) for e in d]
+    elif isinstance(d, bytes):
+        return hexlify(d).decode('ASCII')
+    elif isinstance(d, dict):
+        return {k: dict2jsondict(v) for k, v in d.items()}
+    else:
+        return d
+
+
 def pbprint(pb):
-    print(
-        MessageToJson(
-            pb,
-            including_default_value_fields=True,
-            preserving_proto_field_name=True,
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    print(json.dumps(dict2jsondict(pb2dict(pb)), indent=2))
 
 
 def get_identity(default=False):
