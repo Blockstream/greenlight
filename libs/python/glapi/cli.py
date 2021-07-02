@@ -244,10 +244,13 @@ def get_identity(default=False):
 
 
 @click.group()
+@click.option('--testenv', is_flag=True)
 @click.pass_context
-def cli(ctx):
-    for k, v in env.env.items():
-        os.environ[k] = v
+def cli(ctx, testenv):
+    if testenv:
+        os.environ.update(env.test)
+    else:
+        os.environ.update(env.prod)
     ctx.obj = Context()
 
 
