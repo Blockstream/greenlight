@@ -159,9 +159,15 @@ class HSM:
 
 
 class Context:
-    def __init__(self):
+    def __init__(self, start_hsmd=False):
         self.hsm = HSM()
         self.identity = get_identity()
+
+        if start_hsmd:
+            self.hsmd_thread = Thread(target=self.hsm.run, daemon=True)
+            self.hsmd_thread.start()
+        else:
+            self.hsmd_thread = None
 
         self.scheduler_chan = None
 
@@ -277,13 +283,15 @@ def get_identity(default=False):
 
 @click.group()
 @click.option('--testenv', is_flag=True)
+@click.option('--hsmd/--no-hsmd', default=True)
 @click.pass_context
-def cli(ctx, testenv):
+def cli(ctx, testenv, hsmd):
     if testenv:
         os.environ.update(env.test)
     else:
         os.environ.update(env.prod)
-    ctx.obj = Context()
+
+    ctx.obj = Context(start_hsmd=hsmd)
 
 
 @cli.group()
@@ -398,14 +406,6 @@ def schedule(ctx):
 def hsmd(ctx):
     """Run the hsmd against the scheduler."""
     hsm = ctx.obj.hsm
-
-    def ping_loop():
-        while True:
-            time.sleep(10)
-            hsm.ping()
-
-    #Thread(target=ping_loop, daemon=True).start()
-
     hsm.run()
 
 
