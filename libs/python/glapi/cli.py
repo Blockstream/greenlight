@@ -8,7 +8,6 @@ from glapi.identity import Identity
 from glapi.libhsmd import init as libhsmd_init, handle as libhsmd_handle
 from glapi.scheduler_pb2_grpc import SchedulerStub
 from google.protobuf.descriptor import FieldDescriptor
-from google.protobuf.json_format import MessageToJson
 from pathlib import Path
 from threading import Thread
 import click
@@ -17,11 +16,12 @@ import grpc
 import json
 import logging
 import os
+import re
 import secrets
 import struct
 import sys
 import time
-import json
+
 
 logger = logging.getLogger("glapi.cli")
 logger.setLevel(logging.DEBUG)
@@ -217,6 +217,40 @@ class Context:
         res = scheduler.Schedule(schedpb.ScheduleRequest(node_id=node_id))
         logger.debug(f"Node {node_id.hex()} is running at {res.grpc_uri}")
         return res.grpc_uri
+
+
+class AmountType(click.ParamType):
+    name = 'amount'
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, pb.Amount):
+            return value
+
+        if value.lower() == 'any':
+            return pb.Amount(any=True)
+        elif value.lower() == 'all':
+            return pb.Amount(all=True)
+
+        g = re.match(r'([0-9\.]+)(btc|msat|sat)?', value)
+        if g is None:
+            raise ValueError(f'Unable to parse {value} as an amount.')
+
+        num, suffix = g.groups()
+
+        suffix2unit = {
+            'btc': 'bitcoin',
+            'sat': 'satoshi',
+            'msat': 'millisatoshi',
+            None: 'millisatoshi',
+        }
+
+        if suffix is None:
+            logger.warn(
+                "Unit-less amounts are deprecated to avoid implicit conversion to millisatoshi"
+            )
+
+        args = {suffix2unit[suffix]: int(num)}
+        return pb.Amount(**args)
 
 
 def pb2dict(p):
@@ -477,7 +511,7 @@ def listfunds(ctx, minconf=1):
 
 @cli.command()
 @click.argument("destination")
-@click.argument("amount", type=int)
+@click.argument("amount", type=AmountType())
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def withdraw(ctx, destination, amount, minconf=1):
@@ -485,7 +519,7 @@ def withdraw(ctx, destination, amount, minconf=1):
     res = node.Withdraw(
         pb.WithdrawRequest(
             destination=destination,
-            amount=pb.Amount(millisatoshi=amount),
+            amount=amount,
             minconf=pb.Confirmation(blocks=minconf),
         )
     )
@@ -494,7 +528,7 @@ def withdraw(ctx, destination, amount, minconf=1):
 
 @cli.command()
 @click.argument("nodeid")
-@click.argument("amount", type=int)
+@click.argument("amount", type=AmountType())
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def fundchannel(ctx, nodeid, amount, minconf=1):
@@ -502,7 +536,7 @@ def fundchannel(ctx, nodeid, amount, minconf=1):
     res = node.FundChannel(
         pb.FundChannelRequest(
             node_id=unhexlify(nodeid),
-            amount=pb.Amount(millisatoshi=amount),
+            amount=amount,
             announce=True,
         )
     )
@@ -531,17 +565,18 @@ def close(ctx, nodeid, timeout=None, address=None):
 
 @cli.command()
 @click.argument("label")
-@click.argument("amount", required=False, type=int)
+@click.argument("amount", required=False, type=AmountType())
 @click.option("--description", required=False, type=str)
 @click.pass_context
 def invoice(ctx, label, amount=None, description=None):
     node = ctx.obj.get_node()
+    if amount is None:
+        amount = pb.Amount(any=True)
+
     args = {
         "label": label,
+        "amount": amount,
     }
-    if amount is not None:
-        args["amount"] = pb.Amount(millisatoshi=amount)
-
     args["description"] = description if description is not None else ""
 
     res = node.CreateInvoice(pb.InvoiceRequest(**args))
@@ -578,7 +613,7 @@ def stream_incoming(ctx):
 
 @cli.command()
 @click.argument('node_id')
-@click.argument('amount', type=int)
+@click.argument('amount', type=AmountType())
 @click.option("--routehints", required=False)
 @click.option("--extratlvs", required=False)
 @click.pass_context
@@ -621,7 +656,7 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
     node = ctx.obj.get_node()
     res = node.Keysend(pb.KeysendRequest(
         node_id=unhexlify(node_id),
-        amount=pb.Amount(millisatoshi=amount),
+        amount=amount,
         routehints=routehints,
         extratlvs=extratlvs,
     ))
