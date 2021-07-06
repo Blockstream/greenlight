@@ -230,16 +230,18 @@ def pb2dict(p):
         res[desc.name] = val
 
     # Fill in the default variables so we don't end up with changing
-    # keys all the time.
-    for desc in p.DESCRIPTOR.fields:
-        if desc.name in res:
-            continue
-        if desc.label == FieldDescriptor.LABEL_REPEATED:
-            res[desc.name] = []
-        elif desc.type == FieldDescriptor.TYPE_MESSAGE:
-            res[desc.name] = {}
-        else:
-            res[desc.name] = desc.default_value
+    # keys all the time. If we are in a oneof we don't show them since
+    # they are just redundant.
+    if desc.containing_oneof is None:
+        for desc in p.DESCRIPTOR.fields:
+            if desc.name in res:
+                continue
+            if desc.label == FieldDescriptor.LABEL_REPEATED:
+                res[desc.name] = []
+            elif desc.type == FieldDescriptor.TYPE_MESSAGE:
+                res[desc.name] = {}
+            else:
+                res[desc.name] = desc.default_value
 
     return res
 
