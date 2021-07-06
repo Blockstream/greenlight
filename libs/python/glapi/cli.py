@@ -571,6 +571,7 @@ def stream_incoming(ctx):
     node = ctx.obj.get_node()
     for e in node.StreamIncoming(pb.StreamIncomingFilter()):
         pbprint(e)
+        sys.stdout.flush()
 
 
 @cli.command()
