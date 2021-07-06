@@ -54,13 +54,13 @@ extension. The following works on debian based distros, please check
 with your distro for the equivalent command and package names:
 
 ```bash
-sudo apt-get install autoconf build-essential git libtool libsqlite3-dev libgmp-dev valgrind
+sudo apt install autoconf build-essential git libtool libsqlite3-dev libgmp-dev valgrind python3-pip
 ```
 
-The easiest way to install the library and the cli is through `pip`:
+The easiest way to install the library and the cli is through `pip3`:
 
 ```bash
-$ pip install git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
+$ pip3 install git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
 ```
 
 This will clone the repository in a temporary directory, build the C
@@ -73,22 +73,22 @@ clone the repository and build the library manually:
 
 ```bash
 git clone ssh://git@github.com/Blockstream/greenlight.git
-sudo pip install greenlight/libs/python/
+sudo pip3 install greenlight/libs/python/
 ```
 
 ## Updating `glcli` and the libraries
 
-To update `glcli` you can either use `pip` directly:
+To update `glcli` you can either use `pip3` directly:
 
 ```bash 
-$ pip install -U --force-reinstall git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
+$ pip3 install -U --force-reinstall git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
 ```
 
 or use the git repository:
 
 ```bash
 git pull
-sudo pip install -U --force-reinstall greenlight/libs/python/
+sudo pip3 install -U --force-reinstall greenlight/libs/python/
 ```
 
 Version numbers will be bumped on a regular cadence, so
