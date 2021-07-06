@@ -626,5 +626,21 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
     pbprint(res)
 
 
+@cli.command()
+@click.pass_context
+def listinvoices(ctx):
+    node = ctx.obj.get_node()
+    res = node.ListInvoices(pb.ListInvoicesRequest())
+    pbprint(res)
+
+
+@cli.command()
+@click.pass_context
+def listpays(ctx):
+    node = ctx.obj.get_node()
+    res = node.ListPayments(pb.ListPaymentsRequest())
+    pbprint(res)
+
+
 if __name__ == "__main__":
     cli()
