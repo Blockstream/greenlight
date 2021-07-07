@@ -255,7 +255,12 @@ class AmountType(click.ParamType):
 
 def pb2dict(p):
     res = {}
+    defaults = True
     for desc, val in p.ListFields():
+        # If the parent of any field is contained in a oneof, then we
+        # all are.
+        defaults = defaults and desc.containing_oneof is None
+
         if desc.type == FieldDescriptor.TYPE_MESSAGE:
             if desc.label == FieldDescriptor.LABEL_REPEATED:
                 val = [pb2dict(v) for v in val]
@@ -266,7 +271,7 @@ def pb2dict(p):
     # Fill in the default variables so we don't end up with changing
     # keys all the time. If we are in a oneof we don't show them since
     # they are just redundant.
-    if desc.containing_oneof is None:
+    if defaults:
         for desc in p.DESCRIPTOR.fields:
             if desc.name in res:
                 continue
