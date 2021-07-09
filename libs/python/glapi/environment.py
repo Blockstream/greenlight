@@ -72,20 +72,20 @@ JgcYMvjjEsb17Lxhl9Ni6VgDqeXUaOFgUwkDewyarml2yY1oDv6CdrxV
 
 prod = {
     # Used by glapi
-    "GL_GRPC_URI": "35.236.110.178:2601",
+    "GL_GRPC_URI": "scheduler.gl.blckstrm.com:2601",
 
     # Used by hagrid internally
-    "GL_SCHEDULER_GRPC_URI": "https://35.236.110.178:2601",
+    "GL_SCHEDULER_GRPC_URI": "https://scheduler.gl.blckstrm.com:2601",
 
     "GL_CERT_PATH": ".",
 }
 
 test = {
     # Used by glapi
-    "GL_GRPC_URI": "34.65.38.137:2601",
+    "GL_GRPC_URI": "scheduler.testing.gl.blckstrm.com:2601",
 
     # Used by hagrid internally
-    "GL_SCHEDULER_GRPC_URI": "https://34.65.38.137:2601",
+    "GL_SCHEDULER_GRPC_URI": "https://scheduler.testing.gl.blckstrm.com:2601",
 
     "GL_CERT_PATH": ".",
 }
