@@ -162,6 +162,7 @@ class Context:
     def __init__(self, start_hsmd=False):
         self.hsm = HSM()
         self.identity = get_identity()
+        self.node = None
 
         if start_hsmd:
             self.hsmd_thread = Thread(target=self.hsm.run, daemon=True)
@@ -172,6 +173,8 @@ class Context:
         self.scheduler_chan = None
 
     def get_node(self):
+        if self.node is not None:
+            return self.node
         uri = self.get_node_grpc_uri(self.hsm.node_id)
 
         if uri.startswith("https://"):
