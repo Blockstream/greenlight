@@ -330,12 +330,17 @@ def get_identity(default=False):
 @click.option('--hsmd/--no-hsmd', default=True)
 @click.pass_context
 def cli(ctx, testenv, hsmd):
-    if testenv:
-        os.environ.update(env.test)
-    else:
-        os.environ.update(env.prod)
 
-    ctx.obj = Context(start_hsmd=hsmd)
+    # Disable hsmd if we explicitly get told to run it in the
+    # foreground
+    hsmd = hsmd and (ctx.invoked_subcommand != 'hsmd')
+    if ctx.obj is None:
+        if testenv:
+            os.environ.update(env.test)
+        else:
+            os.environ.update(env.prod)
+
+        ctx.obj = Context(start_hsmd=hsmd)
 
 
 @cli.group()
