@@ -10,8 +10,6 @@ glapi/greenlight_pb2_grpc.py glapi/greenlight_pb2.py: proto/glapi/greenlight.pro
 
 
 pygrpc:
-	cp ../../proto/greenlight.proto proto/glapi
-	cp ../../proto/scheduler.proto proto/glapi
 	python -m grpc_tools.protoc ${PROTOC_OPTS} proto/glapi/greenlight.proto
 	python -m grpc_tools.protoc ${PROTOC_OPTS} proto/glapi/scheduler.proto
 test:
