@@ -1,0 +1,16 @@
+[package]
+name = "gl-client"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+libhsmd-sys = { git = "https://github.com/cdecker/lightning", branch = "libhsmd-rust" }
+hex = "*"
+tokio = { version = "*", features = ["full"] }
+tonic = { version = "^0.5", features = ["tls", "transport"] }
+prost = "0.8"
+lazy_static = "*"
+anyhow = "*"
+
+[build-dependencies]
+tonic-build = "^0.5"
