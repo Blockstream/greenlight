@@ -414,7 +414,7 @@ message Payment {
 	Amount amount_sent = 6;
 	string bolt11 = 7;
 
-	// UTC Unix timestamp of the time the invoice was created.
+        // UTC Unix timestamp of the time the invoice was created.
 	double created_at = 8;
 }
 
@@ -508,4 +508,9 @@ message KeysendRequest {
 message StreamLogRequest {};
 message LogEntry {
 	string line = 1;
+}
+
+message RoutehintRequest{};
+message RoutehintResponse {
+	repeated Routehint routehints = 1;
 }
