@@ -25,6 +25,7 @@ impl Signer {
         let hsmd = Hsmd::new(secret, network.into());
         let init = hsmd.init()?;
         let id = init[2..35].to_vec();
+        trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             hsmd,
             tls: client_tls,
@@ -43,6 +44,7 @@ impl Signer {
     /// requests from it. The requests are then verified and processed
     /// using the `Hsmd`.
     pub async fn run_once(&self, node_uri: Uri) -> Result<()> {
+        debug!("Connecting to node at {}", node_uri);
         let c = Channel::builder(node_uri)
             .tls_config(self.tls.clone())?
             .connect()
@@ -55,14 +57,22 @@ impl Signer {
             .await?
             .into_inner();
 
+        debug!("Starting to stream signer requests");
         loop {
-            let req = match stream.message().await? {
+            let req = match stream
+                .message()
+                .await
+                .context("receiving the next request")?
+            {
                 Some(r) => r,
-                None => return Ok(()),
+                None => {
+                    warn!("Signer request stream ended, the node shouldn't do this.");
+                    return Ok(());
+                }
             };
-
+            trace!("Received request {}", hex::encode(&req.raw));
             let response = self.process_request(req).await?;
-            trace!("Sending response {:?}", response);
+            trace!("Sending response {}", hex::encode(&response.raw));
             client
                 .respond_hsm_request(response)
                 .await
@@ -97,12 +107,18 @@ impl Signer {
         let scheduler_uri = std::env::var("GL_SCHEDULER_GRPC_URI")
             .unwrap_or("https://scheduler.gl.blckstrm.com:2601".to_string());
 
+        debug!(
+            "Contacting scheduler at {} to get the node address",
+            scheduler_uri
+        );
+
         let channel = Channel::from_shared(scheduler_uri)?
             .tls_config(self.tls.clone())?
             .connect()
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
         loop {
+            trace!("Calling scheduler.get_node_info");
             let node_info = match scheduler
                 .get_node_info(NodeInfoRequest {
                     node_id: self.id.clone(),

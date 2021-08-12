@@ -12,6 +12,10 @@ log = "*"
 prost = "0.8"
 tokio = { version = "*", features = ["full"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
+env_logger = "*"
 
 [build-dependencies]
 tonic-build = "^0.5"
+
+[workspace]
+members = ["gl-client-py"]
