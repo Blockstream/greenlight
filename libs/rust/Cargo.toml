@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-#libhsmd-sys = { git = "https://github.com/cdecker/lightning", branch = "libhsmd-rust" }
-libhsmd-sys = { path = "/home/cdecker/dev/lightning/contrib/libhsmd-sys-rs" }
+libhsmd-sys = { git = "https://github.com/cdecker/lightning", branch = "libhsmd-rust" }
 anyhow = "*"
 hex = "*"
 lazy_static = "*"
