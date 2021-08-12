@@ -142,28 +142,6 @@ impl Signer {
             }
         }
     }
-
-    fn get_init_info(hsmd: &Hsmd) -> Result<InitInfo> {
-        const HEADER_LEN: usize = 2;
-        const NODE_ID_LEN: usize = 33;
-        let init_msg: Vec<u8> = vec![
-            0, 11, 4, 53, 135, 207, 4, 53, 131, 148, 6, 34, 110, 70, 17, 26, 11, 89, 202, 175, 18,
-            96, 67, 235, 91, 191, 40, 195, 79, 58, 94, 51, 42, 31, 199, 178, 183, 60, 241, 136,
-            145, 15, 0, 0, 0, 0, 0,
-        ];
-
-        let response = hsmd.client(MAIN_CAPABILITIES).handle(init_msg)?;
-        let node_id = response[HEADER_LEN..(HEADER_LEN + NODE_ID_LEN)].to_vec();
-        let bip32_ext_key = response[(HEADER_LEN + NODE_ID_LEN)..].to_vec();
-
-        assert!(node_id.len() == 33);
-        assert!(bip32_ext_key.len() >= 78);
-
-        return Ok(InitInfo {
-            node_id,
-            bip32_ext_key,
-        });
-    }
 }
 
 #[derive(Debug)]
