@@ -1,0 +1,15 @@
+[package]
+name = "gl-client-py"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "glclient"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "*"
+gl-client = { path = ".." }
+pyo3 = {version = "0.14.1", features = ["extension-module"]}
+tokio = "*"
+tonic = "*"

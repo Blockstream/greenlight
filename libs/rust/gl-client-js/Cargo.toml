@@ -1,0 +1,15 @@
+[package]
+name = "gl-client-js"
+version = "0.1.0"
+license = "ISC"
+edition = "2018"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+gl-client = { path = ".." }
+neon = { version = "0.9", default-features = false, features = ["napi-6"] }
+tokio = "*"
+tonic = "*"

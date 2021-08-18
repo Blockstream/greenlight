@@ -14,6 +14,7 @@ use tonic::Request;
 static MAIN_CAPABILITIES: Capabilities =
     Capability::MASTER | Capability::SIGN_GOSSIP | Capability::ECDH;
 
+#[derive(Clone)]
 pub struct Signer {
     hsmd: Hsmd,
     tls: ClientTlsConfig,
@@ -124,7 +125,7 @@ impl Signer {
                     node_id: self.id.clone(),
                     wait: true,
                 })
-                .await
+                .await.map(|v| v.into_inner())
             {
                 Ok(v) => {
                     debug!("Got node_info from scheduler: {:?}", v);
@@ -139,9 +140,6 @@ impl Signer {
                     continue;
                 }
             };
-
-            // Now connect to the node and start responding to its requests
-            let node_info = node_info.into_inner();
 
             if node_info.grpc_uri == "" {
                 trace!("Got an empty GRPC URI, node is not scheduled, sleeping and retrying");

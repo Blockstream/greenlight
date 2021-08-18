@@ -18,4 +18,7 @@ env_logger = "*"
 tonic-build = "^0.5"
 
 [workspace]
-members = ["gl-client-py"]
+members = [
+  "gl-client-py",
+  "gl-client-js",
+]
