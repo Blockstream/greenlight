@@ -1,6 +1,7 @@
 from pyglclient import Signer
 import logging
 import time
+import pytest
 
 
 def test_init():
@@ -20,4 +21,5 @@ def test_wrong_init():
     secret = open("../hsm_secret", 'rb').read()
     network = 'notanetwork'
 
-    signer = Signer(secret, network, device_cert, device_key)
+    with pytest.raises(ValueError):
+        signer = Signer(secret, network, device_cert, device_key)
