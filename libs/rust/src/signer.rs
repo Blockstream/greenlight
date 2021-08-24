@@ -4,7 +4,8 @@
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest};
 use crate::Network;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
+use bytes::{Buf, Bytes};
 use libhsmd_sys::Hsmd;
 use libhsmd_sys::{Capabilities, Capability};
 use tokio::time::{sleep, Duration};
@@ -82,6 +83,13 @@ impl Signer {
     }
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse> {
+        let mut b = Bytes::from(req.raw.clone());
+
+        if b.get_u16() == 23 {
+            warn!("Refusing to process sign-message request");
+            return Err(anyhow!("Cannot process sign-message requests from node."));
+        }
+
         let client = match req.context {
             Some(HsmRequestContext {
                 dbid: 0,
@@ -125,7 +133,8 @@ impl Signer {
                     node_id: self.id.clone(),
                     wait: true,
                 })
-                .await.map(|v| v.into_inner())
+                .await
+                .map(|v| v.into_inner())
             {
                 Ok(v) => {
                     debug!("Got node_info from scheduler: {:?}", v);
@@ -155,6 +164,31 @@ impl Signer {
                 Err(e) => warn!("Error running against node: {}", e),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_sign_message_rejection() {
+        let signer = Signer::new(
+            vec![0 as u8; 32],
+            crate::Network::BITCOIN,
+            crate::tls::NOBODY_CONFIG.clone(),
+        )
+        .unwrap();
+
+        let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
+        assert!(signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: msg
+            })
+            .await
+            .is_err())
     }
 }
 

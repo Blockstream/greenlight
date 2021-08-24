@@ -8,7 +8,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-mod pb;
+pub mod pb;
 pub mod signer;
 
 pub enum Network {

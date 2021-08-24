@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 libhsmd-sys = { git = "https://github.com/cdecker/lightning", branch = "libhsmd-rust" }
+bytes = "*"
 anyhow = "*"
 hex = "*"
 lazy_static = "*"
