@@ -11,12 +11,7 @@ struct Signer {
 #[pymethods]
 impl Signer {
     #[new]
-    fn new(
-        secret: Vec<u8>,
-        network: String,
-        device_cert: Vec<u8>,
-        device_key: Vec<u8>,
-    ) -> PyResult<Signer> {
+    fn new(secret: Vec<u8>, network: String) -> PyResult<Signer> {
         let network = match network.as_str() {
             "bitcoin" => Network::BITCOIN,
             "testnet" => Network::TESTNET,
@@ -29,7 +24,6 @@ impl Signer {
             }
         };
 
-        let identity = Identity::from_pem(device_cert, device_key);
         let inner = match signer::Signer::new(secret, network, NOBODY_CONFIG.clone()) {
             Ok(v) => v,
             Err(e) => {
@@ -38,9 +32,15 @@ impl Signer {
                     e
                 )))
             }
-        }
-        .with_identity(identity);
+        };
         Ok(Signer { inner })
+    }
+
+    fn with_identity(&self, device_cert: Vec<u8>, device_key: Vec<u8>) -> Self {
+        let identity = Identity::from_pem(device_cert, device_key);
+        Signer {
+            inner: self.inner.clone().with_identity(identity),
+        }
     }
 
     fn run_in_thread(&mut self) -> PyResult<()> {
@@ -72,7 +72,7 @@ impl Signer {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn pyglclient(_py: Python, m: &PyModule) -> PyResult<()> {
+fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Signer>()?;
     Ok(())
 }
