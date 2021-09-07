@@ -108,6 +108,10 @@ impl Signer {
         })
     }
 
+    pub fn node_id(&self) -> Vec<u8> {
+        self.id.clone()
+    }
+
     /// Connect to the scheduler given by the environment variable
     /// `GL_SCHEDULER_GRPC_URI` (of the default URI) and wait for the
     /// node to be scheduled. Once scheduled, connect to the node

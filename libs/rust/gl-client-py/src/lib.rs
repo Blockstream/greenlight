@@ -6,6 +6,7 @@ use tonic::transport::Identity;
 #[pyclass]
 struct Signer {
     inner: signer::Signer,
+    id: Vec<u8>,
 }
 
 #[pymethods]
@@ -33,13 +34,17 @@ impl Signer {
                 )))
             }
         };
-        Ok(Signer { inner })
+
+        let id = inner.node_id();
+
+        Ok(Signer { id, inner })
     }
 
     fn with_identity(&self, device_cert: Vec<u8>, device_key: Vec<u8>) -> Self {
         let identity = Identity::from_pem(device_cert, device_key);
         Signer {
             inner: self.inner.clone().with_identity(identity),
+            id: self.id.clone(),
         }
     }
 
