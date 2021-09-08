@@ -13,3 +13,5 @@ gl-client = { path = ".." }
 pyo3 = {version = "0.14.1", features = ["extension-module"]}
 tokio = "*"
 tonic = "*"
+log = "*"
+env_logger = "*"
