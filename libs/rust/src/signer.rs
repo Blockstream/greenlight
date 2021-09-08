@@ -20,6 +20,9 @@ pub struct Signer {
     hsmd: Hsmd,
     tls: ClientTlsConfig,
     id: Vec<u8>,
+
+    /// Cached version of the init response
+    init: Vec<u8>,
 }
 
 impl Signer {
@@ -27,17 +30,30 @@ impl Signer {
         let hsmd = Hsmd::new(secret, network.into());
         let init = hsmd.init()?;
         let id = init[2..35].to_vec();
+
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             hsmd,
             tls: client_tls,
             id,
+            init,
         })
     }
 
     pub fn with_identity(self, identity: Identity) -> Signer {
+        debug!("Setting identity of the signer");
         Signer {
             tls: self.tls.identity(identity),
+            ..self
+        }
+    }
+
+    pub fn with_ca(self, ca_cert: Vec<u8>) -> Self {
+        debug!("Setting CA of the signer");
+        Signer {
+            tls: self
+                .tls
+                .ca_certificate(tonic::transport::Certificate::from_pem(ca_cert)),
             ..self
         }
     }
@@ -112,6 +128,10 @@ impl Signer {
         self.id.clone()
     }
 
+    pub fn get_init(&self) -> Vec<u8> {
+        self.init.clone()
+    }
+
     /// Connect to the scheduler given by the environment variable
     /// `GL_SCHEDULER_GRPC_URI` (of the default URI) and wait for the
     /// node to be scheduled. Once scheduled, connect to the node
@@ -131,7 +151,7 @@ impl Signer {
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
         loop {
-            trace!("Calling scheduler.get_node_info");
+            debug!("Calling scheduler.get_node_info");
             let node_info = match scheduler
                 .get_node_info(NodeInfoRequest {
                     node_id: self.id.clone(),
@@ -168,6 +188,30 @@ impl Signer {
                 Err(e) => warn!("Error running against node: {}", e),
             }
         }
+    }
+
+    pub fn sign_challenge(&self, challenge: Vec<u8>) -> Result<Vec<u8>> {
+        if challenge.len() != 32 {
+            return Err(anyhow!("challenge is not 32 bytes long"));
+        }
+        let client = self.hsmd.client(MAIN_CAPABILITIES);
+
+        let mut req = vec![0 as u8, 23, 00, 32];
+        req.extend(challenge);
+
+        let response = client.handle(req)?;
+        if response[1] != 123 {
+            return Err(anyhow!(
+                "Expected response type to be 123, got {}",
+                response[1]
+            ));
+        } else if response.len() != 2 + 64 + 1 {
+            return Err(anyhow!(
+                "Malformed response to sign_challenge, unexpected length {}",
+                response.len()
+            ));
+        }
+        Ok(response[2..66].to_vec())
     }
 }
 
