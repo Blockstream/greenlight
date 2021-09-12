@@ -14,6 +14,8 @@ prost = "0.8"
 tokio = { version = "*", features = ["full"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
 env_logger = "*"
+http = "0.2"
+tower = { version = "0.4" }
 
 [build-dependencies]
 tonic-build = "^0.5"
