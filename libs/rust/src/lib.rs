@@ -129,6 +129,11 @@ pub mod node {
         use tonic::transport::Body;
         use tonic::transport::Channel;
         use tower::{Layer, Service};
+
+        pub struct AuthService {
+            hmac_key: Vec<u8>,
+            inner: Channel,
+        }
         pub struct AuthSvc {
             inner: Channel,
         }
