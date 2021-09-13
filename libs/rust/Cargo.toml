@@ -16,6 +16,8 @@ tonic = { version = "^0.5", features = ["tls", "transport"] }
 env_logger = "*"
 http = "0.2"
 tower = { version = "0.4" }
+http-body = "*"
+pin-project = "*"
 
 [build-dependencies]
 tonic-build = "^0.5"
