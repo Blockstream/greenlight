@@ -678,6 +678,16 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
 
 @cli.command()
 @click.pass_context
+def log(ctx):
+    node = ctx.obj.get_node()
+    res = node.StreamLogs(pb.StreamLogRequest())
+
+    for log_entry in res:
+        print(res.line)
+
+
+@cli.command()
+@click.pass_context
 def listinvoices(ctx):
     node = ctx.obj.get_node()
     res = node.ListInvoices(pb.ListInvoicesRequest())

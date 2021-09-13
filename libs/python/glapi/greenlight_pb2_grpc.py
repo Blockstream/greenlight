@@ -105,6 +105,11 @@ class NodeStub(object):
                 request_serializer=glapi_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
                 response_deserializer=glapi_dot_greenlight__pb2.IncomingPayment.FromString,
                 )
+        self.StreamLog = channel.unary_stream(
+                '/greenlight.Node/StreamLog',
+                request_serializer=glapi_dot_greenlight__pb2.StreamLogRequest.SerializeToString,
+                response_deserializer=glapi_dot_greenlight__pb2.LogEntry.FromString,
+                )
         self.StreamHsmRequests = channel.unary_stream(
                 '/greenlight.Node/StreamHsmRequests',
                 request_serializer=glapi_dot_greenlight__pb2.Empty.SerializeToString,
@@ -267,6 +272,20 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StreamLog(self, request, context):
+        """Stream the logs as they are produced by the node
+
+        Mainly intended for debugging clients by tailing the log as
+        they are written on the node. The logs start streaming from
+        the first beginning, in order to allow inspection of events
+        after an error occurred, That also means that the logs can
+        be rather large, and should not be streamed onto
+        resource-constrained devices.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def StreamHsmRequests(self, request, context):
         """////////////////////////////// HSM Messages ////////////////////////
 
@@ -371,6 +390,11 @@ def add_NodeServicer_to_server(servicer, server):
                     servicer.StreamIncoming,
                     request_deserializer=glapi_dot_greenlight__pb2.StreamIncomingFilter.FromString,
                     response_serializer=glapi_dot_greenlight__pb2.IncomingPayment.SerializeToString,
+            ),
+            'StreamLog': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamLog,
+                    request_deserializer=glapi_dot_greenlight__pb2.StreamLogRequest.FromString,
+                    response_serializer=glapi_dot_greenlight__pb2.LogEntry.SerializeToString,
             ),
             'StreamHsmRequests': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamHsmRequests,
@@ -672,6 +696,23 @@ class Node(object):
         return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamIncoming',
             glapi_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
             glapi_dot_greenlight__pb2.IncomingPayment.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def StreamLog(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamLog',
+            glapi_dot_greenlight__pb2.StreamLogRequest.SerializeToString,
+            glapi_dot_greenlight__pb2.LogEntry.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
