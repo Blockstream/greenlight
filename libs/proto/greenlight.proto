@@ -85,6 +85,16 @@ service Node {
 	// invoice or spontaneus paymens through keysend.
 	rpc StreamIncoming(StreamIncomingFilter) returns (stream IncomingPayment) {}
 
+	// Stream the logs as they are produced by the node
+	//
+	// Mainly intended for debugging clients by tailing the log as
+	// they are written on the node. The logs start streaming from
+	// the first beginning, in order to allow inspection of events
+	// after an error occurred, That also means that the logs can
+	// be rather large, and should not be streamed onto
+	// resource-constrained devices.
+	rpc StreamLog(StreamLogRequest) returns (stream LogEntry) {}
+
 	//////////////////////////////// HSM Messages ////////////////////////
 	//
 	// The following messages are related to communicating HSM
@@ -402,6 +412,7 @@ message Payment {
 	PayStatus status = 4;
 	Amount amount = 5;
 	Amount amount_sent = 6;
+	string bolt11 = 7;
 }
 
 // A payment identifier is a way to reference a unique payment, either
@@ -489,4 +500,9 @@ message KeysendRequest {
 	string label = 3;
 	repeated Routehint routehints = 4;
 	repeated TlvField extratlvs = 5;
+}
+
+message StreamLogRequest {};
+message LogEntry {
+	string line = 1;
 }
