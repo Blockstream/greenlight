@@ -680,10 +680,8 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
 @click.pass_context
 def log(ctx):
     node = ctx.obj.get_node()
-    res = node.StreamLogs(pb.StreamLogRequest())
-
-    for log_entry in res:
-        print(res.line)
+    for entry in node.StreamLog(pb.StreamLogRequest()):
+        print(entry.line)
 
 
 @cli.command()
