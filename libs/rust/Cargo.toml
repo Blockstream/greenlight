@@ -1,0 +1,32 @@
+[package]
+name = "gl-client"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+libhsmd-sys = { git = "https://github.com/cdecker/lightning", branch = "libhsmd-rust" }
+anyhow = "*"
+base64 = "*"
+bytes = "*"
+env_logger = "*"
+hex = "*"
+http = "0.2"
+http-body = "*"
+lazy_static = "*"
+log = "*"
+pin-project = "*"
+prost = "0.8"
+ring = "*"
+rustls-pemfile = "*"
+tokio = { version = "*", features = ["full"] }
+tonic = { version = "^0.5", features = ["tls", "transport"] }
+tower = { version = "0.4" }
+
+[build-dependencies]
+tonic-build = "^0.5"
+
+[workspace]
+members = [
+  "gl-client-py",
+  "gl-client-js",
+]
