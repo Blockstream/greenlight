@@ -1,32 +1,31 @@
 use crate::pb::scheduler_client::SchedulerClient;
+use crate::tls::TlsConfig;
 use crate::{node, pb, signer::Signer, utils, Network};
-use anyhow::{anyhow, Result};
-use tonic::transport::{Channel, ClientTlsConfig};
+use anyhow::Result;
+use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
 
 pub struct Scheduler {
     node_id: Vec<u8>,
     client: Client,
-    tls: Option<ClientTlsConfig>,
     network: Network,
 }
 
 impl Scheduler {
     pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
-        let tls = crate::tls::NOBODY_CONFIG.clone();
+        let tls = crate::tls::TlsConfig::default();
         let scheduler_uri = utils::scheduler_uri();
 
 	debug!("Connecting to scheduler at {}", scheduler_uri);
         let channel = Channel::from_shared(scheduler_uri)?
-            .tls_config(tls.clone())?
+            .tls_config(tls.inner.clone())?
             .connect()
             .await?;
 
         let client = SchedulerClient::new(channel);
 
         Ok(Scheduler {
-            tls: None,
             client,
             node_id,
             network,
@@ -89,16 +88,7 @@ impl Scheduler {
         Ok(res.into_inner())
     }
 
-    pub async fn schedule(&self) -> Result<node::Client> {
-        let tls = match &self.tls {
-            Some(tls) => tls.clone(),
-            None => {
-                return Err(anyhow!(
-                    "Cannot connect to the node without first setting the device mTLS certificate"
-                ))
-            }
-        };
-
+    pub async fn schedule(&self, tls: TlsConfig) -> Result<node::Client> {
         let sched = self
             .client
             .clone()
@@ -110,7 +100,7 @@ impl Scheduler {
 
         let uri = sched.grpc_uri;
 
-        node::Builder::new(self.node_id.clone(), self.network, tls)
+        node::Node::new(self.node_id.clone(), self.network, tls)
             .connect(uri)
             .await
     }
