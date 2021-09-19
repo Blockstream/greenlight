@@ -25,8 +25,3 @@ tower = { version = "0.4" }
 [build-dependencies]
 tonic-build = "^0.5"
 
-[workspace]
-members = [
-  "gl-client-py",
-  "gl-client-js",
-]
