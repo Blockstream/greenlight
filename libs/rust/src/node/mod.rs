@@ -1,56 +1,43 @@
-use super::{tls, Network};
 use crate::pb::node_client::NodeClient;
 use crate::pb::{scheduler_client::SchedulerClient, ScheduleRequest};
-use anyhow::{anyhow, Result};
-use tonic::transport::{Certificate, Channel, ClientTlsConfig, Identity, Uri};
-use tower::ServiceBuilder;
+use crate::tls::TlsConfig;
 use crate::utils;
+use crate::Network;
+use anyhow::{anyhow, Result};
+use tonic::transport::{Channel, Uri};
+use tower::ServiceBuilder;
 
+/// A client to the remotely running node on the greenlight
+/// infrastructure. It is configured to authenticate itself with the
+/// device mTLS keypair and will sign outgoing requests with the same
+/// mTLS keypair.
 pub type Client = NodeClient<service::AuthService>;
 
-/// A builder is a synchronous mechanism to configure a NodeStub
-/// before actually connecting to it asynchronously.
+/// A builder to configure a [`Client`] that can either connect to a
+/// node directly, assuming you have the `grpc_uri` that the node is
+/// listening on, or it can talk to the
+/// [`crate::scheduler::Scheduler`] to schedule the node and configure
+/// the [`Client`] accordingly.
 #[allow(dead_code)]
-pub struct Builder {
+pub struct Node {
     node_id: Vec<u8>,
     network: Network,
-    client_tls: ClientTlsConfig,
-    identity: Identity,
-
-    // A copy of the private key allowing us to sign outgoing requests.
-    private_key: Option<Vec<u8>>,
+    tls: TlsConfig,
 }
 
-impl Builder {
-    pub fn new(node_id: Vec<u8>, network: Network, client_tls: ClientTlsConfig) -> Builder {
-        Builder {
+impl Node {
+    pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig) -> Node {
+        Node {
             node_id,
             network,
-            client_tls,
-            identity: tls::NOBODY.clone(),
-            private_key: None,
-        }
-    }
-
-    pub fn ca_certificate(self, cert: Certificate) -> Self {
-        Builder {
-            client_tls: self.client_tls.ca_certificate(cert),
-            ..self
-        }
-    }
-
-    pub fn identity(self, cert_pem: Vec<u8>, key_pem: Vec<u8>) -> Self {
-        Builder {
-            identity: Identity::from_pem(cert_pem, key_pem.clone()),
-            private_key: Some(key_pem),
-            ..self
+            tls,
         }
     }
 
     pub async fn connect(self, node_uri: String) -> Result<Client> {
         let node_uri = Uri::from_maybe_shared(node_uri)?;
 
-        let layer = match self.private_key {
+        let layer = match self.tls.private_key {
             Some(k) => service::AuthLayer::new(k)?,
             None => {
                 return Err(anyhow!(
@@ -60,7 +47,7 @@ impl Builder {
         };
 
         let chan: tonic::transport::Channel = Channel::builder(node_uri)
-            .tls_config(self.client_tls)?
+            .tls_config(self.tls.inner)?
             .connect()
             .await?;
 
@@ -77,7 +64,7 @@ impl Builder {
         );
 
         let channel = Channel::from_shared(scheduler_uri)?
-            .tls_config(self.client_tls.clone())?
+            .tls_config(self.tls.inner.clone())?
             .connect()
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
@@ -97,7 +84,7 @@ impl Builder {
 
 mod service;
 
-pub mod stasher {
+mod stasher {
     use bytes::Bytes;
     use http::HeaderMap;
     use http_body::Body;

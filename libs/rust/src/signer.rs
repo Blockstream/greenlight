@@ -3,13 +3,14 @@
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest};
+use crate::tls::TlsConfig;
 use crate::{node, node::Client, Network};
 use anyhow::{anyhow, Context, Result};
 use bytes::{Buf, Bytes};
 use libhsmd_sys::Hsmd;
 use libhsmd_sys::{Capabilities, Capability};
 use tokio::time::{sleep, Duration};
-use tonic::transport::{Channel, ClientTlsConfig, Identity, Uri};
+use tonic::transport::{Channel, Uri};
 use tonic::Request;
 
 static MAIN_CAPABILITIES: Capabilities =
@@ -18,7 +19,7 @@ static MAIN_CAPABILITIES: Capabilities =
 #[derive(Clone)]
 pub struct Signer {
     hsmd: Hsmd,
-    tls: ClientTlsConfig,
+    tls: TlsConfig,
     id: Vec<u8>,
 
     /// Cached version of the init response
@@ -28,7 +29,7 @@ pub struct Signer {
 }
 
 impl Signer {
-    pub fn new(secret: Vec<u8>, network: Network, client_tls: ClientTlsConfig) -> Result<Signer> {
+    pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
         let hsmd = Hsmd::new(secret, network.into());
         let init = hsmd.init()?;
         let id = init[2..35].to_vec();
@@ -36,29 +37,11 @@ impl Signer {
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             hsmd,
-            tls: client_tls,
+            tls,
             id,
             init,
             network,
         })
-    }
-
-    pub fn with_identity(self, identity: Identity) -> Signer {
-        debug!("Setting identity of the signer");
-        Signer {
-            tls: self.tls.identity(identity),
-            ..self
-        }
-    }
-
-    pub fn with_ca(self, ca_cert: Vec<u8>) -> Self {
-        debug!("Setting CA of the signer");
-        Signer {
-            tls: self
-                .tls
-                .ca_certificate(tonic::transport::Certificate::from_pem(ca_cert)),
-            ..self
-        }
     }
 
     /// Given the URI of the running node, connect to it and stream
@@ -67,7 +50,7 @@ impl Signer {
     pub async fn run_once(&self, node_uri: Uri) -> Result<()> {
         debug!("Connecting to node at {}", node_uri);
         let c = Channel::builder(node_uri)
-            .tls_config(self.tls.clone())?
+            .tls_config(self.tls.inner.clone())?
             .connect()
             .await?;
 
@@ -153,7 +136,7 @@ impl Signer {
         );
 
         let channel = Channel::from_shared(scheduler_uri)?
-            .tls_config(self.tls.clone())?
+            .tls_config(self.tls.inner.clone())?
             .connect()
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
@@ -224,7 +207,7 @@ impl Signer {
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
     pub async fn node(&self) -> Result<Client> {
-        node::Builder::new(self.node_id(), self.network, self.tls.clone())
+        node::Node::new(self.node_id(), self.network, self.tls.clone())
             .schedule()
             .await
     }
@@ -236,12 +219,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sign_message_rejection() {
-        let signer = Signer::new(
-            vec![0 as u8; 32],
-            crate::Network::BITCOIN,
-            crate::tls::NOBODY_CONFIG.clone(),
-        )
-        .unwrap();
+        let signer =
+            Signer::new(vec![0 as u8; 32], Network::BITCOIN, TlsConfig::default()).unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
