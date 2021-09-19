@@ -1,15 +1,12 @@
-use crate::pb::RegistrationResponse;
 use crate::runtime::exec;
 use crate::Signer;
 use crate::{pb, pb::scheduler_client::SchedulerClient};
-use anyhow::{anyhow, Result};
-use core::future::Future;
+use anyhow::Result;
 use gl_client::Network;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use std::convert::TryInto;
-use tokio::runtime::Builder;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
@@ -27,7 +24,7 @@ impl Scheduler {
     fn new(node_id: Vec<u8>, network: String) -> PyResult<Scheduler> {
         let network: Network = match network.try_into() {
             Ok(v) => v,
-            Err(e) => return Err(PyValueError::new_err("Error parsing the network")),
+            Err(_) => return Err(PyValueError::new_err("Error parsing the network")),
         };
         warn!("Node ID {:?}", node_id);
         Ok(Scheduler { node_id, network })
@@ -61,7 +58,7 @@ impl Scheduler {
 
         let res = match res {
             Ok(v) => v,
-            Err(e) => return Err(PyValueError::new_err("error calling get_node_info")),
+            Err(_) => return Err(PyValueError::new_err("error calling get_node_info")),
         };
         let mut buf = Vec::new();
         buf.reserve(res.encoded_len());

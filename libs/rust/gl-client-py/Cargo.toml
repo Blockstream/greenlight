@@ -15,6 +15,5 @@ log = "*"
 once_cell = "*"
 prost = "*"
 pyo3 = {version = "0.14.1", features = ["extension-module", "serde"]}
-pyo3-asyncio = { version = "0.14", features = ["tokio-runtime"] }
 tokio = "*"
 tonic = "*"

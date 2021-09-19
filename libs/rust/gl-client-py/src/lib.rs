@@ -1,6 +1,5 @@
-use gl_client::{pb, tls::NOBODY_CONFIG, Network};
+use gl_client::pb;
 use pyo3::prelude::*;
-use tonic::transport::Identity;
 
 #[macro_use]
 extern crate log;
@@ -9,10 +8,12 @@ mod node;
 mod runtime;
 mod scheduler;
 mod signer;
+mod tls;
 
 pub use node::Node;
 pub use scheduler::Scheduler;
 pub use signer::Signer;
+pub use tls::TlsConfig;
 
 /// Simple wrapper around the protobuf message type to allow handling
 /// rust-native amounts in python.
@@ -69,15 +70,6 @@ impl Amount {
     }
 }
 
-#[pyfunction]
-fn register<'p>(py: Python<'p>, s: Scheduler, signer: Signer) -> PyResult<&'p PyAny> {
-    let secs = 10;
-    pyo3_asyncio::tokio::future_into_py(py, async move {
-        tokio::time::sleep(tokio::time::Duration::from_secs(secs)).await;
-        Python::with_gil(|py| Ok(py.None()))
-    })
-}
-
 /// A Python module implemented in Rust.
 #[pymodule]
 fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -86,7 +78,7 @@ fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Node>()?;
     m.add_class::<Amount>()?;
     m.add_class::<Scheduler>()?;
+    m.add_class::<TlsConfig>()?;
 
-    m.add_function(wrap_pyfunction!(register, m)?)?;
     Ok(())
 }

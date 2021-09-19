@@ -1,6 +1,6 @@
-use gl_client::{tls::NOBODY_CONFIG, Network};
+use crate::tls::TlsConfig;
+use gl_client::Network;
 use pyo3::prelude::*;
-use tonic::transport::Identity;
 
 #[pyclass]
 #[derive(Clone)]
@@ -11,7 +11,7 @@ pub struct Signer {
 #[pymethods]
 impl Signer {
     #[new]
-    fn new(secret: Vec<u8>, network: String) -> PyResult<Signer> {
+    fn new(secret: Vec<u8>, network: String, tls: TlsConfig) -> PyResult<Signer> {
         let network = match network.as_str() {
             "bitcoin" => Network::BITCOIN,
             "testnet" => Network::TESTNET,
@@ -24,7 +24,7 @@ impl Signer {
             }
         };
 
-        let inner = match gl_client::signer::Signer::new(secret, network, NOBODY_CONFIG.clone()) {
+        let inner = match gl_client::signer::Signer::new(secret, network, tls.inner) {
             Ok(v) => v,
             Err(e) => {
                 return Err(pyo3::exceptions::PyValueError::new_err(format!(
@@ -35,19 +35,6 @@ impl Signer {
         };
 
         Ok(Signer { inner })
-    }
-
-    fn with_identity(&self, device_cert: Vec<u8>, device_key: Vec<u8>) -> Self {
-        let identity = Identity::from_pem(device_cert, device_key);
-        Signer {
-            inner: self.inner.clone().with_identity(identity),
-        }
-    }
-
-    fn with_ca(&self, ca_cert: Vec<u8>) -> Self {
-        Signer {
-            inner: self.inner.clone().with_ca(ca_cert),
-        }
     }
 
     fn run_in_thread(&mut self) -> PyResult<()> {
