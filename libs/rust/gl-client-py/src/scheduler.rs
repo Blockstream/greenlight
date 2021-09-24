@@ -95,7 +95,12 @@ impl Scheduler {
 pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
     let res = match r {
         Ok(v) => v,
-        Err(_) => return Err(PyValueError::new_err("error calling remote method")),
+        Err(e) => {
+            return Err(PyValueError::new_err(format!(
+                "error calling remote method: {}",
+                e
+            )))
+        }
     };
     let mut buf = Vec::new();
     buf.reserve(res.encoded_len());
