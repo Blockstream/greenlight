@@ -1,12 +1,11 @@
+from glclient import Signer, TlsConfig, Scheduler
+from pathlib import Path
+
+
 from binascii import hexlify, unhexlify
 from glapi import environment as env
-from glapi import greenlight_pb2 as pb
-from glapi import scheduler_pb2 as schedpb
-from glapi.greenlight_pb2 import GetInfoRequest, StopRequest, ConnectRequest
-from glapi.greenlight_pb2_grpc import NodeStub
 from glapi.identity import Identity
 from glapi.libhsmd import init as libhsmd_init, handle as libhsmd_handle
-from glapi.scheduler_pb2_grpc import SchedulerStub
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
 from threading import Thread
@@ -32,13 +31,22 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-class HSM:
-    """Simple wrapper around the keeper of keys."""
+class Context:
+    def __init__(self, start_hsmd=False):
+        cert_path = Path('device.crt')
+        key_path = Path('device-key.pem')
+        self.tls = TlsConfig()
+        if cert_path.exists():
+            device_cert = open('device.crt', 'rb').read()
+            device_key = open('device-key.pem', 'rb').read()
+            self.tls = self.tls.identity(device_cert, device_key)
+            logger.info("Configuring client with user identity.")
+        else:
+            logger.info("Configuring client with the NOBODY identity.")
 
-    def __init__(self):
         secrets_file = Path("hsm_secret")
         if not secrets_file.exists():
-            logging.info(f"No {secrets_file} file found, generating a new secret key")
+            logger.info(f"No {secrets_file} file found, generating a new secret key")
             secret = secrets.token_bytes(32)
             with open(
                 os.open(secrets_file, os.O_CREAT | os.O_WRONLY, 0o600), "wb"
@@ -48,178 +56,24 @@ class HSM:
             logger.debug(f"Found existing {secrets_file} file, loading secret from it")
             with open(secrets_file, "rb") as f:
                 secret = f.read(32)
-        logger.debug(f"Initializing libhsmd with secret")
-        msg = unhexlify(libhsmd_init(secret.hex(), "bitcoin"))
-        self.node_id = msg[2:35]
-        self.bip32_key = msg[35:-32]
-        self.bolt12_key = msg[-32:]
-        self.scheduler_chan = None
-        logger.debug(f"libhsmd initialized for node_id={self.node_id.hex()}")
 
-    def sign_challenge(self, challenge: bytes) -> bytes:
-        """Sign a 32 byte challenge."""
-        assert len(challenge) == 32
-        msg = struct.pack(f"!HH{len(challenge)}s", 23, len(challenge), challenge)
-        res = libhsmd_handle(1024, 0, None, msg.hex())
-        assert len(res) == 2 * 2 + 2 * 64 + 2
-        type, signature, recid = struct.unpack("!H64ss", unhexlify(res))
-        assert type == 123
-        return signature
+        network = 'testnet'
 
-    def _scheduler_stub(self, grpc_uri):
-        if self.scheduler_chan is None:
-            identity = get_identity()
-            cred = identity.to_channel_credentials()
-            self.scheduler_chan = grpc.secure_channel(
-                grpc_uri,
-                cred,
-                options=(
-                    (
-                        "grpc.ssl_target_name_override",
-                        "localhost",
-                    ),
-                ),
-            )
-
-        return SchedulerStub(self.scheduler_chan)
-
-    def run(self):
-        grpc_uri = os.environ.get("GL_SCHEDULER_GRPC_URI")
-        if grpc_uri.startswith("https://"):
-            grpc_uri = grpc_uri[8:]
-
-        logger.debug(
-            f"Contacting scheduler at {grpc_uri} to wait for the node to be scheduled."
-        )
-
-        scheduler = self._scheduler_stub(grpc_uri)
-        while True:
-            # Outer loop: wait for our node to get scheduled.
-            logger.debug(f"Waiting for node {self.node_id.hex()} to be scheduled")
-            res = scheduler.GetNodeInfo(
-                schedpb.NodeInfoRequest(
-                    node_id=self.node_id,
-                    wait=True,
-                )
-            )
-            logger.info(
-                f"Node was scheduled at {res.grpc_uri}, opening direct connection"
-            )
-            self.run_once(res.grpc_uri)
-
-    def run_once(self, uri):
-        identity = get_identity()
-        cred = identity.to_channel_credentials()
-        if uri.startswith("https://"):
-            uri = uri[8:]
-
-        chan = grpc.secure_channel(
-            uri,
-            cred,
-            options=(
-                (
-                    "grpc.ssl_target_name_override",
-                    "localhost",
-                ),
-            ),
-        )
-        node = NodeStub(chan)
-        logger.debug(f"Streaming HSM requests")
-        try:
-            for r in node.StreamHsmRequests(pb.Empty()):
-                if r.context.ByteSize() != 0:
-                    capabilities = r.context.capabilities
-                    dbid = r.context.dbid
-                    node_id = r.context.node_id.hex()
-                else:
-                    capabilities = 1024 | 2 | 1
-                    dbid = 0
-                    node_id = None
-                response = libhsmd_handle(capabilities, dbid, node_id, r.raw.hex())
-                node.RespondHsmRequest(
-                    pb.HsmResponse(
-                        request_id=r.request_id,
-                        raw=unhexlify(response),
-                    )
-                )
-        except grpc.RpcError:
-            logger.debug(
-                "Error streaming hsm requests from node, likely just got disconnected."
-            )
-            time.sleep(1)
-
-    def ping(self):
-        grpc_uri = os.environ.get("GL_SCHEDULER_GRPC_URI")
-        if grpc_uri.startswith("https://"):
-            grpc_uri = grpc_uri[8:]
-
-        logger.debug(f"Pinging scheduler at {grpc_uri}")
-        scheduler = self._scheduler_stub(grpc_uri)
-        scheduler.GetNodeInfo(schedpb.NodeInfoRequest(node_id=self.node_id))
-
-
-class Context:
-    def __init__(self, start_hsmd=False):
-        self.hsm = HSM()
-        self.identity = get_identity()
+        self.signer = Signer(secret, network, self.tls)
+        self.node_id = bytes(self.signer.node_id())
+        self.scheduler = Scheduler(self.node_id, network)
+        self.scheduler.tls = self.tls
         self.node = None
 
         if start_hsmd:
-            self.hsmd_thread = Thread(target=self.hsm.run, daemon=True)
-            self.hsmd_thread.start()
-        else:
-            self.hsmd_thread = None
+            self.signer.run_in_thread()
 
         self.scheduler_chan = None
 
     def get_node(self):
-        if self.node is not None:
-            return self.node
-        uri = self.get_node_grpc_uri(self.hsm.node_id)
-
-        if uri.startswith("https://"):
-            uri = uri[8:]
-
-        cred = self.identity.to_channel_credentials()
-        chan = grpc.secure_channel(
-            uri,
-            cred,
-            options=(
-                (
-                    "grpc.ssl_target_name_override",
-                    "localhost",
-                ),
-            ),
-        )
-        return NodeStub(chan)
-
-    @functools.lru_cache(1)
-    def get_scheduler(self):
-        if self.scheduler_chan is None:
-            grpc_uri = os.environ.get("GL_SCHEDULER_GRPC_URI")
-            if grpc_uri.startswith("https://"):
-                grpc_uri = grpc_uri[8:]
-            identity = get_identity(default=True)
-            cred = identity.to_channel_credentials()
-            self.scheduler_chan = grpc.secure_channel(
-                grpc_uri,
-                cred,
-                options=(
-                    (
-                        "grpc.ssl_target_name_override",
-                        "localhost",
-                    ),
-                ),
-            )
-        return SchedulerStub(self.scheduler_chan)
-
-    @functools.lru_cache(1)
-    def get_node_grpc_uri(self, node_id):
-        logger.debug(f"Contacting scheduler to find grp_uri of node_id={node_id.hex()}")
-        scheduler = self.get_scheduler()
-        res = scheduler.Schedule(schedpb.ScheduleRequest(node_id=node_id))
-        logger.debug(f"Node {node_id.hex()} is running at {res.grpc_uri}")
-        return res.grpc_uri
+        if self.node is None:
+            self.node = self.scheduler.node()
+        return self.node
 
 
 class AmountType(click.ParamType):
@@ -304,7 +158,7 @@ def dict2jsondict(d):
 def pbprint(pb):
     print(json.dumps(dict2jsondict(pb2dict(pb)), indent=2))
 
-
+"""
 def get_identity(default=False):
     p = Path("device-key.pem")
     if p.exists() and not default:
@@ -323,7 +177,7 @@ def get_identity(default=False):
     else:
         logger.debug("Loading generic installation keys")
         return Identity.from_path("/users/nobody")
-
+"""
 
 @click.group()
 @click.option('--testenv', is_flag=True)
@@ -334,12 +188,12 @@ def cli(ctx, testenv, hsmd):
     # Disable hsmd if we explicitly get told to run it in the
     # foreground
     hsmd = hsmd and (ctx.invoked_subcommand != 'hsmd')
-    if ctx.obj is None:
-        if testenv:
-            os.environ.update(env.test)
-        else:
-            os.environ.update(env.prod)
+    if testenv:
+        os.environ.update(env.test)
+    else:
+        os.environ.update(env.prod)
 
+    if ctx.obj is None:
         ctx.obj = Context(start_hsmd=hsmd)
 
 
@@ -442,27 +296,27 @@ def ping(ctx):
 @click.pass_context
 def schedule(ctx):
     grpc_uri = os.environ.get("GL_SCHEDULER_GRPC_URI")
-    node_id = ctx.obj.hsm.node_id
-    print(f"Scheduling {node_id.hex()} with scheduler {grpc_uri}")
-    scheduler = ctx.obj.get_scheduler()
-
-    res = scheduler.Schedule(schedpb.ScheduleRequest(node_id=node_id))
-    pbprint(res)
-
+    node_id = ctx.obj.node_id
+    logger.info(f"Scheduling {node_id.hex()} with scheduler {grpc_uri}")
+    scheduler = ctx.obj.scheduler
+    try:
+        res = scheduler.schedule()
+        pbprint(res)
+    except ValueError as e:
+        raise click.ClickException(message=e.args[0])
 
 @cli.command()
 @click.pass_context
 def hsmd(ctx):
     """Run the hsmd against the scheduler."""
-    hsm = ctx.obj.hsm
-    hsm.run()
+    hsm = ctx.obj.signer.run_in_foreground()
 
 
 @cli.command()
 @click.pass_context
 def getinfo(ctx):
     node = ctx.obj.get_node()
-    res = node.GetInfo(GetInfoRequest())
+    res = node.get_info()
     pbprint(res)
 
 
@@ -470,11 +324,8 @@ def getinfo(ctx):
 @click.pass_context
 def stop(ctx):
     node = ctx.obj.get_node()
-    try:
-        res = node.Stop(StopRequest())
-        print(res)
-    except Exception:
-        print("No response received, node was shut down")
+    res = node.stop()
+    print("Node shut down")
 
 
 @cli.command()
@@ -482,17 +333,18 @@ def stop(ctx):
 @click.argument("addr", required=False)
 @click.pass_context
 def connect(ctx, node_id, addr):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     res = node.ConnectPeer(ConnectRequest(node_id=node_id, addr=addr))
     pbprint(res)
 
 
 @cli.command()
-@click.argument("node_id", required=False)
+#@click.argument("node_id", required=False)
 @click.pass_context
-def listpeers(ctx, node_id=None):
+def listpeers(ctx):
     node = ctx.obj.get_node()
-    res = node.ListPeers(pb.ListPeersRequest(node_id=node_id))
+    res = node.list_peers()
     pbprint(res)
 
 
@@ -500,6 +352,7 @@ def listpeers(ctx, node_id=None):
 @click.argument("node_id")
 @click.pass_context
 def disconnect(ctx, node_id):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     res = node.Disconnect(pb.DisconnectRequest(node_id=node_id))
     pbprint(res)
@@ -508,17 +361,18 @@ def disconnect(ctx, node_id):
 @cli.command()
 @click.pass_context
 def newaddr(ctx):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     res = node.NewAddr(pb.NewAddrRequest(address_type=pb.BtcAddressType.BECH32))
     pbprint(res)
 
 
 @cli.command()
-@click.option("--minconf", required=False, type=int)
+#@click.option("--minconf", required=False, type=int)
 @click.pass_context
-def listfunds(ctx, minconf=1):
+def listfunds(ctx):
     node = ctx.obj.get_node()
-    res = node.ListFunds(pb.ListFundsRequest())
+    res = node.list_funds()
     pbprint(res)
 
 
@@ -528,6 +382,7 @@ def listfunds(ctx, minconf=1):
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def withdraw(ctx, destination, amount, minconf=1):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     res = node.Withdraw(
         pb.WithdrawRequest(
@@ -545,6 +400,7 @@ def withdraw(ctx, destination, amount, minconf=1):
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def fundchannel(ctx, nodeid, amount, minconf=1):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     res = node.FundChannel(
         pb.FundChannelRequest(
@@ -562,6 +418,7 @@ def fundchannel(ctx, nodeid, amount, minconf=1):
 @click.option("--address", required=False, type=str)
 @click.pass_context
 def close(ctx, nodeid, timeout=None, address=None):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     args = {
         "node_id": unhexlify(nodeid),
@@ -582,6 +439,7 @@ def close(ctx, nodeid, timeout=None, address=None):
 @click.option("--description", required=False, type=str)
 @click.pass_context
 def invoice(ctx, label, amount=None, description=None):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     if amount is None:
         amount = pb.Amount(any=True)
@@ -600,17 +458,10 @@ def invoice(ctx, label, amount=None, description=None):
 @click.argument("invoice")
 @click.pass_context
 def pay(ctx, invoice):
+    raise NotImplementedError
     node = ctx.obj.get_node()
     res = node.Pay(pb.PayRequest(bolt11=invoice))
     pbprint(res)
-
-
-@cli.command()
-def destroy():
-    os.unlink("device-key.pem")
-    os.unlink("device.crt")
-    os.unlink("ca.pem")
-    os.unlink("hsm_secret")
 
 
 @cli.command()
@@ -618,6 +469,7 @@ def destroy():
 def stream_incoming(ctx):
     """Listen for incoming payments and print details to stdout.
     """
+    raise NotImplementedError
     node = ctx.obj.get_node()
     for e in node.StreamIncoming(pb.StreamIncomingFilter()):
         pbprint(e)
@@ -633,7 +485,7 @@ def stream_incoming(ctx):
 def keysend(ctx, node_id, amount, routehints, extratlvs):
     """Send a spontaneous payment to the specified node.
     """
-
+    raise NotImplementedError
     # Convert the advanced arguments.
     if routehints is not None:
         arr = json.loads(routehints)
@@ -679,6 +531,7 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
 @cli.command()
 @click.pass_context
 def log(ctx):
+    raise NotImplementedError()
     node = ctx.obj.get_node()
     for entry in node.StreamLog(pb.StreamLogRequest()):
         print(entry.line)
@@ -688,7 +541,7 @@ def log(ctx):
 @click.pass_context
 def listinvoices(ctx):
     node = ctx.obj.get_node()
-    res = node.ListInvoices(pb.ListInvoicesRequest())
+    res = node.list_invoices()
     pbprint(res)
 
 
@@ -696,7 +549,7 @@ def listinvoices(ctx):
 @click.pass_context
 def listpays(ctx):
     node = ctx.obj.get_node()
-    res = node.ListPayments(pb.ListPaymentsRequest())
+    res = node.list_payments()
     pbprint(res)
 
 
