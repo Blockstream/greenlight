@@ -14,6 +14,7 @@ use ring::{
     rand,
     signature::{self, EcdsaKeyPair},
 };
+
 pub struct AuthLayer {
     key: Vec<u8>,
 }
@@ -56,6 +57,7 @@ impl Layer<Channel> for AuthLayer {
     }
 }
 
+#[derive(Clone)]
 pub struct AuthService {
     // PKCS#8 formatted private key
     key: Vec<u8>,
@@ -107,13 +109,6 @@ impl Service<Request<BoxBody>> for AuthService {
             parts
                 .headers
                 .insert("glauthsig", base64::encode(sig).parse().unwrap());
-
-            {
-                let sig = base64::decode(base64::encode(sig)).unwrap();
-                let peer_public_key =
-                    signature::UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, pubkey);
-                dbg!(peer_public_key.verify(&data, sig.as_ref()).unwrap());
-            }
 
             let body = crate::node::stasher::StashBody::new(data).into();
             let request = Request::from_parts(parts, body);

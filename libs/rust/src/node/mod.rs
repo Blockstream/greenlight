@@ -19,6 +19,7 @@ pub type Client = NodeClient<service::AuthService>;
 /// [`crate::scheduler::Scheduler`] to schedule the node and configure
 /// the [`Client`] accordingly.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct Node {
     node_id: Vec<u8>,
     network: Network,

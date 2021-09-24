@@ -6,6 +6,7 @@ use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
 
+#[derive(Clone)]
 pub struct Scheduler {
     node_id: Vec<u8>,
     client: Client,
@@ -32,7 +33,7 @@ impl Scheduler {
         })
     }
 
-    pub async fn register(&self, signer: Signer) -> Result<pb::RegistrationResponse> {
+    pub async fn register(&self, signer: &Signer) -> Result<pb::RegistrationResponse> {
         let challenge = self
             .client
             .clone()
