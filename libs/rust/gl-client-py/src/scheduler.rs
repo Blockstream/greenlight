@@ -16,6 +16,7 @@ type Client = SchedulerClient<Channel>;
 pub struct Scheduler {
     node_id: Vec<u8>,
     network: Network,
+    inner: gl_client::scheduler::Scheduler,
 }
 
 #[pymethods]
@@ -26,25 +27,37 @@ impl Scheduler {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("Error parsing the network")),
         };
-        warn!("Node ID {:?}", node_id);
-        Ok(Scheduler { node_id, network })
+        info!("Node ID {:?}", node_id);
+
+        let id = node_id.clone();
+        let res = exec(async move { gl_client::scheduler::Scheduler::new(id, network).await });
+
+        let inner = match res {
+            Ok(v) => v,
+            Err(_) => return Err(PyValueError::new_err("could not connect to the scheduler")),
+        };
+
+        Ok(Scheduler {
+            node_id,
+            network,
+            inner,
+        })
     }
 
-    fn register(&self, signer: &Signer) -> PyResult<()> {
-        let secs = 10;
-        exec(async move {
-            println!("Sleeping {}", secs);
-            tokio::time::sleep(tokio::time::Duration::from_secs(secs)).await;
-            println!("Done sleeping {}", secs);
-            Ok(())
-        })
+    fn register(&self, signer: &Signer) -> PyResult<Vec<u8>> {
+        convert(exec(self.inner.register(&signer.inner)))
+    }
+
+    fn recover(&self, signer: &Signer) -> PyResult<Vec<u8>> {
+        convert(exec(
+            async move { self.inner.recover(&signer.inner).await },
+        ))
     }
 
     fn get_node_info(&self) -> PyResult<Vec<u8>> {
         let res: Result<pb::NodeInfoResponse> = exec(async move {
             let mut client = self.connect().await.unwrap();
 
-            println!("get_node_id Node id {:?}", self.node_id);
             let info = client
                 .get_node_info(pb::NodeInfoRequest {
                     node_id: self.node_id.clone(),
@@ -52,7 +65,6 @@ impl Scheduler {
                 })
                 .await;
 
-            println!("INFO: {:?}", info);
             Ok(info?.into_inner())
         });
 
@@ -65,6 +77,30 @@ impl Scheduler {
         res.encode(&mut buf).unwrap();
         Ok(buf)
     }
+
+    fn schedule(&self) -> PyResult<Vec<u8>> {
+        convert(exec(async move {
+            Ok(self
+                .connect()
+                .await?
+                .schedule(pb::ScheduleRequest {
+                    node_id: self.node_id.clone(),
+                })
+                .await?
+                .into_inner())
+        }))
+    }
+}
+
+pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
+    let res = match r {
+        Ok(v) => v,
+        Err(_) => return Err(PyValueError::new_err("error calling remote method")),
+    };
+    let mut buf = Vec::new();
+    buf.reserve(res.encoded_len());
+    res.encode(&mut buf).unwrap();
+    Ok(buf)
 }
 
 impl Scheduler {
