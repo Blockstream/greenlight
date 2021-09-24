@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 #[pyclass]
 #[derive(Clone)]
 pub struct Signer {
-    inner: gl_client::signer::Signer,
+    pub(crate) inner: gl_client::signer::Signer,
 }
 
 #[pymethods]
