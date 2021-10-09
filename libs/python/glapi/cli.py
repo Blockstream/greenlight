@@ -32,7 +32,7 @@ logger.addHandler(handler)
 
 
 class Context:
-    def __init__(self, start_hsmd=False):
+    def __init__(self, network='testnet', start_hsmd=False):
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
         self.tls = TlsConfig()
@@ -57,8 +57,6 @@ class Context:
             logger.debug(f"Found existing {secrets_file} file, loading secret from it")
             with open(secrets_file, "rb") as f:
                 secret = f.read(32)
-
-        network = 'testnet'
 
         self.signer = Signer(secret, network, self.tls)
         self.node_id = bytes(self.signer.node_id())
@@ -211,33 +209,14 @@ def scheduler():
 @click.option("--network", type=str, default="testnet")
 @click.pass_context
 def register(ctx, network):
-    hsm = ctx.obj.hsm
-    node_id = hsm.node_id
-    bip32_key = hsm.bip32_key + hsm.bolt12_key
+    # Reinitialize the signer with the right network, so register will pick that up
+    ctx.obj = Context(network=network, start_hsmd=False)
+    signer = ctx.obj.signer
+    node_id = ctx.obj.node_id
     hex_node_id = hexlify(node_id).decode("ASCII")
     logger.debug(f"Registering new node with node_id={hex_node_id} for {network}")
-    scheduler = ctx.obj.get_scheduler()
-
-    ch = scheduler.GetChallenge(
-        schedpb.ChallengeRequest(
-            scope=schedpb.ChallengeScope.REGISTER,
-            node_id=node_id,
-        )
-    )
-
-    # Now have the hsmd sign the challenge
-    res = hsm.sign_challenge(ch.challenge)
-
-    res = scheduler.Register(
-        schedpb.RegistrationRequest(
-            node_id=node_id,
-            bip32_key=bip32_key,
-            email=None,
-            network=network,
-            challenge=ch.challenge,
-            signature=res,
-        )
-    )
+    scheduler = ctx.obj.scheduler
+    res = scheduler.register(signer)
 
     with open("device-key.pem", "w") as f:
         f.write(res.device_key)
@@ -254,27 +233,12 @@ def register(ctx, network):
 @scheduler.command()
 @click.pass_context
 def recover(ctx):
-    node_id = ctx.obj.hsm.node_id
+    signer = ctx.obj.signer
+    node_id = ctx.obj.node_id
     logger.debug(f"Recovering access to node_id={hexlify(node_id).decode('ASCII')}")
-    scheduler = ctx.obj.get_scheduler()
+    scheduler = ctx.obj.scheduler
 
-    ch = scheduler.GetChallenge(
-        schedpb.ChallengeRequest(
-            scope=schedpb.ChallengeScope.RECOVER,
-            node_id=node_id,
-        )
-    )
-
-    # Now have the hsmd sign the challenge
-    res = ctx.obj.hsm.sign_challenge(ch.challenge)
-
-    res = scheduler.Recover(
-        schedpb.RecoveryRequest(
-            node_id=node_id,
-            challenge=ch.challenge,
-            signature=res,
-        )
-    )
+    res = scheduler.recover(signer)
 
     with open("device-key.pem", "w") as f:
         f.write(res.device_key)
@@ -291,10 +255,8 @@ def recover(ctx):
 @scheduler.command()
 @click.pass_context
 def ping(ctx):
-    node_id = ctx.obj.hsm.node_id
-    scheduler = ctx.obj.get_scheduler()
-    res = scheduler.GetNodeInfo(schedpb.NodeInfoRequest(node_id=node_id, wait=False))
-    pbprint(res)
+    node_id = ctx.obj.node_id
+    pbprint(ctx.obj.scheduler.get_node_info())
 
 
 @scheduler.command()
