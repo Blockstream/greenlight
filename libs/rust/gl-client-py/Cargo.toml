@@ -12,6 +12,7 @@ anyhow = "*"
 bytes = "*"
 env_logger = "*"
 gl-client = { path = ".." }
+hex = "*"
 log = "*"
 once_cell = "*"
 prost = "*"
