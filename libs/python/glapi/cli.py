@@ -190,7 +190,9 @@ def cli(ctx, testenv, hsmd):
 
     # Disable hsmd if we explicitly get told to run it in the
     # foreground
-    hsmd = hsmd and (ctx.invoked_subcommand != 'hsmd')
+    nohsmd_subcmds = ['scheduler', 'hsmd']
+    hsmd = hsmd and (ctx.invoked_subcommand not in nohsmd_subcmds)
+
     if testenv:
         os.environ.update(env.test)
     else:
