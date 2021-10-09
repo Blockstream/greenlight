@@ -27,7 +27,7 @@ impl Scheduler {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("Error parsing the network")),
         };
-        info!("Node ID {:?}", node_id);
+        debug!("Node ID {}", hex::encode(&node_id));
 
         let id = node_id.clone();
         let res = exec(async move { gl_client::scheduler::Scheduler::new(id, network).await });
