@@ -36,7 +36,8 @@ class Context:
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
         self.tls = TlsConfig()
-        if cert_path.exists():
+        have_certs = cert_path.exists() and key_path.exists()
+        if have_certs:
             device_cert = open('device.crt', 'rb').read()
             device_key = open('device-key.pem', 'rb').read()
             self.tls = self.tls.identity(device_cert, device_key)
@@ -65,8 +66,10 @@ class Context:
         self.scheduler.tls = self.tls
         self.node = None
 
-        if start_hsmd:
+        if start_hsmd and have_certs:
             self.signer.run_in_thread()
+        elif start_hsmd and not have_certs:
+            logger.warning("We don't have user device certificates, not starting signer")
 
         self.scheduler_chan = None
 
