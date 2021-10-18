@@ -1,6 +1,7 @@
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 lazy_static! {
+    pub static ref CA_RAW: Vec<u8> = include_str!("../tls/ca.pem").as_bytes().to_vec();
     pub static ref CA: Certificate = Certificate::from_pem(include_str!("../tls/ca.pem"));
     pub static ref NOBODY: Identity = Identity::from_pem(
         include_str!("../tls/users-nobody.pem"),
@@ -29,6 +30,8 @@ pub struct TlsConfig {
     /// Copy of the private key in the TLS identity. Stored here in
     /// order to be able to use it in the `AuthLayer`.
     pub(crate) private_key: Option<Vec<u8>>,
+
+    pub ca: Vec<u8>,
 }
 
 impl Default for TlsConfig {
@@ -36,6 +39,7 @@ impl Default for TlsConfig {
         TlsConfig {
             inner: NOBODY_CONFIG.clone(),
             private_key: None,
+	    ca: CA_RAW.clone(),
         }
     }
 }
@@ -62,7 +66,8 @@ impl TlsConfig {
     /// handshake.
     pub fn ca_certificate(self, ca: Vec<u8>) -> Self {
         TlsConfig {
-            inner: self.inner.ca_certificate(Certificate::from_pem(ca)),
+            inner: self.inner.ca_certificate(Certificate::from_pem(&ca)),
+	    ca: ca.clone(),
             ..self
         }
     }
