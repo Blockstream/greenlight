@@ -1,7 +1,10 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
 from . import glclient as native
-from binascii import hexlify
+from .greenlight_pb2 import Amount
+from binascii import hexlify, unhexlify
+from typing import Optional, List
+
 
 class TlsConfig(object):
     def __init__(self):
@@ -75,12 +78,24 @@ class Scheduler(object):
 
     def node(self) -> "Node":
         res = self.schedule()
-        return Node(self.node_id, self.network, self.tls.inner, res.grpc_uri)
+        return Node(
+            node_id=self.node_id,
+            network=self.network,
+            tls=self.tls,
+            grpc_uri=res.grpc_uri
+        )
 
 
 class Node(object):
-    def __init__(self, *args):
-        self.inner = native.Node(*args)
+    def __init__(self, node_id, network, tls, grpc_uri):
+        self.tls = tls
+        self.grpc_uri = grpc_uri
+        self.inner = native.Node(
+            node_id=node_id,
+            network=network,
+            tls=tls.inner,
+            grpc_uri=grpc_uri
+        )
 
     def get_info(self) -> nodepb.GetInfoResponse:
         return nodepb.GetInfoResponse.FromString(
@@ -124,36 +139,153 @@ class Node(object):
             bytes(self.inner.connect_peer(node_id, addr))
         )
 
-    def disconnect(self, peer_id, force=False) -> nodepb.DisconnectResponse:
+    def disconnect_peer(self, peer_id, force=False) -> nodepb.DisconnectResponse:
         return nodepb.ConnectResponse.FromString(
             bytes(self.inner.disconnect_peer(peer_id, force))
         )
 
-    def newaddr(NewAddrRequest) -> nodepb.NewAddrResponse:
-        raise NotImplementedError
+    def new_address(self, address_type: str) -> nodepb.NewAddrResponse:
+        return nodepb.NewAddrResponse.FromString(
+            bytes(self.inner.new_address())
+        )
 
-    def Withdraw(WithdrawRequest) -> nodepb.WithdrawResponse:
-        raise NotImplementedError
+    def withdraw(self, destination, amount: Amount, minconf: int=0) -> nodepb.WithdrawResponse:
+        req = nodepb.WithdrawRequest(
+            destination=destination,
+            amount=amount,
+            minconf=nodepb.Confirmation(blocks=minconf),
+        ).SerializeToString()
 
-    def FundChannel(FundChannelRequest) -> nodepb.FundChannelResponse:
-        raise NotImplementedError
+        return nodepb.WithdrawResponse.FromString(
+            bytes(self.inner.withdraw(req))
+        )
 
-    def CloseChannel(CloseChannelRequest) -> nodepb.CloseChannelResponse:
-        raise NotImplementedError
+    def fund_channel(self, node_id, amount, announce=False, minconf=1) -> nodepb.FundChannelResponse:
+        if len(node_id) == 66:
+            node_id = unhexlify(node_id)
 
-    def CreateInvoice(InvoiceRequest) -> nodepb.Invoice:
-        raise NotImplementedError
+        if len(node_id) != 33:
+            raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
 
-    def Pay(PayRequest) -> nodepb.Payment:
-        raise NotImplementedError
+        req = nodepb.FundChannelRequest(
+            node_id=node_id,
+            amount=amount,
+            announce=announce,
+            minconf=minconf,
+        ).SerializeToString()
 
-    def Keysend(KeysendRequest) -> nodepb.Payment:
-        raise NotImplementedError
+        return nodepb.FundChannelResponse.FromString(
+            bytes(self.inner.fund_channel(req))
+        )
 
-"""
-    def StreamIncoming(StreamIncomingFilter) returns (stream IncomingPayment)
-        raise NotImplementedError
+    def close_channel(peer_id, timeout=None, address=None) -> nodepb.CloseChannelResponse:
+        if len(node_id) == 66:
+            node_id = unhexlify(node_id)
 
-    def StreamLog(StreamLogRequest) returns (stream LogEntry)
-        raise NotImplementedError
-"""
+        if len(node_id) != 33:
+            raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
+
+        if isinstance(node_id, str):
+            node_id = node_id.encode('ASCII')
+
+        return nodepb.CloseChannelResponse.FromString(bytes(self.inner.close_channel(
+            peer_id,
+            timeout,
+            address,
+        )))
+
+
+    def create_invoice(self, label: str, amount=None, description=None) -> nodepb.Invoice:
+        req = nodepb.InvoiceRequest(
+            amount=amount,
+            label=label,
+            description=description,
+        ).SerializeToString()
+
+        return nodepb.Invoice.FromString(
+            bytes(self.inner.create_invoice(req))
+        )
+
+    def pay(self, bolt11: str, amount=None, timeout: int=0) -> nodepb.Payment:
+        req = nodepb.PayRequest(
+            bolt11=bolt11,
+            amount=amount,
+            timeout=timeout,
+        ).SerializeToString()
+
+        return nodepb.Payment.FromString(
+            bytes(self.inner.pay(req))
+        )
+
+    def keysend(
+            self,
+            node_id,
+            amount: nodepb.Amount,
+            label: Optional[str]=None,
+            routehints: Optional[List[nodepb.Routehint]]=None,
+            extratlvs: Optional[List[nodepb.TlvField]]=None
+    ) -> nodepb.Payment:
+        req = nodepb.KeysendRequest(
+            node_id=normalize_node_id(node_id),
+            amount=amount,
+            label=label,
+            routehints=routehints,
+            extratlvs=extratlvs,
+        ).SerializeToString()
+
+        return nodepb.Payment.FromString(
+            bytes(self.inner.keysend(req))
+        )
+
+    def _direct_stub(self):
+        """Streaming API methods are not yet supported by our middleware. So
+        we need to actually create a new direct connection instead.
+
+        """
+        # Need to create a python-based stub since we cannot yield
+        # across FFI boundaries (yet).
+        from . import greenlight_pb2_grpc as nodegrpc
+        import grpc
+        creds = grpc.ssl_channel_credentials(
+            root_certificates=bytes(self.tls.inner.ca_certificate()),
+            private_key=self.tls.id[1],
+            certificate_chain=self.tls.id[0],
+        )
+        grpc_uri = self.grpc_uri
+        if grpc_uri.startswith("https://"):
+            grpc_uri = grpc_uri[8:]
+
+        chan = grpc.secure_channel(
+            grpc_uri,
+            creds,
+            options=(
+                (
+                    "grpc.ssl_target_name_override",
+                    "localhost",
+                ),
+            ),
+        )
+        stub = nodegrpc.NodeStub(chan)
+        return stub
+
+    def stream_log(self):
+        """Stream logs as they get generated on the server side.
+        """
+        stub = self._direct_stub()
+        yield from stub.StreamLog(nodepb.StreamLogRequest())
+
+    def stream_incoming(self):
+        stub = self._direct_stub()
+        yield from stub.StreamIncoming(nodepb.StreamIncomingFilter())
+
+
+def normalize_node_id(node_id, string=False):
+    if len(node_id) == 66:
+        node_id = unhexlify(node_id)
+
+    if len(node_id) != 33:
+        raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
+
+    if isinstance(node_id, str):
+        node_id = node_id.encode('ASCII')
+    return node_id if not string else hexlify(node_id).encode('ASCII')
