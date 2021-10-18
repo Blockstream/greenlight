@@ -1,6 +1,5 @@
 use crate::runtime::exec;
 use crate::tls::TlsConfig;
-use anyhow::Error;
 use gl_client as gl;
 use gl_client::pb;
 use prost::Message;
@@ -11,9 +10,9 @@ use tonic::Status;
 
 #[pyclass]
 pub struct Node {
-    inner: gl::node::Node,
+    _inner: gl::node::Node,
     client: gl::node::Client,
-    node_id: Vec<u8>,
+    _node_id: Vec<u8>,
 }
 
 #[pymethods]
@@ -36,9 +35,9 @@ impl Node {
             }
         };
         Ok(Node {
-            inner,
+            _inner: inner,
             client,
-            node_id,
+            _node_id: node_id,
         })
     }
 
@@ -99,7 +98,7 @@ impl Node {
     }
 
     fn connect_peer(&self, node_id: String, addr: Option<String>) -> PyResult<Vec<u8>> {
-	trace!("Connecting to node_id={} at addr={:?}", node_id, addr);
+        trace!("Connecting to node_id={} at addr={:?}", node_id, addr);
         convert(
             exec(self.client.clone().connect_peer(pb::ConnectRequest {
                 node_id: node_id,
@@ -108,9 +107,26 @@ impl Node {
             .map(|x| x.into_inner()),
         )
     }
+
+    fn close(
+        &self,
+        peer_id: Vec<u8>,
+        timeout: Option<u32>,
+        address: Option<String>,
+    ) -> PyResult<Vec<u8>> {
+        convert(
+            exec(self.client.clone().close_channel(pb::CloseChannelRequest {
+                node_id: peer_id,
+                unilateraltimeout: timeout.map(|s| pb::Timeout { seconds: s }),
+                destination: address.map(|a| pb::BitcoinAddress { address: a }),
+            }))
+            .map(|x| x.into_inner()),
+        )
+    }
+
     fn disconnect_peer(&self, peer_id: String, force: Option<bool>) -> PyResult<Vec<u8>> {
-	let force = force.unwrap_or(false);
-	trace!("Disconnecting from peer_id={} at force={}", peer_id, force);
+        let force = force.unwrap_or(false);
+        trace!("Disconnecting from peer_id={} at force={}", peer_id, force);
         convert(
             exec(self.client.clone().disconnect(pb::DisconnectRequest {
                 node_id: peer_id,
@@ -118,6 +134,97 @@ impl Node {
             }))
             .map(|x| x.into_inner()),
         )
+    }
+
+    fn new_address(&self, address_type: Option<&str>) -> PyResult<Vec<u8>> {
+        let typ = match address_type {
+            None => pb::BtcAddressType::Bech32,
+            Some("bech32") => pb::BtcAddressType::P2shSegwit,
+            Some("p2sh-segwit") => pb::BtcAddressType::P2shSegwit,
+            Some(v) => {
+                return Err(PyValueError::new_err(format!(
+                    "Unknown address type {}, available types are bech32 and p2sh-segwit",
+                    v
+                )))
+            }
+        };
+
+        convert(
+            exec(self.client.clone().new_addr(pb::NewAddrRequest {
+                address_type: typ as i32,
+            }))
+            .map(|x| x.into_inner()),
+        )
+    }
+
+    fn withdraw(&self, args: &[u8]) -> PyResult<Vec<u8>> {
+        let req = match pb::WithdrawRequest::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        convert(exec(self.client.clone().withdraw(req)).map(|x| x.into_inner()))
+    }
+
+    fn fund_channel(&self, args: &[u8]) -> PyResult<Vec<u8>> {
+        let req = match pb::FundChannelRequest::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        convert(exec(self.client.clone().fund_channel(req)).map(|x| x.into_inner()))
+    }
+
+    fn create_invoice(&self, args: &[u8]) -> PyResult<Vec<u8>> {
+        let req = match pb::InvoiceRequest::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        convert(exec(self.client.clone().create_invoice(req)).map(|x| x.into_inner()))
+    }
+
+    fn pay(&self, args: &[u8]) -> PyResult<Vec<u8>> {
+        let req = match pb::PayRequest::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        convert(exec(self.client.clone().pay(req)).map(|x| x.into_inner()))
+    }
+
+    fn keysend(&self, args: &[u8]) -> PyResult<Vec<u8>> {
+        let req = match pb::KeysendRequest::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        convert(exec(self.client.clone().keysend(req)).map(|x| x.into_inner()))
     }
 }
 

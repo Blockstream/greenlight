@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow = "*"
+bytes = "*"
 env_logger = "*"
 gl-client = { path = ".." }
 log = "*"

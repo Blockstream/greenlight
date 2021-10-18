@@ -27,4 +27,8 @@ impl TlsConfig {
             inner: self.inner.clone().ca_certificate(ca),
         }
     }
+
+    fn ca_certificate(&self) -> Vec<u8> {
+	self.inner.ca.clone()
+    }
 }
