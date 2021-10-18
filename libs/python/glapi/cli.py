@@ -1,11 +1,6 @@
-from glclient import Signer, TlsConfig, Scheduler
-from pathlib import Path
-
-
 from binascii import hexlify, unhexlify
 from glapi import environment as env
-from glapi.identity import Identity
-from glapi.libhsmd import init as libhsmd_init, handle as libhsmd_handle
+from glclient import Signer, TlsConfig, Scheduler, Amount, nodepb as pb
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
 from threading import Thread
@@ -159,26 +154,6 @@ def dict2jsondict(d):
 def pbprint(pb):
     print(json.dumps(dict2jsondict(pb2dict(pb)), indent=2))
 
-"""
-def get_identity(default=False):
-    p = Path("device-key.pem")
-    if p.exists() and not default:
-        private_key = p.read_bytes()
-        cert_chain = Path("device.crt").read_bytes()
-        caroot = (Path(os.environ.get("GL_CERT_PATH")) / Path("ca.pem")).read_bytes()
-        return Identity(pem=cert_chain, crt=cert_chain, caroot=caroot, key=private_key)
-    elif env is not None:
-        logger.debug("Using certificate and keys from the environment.py file")
-        return Identity(
-            pem=env.users_nobody_crt,
-            crt=env.users_nobody_crt,
-            key=env.users_nobody_key,
-            caroot=env.ca_pem,
-        )
-    else:
-        logger.debug("Loading generic installation keys")
-        return Identity.from_path("/users/nobody")
-"""
 
 @click.group()
 @click.option('--testenv', is_flag=True)
@@ -300,9 +275,8 @@ def stop(ctx):
 @click.argument("addr", required=False)
 @click.pass_context
 def connect(ctx, node_id, addr):
-    raise NotImplementedError
     node = ctx.obj.get_node()
-    res = node.ConnectPeer(ConnectRequest(node_id=node_id, addr=addr))
+    res = node.connect_peer(node_id=node_id, addr=addr)
     pbprint(res)
 
 
@@ -319,18 +293,16 @@ def listpeers(ctx):
 @click.argument("node_id")
 @click.pass_context
 def disconnect(ctx, node_id):
-    raise NotImplementedError
     node = ctx.obj.get_node()
-    res = node.Disconnect(pb.DisconnectRequest(node_id=node_id))
+    res = node.disconnect_peer(node_id)
     pbprint(res)
 
 
 @cli.command()
 @click.pass_context
 def newaddr(ctx):
-    raise NotImplementedError
     node = ctx.obj.get_node()
-    res = node.NewAddr(pb.NewAddrRequest(address_type=pb.BtcAddressType.BECH32))
+    res = node.new_address("bech32")
     pbprint(res)
 
 
@@ -349,15 +321,8 @@ def listfunds(ctx):
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def withdraw(ctx, destination, amount, minconf=1):
-    raise NotImplementedError
     node = ctx.obj.get_node()
-    res = node.Withdraw(
-        pb.WithdrawRequest(
-            destination=destination,
-            amount=amount,
-            minconf=pb.Confirmation(blocks=minconf),
-        )
-    )
+    res = node.withdraw(destination, amount, minconf)
     pbprint(res)
 
 
@@ -367,14 +332,12 @@ def withdraw(ctx, destination, amount, minconf=1):
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def fundchannel(ctx, nodeid, amount, minconf=1):
-    raise NotImplementedError
     node = ctx.obj.get_node()
-    res = node.FundChannel(
-        pb.FundChannelRequest(
-            node_id=unhexlify(nodeid),
-            amount=amount,
-            announce=True,
-        )
+    res = node.fund_channel(
+        node_id=nodeid,
+        amount=amount,
+        announce=False,
+        minconf=minconf,
     )
     pbprint(res)
 
@@ -385,7 +348,6 @@ def fundchannel(ctx, nodeid, amount, minconf=1):
 @click.option("--address", required=False, type=str)
 @click.pass_context
 def close(ctx, nodeid, timeout=None, address=None):
-    raise NotImplementedError
     node = ctx.obj.get_node()
     args = {
         "node_id": unhexlify(nodeid),
@@ -406,10 +368,9 @@ def close(ctx, nodeid, timeout=None, address=None):
 @click.option("--description", required=False, type=str)
 @click.pass_context
 def invoice(ctx, label, amount=None, description=None):
-    raise NotImplementedError
     node = ctx.obj.get_node()
     if amount is None:
-        amount = pb.Amount(any=True)
+        amount = Amount(any=True)
 
     args = {
         "label": label,
@@ -417,17 +378,18 @@ def invoice(ctx, label, amount=None, description=None):
     }
     args["description"] = description if description is not None else ""
 
-    res = node.CreateInvoice(pb.InvoiceRequest(**args))
+    res = node.create_invoice(**args)
     pbprint(res)
 
 
 @cli.command()
 @click.argument("invoice")
 @click.pass_context
-def pay(ctx, invoice):
-    raise NotImplementedError
+@click.option("--amount", required=False, type=AmountType())
+@click.option("--timeout", required=False, type=int)
+def pay(ctx, invoice, amount=None, timeout=0):
     node = ctx.obj.get_node()
-    res = node.Pay(pb.PayRequest(bolt11=invoice))
+    res = node.pay(bolt11=invoice, amount=amount, timeout=timeout)
     pbprint(res)
 
 
@@ -436,9 +398,8 @@ def pay(ctx, invoice):
 def stream_incoming(ctx):
     """Listen for incoming payments and print details to stdout.
     """
-    raise NotImplementedError
     node = ctx.obj.get_node()
-    for e in node.StreamIncoming(pb.StreamIncomingFilter()):
+    for e in node.stream_incoming():
         pbprint(e)
         sys.stdout.flush()
 
@@ -446,13 +407,13 @@ def stream_incoming(ctx):
 @cli.command()
 @click.argument('node_id')
 @click.argument('amount', type=AmountType())
+@click.option("--label", required=False)
 @click.option("--routehints", required=False)
 @click.option("--extratlvs", required=False)
 @click.pass_context
-def keysend(ctx, node_id, amount, routehints, extratlvs):
+def keysend(ctx, node_id, amount, label, routehints, extratlvs):
     """Send a spontaneous payment to the specified node.
     """
-    raise NotImplementedError
     # Convert the advanced arguments.
     if routehints is not None:
         arr = json.loads(routehints)
@@ -486,21 +447,16 @@ def keysend(ctx, node_id, amount, routehints, extratlvs):
 
     print(extratlvs)
     node = ctx.obj.get_node()
-    res = node.Keysend(pb.KeysendRequest(
-        node_id=unhexlify(node_id),
-        amount=amount,
-        routehints=routehints,
-        extratlvs=extratlvs,
-    ))
+    res = node.keysend(node_id=node_id, amount=amount, label=label,
+                       routehints=routehints, extratlvs=extratlvs)
     pbprint(res)
 
 
 @cli.command()
 @click.pass_context
 def log(ctx):
-    raise NotImplementedError()
     node = ctx.obj.get_node()
-    for entry in node.StreamLog(pb.StreamLogRequest()):
+    for entry in node.stream_log():
         print(entry.line)
 
 
