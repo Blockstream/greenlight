@@ -1,19 +1,11 @@
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 lazy_static! {
-    pub static ref CA_RAW: Vec<u8> = include_str!("../tls/ca.pem").as_bytes().to_vec();
-    pub static ref CA: Certificate = Certificate::from_pem(include_str!("../tls/ca.pem"));
-    pub static ref NOBODY: Identity = Identity::from_pem(
-        include_str!("../tls/users-nobody.pem"),
-        include_str!("../tls/users-nobody-key.pem")
-    );
-    pub static ref NOBODY_CONFIG: ClientTlsConfig = ClientTlsConfig::new()
-        .domain_name("localhost")
-        .ca_certificate(Certificate::from_pem(include_str!("../tls/ca.pem")))
-        .identity(Identity::from_pem(
-            include_str!("../tls/users-nobody.pem"),
-            include_str!("../tls/users-nobody-key.pem")
-        ));
+    static ref CA_RAW: Vec<u8> = include_str!("../tls/ca.pem").as_bytes().to_vec();
+    static ref NOBODY_CRT: Vec<u8> = include_str!("../tls/users-nobody.pem").as_bytes().to_vec();
+    static ref NOBODY_KEY: Vec<u8> = include_str!("../tls/users-nobody-key.pem")
+        .as_bytes()
+        .to_vec();
 }
 
 /// In order to allow the clients to talk to the
@@ -34,12 +26,34 @@ pub struct TlsConfig {
     pub ca: Vec<u8>,
 }
 
+fn load_file_or_default(varname: &str, default: Vec<u8>) -> Vec<u8> {
+    match std::env::var(varname) {
+        Ok(fname) => {
+            debug!("Loading file {} for envvar {}", fname, varname);
+            std::fs::read(fname).expect("reading custom identity file")
+        }
+        Err(_) => default,
+    }
+}
+
 impl Default for TlsConfig {
     fn default() -> Self {
+        // Allow overriding the defaults through the environment
+        // variables, so we don't pollute the public interface with
+        // stuff that is testing-related.
+        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT.clone());
+        let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY.clone());
+        let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW.clone());
+
+        let config = ClientTlsConfig::new()
+            .domain_name("localhost")
+            .ca_certificate(Certificate::from_pem(ca_crt.clone()))
+            .identity(Identity::from_pem(nobody_crt, nobody_key));
+
         TlsConfig {
-            inner: NOBODY_CONFIG.clone(),
+            inner: config,
             private_key: None,
-	    ca: CA_RAW.clone(),
+            ca: ca_crt,
         }
     }
 }
@@ -67,8 +81,12 @@ impl TlsConfig {
     pub fn ca_certificate(self, ca: Vec<u8>) -> Self {
         TlsConfig {
             inner: self.inner.ca_certificate(Certificate::from_pem(&ca)),
-	    ca: ca.clone(),
+            ca: ca.clone(),
             ..self
         }
+    }
+
+    pub fn client_tls_config(&self) -> ClientTlsConfig {
+        self.inner.clone()
     }
 }
