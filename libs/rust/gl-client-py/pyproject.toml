@@ -1,8 +1,20 @@
-[project]
+[tool.poetry]
 name = "glclient"
-requires-python = ">=3.6"
+version = "0.1.0"
+description = ""
+authors = ["Christian Decker <decker.christian@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.6.2,<4.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6"
+gltesting = { path = "../gl-testing/", develop = true }
+pytest-repeat = "^0.9.1"
+pytest-xdist = "^2.4.0"
+isort = "^5.9.3"
+black = "^21.9b0"
 
 [build-system]
 requires = ["maturin>=0.11,<0.12"]
 build-backend = "maturin"
-

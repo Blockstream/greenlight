@@ -111,7 +111,7 @@ pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
 impl Scheduler {
     async fn connect(&self) -> Result<Client> {
         let uri = gl_client::utils::scheduler_uri();
-        let client_tls = gl_client::tls::NOBODY_CONFIG.clone();
+        let client_tls = gl_client::tls::TlsConfig::default().client_tls_config();
         let channel = Channel::from_shared(uri)?
             .tls_config(client_tls.clone())?
             .connect()
