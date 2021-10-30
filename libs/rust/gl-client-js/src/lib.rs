@@ -10,7 +10,6 @@ mod tls;
 use tls::TlsConfig;
 mod runtime;
 
-
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     env_logger::init();

@@ -1,9 +1,10 @@
 use crate::node::Node;
-use crate::runtime::{exec, jsconvert};
+use crate::runtime::{convert, exec};
 use crate::tls::TlsConfig;
 use crate::Signer;
 use gl_client::Network;
 use neon::prelude::*;
+use prost::Message;
 use std::convert::TryInto;
 
 pub(crate) struct Scheduler {
@@ -52,3 +53,24 @@ impl Scheduler {
 }
 
 impl Finalize for Scheduler {}
+
+pub fn jsconvert<T, E>(r: Result<T, E>, mut cx: FunctionContext) -> JsResult<JsBuffer>
+where
+    T: Message,
+    E: std::fmt::Display + std::fmt::Debug,
+{
+    let r = match r {
+        Ok(v) => v,
+        Err(e) => cx.throw_error(format!("{}", e))?,
+    };
+
+    let buf = match convert(r) {
+        Ok(v) => v,
+        Err(e) => cx.throw_error(format!("{}", e))?,
+    };
+
+    let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
+    cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
+
+    Ok(jsbuf)
+}
