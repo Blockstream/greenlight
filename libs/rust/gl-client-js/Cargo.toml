@@ -1,0 +1,26 @@
+[package]
+name = "gl-client-js"
+version = "0.1.0"
+license = "ISC"
+edition = "2018"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gl-client = { path = ".." }
+tokio = "*"
+log = "*"
+env_logger = "*"
+once_cell = "*"
+tonic = "*"
+prost = "*"
+anyhow = "*"
+
+[dependencies.neon]
+version = "0.9"
+default-features = false
+features = ["napi-6", "channel-api"]
