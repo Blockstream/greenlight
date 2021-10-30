@@ -1,6 +1,5 @@
 use ::tokio::runtime::{Builder, Runtime};
 use anyhow::Result;
-use neon::prelude::*;
 use once_cell::sync::OnceCell;
 use prost::Message;
 use std::future::Future;
@@ -32,25 +31,4 @@ where
     buf.reserve(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(buf)
-}
-
-pub fn jsconvert<T, E>(r: Result<T, E>, mut cx: FunctionContext) -> JsResult<JsBuffer>
-where
-    T: Message,
-    E: std::fmt::Display + std::fmt::Debug,
-{
-    let r = match r {
-        Ok(v) => v,
-        Err(e) => cx.throw_error(format!("{}", e))?,
-    };
-
-    let buf = match convert(r) {
-        Ok(v) => v,
-        Err(e) => cx.throw_error(format!("{}", e))?,
-    };
-
-    let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
-    cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
-
-    Ok(jsbuf)
 }
