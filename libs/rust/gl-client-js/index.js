@@ -69,6 +69,76 @@ class Scheduler {
     }
 }
 
+function ensureByteNodeId(node_id) {
+    if (!Buffer.isBuffer(node_id)) {
+	return Buffer.from(node_id, "hex");
+    } else {
+	return node_id;
+    }
+}
+
+function ensureStrNodeId(node_id) {
+    if (Buffer.isBuffer(node_id)) {
+	return node_id.toString("hex");
+    } else {
+	return node_id;
+    }
+}
+
+/* Parse the amount from the given string. It supports sat, btc and
+ * msat as suffixes, as well as `any` and `all` as substitutes. */
+function parseAmount(amtstr, allow_any=true, allow_all=true) {
+    let ival = parseInt(amtstr);
+    let suffix = amtstr.slice(ival.toString().length);
+    let amount = proto.greenlight.Amount.create()
+
+    if (suffix == "msat") {
+	amount['millisatoshi'] = ival;
+    } else if (suffix == "sat") {
+	amount['satoshi'] = ival;
+    } else if (suffix == "btc") {
+	amount['bitcoin'] = ival;
+    } else if (amtstr == "all") {
+	if (!allow_all)
+	    throw "`all` is not allowed as value for this amount";
+	amount['all'] = true;
+    } else if (amtstr == "any") {
+	if (!allow_any)
+	    throw "`any` is not allowed as value for this amount";
+	amount['any'] = true;
+    } else {
+	throw "Unknown amount suffix `" + suffix + "`";
+    }
+    return amount;
+}
+
+function parseConfirmation(blocks) {
+    return proto.greenlight.Confirmation.create({blocks: blocks});
+}
+
+function parseFeerate(feestr) {
+    if (feestr === null)
+	return null;
+
+    let ival = parseInt(feestr);
+    let suffix = feestr.slice(ival.toString().length);
+    let feerate = proto.greenlight.Feerate.create()
+
+    if (feestr.toUpperCase() == "NORMAL")
+	feerate['preset'] = proto.greenlight.FeeratePreset.NORMAL;
+    else if (feestr.toUpperCase() == "SLOW")
+	feerate['preset'] = proto.greenlight.FeeratePreset.SLOW;
+    else if (feestr.toUpperCase() == "URGENT")
+	feerate['preset'] = proto.greenlight.FeeratePreset.URGENT;
+    else if (suffix == "perkw")
+	feerate['perkw'] = ival;
+    else if (suffix == "perkb")
+	feerate['perkb'] = ival;
+    else
+	throw "Unknown amount suffix `" + suffix + "`";
+    return feerate;
+}
+
 class Node {
     _call(method, reqType, resType, properties) {
 	let req = reqType.create(properties)
