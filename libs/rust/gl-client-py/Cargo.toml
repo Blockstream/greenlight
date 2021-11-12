@@ -15,7 +15,7 @@ gl-client = { path = ".." }
 hex = "*"
 log = "*"
 once_cell = "*"
-prost = "*"
+prost = "0.8"
 pyo3 = {version = "0.14.1", features = ["extension-module", "serde"]}
-tokio = "*"
-tonic = "*"
+tokio = { version = "*", features = ["full"] }
+tonic = { version = "^0.5", features = ["tls", "transport"] }
