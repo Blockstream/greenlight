@@ -7,6 +7,13 @@ from . import certs
 from .identity import Identity
 import os
 from pathlib import Path
+import logging
+import sys
+
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.getLogger('sh').setLevel(logging.ERROR)
+logger = logging.getLogger(__name__)
 
 @pytest.fixture()
 def directory():
@@ -60,6 +67,7 @@ def nobody_id(users_id):
 def scheduler(scheduler_id):
     grpc_port = reserve()
     s = Scheduler(grpc_port=grpc_port, identity=scheduler_id)
+    logger.debug(f"Scheduler is running at {s.grpc_addr}")
     os.environ.update({
         "GL_SCHEDULER_GRPC_URI": s.grpc_addr,
     })

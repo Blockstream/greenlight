@@ -7,6 +7,7 @@ authors = ["Christian Decker <decker.christian@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.6"
 ephemeral-port-reserve = "^1.1.4"
+sh = "^1.14.2"
 
 [tool.poetry.dev-dependencies]
 
