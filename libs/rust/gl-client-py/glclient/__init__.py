@@ -15,6 +15,12 @@ class TlsConfig(object):
         self.id = (None, None)
 
     def identity(self, cert_pem, key_pem):
+        if isinstance(cert_pem, str):
+            cert_pem = cert_pem.encode('ASCII')
+
+        if isinstance(key_pem, str):
+            key_pem = key_pem.encode('ASCII')
+
         c = TlsConfig()
         c.inner = self.inner.identity(cert_pem, key_pem)
         c.ca = self.ca
@@ -22,6 +28,9 @@ class TlsConfig(object):
         return c
 
     def with_ca_certificate(self, ca):
+        if isinstance(ca, str):
+            ca = ca.encode('ASCII')
+
         c = TlsConfig()
         c.inner = self.inner.with_ca_certificate(ca)
         c.ca = ca
@@ -36,6 +45,7 @@ def _convert(cls, res):
 class Signer(object):
     def __init__(self, secret: bytes, network: str, tls: TlsConfig):
         self.inner = native.Signer(secret, network, tls.inner)
+        self.tls = tls
 
     def run_in_thread(self):
         return self.inner.run_in_thread()
@@ -44,7 +54,7 @@ class Signer(object):
         return self.inner.run_in_foreground()
 
     def node_id(self):
-        return self.inner.node_id()
+        return bytes(self.inner.node_id())
 
     def sign_challenge(self, challenge):
         return bytes(self.inner.sign_challenge(challenge))
