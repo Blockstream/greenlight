@@ -87,7 +87,7 @@ function ensureStrNodeId(node_id) {
 
 /* Parse the amount from the given string. It supports sat, btc and
  * msat as suffixes, as well as `any` and `all` as substitutes. */
-function parseAmount(amtstr, allow_any=true, allow_all=true) {
+function parseAmount(amtstr, {allow_any=true, allow_all=true}={}) {
     let ival = parseInt(amtstr);
     let suffix = amtstr.slice(ival.toString().length);
     let amount = proto.greenlight.Amount.create()
@@ -138,6 +138,24 @@ function parseFeerate(feestr) {
 	throw "Unknown amount suffix `" + suffix + "`";
     return feerate;
 }
+
+function parseBtcAddressType(t) {
+    let BtcAddressType = proto.greenlight.BtcAddressType;
+    if (t == null)
+	return null
+    else if (t.toUpperCase() == "BECH32")
+	return 0;
+    else if (t.toUpperCase() == "P2WSH_SEGWIT")
+	return 1;
+    else if (t != null)
+	throw "Unknow bitcoin address type " + t + ", allowed values are `bech32` and `p2wsh_segwit`"
+}
+
+function parseBtcAddress(a) {
+    if (a == null)
+	return a;
+
+    return proto.greenlight.BitcoinAddress({address: a});
 
 class Node {
     _call(method, reqType, resType, properties) {
@@ -202,49 +220,135 @@ class Node {
 	    )
     }
 
-    list_peers() {
+    list_peers(node_id=null) {
 	return this._call(
-		"listpeers",
-		proto.greenlight.ListPeersRequest,
-		proto.greenlight.ListPeersResponse,
-		{}
-	    )
+	    "listpeers",
+	    proto.greenlight.ListPeersRequest,
+	    proto.greenlight.ListPeersResponse,
+	    {
+		nodeId: ensureStrNodeId(node_id)
+	    }
+	)
     }
 
-    connect_peer() {
-	throw "unimplemented"
+    connect_peer(node_id, addr=null) {
+	return this._call(
+	    "connect_peer",
+	    proto.greenlight.ConnectRequest,
+	    proto.greenlight.ConnectResponse,
+	    {
+		nodeId: ensureStrNodeId(node_id),
+		addr: addr
+	    }
+	)
     }
 
-    close() {
-	throw "unimplemented"
+    close(node_id, {unilateraltimeout=null, destination=null}={}) {
+	return this._call(
+	    "close_channel",
+	    proto.greenlight.CloseChannelRequest,
+	    proto.greenlight.CloseChannelResponse,
+	    {
+		nodeId: ensureByteNodeId(node_id),
+		unilateraltimeout: unilateraltimeout,
+		destination: parseBtcAddress(destination)
+	    }
+	)
     }
 
-    disconnect_peer() {
-	throw "unimplemented"
+    disconnect_peer(node_id, force=false) {
+	return this._call(
+	    "disconnect",
+	    proto.greenlight.DisconnectRequest,
+	    proto.greenlight.DisconnectResponse,
+	    {
+		nodeId: ensureStrNodeId(node_id),
+		force: force
+	    }
+	)
     }
 
-    new_address() {
-	throw "unimplemented"
+    new_address(addressType=null) {
+	return this._call(
+	    "newaddr",
+	    proto.greenlight.NewAddrRequest,
+	    proto.greenlight.NewAddrResponse,
+	    {
+		addressType: parseBtcAddressType(addressType)
+	    }
+	)
     }
 
-    withdraw() {
-	throw "unimplemented"
+    withdraw(destination, amount, {feerate=null, minconf=null}={}) {
+	return this._call(
+	    "withdraw",
+	    proto.greenlight.WithdrawRequest,
+	    proto.greenlight.WithdrawResponse,
+	    {
+		destination: destination,
+		amount: parseAmount(amount, {allow_any: false}),
+		feerate: parseFeerate(feerate),
+		minconf: parseConfirmation(minconf),
+		utxos: null,
+	    }
+	)
     }
 
-    fund_channel() {
-	throw "unimplemented"
+    fund_channel(node_id, amount, {feerate=null, announce=false, minconf=null, close_to=null}={}) {
+	return this._call(
+	    "fund_channel",
+	    proto.greenlight.FundChannelRequest,
+	    proto.greenlight.FundChannelResponse,
+	    {
+		nodeId: ensureByteNodeId(node_id),
+		amount: parseAmount(amount),
+		feerate: parseFeerate(feerate),
+		announce: announce,
+		minconf: parseConfirmation(minconf),
+		close_to: close_to,
+	    }
+	)
     }
 
-    create_invoice() {
-	throw "unimplemented"
+    create_invoice(amount, label, description=null) {
+	return this._call(
+	    "create_invoice",
+	    proto.greenlight.InvoiceRequest,
+	    proto.greenlight.Invoice,
+	    {
+		amount: parseAmount(amount),
+		label: label,
+		description: description
+	    }
+	)
     }
 
-    pay() {
-	throw "unimplemented"
+    pay(bolt11, {amount=null, timeout=null}={}) {
+	return this._call(
+	    "pay",
+	    proto.greenlight.PaymentRequest,
+	    proto.greenlight.Payment,
+	    {
+		bolt11: bolt11,
+		amount: parseAmount(amount),
+		timeout: timeout
+	    }
+	)
     }
 
-    keysend() {
-	throw "unimplemented"
+    keysend(node_id, amount, label=null, {routehints=null, extratlvs=null}={}) {
+	return this._call(
+	    "keysend",
+	    proto.greenlight.KeysendRequest,
+	    proto.greenlight.Payment,
+	    {
+		nodeId: ensureByteNodeId(node_id),
+		amount: parseAmount(amount),
+		label: label,
+		routehints: routehints, // TODO: Provide parseRoutehints helper
+		extratlvs: extratlvs // TODO: Provide parseTlvs helper
+	    }
+	)
     }
 }
 
