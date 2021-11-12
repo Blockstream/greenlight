@@ -17,7 +17,7 @@ log = "*"
 env_logger = "*"
 once_cell = "*"
 tonic = "*"
-prost = "*"
+prost = "0.8"
 anyhow = "*"
 
 [dependencies.neon]
