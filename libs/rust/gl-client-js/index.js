@@ -144,9 +144,9 @@ function parseBtcAddressType(t) {
     if (t == null)
 	return null
     else if (t.toUpperCase() == "BECH32")
-	return 0;
-    else if (t.toUpperCase() == "P2WSH_SEGWIT")
-	return 1;
+	return BtcAddressType.BECH32;
+    else if (t.toUpperCase() == "P2SH_SEGWIT")
+	return BtcAddressType.P2SH_SEGWIT;
     else if (t != null)
 	throw "Unknow bitcoin address type " + t + ", allowed values are `bech32` and `p2wsh_segwit`"
 }
@@ -156,6 +156,7 @@ function parseBtcAddress(a) {
 	return a;
 
     return proto.greenlight.BitcoinAddress({address: a});
+}
 
 class Node {
     _call(method, reqType, resType, properties) {
