@@ -7,14 +7,32 @@ from collections import namedtuple
 import tempfile
 from pathlib import Path
 from gltesting import certs
+from gltesting.node import MockNode
+from ephemeral_port_reserve import reserve
+import time
 
-Node = namedtuple("Node", ['node_id', 'directory', 'network', 'running', 'identity', 'bip32_key'])
-Challenge = namedtuple("Challenge", ["node_id", "challenge", "scope", "used"])
+Node = namedtuple("Node", [
+    'node_id',
+    'directory',
+    'network',
+    'running',
+    'identity',
+    'bip32_key',
+    'instance'
+])
+Challenge = namedtuple("Challenge", [
+    "node_id",
+    "challenge",
+    "scope",
+    "used"
+])
+
 
 class Scheduler(object):
     def __init__(self, grpc_port=2601, identity=None, node_directory=None):
         self.grpc_port = grpc_port
         self.server = None
+        print("Starting scheduler with caroot", identity.caroot)
         self.identity = identity
 
         self.challenges = []
@@ -64,9 +82,10 @@ class Scheduler(object):
 
         num = len(self.nodes)
         hex_node_id = challenge.node_id.hex()
-        certs.genca("/users/{hex_node_id}")
+        certs.genca(f"/users/{hex_node_id}")
 
-        device_id = certs.gencert("/users/{hex_node_id}/device")
+        device_id = certs.gencert(f"/users/{hex_node_id}/device")
+        node_cert = certs.gencert(f"/users/{hex_node_id}/node")
 
         directory = self.node_directory / f'node-{num}'
         directory.mkdir(parents=True)
@@ -78,16 +97,17 @@ class Scheduler(object):
             directory=directory,
             identity=device_id,
             running=False,
+            instance=MockNode(
+                req.node_id,
+                identity=node_cert,
+                grpc_port=reserve(),
+            ),
         ))
 
         return schedpb.RegistrationResponse(
             device_cert=device_id.cert_chain,
             device_key=device_id.private_key,
         )
-
-        print(self.nodes)
-
-        raise ValueError()
 
     def Recover(self, req, ctx):
         challenge = None
@@ -100,7 +120,7 @@ class Scheduler(object):
         assert(challenge.scope == schedpb.ChallengeScope.RECOVER)
         # TODO Verify that the response matches the challenge.
         hex_node_id = challenge.node_id.hex()
-        device_id = certs.gencert("/users/{hex_node_id}/recover-{len(self.challenges)}")
+        device_id = certs.gencert(f"/users/{hex_node_id}/recover-{len(self.challenges)}")
         return schedpb.RecoveryResponse(
             device_cert=device_id.cert_chain,
             device_key=device_id.private_key,
@@ -121,7 +141,18 @@ class Scheduler(object):
         return schedpb.ChallengeResponse(challenge=challenge.challenge)
 
     def Schedule(self, req, ctx):
-        raise ValueError()
+        node = self.get_node(req.node_id)
+
+        if node.instance.server is None:
+            node.instance.start()
+
+        time.sleep(0.1)
+        return schedpb.NodeInfoResponse(
+            node_id=node.node_id,
+            grpc_uri=node.instance.grpc_addr,
+        )
 
     def GetNodeInfo(self, req, ctx):
-        raise ValueError()
+        node = self.get_node(req.node_id)
+        print(node)
+        return schedpb.NodeInfoResponse(node_id=req.node_id)
