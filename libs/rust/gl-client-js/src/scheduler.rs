@@ -46,9 +46,11 @@ impl Scheduler {
     pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsBox<Node>> {
         let this = cx.argument::<JsBox<Scheduler>>(0)?;
         let tls = cx.argument::<JsBox<TlsConfig>>(1)?;
-        let client = exec(this.inner.schedule(tls.inner.clone())).unwrap();
 
-        Ok(cx.boxed(Node::new(client)))
+        match exec(this.inner.schedule(tls.inner.clone())) {
+            Ok(client) => Ok(cx.boxed(Node::new(client))),
+            Err(e) => cx.throw_error(format!("{}", e))?,
+        }
     }
 }
 
