@@ -2,6 +2,10 @@ PROTOC_OPTS=-Iproto --python_out=. --grpc_python_out=.
 GRPC_FILES = \
 	glapi/scheduler_pb2.py
 
+install:
+	(cd ../rust/gl-client-py; maturin develop)
+	pip install .
+
 glapi/scheduler_pb2_grpc.py glapi/scheduler_pb2.py: proto/glapi/scheduler.proto
 	python -m grpc_tools.protoc ${PROTOC_OPTS} proto/glapi/scheduler.proto
 
