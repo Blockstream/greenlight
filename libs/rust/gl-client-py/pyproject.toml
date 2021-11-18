@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "glclient"
+name = "gl-client-py"
 version = "0.1.0"
 description = ""
 authors = ["Christian Decker <decker.christian@gmail.com>"]

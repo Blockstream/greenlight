@@ -16,16 +16,22 @@ $ glcli --help
 
 ## Installing
 
-Installation is a bit more complex than necessary at the moment. The
-main issue is that installing `glclient` from a relative directory is
-not supported by `pip`. The `Makefile` in this directory has a `make
-install` target that can be used to install the packages in the
-correct order in the currently active `virtualenv`.
+Installing the `glcli` utility can be done with the following command:
 
 ```bash
-make install
+pip install --extra-index-url=https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/simple/ .
 ```
 
+In most cases we have prebuilt the binary extension for `gl-client-py`
+(which internall depends on `libhsmd`, another binary extension). If
+you run any of the following platforms you'll get a precompiled
+version:
+
+ - MacOS ARM64 (cpython 3.6, 3.7m, 3.8, 3.9 and 3.10)
+ - Linux glibc 2.24 amd64 and i686(cpython 3.6, 3.7m, 3.8, 3.9 and 3.10)
+
+Should your platform not be among the precompiled versions you will
+need to have some additional dependencies to build it on the fly.
 
 ### Ubuntu / Debian
 

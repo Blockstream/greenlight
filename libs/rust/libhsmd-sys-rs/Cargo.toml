@@ -1,0 +1,17 @@
+[package]
+authors = ["Christian Decker <decker.christian@gmail.com>"]
+edition = "2018"
+name = "libhsmd-sys"
+version = "0.1.0"
+
+[dependencies]
+libc = "*"
+lazy_static = "*"
+
+[dev-dependencies]
+hex = "*"
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }
+pkg-config = "0.3"
+which = "*"

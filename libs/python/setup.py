@@ -8,7 +8,7 @@ package_data = \
 {'': ['*'], 'glapi': ['bin/*']}
 
 install_requires = \
-['click>=7.1.2,<7.2.0', 'grpcio>=1.34.0,<1.35.0', 'protobuf>=3.15.8,<3.16.0', 'libhsmd>=0.10.0']
+['click>=7.1.2,<7.2.0', 'grpcio>=1.34.0,<1.35.0', 'protobuf>=3.15.8,<3.16.0', 'gl-client-py']
 
 entry_points = \
 {'console_scripts': ['glcli = glapi.cli:cli']}
