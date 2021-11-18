@@ -29,7 +29,5 @@ setup_kwargs = {
     'entry_points': entry_points,
     'python_requires': '>=3.5,<4.0',
 }
-#from extbuild import *
-#build(setup_kwargs)
 
 setup(**setup_kwargs)
