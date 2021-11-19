@@ -1,6 +1,5 @@
 extern crate libc;
 use libc::{c_void, size_t};
-use std::ffi::CString;
 use std::fmt;
 use std::slice;
 use std::sync::Mutex;
@@ -8,7 +7,7 @@ use std::sync::Mutex;
 extern crate lazy_static;
 
 extern "C" {
-    fn c_init(secret: *const u8, network: *const i8) -> *const u8;
+    fn c_init(secret: *const u8, network: *const u8) -> *const u8;
     fn tal_bytelen(ptr: *const c_void) -> size_t;
     fn tal_free(ptr: *const c_void);
     fn c_handle(
@@ -177,12 +176,7 @@ impl Client {
 /// with [`handle`]. If you call `init` with different parameters make
 /// sure that `init` and `handle` are not interleaved.
 pub fn init(secret: Vec<u8>, network: &str) -> Result<Vec<u8>, Error> {
-    let network = match CString::new(network) {
-        Ok(s) => s,
-        Err(_) => return Err(Error::StringConversion),
-    };
-
-    let res: *const u8 = unsafe { c_init(secret.as_ptr(), network.as_ptr()) };
+    let res: *const u8 = unsafe { c_init(secret.as_ptr(), network.as_bytes().as_ptr()) };
 
     if res.is_null() {
         return Err(Error::Internal);
