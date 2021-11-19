@@ -2,20 +2,20 @@
 from setuptools import setup
 
 packages = \
-['glapi']
+['glcli']
 
 package_data = \
-{'': ['*'], 'glapi': ['bin/*']}
+{'': ['*'], 'glcli': ['bin/*']}
 
 install_requires = \
 ['click>=7.1.2,<7.2.0', 'grpcio>=1.34.0,<1.35.0', 'protobuf>=3.15.8,<3.16.0', 'gl-client-py']
 
 entry_points = \
-{'console_scripts': ['glcli = glapi.cli:cli']}
+{'console_scripts': ['glcli = glcli.cli:cli']}
 
 setup_kwargs = {
-    'name': 'glapi',
-    'version': '0.1.0',
+    'name': 'glcli',
+    'version': '0.1.1',
     'description': '',
     'long_description': None,
     'author': 'Christian Decker',

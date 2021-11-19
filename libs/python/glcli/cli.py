@@ -1,5 +1,5 @@
 from binascii import hexlify, unhexlify
-from glapi import environment as env
+from glcli import environment as env
 from glclient import Signer, TlsConfig, Scheduler, Amount, nodepb as pb
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path

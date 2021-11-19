@@ -71,7 +71,7 @@ JgcYMvjjEsb17Lxhl9Ni6VgDqeXUaOFgUwkDewyarml2yY1oDv6CdrxV
 -----END PRIVATE KEY-----"""
 
 prod = {
-    # Used by glapi
+    # Used by glcli
     "GL_GRPC_URI": "scheduler.gl.blckstrm.com:2601",
 
     # Used by hagrid internally
@@ -81,7 +81,7 @@ prod = {
 }
 
 test = {
-    # Used by glapi
+    # Used by glcli
     "GL_GRPC_URI": "scheduler.testing.gl.blckstrm.com:2601",
 
     # Used by hagrid internally
