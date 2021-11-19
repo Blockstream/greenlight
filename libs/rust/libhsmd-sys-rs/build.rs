@@ -57,25 +57,25 @@ fn main() {
         .wait()
         .expect("failed to clone the source directory");
 
-    let out = Command::new("./configure")
+    Command::new("./configure")
         .arg("--disable-valgrind")
         .arg("--disable-developer")
         .arg("--disable-experimental-features")
-        .arg("CC=clang").arg("COPTFLAGS=-O2")
+        .arg("CC=clang")
+        .arg("COPTFLAGS=-O2")
         .current_dir(srcdir.clone())
-        .output()
+        .spawn()
+        .unwrap()
+        .wait()
         .expect("failed to run ./configure in c-lightning source directory");
 
-    println!("{}", std::str::from_utf8(&out.stdout).unwrap());
-    println!("{}", std::str::from_utf8(&out.stderr).unwrap());
-    let out = Command::new("make")
-        .arg("-j16")
+    Command::new("make")
+        .arg("-j32")
         .current_dir(srcdir.clone())
-        .output()
+        .spawn()
+        .unwrap()
+        .wait()
         .expect("failed to build the hsmd binary");
-    println!("{}", std::str::from_utf8(&out.stdout).unwrap());
-    println!("{}", std::str::from_utf8(&out.stderr).unwrap());
-    println!("XXX");
 
     println!(
         "cargo:rustc-link-search=native={}/external/{}/",
@@ -153,8 +153,6 @@ fn main() {
         "common/utils.c",
         "common/utxo.c",
         "common/version.c",
-        "contrib/libhsmd-sys-rs/libhsmd.c",
-        "contrib/libhsmd-sys-rs/shims.c",
         "external/libwally-core/src/base58.c",
         "external/libwally-core/src/base64.c",
         "external/libwally-core/src/bip32.c",
@@ -181,7 +179,7 @@ fn main() {
         "wire/wire_sync.c",
     ];
 
-    let srcs: Vec<String> = src
+    let mut srcs: Vec<String> = src
         .iter()
         .map(|f| {
             srcdir
@@ -193,7 +191,8 @@ fn main() {
         })
         .collect();
 
-    eprintln!("SRCS={:?}", srcs);
+    srcs.push("libhsmd.c".to_string());
+    srcs.push("shims.c".to_string());
 
     let includes = [
         "./",
