@@ -41,15 +41,16 @@ The following dependencies are required to install from source.
 #+begin_src bash
 apt-get update
 apt-get install -y \
-	python3-pip \
-	clang \
-	pkg-config \
 	autoconf \
-	libtool \
+	clang \
+	curl \
 	git \
-	libsqlite3-dev \
 	libgmp-dev \
-	curl
+	libsqlite3-dev \
+	libtool \
+	pkg-config \
+	python3-pip \
+	valgrind
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
 source $HOME/.cargo/env

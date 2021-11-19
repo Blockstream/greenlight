@@ -46,53 +46,23 @@ present at a time, freeing others from that duty.
 The following is a quick walkthrough based on the python `glcli`
 command line tool to get you started:
 
-## Install `glcli` and the python API
+## Install and updating `glcli` and python API
 
-Since `glcli` consists both of a C extension, and a python library
-that wraps it we'll require a couple of dependencies to build the C
-extension. The following works on debian based distros, please check
-with your distro for the equivalent command and package names:
-
-```bash
-sudo apt install autoconf build-essential git libtool libsqlite3-dev libgmp-dev valgrind python3-pip
-```
-
-The easiest way to install the library and the cli is through `pip3`:
+There are prebuilt `glcli` and `gl-client-py` packages on a private
+repository. These allow developers to hit a running start, without
+having to bother with compiling the binary extensions.
 
 ```bash
-$ pip3 install git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
+pip install --extra-index-url=https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/simple/ -U glcli
 ```
 
-This will clone the repository in a temporary directory, build the C
-extension and install it in the current python environment. Notice
-that while the repository is set to private the command above will ask
-for your Github credentials. 
+Should you encounter any issues with the installation it is likely due
+to there not being a prebuilt version of the `gl-client-py`
+library. Please refer to its [documentation][glpy-doc] on how to build
+the library from source, and let us know your platform so we can add
+it to our build system if possible.
 
-Should this cause authentication issues, or not work you can also
-clone the repository and build the library manually:
-
-```bash
-git clone ssh://git@github.com/Blockstream/greenlight.git
-sudo pip3 install greenlight/libs/python/
-```
-
-## Updating `glcli` and the libraries
-
-To update `glcli` you can either use `pip3` directly:
-
-```bash 
-$ pip3 install -U --force-reinstall git+ssh://git@github.com/Blockstream/greenlight.git#subdirectory=libs/python
-```
-
-or use the git repository:
-
-```bash
-git pull
-sudo pip3 install -U --force-reinstall greenlight/libs/python/
-```
-
-Version numbers will be bumped on a regular cadence, so
-`--force-reinstall` may not be required.
+[glpy-doc]: libs/rust/gl-client-py
 
 ## Register / recover an account
 

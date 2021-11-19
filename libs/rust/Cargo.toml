@@ -8,7 +8,6 @@ libhsmd-sys = { path = "libhsmd-sys-rs" }
 anyhow = "*"
 base64 = "*"
 bytes = "*"
-env_logger = "*"
 hex = "*"
 http = "0.2"
 http-body = "*"
