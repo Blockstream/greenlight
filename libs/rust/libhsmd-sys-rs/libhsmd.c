@@ -7,7 +7,7 @@
 #include <common/setup.h>
 #include <stdio.h>
 
-u8 *c_init(u8 *hsm_secret, u8 *network_name) {
+u8 *c_init(u8 *hsm_secret, char *network_name) {
 	struct secret sec;
 	u8 *response;
 	common_setup(NULL);
