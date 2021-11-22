@@ -1,5 +1,5 @@
 extern crate libc;
-use libc::{c_void, size_t, c_char};
+use libc::{c_char, c_void, size_t};
 use std::fmt;
 use std::slice;
 use std::sync::Mutex;

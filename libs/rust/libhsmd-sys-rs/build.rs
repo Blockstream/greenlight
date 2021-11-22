@@ -69,8 +69,18 @@ fn main() {
         .wait()
         .expect("failed to run ./configure in c-lightning source directory");
 
+    Command::new("sed")
+        .arg("-i")
+        .arg("s|-L/usr/local/lib|-L/usr/local/lib -L/opt/homebrew/lib|g")
+        .arg("Makefile")
+        .current_dir(srcdir.clone())
+        .spawn()
+        .unwrap()
+        .wait()
+        .expect("Patching Makefile for macos");
+
     Command::new("make")
-        .arg("-j32")
+        .arg("-j8")
         .current_dir(srcdir.clone())
         .spawn()
         .unwrap()
@@ -85,6 +95,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=sodium");
     println!("cargo:rustc-link-lib=wallycore");
     println!("cargo:rustc-link-lib=backtrace");
+    println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
 
     let src = [
         "ccan/ccan/strmap/strmap.c",

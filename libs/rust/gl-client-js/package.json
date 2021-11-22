@@ -4,20 +4,22 @@
   "description": "",
   "main": "index.node",
   "scripts": {
-    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
+    "build": "neon build --release && neon-tag-prebuild",
+    "build-debug": "npm run build",
+    "build-release": "npm run build",
     "install": "npm run build-release",
     "test": "cargo test && jest"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "cargo-cp-artifact": "^0.1",
     "jest": "^27.3.1",
     "rewire": "^5.0.0"
   },
   "dependencies": {
+    "neon-cli": "^0.9.1",
+    "neon-load-or-build": "^2.2.2",
+    "neon-tag-prebuild": "^1.1.0",
     "protobufjs": "^6.11.2"
   }
 }
