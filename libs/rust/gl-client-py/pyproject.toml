@@ -4,6 +4,9 @@ version = "0.1.1"
 description = ""
 authors = ["Christian Decker <decker.christian@gmail.com>"]
 
+[project]
+dependencies = ["grpcio==1.41", "protobuf==3.19"]
+
 [tool.poetry.dependencies]
 python = ">=3.6.2,<4.0"
 grpcio = "^1.41.1"
