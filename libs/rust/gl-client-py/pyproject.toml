@@ -5,6 +5,7 @@ description = ""
 authors = ["Christian Decker <decker.christian@gmail.com>"]
 
 [project]
+name = "gl-client-py"
 dependencies = ["grpcio==1.41", "protobuf==3.19"]
 
 [tool.poetry.dependencies]
