@@ -70,7 +70,7 @@ fn main() {
         .expect("failed to run ./configure in c-lightning source directory");
 
     if cfg!(target_os = "macos") {
-        if cfg!(target_arch = "x86_64") {
+        if cfg!(target_arch = "aarch64") {
             Command::new("sed")
                 .arg("-i")
                 .arg(".bak")
