@@ -69,15 +69,30 @@ fn main() {
         .wait()
         .expect("failed to run ./configure in c-lightning source directory");
 
-    Command::new("sed")
-        .arg("-i")
-        .arg("s|-L/usr/local/lib|-L/usr/local/lib -L/opt/homebrew/lib|g")
-        .arg("Makefile")
-        .current_dir(srcdir.clone())
-        .spawn()
-        .unwrap()
-        .wait()
-        .expect("Patching Makefile for macos");
+    if cfg!(target_os = "macos") {
+        if cfg!(target_arch = "x86_64") {
+            Command::new("sed")
+                .arg("-i")
+                .arg(".bak")
+                .arg("s|-L/usr/local/lib|-L/opt/homebrew/lib|g")
+                .arg("Makefile")
+                .current_dir(srcdir.clone())
+                .spawn()
+                .unwrap()
+                .wait()
+                .expect("Patching Makefile for macos");
+        }
+        Command::new("sed")
+            .arg("-i")
+            .arg(".bak")
+            .arg("s|HAVE_GOOD_LIBSODIUM=1|HAVE_GOOD_LIBSODIUM=0|g")
+            .arg("config.vars")
+            .current_dir(srcdir.clone())
+            .spawn()
+            .unwrap()
+            .wait()
+            .expect("Patching config.vars for macos");
+    }
 
     Command::new("make")
         .arg("-j8")
