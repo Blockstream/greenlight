@@ -1,3 +1,5 @@
 node_modules
 package-lock.json
 index.node
+artifacts.json
+build

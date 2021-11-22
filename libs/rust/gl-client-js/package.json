@@ -1,14 +1,23 @@
 {
-  "name": "gl-client-js",
-  "version": "0.1.0",
+  "name": "@greenlight/gl-client-js",
+  "version": "0.1.2",
   "description": "",
   "main": "index.node",
   "scripts": {
-    "build": "neon build --release && neon-tag-prebuild",
+    "build": "neon build --release",
     "build-debug": "npm run build",
     "build-release": "npm run build",
-    "install": "npm run build-release",
-    "test": "cargo test && jest"
+    "install": "node-pre-gyp install --fallback-to-build=false || neon build",
+    "test": "cargo build && cargo test && jest",
+    "package": "npm run build && node-pre-gyp package"
+  },
+  "binary": {
+    "module_name": "index",
+    "host": "https://github.com/Blockstream/greenlight/releases/download/",
+    "remote_path": "{version}",
+    "package_name": "{node_abi}-{platform}-{arch}.tar.gz",
+    "module_path": ".",
+    "pkg_path": "."
   },
   "author": "",
   "license": "ISC",
@@ -18,8 +27,7 @@
   },
   "dependencies": {
     "neon-cli": "^0.9.1",
-    "neon-load-or-build": "^2.2.2",
-    "neon-tag-prebuild": "^1.1.0",
+    "node-pre-gyp": "^0.17.0",
     "protobufjs": "^6.11.2"
   }
 }
