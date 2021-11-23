@@ -1,6 +1,10 @@
 build:
 	npm install
 
+package:
+	npm install
+	npm run package
+
 clean:
 	cargo clean
 	rm -f index.node
