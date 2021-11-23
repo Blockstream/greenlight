@@ -1,4 +1,4 @@
-ARCH=$(shell uname -m)
+ARCH=$(shell node -e "console.log(process.arch)")
 PLAT=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 VERSION=$(shell jq '.version' package.json -r)
 index.node:
