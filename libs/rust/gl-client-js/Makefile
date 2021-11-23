@@ -1,9 +1,15 @@
-build:
-	npm install
+ARCH=$(shell uname -m)
+PLAT=$(shell uname -s | tr '[:upper:]' '[:lower:]')
+VERSION=$(shell jq '.version' package.json -r)
+index.node:
+	neon build --release
 
-package:
+build: index.node
+
+package: index.node
 	npm install
-	npm run package
+	mkdir -p build/stage/${VERSION}/
+	tar -cvzf build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-${ARCH}.tar.gz index.node
 
 clean:
 	cargo clean

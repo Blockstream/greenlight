@@ -43,3 +43,10 @@ test('parseBtcAddressType', () => {
     expect(parseBtcAddressType('bEch32')).toEqual(BtcAddressType.BECH32);
     expect(parseBtcAddressType('P2sh_segwit')).toEqual(BtcAddressType.P2SH_SEGWIT);
 })
+
+// Just a simple test to check if we can load the binary extension
+// alright.
+test('instantiate TlsConfig', () => {
+    var tls = new glclient.TlsConfig();
+    console.log(tls);
+})
