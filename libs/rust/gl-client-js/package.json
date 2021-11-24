@@ -1,12 +1,17 @@
 {
   "name": "@greenlight/gl-client-js",
-  "version": "0.1.4",
+  "version": "0.1.1",
   "description": "",
   "main": "index.js",
   "files": [
+    "package.json",
     "index.node",
     "index.js",
-    "proto.js"
+    "proto.js",
+    "Cargo.toml",
+    "libhsmd-sys-rs",
+    "gl-client",
+    "src"
   ],
   "scripts": {
     "build": "cargo-cp-artifact -a cdylib gl_client_js index.node -- cargo build --message-format=json-render-diagnostics --release",

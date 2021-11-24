@@ -6,6 +6,10 @@ index.node:
 
 build: index.node
 
+# Packaging is a bit involved since we manually build the package
+# structure and then package it into a platform specific
+# distribution. But this level of access allows us to customize
+# exactly what we ship.
 package: index.node
 	npm run build
 	mkdir -p gl-client-js
@@ -21,5 +25,4 @@ clean:
 	rm -rf node_modules build
 
 publish:
-	npx google-artifactregistry-auth
-	npm publish
+	bash -x publish.sh
