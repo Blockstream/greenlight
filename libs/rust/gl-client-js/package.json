@@ -3,13 +3,15 @@
   "version": "0.1.4",
   "description": "",
   "main": "index.js",
+  "files": [
+    "index.node",
+    "index.js",
+    "proto.js"
+  ],
   "scripts": {
-    "build": "neon build --release",
-    "build-debug": "npm run build",
-    "build-release": "npm run build",
-    "install": "node-pre-gyp install --fallback-to-build=false || neon build",
-    "test": "cargo build && cargo test && jest",
-    "package": "npm run build && node-pre-gyp package"
+    "build": "cargo-cp-artifact -a cdylib gl_client_js index.node -- cargo build --message-format=json-render-diagnostics --release",
+    "install": "node-pre-gyp install --fallback-to-build=false || npm run build",
+    "test": "cargo build && cargo test && jest"
   },
   "binary": {
     "module_name": "index",
@@ -22,11 +24,11 @@
   "license": "ISC",
   "devDependencies": {
     "jest": "^27.3.1",
-    "rewire": "^5.0.0"
+    "rewire": "^3.0.2"
   },
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0.7",
-    "neon-cli": "^0.9.1",
+    "cargo-cp-artifact": "^0.1",
     "protobufjs": "^6.11.2"
   }
 }
