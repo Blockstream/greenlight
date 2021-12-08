@@ -62,10 +62,11 @@ class Signer(object):
 
 class Scheduler(object):
 
-    def __init__(self, node_id: bytes, network: str):
+    def __init__(self, node_id: bytes, network: str, tls: TlsConfig):
         self.node_id = node_id
         self.network = network
         self.inner = native.Scheduler(node_id, network)
+        self.tls = tls
 
     def get_node_info(self) -> schedpb.NodeInfoResponse:
         return _convert(

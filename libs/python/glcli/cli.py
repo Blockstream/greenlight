@@ -55,7 +55,7 @@ class Context:
 
         self.signer = Signer(secret, network, self.tls)
         self.node_id = bytes(self.signer.node_id())
-        self.scheduler = Scheduler(self.node_id, network)
+        self.scheduler = Scheduler(self.node_id, network, self.tls)
         self.scheduler.tls = self.tls
         self.node = None
 
