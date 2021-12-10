@@ -226,6 +226,93 @@ impl Node {
 
         convert(exec(self.client.clone().keysend(req)).map(|x| x.into_inner()))
     }
+
+    fn stream_log(&self, args: &[u8]) -> PyResult<LogStream> {
+        let req = match pb::StreamLogRequest::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        let stream = match exec(self.client.clone().stream_log(req)).map(|x| x.into_inner()) {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "Error starting stream: {}",
+                    e
+                )))
+            }
+        };
+        Ok(LogStream { inner: stream })
+    }
+
+    fn stream_incoming(&self, args: &[u8]) -> PyResult<IncomingStream> {
+        let req = match pb::StreamIncomingFilter::decode(args) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "error decoding request: {}",
+                    e
+                )))
+            }
+        };
+
+        let stream = match exec(self.client.clone().stream_incoming(req)).map(|x| x.into_inner()) {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(PyValueError::new_err(format!(
+                    "Error starting stream: {}",
+                    e
+                )))
+            }
+        };
+        Ok(IncomingStream { inner: stream })
+    }
+}
+
+#[pyclass]
+struct LogStream {
+    inner: tonic::codec::Streaming<pb::LogEntry>,
+}
+
+#[pymethods]
+impl LogStream {
+    fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
+        convert_stream_entry(exec(async { self.inner.message().await }))
+    }
+}
+
+#[pyclass]
+struct IncomingStream {
+    inner: tonic::codec::Streaming<pb::IncomingPayment>,
+}
+
+#[pymethods]
+impl IncomingStream {
+    fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
+        convert_stream_entry(exec(async { self.inner.message().await }))
+    }
+}
+
+fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Option<Vec<u8>>> {
+    let res = match r {
+        Ok(Some(v)) => v,
+        Ok(None) => return Ok(None),
+        Err(e) => {
+            return Err(PyValueError::new_err(format!(
+                "error calling remote method: {}",
+                e
+            )))
+        }
+    };
+    let mut buf = Vec::new();
+    buf.reserve(res.encoded_len());
+    res.encode(&mut buf).unwrap();
+    Ok(Some(buf))
 }
 
 pub fn convert<T: Message>(r: Result<T, Status>) -> PyResult<Vec<u8>> {

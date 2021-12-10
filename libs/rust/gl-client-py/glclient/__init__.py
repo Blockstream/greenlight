@@ -247,46 +247,23 @@ class Node(object):
             bytes(self.inner.keysend(req))
         )
 
-    def _direct_stub(self):
-        """Streaming API methods are not yet supported by our middleware. So
-        we need to actually create a new direct connection instead.
-
-        """
-        # Need to create a python-based stub since we cannot yield
-        # across FFI boundaries (yet).
-        from . import greenlight_pb2_grpc as nodegrpc
-        import grpc
-        creds = grpc.ssl_channel_credentials(
-            root_certificates=bytes(self.tls.inner.ca_certificate()),
-            private_key=self.tls.id[1],
-            certificate_chain=self.tls.id[0],
-        )
-        grpc_uri = self.grpc_uri
-        if grpc_uri.startswith("https://"):
-            grpc_uri = grpc_uri[8:]
-
-        chan = grpc.secure_channel(
-            grpc_uri,
-            creds,
-            options=(
-                (
-                    "grpc.ssl_target_name_override",
-                    "localhost",
-                ),
-            ),
-        )
-        stub = nodegrpc.NodeStub(chan)
-        return stub
-
     def stream_log(self):
         """Stream logs as they get generated on the server side.
         """
-        stub = self._direct_stub()
-        yield from stub.StreamLog(nodepb.StreamLogRequest())
+        stream = self.inner.stream_log(b"")
+        while True:
+            n = stream.next()
+            if n is None:
+                break
+            yield nodepb.LogEntry.FromString(bytes(n))
 
     def stream_incoming(self):
-        stub = self._direct_stub()
-        yield from stub.StreamIncoming(nodepb.StreamIncomingFilter())
+        stream = self.inner.stream_incoming(b"")
+        while True:
+            n = stream.next()
+            if n is None:
+                break
+            yield nodepb.IncomingPayment.FromString(bytes(n))
 
 
 def normalize_node_id(node_id, string=False):
