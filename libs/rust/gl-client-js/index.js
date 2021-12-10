@@ -19,6 +19,11 @@ const {
     schedulerSchedule,
 
     nodeCall,
+    nodeCallStreamLog,
+    logStreamNext,
+    nodeCallStreamIncoming,
+    incomingStreamNext,
+
 } = require(binding_path);
 
 const proto = require('./proto.js');
@@ -354,6 +359,26 @@ class Node {
 		extratlvs: extratlvs // TODO: Provide parseTlvs helper
 	    }
 	)
+    }
+
+    stream_log() {
+	return new Streaming(nodeCallStreamLog(this.inner), proto.greenlight.LogEntry, logStreamNext)
+    }
+
+    stream_incoming() {
+	return new Streaming(nodeCallStreamIncoming(this.inner), proto.greenlight.IncomingPayment, incomingStreamNext)
+    }
+}
+
+class Streaming {
+    constructor(stream, typ, func) {
+	this.stream = stream;
+	this.typ = typ
+	this.func = func
+    }
+
+    next() {
+	return this.typ.decode(this.func(this.stream));
     }
 }
 

@@ -3,7 +3,7 @@ use neon::prelude::*;
 mod node;
 mod scheduler;
 mod signer;
-use node::Node;
+use node::{IncomingStream, LogStream, Node};
 use scheduler::Scheduler;
 use signer::Signer;
 mod tls;
@@ -24,6 +24,11 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("schedulerSchedule", Scheduler::schedule)?;
 
     cx.export_function("nodeCall", Node::call)?;
+    cx.export_function("nodeCallStreamLog", Node::call_stream_log)?;
+    cx.export_function("logStreamNext", LogStream::next)?;
+
+    cx.export_function("nodeCallStreamIncoming", Node::call_stream_incoming)?;
+    cx.export_function("incomingStreamNext", IncomingStream::next)?;
 
     cx.export_function("tlsConfigNew", TlsConfig::new)?;
     cx.export_function("tlsConfigIdentity", TlsConfig::identity)?;
