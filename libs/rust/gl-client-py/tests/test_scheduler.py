@@ -22,7 +22,7 @@ def signer(scheduler, tls):
 
 
 @pytest.fixture
-def sclient(signer):
+def sclient(signer, tls):
     """Just a preconfigured scheduler client.
 
     This scheduler client is configured with a secret for easy
@@ -30,7 +30,7 @@ def sclient(signer):
 
     """
     network = 'regtest'
-    return Scheduler(signer.node_id(), network)
+    return Scheduler(signer.node_id(), network=network, tls=tls)
 
 
 def test_connect(scheduler, tls):
@@ -38,7 +38,7 @@ def test_connect(scheduler, tls):
     """
     sig = Signer(b'\x00'*32, network='regtest', tls=tls)
     node_id = sig.node_id()
-    s = Scheduler(node_id, network='regtest')
+    s = Scheduler(node_id, network='regtest', tls=tls)
     assert(s.get_node_info().node_id == node_id)
 
 
