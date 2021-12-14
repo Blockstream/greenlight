@@ -14,7 +14,7 @@ tokio = "*"
 log = "*"
 env_logger = "*"
 once_cell = "*"
-tonic = "*"
+tonic = "^0.5"
 prost = "0.8"
 anyhow = "*"
 

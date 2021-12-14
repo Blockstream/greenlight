@@ -108,7 +108,11 @@ fn main() {
         machine
     );
     println!("cargo:rustc-link-lib=static=sodium");
-    println!("cargo:rustc-link-lib=wallycore");
+
+    if cfg!(target_os = "macos") {
+        println!("cargo:rustc-link-lib=wallycore");
+    }
+    
     println!("cargo:rustc-link-lib=backtrace");
     println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
 
@@ -154,7 +158,7 @@ fn main() {
         "ccan/ccan/timer/timer.c",
         "ccan/ccan/utf8/utf8.c",
         "common/amount.c",
-	// Post v0.10.2 needs this
+        // Post v0.10.2 needs this
         //"common/autodata.c",
         "common/bigsize.c",
         "common/bip32.c",
@@ -166,7 +170,7 @@ fn main() {
         "common/hash_u5.c",
         "common/hsm_encryption.c",
         "common/key_derive.c",
-	// Post v0.10.2 needs this
+        // Post v0.10.2 needs this
         //"common/lease_rates.c",
         "common/memleak.c",
         "common/msg_queue.c",
