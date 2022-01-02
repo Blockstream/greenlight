@@ -68,6 +68,7 @@ class Scheduler(object):
         for n in self.nodes:
             if n.node_id == node_id:
                 return n
+        raise ValueError(f"No node with node_id={node_id} found in gltesting scheduler, do you need to register it first?")
 
     def Register(self, req, ctx):
         challenge = None

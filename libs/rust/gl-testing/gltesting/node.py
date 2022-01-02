@@ -1,6 +1,6 @@
 from binascii import hexlify
-from gltesting import greenlight_pb2_grpc as nodegrpc
-from gltesting import greenlight_pb2 as nodepb
+from glclient import greenlight_pb2_grpc as nodegrpc
+from glclient import greenlight_pb2 as nodepb
 import logging
 import grpc
 from concurrent.futures import ThreadPoolExecutor
