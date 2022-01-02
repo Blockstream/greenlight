@@ -413,6 +413,9 @@ message Payment {
 	Amount amount = 5;
 	Amount amount_sent = 6;
 	string bolt11 = 7;
+
+	// UTC Unix timestamp of the time the invoice was created.
+	double created_at = 8;
 }
 
 // A payment identifier is a way to reference a unique payment, either
