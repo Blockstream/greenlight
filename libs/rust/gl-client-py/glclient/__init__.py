@@ -4,6 +4,7 @@ from . import glclient as native
 from .greenlight_pb2 import Amount
 from binascii import hexlify, unhexlify
 from typing import Optional, List
+import logging
 
 
 class TlsConfig(object):
@@ -106,10 +107,12 @@ class Node(object):
             tls=tls.inner,
             grpc_uri=grpc_uri
         )
+        self.logger = logging.getLogger("glclient.Node")
 
     def get_info(self) -> nodepb.GetInfoResponse:
+        req = bytes(nodepb.GetInfoRequest().SerializeToString())
         return nodepb.GetInfoResponse.FromString(
-            bytes(self.inner.get_info())
+            bytes(self.call("GetInfo", req))
         )
 
     def stop(self) -> nodepb.StopResponse:
@@ -130,9 +133,26 @@ class Node(object):
             bytes(self.inner.list_payments())
         )
 
-    def list_invoices(self) -> nodepb.ListInvoicesResponse:
+    def list_invoices(self, label: str = None, invstring: str = None, payment_hash: bytes = None) -> nodepb.ListInvoicesResponse:
+        if sum([bool(a) for a in [label, invstring, payment_hash]]) >= 2:
+            raise ValueError(
+                f"Cannot specify multiple filters for list_invoices: "
+                f"label={label}, invstring={invstring}, or "
+                f"paymen_hash={payment_hash}"
+            )
+
+        if label is not None:
+            f = nodepb.InvoiceIdentifier(label=label)
+        elif invstring is not None:
+            f = nodepb.InvoiceIdentifier(invstring=invstring)
+        elif payment_hash is not None:
+            f = nodepb.InvoiceIdentifier(payment_hash=unhexlify(payment_hash))
+        else:
+            f = None
+
+        req = bytes(nodepb.ListInvoicesRequest(identifier=f).SerializeToString())
         return nodepb.ListInvoicesResponse.FromString(
-            bytes(self.inner.list_invoices())
+            bytes(self.call("ListInvoices", req))
         )
 
     def connect_peer(self, node_id, addr=None) -> nodepb.ConnectResponse:
@@ -246,6 +266,10 @@ class Node(object):
         return nodepb.Payment.FromString(
             bytes(self.inner.keysend(req))
         )
+
+    def call(self, method: str, request: bytes) -> bytes:
+        self.logger.debug(f"Calling {method} with request {request}")
+        return bytes(self.inner.call(method, request))
 
     def stream_log(self):
         """Stream logs as they get generated on the server side.

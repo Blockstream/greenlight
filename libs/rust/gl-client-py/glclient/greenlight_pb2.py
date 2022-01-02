@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x10greenlight.proto\x12\ngreenlight\"H\n\x11HsmRequestContext\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x0c\n\x04\x64\x62id\x18\x02 \x01(\x04\x12\x14\n\x0c\x63\x61pabilities\x18\x03 \x01(\x04\".\n\x0bHsmResponse\x12\x12\n\nrequest_id\x18\x01 \x01(\r\x12\x0b\n\x03raw\x18\x02 \x01(\x0c\"]\n\nHsmRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\r\x12.\n\x07\x63ontext\x18\x02 \x01(\x0b\x32\x1d.greenlight.HsmRequestContext\x12\x0b\n\x03raw\x18\x03 \x01(\x0c\"\x07\n\x05\x45mpty\"O\n\x07\x41\x64\x64ress\x12(\n\x04type\x18\x01 \x01(\x0e\x32\x1a.greenlight.NetAddressType\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\"\x10\n\x0eGetInfoRequest\"\xb2\x01\n\x0fGetInfoResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\r\n\x05\x61lias\x18\x02 \x01(\t\x12\r\n\x05\x63olor\x18\x03 \x01(\x0c\x12\x11\n\tnum_peers\x18\x04 \x01(\r\x12&\n\taddresses\x18\x05 \x03(\x0b\x32\x13.greenlight.Address\x12\x0f\n\x07version\x18\x06 \x01(\t\x12\x13\n\x0b\x62lockheight\x18\x07 \x01(\r\x12\x0f\n\x07network\x18\x08 \x01(\t\"\r\n\x0bStopRequest\"\x0e\n\x0cStopResponse\"/\n\x0e\x43onnectRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\"4\n\x0f\x43onnectResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x10\n\x08\x66\x65\x61tures\x18\x02 \x01(\t\"#\n\x10ListPeersRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\t\"\x81\x01\n\x04Htlc\x12\x11\n\tdirection\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\x04\x12\x0e\n\x06\x61mount\x18\x03 \x01(\t\x12\x0e\n\x06\x65xpiry\x18\x04 \x01(\x04\x12\x14\n\x0cpayment_hash\x18\x05 \x01(\t\x12\r\n\x05state\x18\x06 \x01(\t\x12\x15\n\rlocal_trimmed\x18\x07 \x01(\x08\"\xeb\x02\n\x07\x43hannel\x12\r\n\x05state\x18\x01 \x01(\t\x12\r\n\x05owner\x18\x02 \x01(\t\x12\x18\n\x10short_channel_id\x18\x03 \x01(\t\x12\x11\n\tdirection\x18\x04 \x01(\r\x12\x12\n\nchannel_id\x18\x05 \x01(\t\x12\x14\n\x0c\x66unding_txid\x18\x06 \x01(\t\x12\x15\n\rclose_to_addr\x18\x07 \x01(\t\x12\x10\n\x08\x63lose_to\x18\x08 \x01(\t\x12\x0f\n\x07private\x18\t \x01(\x08\x12\r\n\x05total\x18\n \x01(\t\x12\x12\n\ndust_limit\x18\x0b \x01(\t\x12\x11\n\tspendable\x18\x0c \x01(\t\x12\x12\n\nreceivable\x18\r \x01(\t\x12\x1b\n\x13their_to_self_delay\x18\x0e \x01(\r\x12\x19\n\x11our_to_self_delay\x18\x0f \x01(\r\x12\x0e\n\x06status\x18\x10 \x03(\t\x12\x1f\n\x05htlcs\x18\x11 \x03(\x0b\x32\x10.greenlight.Htlc\"\x86\x01\n\x04Peer\x12\n\n\x02id\x18\x01 \x01(\x0c\x12\x11\n\tconnected\x18\x02 \x01(\x08\x12&\n\taddresses\x18\x03 \x03(\x0b\x32\x13.greenlight.Address\x12\x10\n\x08\x66\x65\x61tures\x18\x04 \x01(\t\x12%\n\x08\x63hannels\x18\x05 \x03(\x0b\x32\x13.greenlight.Channel\"4\n\x11ListPeersResponse\x12\x1f\n\x05peers\x18\x01 \x03(\x0b\x32\x10.greenlight.Peer\"3\n\x11\x44isconnectRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\r\n\x05\x66orce\x18\x02 \x01(\x08\"\x14\n\x12\x44isconnectResponse\"B\n\x0eNewAddrRequest\x12\x30\n\x0c\x61\x64\x64ress_type\x18\x01 \x01(\x0e\x32\x1a.greenlight.BtcAddressType\"T\n\x0fNewAddrResponse\x12\x30\n\x0c\x61\x64\x64ress_type\x18\x01 \x01(\x0e\x32\x1a.greenlight.BtcAddressType\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\"=\n\x10ListFundsRequest\x12)\n\x07minconf\x18\x01 \x01(\x0b\x32\x18.greenlight.Confirmation\"\x96\x01\n\x0fListFundsOutput\x12$\n\x06output\x18\x01 \x01(\x0b\x32\x14.greenlight.Outpoint\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12(\n\x06status\x18\x05 \x01(\x0e\x32\x18.greenlight.OutputStatus\"\xac\x01\n\x10ListFundsChannel\x12\x0f\n\x07peer_id\x18\x01 \x01(\x0c\x12\x11\n\tconnected\x18\x02 \x01(\x08\x12\x18\n\x10short_channel_id\x18\x03 \x01(\x04\x12\x17\n\x0four_amount_msat\x18\x04 \x01(\x04\x12\x13\n\x0b\x61mount_msat\x18\x05 \x01(\x04\x12\x14\n\x0c\x66unding_txid\x18\x06 \x01(\x0c\x12\x16\n\x0e\x66unding_output\x18\x07 \x01(\r\"q\n\x11ListFundsResponse\x12,\n\x07outputs\x18\x01 \x03(\x0b\x32\x1b.greenlight.ListFundsOutput\x12.\n\x08\x63hannels\x18\x02 \x03(\x0b\x32\x1c.greenlight.ListFundsChannel\"a\n\x07\x46\x65\x65rate\x12+\n\x06preset\x18\x01 \x01(\x0e\x32\x19.greenlight.FeeratePresetH\x00\x12\x0f\n\x05perkw\x18\x05 \x01(\x04H\x00\x12\x0f\n\x05perkb\x18\x06 \x01(\x04H\x00\x42\x07\n\x05value\"\x1e\n\x0c\x43onfirmation\x12\x0e\n\x06\x62locks\x18\x01 \x01(\r\"\xc0\x01\n\x0fWithdrawRequest\x12\x13\n\x0b\x64\x65stination\x18\x01 \x01(\t\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12$\n\x07\x66\x65\x65rate\x18\x03 \x01(\x0b\x32\x13.greenlight.Feerate\x12)\n\x07minconf\x18\x07 \x01(\x0b\x32\x18.greenlight.Confirmation\x12#\n\x05utxos\x18\x08 \x03(\x0b\x32\x14.greenlight.Outpoint\",\n\x10WithdrawResponse\x12\n\n\x02tx\x18\x01 \x01(\x0c\x12\x0c\n\x04txid\x18\x02 \x01(\x0c\"\xbe\x01\n\x12\x46undChannelRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12$\n\x07\x66\x65\x65rate\x18\x03 \x01(\x0b\x32\x13.greenlight.Feerate\x12\x10\n\x08\x61nnounce\x18\x07 \x01(\x08\x12)\n\x07minconf\x18\x08 \x01(\x0b\x32\x18.greenlight.Confirmation\x12\x10\n\x08\x63lose_to\x18\n \x01(\t\"(\n\x08Outpoint\x12\x0c\n\x04txid\x18\x01 \x01(\x0c\x12\x0e\n\x06outnum\x18\x02 \x01(\r\"o\n\x13\x46undChannelResponse\x12\n\n\x02tx\x18\x01 \x01(\x0c\x12&\n\x08outpoint\x18\x02 \x01(\x0b\x32\x14.greenlight.Outpoint\x12\x12\n\nchannel_id\x18\x03 \x01(\x0c\x12\x10\n\x08\x63lose_to\x18\x04 \x01(\t\"\x1a\n\x07Timeout\x12\x0f\n\x07seconds\x18\x01 \x01(\r\"!\n\x0e\x42itcoinAddress\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\t\"\x87\x01\n\x13\x43loseChannelRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12.\n\x11unilateraltimeout\x18\x02 \x01(\x0b\x32\x13.greenlight.Timeout\x12/\n\x0b\x64\x65stination\x18\x03 \x01(\x0b\x32\x1a.greenlight.BitcoinAddress\"b\n\x14\x43loseChannelResponse\x12\x30\n\nclose_type\x18\x01 \x01(\x0e\x32\x1c.greenlight.CloseChannelType\x12\n\n\x02tx\x18\x02 \x01(\x0c\x12\x0c\n\x04txid\x18\x03 \x01(\x0c\"l\n\x06\x41mount\x12\x16\n\x0cmillisatoshi\x18\x01 \x01(\x04H\x00\x12\x11\n\x07satoshi\x18\x02 \x01(\x04H\x00\x12\x11\n\x07\x62itcoin\x18\x03 \x01(\x04H\x00\x12\r\n\x03\x61ll\x18\x04 \x01(\x08H\x00\x12\r\n\x03\x61ny\x18\x05 \x01(\x08H\x00\x42\x06\n\x04unit\"X\n\x0eInvoiceRequest\x12\"\n\x06\x61mount\x18\x01 \x01(\x0b\x32\x12.greenlight.Amount\x12\r\n\x05label\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\"\x8d\x02\n\x07Invoice\x12\r\n\x05label\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\"\n\x06\x61mount\x18\x03 \x01(\x0b\x32\x12.greenlight.Amount\x12$\n\x08received\x18\x04 \x01(\x0b\x32\x12.greenlight.Amount\x12)\n\x06status\x18\x05 \x01(\x0e\x32\x19.greenlight.InvoiceStatus\x12\x14\n\x0cpayment_time\x18\x06 \x01(\r\x12\x13\n\x0b\x65xpiry_time\x18\x07 \x01(\r\x12\x0e\n\x06\x62olt11\x18\x08 \x01(\t\x12\x14\n\x0cpayment_hash\x18\t \x01(\x0c\x12\x18\n\x10payment_preimage\x18\n \x01(\x0c\"Q\n\nPayRequest\x12\x0e\n\x06\x62olt11\x18\x01 \x01(\t\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12\x0f\n\x07timeout\x18\x03 \x01(\r\"\xd2\x01\n\x07Payment\x12\x13\n\x0b\x64\x65stination\x18\x01 \x01(\x0c\x12\x14\n\x0cpayment_hash\x18\x02 \x01(\x0c\x12\x18\n\x10payment_preimage\x18\x03 \x01(\x0c\x12%\n\x06status\x18\x04 \x01(\x0e\x32\x15.greenlight.PayStatus\x12\"\n\x06\x61mount\x18\x05 \x01(\x0b\x32\x12.greenlight.Amount\x12\'\n\x0b\x61mount_sent\x18\x06 \x01(\x0b\x32\x12.greenlight.Amount\x12\x0e\n\x06\x62olt11\x18\x07 \x01(\t\"C\n\x11PaymentIdentifier\x12\x10\n\x06\x62olt11\x18\x01 \x01(\tH\x00\x12\x16\n\x0cpayment_hash\x18\x02 \x01(\x0cH\x00\x42\x04\n\x02id\"H\n\x13ListPaymentsRequest\x12\x31\n\nidentifier\x18\x01 \x01(\x0b\x32\x1d.greenlight.PaymentIdentifier\"=\n\x14ListPaymentsResponse\x12%\n\x08payments\x18\x01 \x03(\x0b\x32\x13.greenlight.Payment\"W\n\x11InvoiceIdentifier\x12\x0f\n\x05label\x18\x01 \x01(\tH\x00\x12\x13\n\tinvstring\x18\x02 \x01(\tH\x00\x12\x16\n\x0cpayment_hash\x18\x03 \x01(\x0cH\x00\x42\x04\n\x02id\"H\n\x13ListInvoicesRequest\x12\x31\n\nidentifier\x18\x01 \x01(\x0b\x32\x1d.greenlight.InvoiceIdentifier\"\x16\n\x14StreamIncomingFilter\"=\n\x14ListInvoicesResponse\x12%\n\x08invoices\x18\x01 \x03(\x0b\x32\x13.greenlight.Invoice\"\'\n\x08TlvField\x12\x0c\n\x04type\x18\x01 \x01(\x04\x12\r\n\x05value\x18\x02 \x01(\x0c\"\xa5\x01\n\x0fOffChainPayment\x12\r\n\x05label\x18\x01 \x01(\t\x12\x10\n\x08preimage\x18\x02 \x01(\x0c\x12\"\n\x06\x61mount\x18\x03 \x01(\x0b\x32\x12.greenlight.Amount\x12\'\n\textratlvs\x18\x04 \x03(\x0b\x32\x14.greenlight.TlvField\x12\x14\n\x0cpayment_hash\x18\x05 \x01(\x0c\x12\x0e\n\x06\x62olt11\x18\x06 \x01(\t\"M\n\x0fIncomingPayment\x12/\n\x08offchain\x18\x01 \x01(\x0b\x32\x1b.greenlight.OffChainPaymentH\x00\x42\t\n\x07\x64\x65tails\"x\n\x0cRoutehintHop\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x18\n\x10short_channel_id\x18\x02 \x01(\t\x12\x10\n\x08\x66\x65\x65_base\x18\x03 \x01(\x04\x12\x10\n\x08\x66\x65\x65_prop\x18\x04 \x01(\r\x12\x19\n\x11\x63ltv_expiry_delta\x18\x05 \x01(\r\"3\n\tRoutehint\x12&\n\x04hops\x18\x01 \x03(\x0b\x32\x18.greenlight.RoutehintHop\"\xa8\x01\n\x0eKeysendRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12\r\n\x05label\x18\x03 \x01(\t\x12)\n\nroutehints\x18\x04 \x03(\x0b\x32\x15.greenlight.Routehint\x12\'\n\textratlvs\x18\x05 \x03(\x0b\x32\x14.greenlight.TlvField\"\x12\n\x10StreamLogRequest\"\x18\n\x08LogEntry\x12\x0c\n\x04line\x18\x01 \x01(\t*:\n\x0eNetAddressType\x12\x08\n\x04Ipv4\x10\x00\x12\x08\n\x04Ipv6\x10\x01\x12\t\n\x05TorV2\x10\x02\x12\t\n\x05TorV3\x10\x03*-\n\x0e\x42tcAddressType\x12\n\n\x06\x42\x45\x43H32\x10\x00\x12\x0f\n\x0bP2SH_SEGWIT\x10\x01*.\n\x0cOutputStatus\x12\r\n\tCONFIRMED\x10\x00\x12\x0f\n\x0bUNCONFIRMED\x10\x01*1\n\rFeeratePreset\x12\n\n\x06NORMAL\x10\x00\x12\x08\n\x04SLOW\x10\x01\x12\n\n\x06URGENT\x10\x02*.\n\x10\x43loseChannelType\x12\n\n\x06MUTUAL\x10\x00\x12\x0e\n\nUNILATERAL\x10\x01*2\n\rInvoiceStatus\x12\n\n\x06UNPAID\x10\x00\x12\x08\n\x04PAID\x10\x01\x12\x0b\n\x07\x45XPIRED\x10\x02*2\n\tPayStatus\x12\x0b\n\x07PENDING\x10\x00\x12\x0c\n\x08\x43OMPLETE\x10\x01\x12\n\n\x06\x46\x41ILED\x10\x02\x32\xf3\n\n\x04Node\x12\x44\n\x07GetInfo\x12\x1a.greenlight.GetInfoRequest\x1a\x1b.greenlight.GetInfoResponse\"\x00\x12;\n\x04Stop\x12\x17.greenlight.StopRequest\x1a\x18.greenlight.StopResponse\"\x00\x12H\n\x0b\x43onnectPeer\x12\x1a.greenlight.ConnectRequest\x1a\x1b.greenlight.ConnectResponse\"\x00\x12J\n\tListPeers\x12\x1c.greenlight.ListPeersRequest\x1a\x1d.greenlight.ListPeersResponse\"\x00\x12M\n\nDisconnect\x12\x1d.greenlight.DisconnectRequest\x1a\x1e.greenlight.DisconnectResponse\"\x00\x12\x44\n\x07NewAddr\x12\x1a.greenlight.NewAddrRequest\x1a\x1b.greenlight.NewAddrResponse\"\x00\x12J\n\tListFunds\x12\x1c.greenlight.ListFundsRequest\x1a\x1d.greenlight.ListFundsResponse\"\x00\x12G\n\x08Withdraw\x12\x1b.greenlight.WithdrawRequest\x1a\x1c.greenlight.WithdrawResponse\"\x00\x12P\n\x0b\x46undChannel\x12\x1e.greenlight.FundChannelRequest\x1a\x1f.greenlight.FundChannelResponse\"\x00\x12S\n\x0c\x43loseChannel\x12\x1f.greenlight.CloseChannelRequest\x1a .greenlight.CloseChannelResponse\"\x00\x12\x42\n\rCreateInvoice\x12\x1a.greenlight.InvoiceRequest\x1a\x13.greenlight.Invoice\"\x00\x12\x34\n\x03Pay\x12\x16.greenlight.PayRequest\x1a\x13.greenlight.Payment\"\x00\x12<\n\x07Keysend\x12\x1a.greenlight.KeysendRequest\x1a\x13.greenlight.Payment\"\x00\x12S\n\x0cListPayments\x12\x1f.greenlight.ListPaymentsRequest\x1a .greenlight.ListPaymentsResponse\"\x00\x12S\n\x0cListInvoices\x12\x1f.greenlight.ListInvoicesRequest\x1a .greenlight.ListInvoicesResponse\"\x00\x12S\n\x0eStreamIncoming\x12 .greenlight.StreamIncomingFilter\x1a\x1b.greenlight.IncomingPayment\"\x00\x30\x01\x12\x43\n\tStreamLog\x12\x1c.greenlight.StreamLogRequest\x1a\x14.greenlight.LogEntry\"\x00\x30\x01\x12\x42\n\x11StreamHsmRequests\x12\x11.greenlight.Empty\x1a\x16.greenlight.HsmRequest\"\x00\x30\x01\x12\x41\n\x11RespondHsmRequest\x12\x17.greenlight.HsmResponse\x1a\x11.greenlight.Empty\"\x00\x32s\n\x03Hsm\x12<\n\x07Request\x12\x16.greenlight.HsmRequest\x1a\x17.greenlight.HsmResponse\"\x00\x12.\n\x04Ping\x12\x11.greenlight.Empty\x1a\x11.greenlight.Empty\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x10greenlight.proto\x12\ngreenlight\"H\n\x11HsmRequestContext\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x0c\n\x04\x64\x62id\x18\x02 \x01(\x04\x12\x14\n\x0c\x63\x61pabilities\x18\x03 \x01(\x04\".\n\x0bHsmResponse\x12\x12\n\nrequest_id\x18\x01 \x01(\r\x12\x0b\n\x03raw\x18\x02 \x01(\x0c\"]\n\nHsmRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\r\x12.\n\x07\x63ontext\x18\x02 \x01(\x0b\x32\x1d.greenlight.HsmRequestContext\x12\x0b\n\x03raw\x18\x03 \x01(\x0c\"\x07\n\x05\x45mpty\"O\n\x07\x41\x64\x64ress\x12(\n\x04type\x18\x01 \x01(\x0e\x32\x1a.greenlight.NetAddressType\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\r\"\x10\n\x0eGetInfoRequest\"\xb2\x01\n\x0fGetInfoResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\r\n\x05\x61lias\x18\x02 \x01(\t\x12\r\n\x05\x63olor\x18\x03 \x01(\x0c\x12\x11\n\tnum_peers\x18\x04 \x01(\r\x12&\n\taddresses\x18\x05 \x03(\x0b\x32\x13.greenlight.Address\x12\x0f\n\x07version\x18\x06 \x01(\t\x12\x13\n\x0b\x62lockheight\x18\x07 \x01(\r\x12\x0f\n\x07network\x18\x08 \x01(\t\"\r\n\x0bStopRequest\"\x0e\n\x0cStopResponse\"/\n\x0e\x43onnectRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\"4\n\x0f\x43onnectResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x10\n\x08\x66\x65\x61tures\x18\x02 \x01(\t\"#\n\x10ListPeersRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\t\"\x81\x01\n\x04Htlc\x12\x11\n\tdirection\x18\x01 \x01(\t\x12\n\n\x02id\x18\x02 \x01(\x04\x12\x0e\n\x06\x61mount\x18\x03 \x01(\t\x12\x0e\n\x06\x65xpiry\x18\x04 \x01(\x04\x12\x14\n\x0cpayment_hash\x18\x05 \x01(\t\x12\r\n\x05state\x18\x06 \x01(\t\x12\x15\n\rlocal_trimmed\x18\x07 \x01(\x08\"\xeb\x02\n\x07\x43hannel\x12\r\n\x05state\x18\x01 \x01(\t\x12\r\n\x05owner\x18\x02 \x01(\t\x12\x18\n\x10short_channel_id\x18\x03 \x01(\t\x12\x11\n\tdirection\x18\x04 \x01(\r\x12\x12\n\nchannel_id\x18\x05 \x01(\t\x12\x14\n\x0c\x66unding_txid\x18\x06 \x01(\t\x12\x15\n\rclose_to_addr\x18\x07 \x01(\t\x12\x10\n\x08\x63lose_to\x18\x08 \x01(\t\x12\x0f\n\x07private\x18\t \x01(\x08\x12\r\n\x05total\x18\n \x01(\t\x12\x12\n\ndust_limit\x18\x0b \x01(\t\x12\x11\n\tspendable\x18\x0c \x01(\t\x12\x12\n\nreceivable\x18\r \x01(\t\x12\x1b\n\x13their_to_self_delay\x18\x0e \x01(\r\x12\x19\n\x11our_to_self_delay\x18\x0f \x01(\r\x12\x0e\n\x06status\x18\x10 \x03(\t\x12\x1f\n\x05htlcs\x18\x11 \x03(\x0b\x32\x10.greenlight.Htlc\"\x86\x01\n\x04Peer\x12\n\n\x02id\x18\x01 \x01(\x0c\x12\x11\n\tconnected\x18\x02 \x01(\x08\x12&\n\taddresses\x18\x03 \x03(\x0b\x32\x13.greenlight.Address\x12\x10\n\x08\x66\x65\x61tures\x18\x04 \x01(\t\x12%\n\x08\x63hannels\x18\x05 \x03(\x0b\x32\x13.greenlight.Channel\"4\n\x11ListPeersResponse\x12\x1f\n\x05peers\x18\x01 \x03(\x0b\x32\x10.greenlight.Peer\"3\n\x11\x44isconnectRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\r\n\x05\x66orce\x18\x02 \x01(\x08\"\x14\n\x12\x44isconnectResponse\"B\n\x0eNewAddrRequest\x12\x30\n\x0c\x61\x64\x64ress_type\x18\x01 \x01(\x0e\x32\x1a.greenlight.BtcAddressType\"T\n\x0fNewAddrResponse\x12\x30\n\x0c\x61\x64\x64ress_type\x18\x01 \x01(\x0e\x32\x1a.greenlight.BtcAddressType\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\"=\n\x10ListFundsRequest\x12)\n\x07minconf\x18\x01 \x01(\x0b\x32\x18.greenlight.Confirmation\"\x96\x01\n\x0fListFundsOutput\x12$\n\x06output\x18\x01 \x01(\x0b\x32\x14.greenlight.Outpoint\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12(\n\x06status\x18\x05 \x01(\x0e\x32\x18.greenlight.OutputStatus\"\xac\x01\n\x10ListFundsChannel\x12\x0f\n\x07peer_id\x18\x01 \x01(\x0c\x12\x11\n\tconnected\x18\x02 \x01(\x08\x12\x18\n\x10short_channel_id\x18\x03 \x01(\x04\x12\x17\n\x0four_amount_msat\x18\x04 \x01(\x04\x12\x13\n\x0b\x61mount_msat\x18\x05 \x01(\x04\x12\x14\n\x0c\x66unding_txid\x18\x06 \x01(\x0c\x12\x16\n\x0e\x66unding_output\x18\x07 \x01(\r\"q\n\x11ListFundsResponse\x12,\n\x07outputs\x18\x01 \x03(\x0b\x32\x1b.greenlight.ListFundsOutput\x12.\n\x08\x63hannels\x18\x02 \x03(\x0b\x32\x1c.greenlight.ListFundsChannel\"a\n\x07\x46\x65\x65rate\x12+\n\x06preset\x18\x01 \x01(\x0e\x32\x19.greenlight.FeeratePresetH\x00\x12\x0f\n\x05perkw\x18\x05 \x01(\x04H\x00\x12\x0f\n\x05perkb\x18\x06 \x01(\x04H\x00\x42\x07\n\x05value\"\x1e\n\x0c\x43onfirmation\x12\x0e\n\x06\x62locks\x18\x01 \x01(\r\"\xc0\x01\n\x0fWithdrawRequest\x12\x13\n\x0b\x64\x65stination\x18\x01 \x01(\t\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12$\n\x07\x66\x65\x65rate\x18\x03 \x01(\x0b\x32\x13.greenlight.Feerate\x12)\n\x07minconf\x18\x07 \x01(\x0b\x32\x18.greenlight.Confirmation\x12#\n\x05utxos\x18\x08 \x03(\x0b\x32\x14.greenlight.Outpoint\",\n\x10WithdrawResponse\x12\n\n\x02tx\x18\x01 \x01(\x0c\x12\x0c\n\x04txid\x18\x02 \x01(\x0c\"\xbe\x01\n\x12\x46undChannelRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12$\n\x07\x66\x65\x65rate\x18\x03 \x01(\x0b\x32\x13.greenlight.Feerate\x12\x10\n\x08\x61nnounce\x18\x07 \x01(\x08\x12)\n\x07minconf\x18\x08 \x01(\x0b\x32\x18.greenlight.Confirmation\x12\x10\n\x08\x63lose_to\x18\n \x01(\t\"(\n\x08Outpoint\x12\x0c\n\x04txid\x18\x01 \x01(\x0c\x12\x0e\n\x06outnum\x18\x02 \x01(\r\"o\n\x13\x46undChannelResponse\x12\n\n\x02tx\x18\x01 \x01(\x0c\x12&\n\x08outpoint\x18\x02 \x01(\x0b\x32\x14.greenlight.Outpoint\x12\x12\n\nchannel_id\x18\x03 \x01(\x0c\x12\x10\n\x08\x63lose_to\x18\x04 \x01(\t\"\x1a\n\x07Timeout\x12\x0f\n\x07seconds\x18\x01 \x01(\r\"!\n\x0e\x42itcoinAddress\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\t\"\x87\x01\n\x13\x43loseChannelRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12.\n\x11unilateraltimeout\x18\x02 \x01(\x0b\x32\x13.greenlight.Timeout\x12/\n\x0b\x64\x65stination\x18\x03 \x01(\x0b\x32\x1a.greenlight.BitcoinAddress\"b\n\x14\x43loseChannelResponse\x12\x30\n\nclose_type\x18\x01 \x01(\x0e\x32\x1c.greenlight.CloseChannelType\x12\n\n\x02tx\x18\x02 \x01(\x0c\x12\x0c\n\x04txid\x18\x03 \x01(\x0c\"l\n\x06\x41mount\x12\x16\n\x0cmillisatoshi\x18\x01 \x01(\x04H\x00\x12\x11\n\x07satoshi\x18\x02 \x01(\x04H\x00\x12\x11\n\x07\x62itcoin\x18\x03 \x01(\x04H\x00\x12\r\n\x03\x61ll\x18\x04 \x01(\x08H\x00\x12\r\n\x03\x61ny\x18\x05 \x01(\x08H\x00\x42\x06\n\x04unit\"X\n\x0eInvoiceRequest\x12\"\n\x06\x61mount\x18\x01 \x01(\x0b\x32\x12.greenlight.Amount\x12\r\n\x05label\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\"\x8d\x02\n\x07Invoice\x12\r\n\x05label\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\"\n\x06\x61mount\x18\x03 \x01(\x0b\x32\x12.greenlight.Amount\x12$\n\x08received\x18\x04 \x01(\x0b\x32\x12.greenlight.Amount\x12)\n\x06status\x18\x05 \x01(\x0e\x32\x19.greenlight.InvoiceStatus\x12\x14\n\x0cpayment_time\x18\x06 \x01(\r\x12\x13\n\x0b\x65xpiry_time\x18\x07 \x01(\r\x12\x0e\n\x06\x62olt11\x18\x08 \x01(\t\x12\x14\n\x0cpayment_hash\x18\t \x01(\x0c\x12\x18\n\x10payment_preimage\x18\n \x01(\x0c\"Q\n\nPayRequest\x12\x0e\n\x06\x62olt11\x18\x01 \x01(\t\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12\x0f\n\x07timeout\x18\x03 \x01(\r\"\xe6\x01\n\x07Payment\x12\x13\n\x0b\x64\x65stination\x18\x01 \x01(\x0c\x12\x14\n\x0cpayment_hash\x18\x02 \x01(\x0c\x12\x18\n\x10payment_preimage\x18\x03 \x01(\x0c\x12%\n\x06status\x18\x04 \x01(\x0e\x32\x15.greenlight.PayStatus\x12\"\n\x06\x61mount\x18\x05 \x01(\x0b\x32\x12.greenlight.Amount\x12\'\n\x0b\x61mount_sent\x18\x06 \x01(\x0b\x32\x12.greenlight.Amount\x12\x0e\n\x06\x62olt11\x18\x07 \x01(\t\x12\x12\n\ncreated_at\x18\x08 \x01(\x01\"C\n\x11PaymentIdentifier\x12\x10\n\x06\x62olt11\x18\x01 \x01(\tH\x00\x12\x16\n\x0cpayment_hash\x18\x02 \x01(\x0cH\x00\x42\x04\n\x02id\"H\n\x13ListPaymentsRequest\x12\x31\n\nidentifier\x18\x01 \x01(\x0b\x32\x1d.greenlight.PaymentIdentifier\"=\n\x14ListPaymentsResponse\x12%\n\x08payments\x18\x01 \x03(\x0b\x32\x13.greenlight.Payment\"W\n\x11InvoiceIdentifier\x12\x0f\n\x05label\x18\x01 \x01(\tH\x00\x12\x13\n\tinvstring\x18\x02 \x01(\tH\x00\x12\x16\n\x0cpayment_hash\x18\x03 \x01(\x0cH\x00\x42\x04\n\x02id\"H\n\x13ListInvoicesRequest\x12\x31\n\nidentifier\x18\x01 \x01(\x0b\x32\x1d.greenlight.InvoiceIdentifier\"\x16\n\x14StreamIncomingFilter\"=\n\x14ListInvoicesResponse\x12%\n\x08invoices\x18\x01 \x03(\x0b\x32\x13.greenlight.Invoice\"\'\n\x08TlvField\x12\x0c\n\x04type\x18\x01 \x01(\x04\x12\r\n\x05value\x18\x02 \x01(\x0c\"\xa5\x01\n\x0fOffChainPayment\x12\r\n\x05label\x18\x01 \x01(\t\x12\x10\n\x08preimage\x18\x02 \x01(\x0c\x12\"\n\x06\x61mount\x18\x03 \x01(\x0b\x32\x12.greenlight.Amount\x12\'\n\textratlvs\x18\x04 \x03(\x0b\x32\x14.greenlight.TlvField\x12\x14\n\x0cpayment_hash\x18\x05 \x01(\x0c\x12\x0e\n\x06\x62olt11\x18\x06 \x01(\t\"M\n\x0fIncomingPayment\x12/\n\x08offchain\x18\x01 \x01(\x0b\x32\x1b.greenlight.OffChainPaymentH\x00\x42\t\n\x07\x64\x65tails\"x\n\x0cRoutehintHop\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x18\n\x10short_channel_id\x18\x02 \x01(\t\x12\x10\n\x08\x66\x65\x65_base\x18\x03 \x01(\x04\x12\x10\n\x08\x66\x65\x65_prop\x18\x04 \x01(\r\x12\x19\n\x11\x63ltv_expiry_delta\x18\x05 \x01(\r\"3\n\tRoutehint\x12&\n\x04hops\x18\x01 \x03(\x0b\x32\x18.greenlight.RoutehintHop\"\xa8\x01\n\x0eKeysendRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\"\n\x06\x61mount\x18\x02 \x01(\x0b\x32\x12.greenlight.Amount\x12\r\n\x05label\x18\x03 \x01(\t\x12)\n\nroutehints\x18\x04 \x03(\x0b\x32\x15.greenlight.Routehint\x12\'\n\textratlvs\x18\x05 \x03(\x0b\x32\x14.greenlight.TlvField\"\x12\n\x10RoutehintRequest\">\n\x11RoutehintResponse\x12)\n\nroutehints\x18\x01 \x03(\x0b\x32\x15.greenlight.Routehint\"\x12\n\x10StreamLogRequest\"\x18\n\x08LogEntry\x12\x0c\n\x04line\x18\x01 \x01(\t*:\n\x0eNetAddressType\x12\x08\n\x04Ipv4\x10\x00\x12\x08\n\x04Ipv6\x10\x01\x12\t\n\x05TorV2\x10\x02\x12\t\n\x05TorV3\x10\x03*-\n\x0e\x42tcAddressType\x12\n\n\x06\x42\x45\x43H32\x10\x00\x12\x0f\n\x0bP2SH_SEGWIT\x10\x01*.\n\x0cOutputStatus\x12\r\n\tCONFIRMED\x10\x00\x12\x0f\n\x0bUNCONFIRMED\x10\x01*1\n\rFeeratePreset\x12\n\n\x06NORMAL\x10\x00\x12\x08\n\x04SLOW\x10\x01\x12\n\n\x06URGENT\x10\x02*.\n\x10\x43loseChannelType\x12\n\n\x06MUTUAL\x10\x00\x12\x0e\n\nUNILATERAL\x10\x01*2\n\rInvoiceStatus\x12\n\n\x06UNPAID\x10\x00\x12\x08\n\x04PAID\x10\x01\x12\x0b\n\x07\x45XPIRED\x10\x02*2\n\tPayStatus\x12\x0b\n\x07PENDING\x10\x00\x12\x0c\n\x08\x43OMPLETE\x10\x01\x12\n\n\x06\x46\x41ILED\x10\x02\x32\xf3\n\n\x04Node\x12\x44\n\x07GetInfo\x12\x1a.greenlight.GetInfoRequest\x1a\x1b.greenlight.GetInfoResponse\"\x00\x12;\n\x04Stop\x12\x17.greenlight.StopRequest\x1a\x18.greenlight.StopResponse\"\x00\x12H\n\x0b\x43onnectPeer\x12\x1a.greenlight.ConnectRequest\x1a\x1b.greenlight.ConnectResponse\"\x00\x12J\n\tListPeers\x12\x1c.greenlight.ListPeersRequest\x1a\x1d.greenlight.ListPeersResponse\"\x00\x12M\n\nDisconnect\x12\x1d.greenlight.DisconnectRequest\x1a\x1e.greenlight.DisconnectResponse\"\x00\x12\x44\n\x07NewAddr\x12\x1a.greenlight.NewAddrRequest\x1a\x1b.greenlight.NewAddrResponse\"\x00\x12J\n\tListFunds\x12\x1c.greenlight.ListFundsRequest\x1a\x1d.greenlight.ListFundsResponse\"\x00\x12G\n\x08Withdraw\x12\x1b.greenlight.WithdrawRequest\x1a\x1c.greenlight.WithdrawResponse\"\x00\x12P\n\x0b\x46undChannel\x12\x1e.greenlight.FundChannelRequest\x1a\x1f.greenlight.FundChannelResponse\"\x00\x12S\n\x0c\x43loseChannel\x12\x1f.greenlight.CloseChannelRequest\x1a .greenlight.CloseChannelResponse\"\x00\x12\x42\n\rCreateInvoice\x12\x1a.greenlight.InvoiceRequest\x1a\x13.greenlight.Invoice\"\x00\x12\x34\n\x03Pay\x12\x16.greenlight.PayRequest\x1a\x13.greenlight.Payment\"\x00\x12<\n\x07Keysend\x12\x1a.greenlight.KeysendRequest\x1a\x13.greenlight.Payment\"\x00\x12S\n\x0cListPayments\x12\x1f.greenlight.ListPaymentsRequest\x1a .greenlight.ListPaymentsResponse\"\x00\x12S\n\x0cListInvoices\x12\x1f.greenlight.ListInvoicesRequest\x1a .greenlight.ListInvoicesResponse\"\x00\x12S\n\x0eStreamIncoming\x12 .greenlight.StreamIncomingFilter\x1a\x1b.greenlight.IncomingPayment\"\x00\x30\x01\x12\x43\n\tStreamLog\x12\x1c.greenlight.StreamLogRequest\x1a\x14.greenlight.LogEntry\"\x00\x30\x01\x12\x42\n\x11StreamHsmRequests\x12\x11.greenlight.Empty\x1a\x16.greenlight.HsmRequest\"\x00\x30\x01\x12\x41\n\x11RespondHsmRequest\x12\x17.greenlight.HsmResponse\x1a\x11.greenlight.Empty\"\x00\x32s\n\x03Hsm\x12<\n\x07Request\x12\x16.greenlight.HsmRequest\x1a\x17.greenlight.HsmResponse\"\x00\x12.\n\x04Ping\x12\x11.greenlight.Empty\x1a\x11.greenlight.Empty\"\x00\x62\x06proto3'
 )
 
 _NETADDRESSTYPE = _descriptor.EnumDescriptor(
@@ -53,8 +53,8 @@ _NETADDRESSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5058,
-  serialized_end=5116,
+  serialized_start=5162,
+  serialized_end=5220,
 )
 _sym_db.RegisterEnumDescriptor(_NETADDRESSTYPE)
 
@@ -79,8 +79,8 @@ _BTCADDRESSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5118,
-  serialized_end=5163,
+  serialized_start=5222,
+  serialized_end=5267,
 )
 _sym_db.RegisterEnumDescriptor(_BTCADDRESSTYPE)
 
@@ -105,8 +105,8 @@ _OUTPUTSTATUS = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5165,
-  serialized_end=5211,
+  serialized_start=5269,
+  serialized_end=5315,
 )
 _sym_db.RegisterEnumDescriptor(_OUTPUTSTATUS)
 
@@ -136,8 +136,8 @@ _FEERATEPRESET = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5213,
-  serialized_end=5262,
+  serialized_start=5317,
+  serialized_end=5366,
 )
 _sym_db.RegisterEnumDescriptor(_FEERATEPRESET)
 
@@ -162,8 +162,8 @@ _CLOSECHANNELTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5264,
-  serialized_end=5310,
+  serialized_start=5368,
+  serialized_end=5414,
 )
 _sym_db.RegisterEnumDescriptor(_CLOSECHANNELTYPE)
 
@@ -193,8 +193,8 @@ _INVOICESTATUS = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5312,
-  serialized_end=5362,
+  serialized_start=5416,
+  serialized_end=5466,
 )
 _sym_db.RegisterEnumDescriptor(_INVOICESTATUS)
 
@@ -224,8 +224,8 @@ _PAYSTATUS = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=5364,
-  serialized_end=5414,
+  serialized_start=5468,
+  serialized_end=5518,
 )
 _sym_db.RegisterEnumDescriptor(_PAYSTATUS)
 
@@ -2169,6 +2169,13 @@ _PAYMENT = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='created_at', full_name='greenlight.Payment.created_at', index=7,
+      number=8, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -2182,7 +2189,7 @@ _PAYMENT = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=3710,
-  serialized_end=3920,
+  serialized_end=3940,
 )
 
 
@@ -2225,8 +2232,8 @@ _PAYMENTIDENTIFIER = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=3922,
-  serialized_end=3989,
+  serialized_start=3942,
+  serialized_end=4009,
 )
 
 
@@ -2257,8 +2264,8 @@ _LISTPAYMENTSREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3991,
-  serialized_end=4063,
+  serialized_start=4011,
+  serialized_end=4083,
 )
 
 
@@ -2289,8 +2296,8 @@ _LISTPAYMENTSRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4065,
-  serialized_end=4126,
+  serialized_start=4085,
+  serialized_end=4146,
 )
 
 
@@ -2340,8 +2347,8 @@ _INVOICEIDENTIFIER = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=4128,
-  serialized_end=4215,
+  serialized_start=4148,
+  serialized_end=4235,
 )
 
 
@@ -2372,8 +2379,8 @@ _LISTINVOICESREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4217,
-  serialized_end=4289,
+  serialized_start=4237,
+  serialized_end=4309,
 )
 
 
@@ -2397,8 +2404,8 @@ _STREAMINCOMINGFILTER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4291,
-  serialized_end=4313,
+  serialized_start=4311,
+  serialized_end=4333,
 )
 
 
@@ -2429,8 +2436,8 @@ _LISTINVOICESRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4315,
-  serialized_end=4376,
+  serialized_start=4335,
+  serialized_end=4396,
 )
 
 
@@ -2468,8 +2475,8 @@ _TLVFIELD = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4378,
-  serialized_end=4417,
+  serialized_start=4398,
+  serialized_end=4437,
 )
 
 
@@ -2535,8 +2542,8 @@ _OFFCHAINPAYMENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4420,
-  serialized_end=4585,
+  serialized_start=4440,
+  serialized_end=4605,
 )
 
 
@@ -2572,8 +2579,8 @@ _INCOMINGPAYMENT = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=4587,
-  serialized_end=4664,
+  serialized_start=4607,
+  serialized_end=4684,
 )
 
 
@@ -2632,8 +2639,8 @@ _ROUTEHINTHOP = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4666,
-  serialized_end=4786,
+  serialized_start=4686,
+  serialized_end=4806,
 )
 
 
@@ -2664,8 +2671,8 @@ _ROUTEHINT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4788,
-  serialized_end=4839,
+  serialized_start=4808,
+  serialized_end=4859,
 )
 
 
@@ -2724,8 +2731,65 @@ _KEYSENDREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4842,
-  serialized_end=5010,
+  serialized_start=4862,
+  serialized_end=5030,
+)
+
+
+_ROUTEHINTREQUEST = _descriptor.Descriptor(
+  name='RoutehintRequest',
+  full_name='greenlight.RoutehintRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=5032,
+  serialized_end=5050,
+)
+
+
+_ROUTEHINTRESPONSE = _descriptor.Descriptor(
+  name='RoutehintResponse',
+  full_name='greenlight.RoutehintResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='routehints', full_name='greenlight.RoutehintResponse.routehints', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=5052,
+  serialized_end=5114,
 )
 
 
@@ -2749,8 +2813,8 @@ _STREAMLOGREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5012,
-  serialized_end=5030,
+  serialized_start=5116,
+  serialized_end=5134,
 )
 
 
@@ -2781,8 +2845,8 @@ _LOGENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5032,
-  serialized_end=5056,
+  serialized_start=5136,
+  serialized_end=5160,
 )
 
 _HSMREQUEST.fields_by_name['context'].message_type = _HSMREQUESTCONTEXT
@@ -2873,6 +2937,7 @@ _ROUTEHINT.fields_by_name['hops'].message_type = _ROUTEHINTHOP
 _KEYSENDREQUEST.fields_by_name['amount'].message_type = _AMOUNT
 _KEYSENDREQUEST.fields_by_name['routehints'].message_type = _ROUTEHINT
 _KEYSENDREQUEST.fields_by_name['extratlvs'].message_type = _TLVFIELD
+_ROUTEHINTRESPONSE.fields_by_name['routehints'].message_type = _ROUTEHINT
 DESCRIPTOR.message_types_by_name['HsmRequestContext'] = _HSMREQUESTCONTEXT
 DESCRIPTOR.message_types_by_name['HsmResponse'] = _HSMRESPONSE
 DESCRIPTOR.message_types_by_name['HsmRequest'] = _HSMREQUEST
@@ -2926,6 +2991,8 @@ DESCRIPTOR.message_types_by_name['IncomingPayment'] = _INCOMINGPAYMENT
 DESCRIPTOR.message_types_by_name['RoutehintHop'] = _ROUTEHINTHOP
 DESCRIPTOR.message_types_by_name['Routehint'] = _ROUTEHINT
 DESCRIPTOR.message_types_by_name['KeysendRequest'] = _KEYSENDREQUEST
+DESCRIPTOR.message_types_by_name['RoutehintRequest'] = _ROUTEHINTREQUEST
+DESCRIPTOR.message_types_by_name['RoutehintResponse'] = _ROUTEHINTRESPONSE
 DESCRIPTOR.message_types_by_name['StreamLogRequest'] = _STREAMLOGREQUEST
 DESCRIPTOR.message_types_by_name['LogEntry'] = _LOGENTRY
 DESCRIPTOR.enum_types_by_name['NetAddressType'] = _NETADDRESSTYPE
@@ -3308,6 +3375,20 @@ KeysendRequest = _reflection.GeneratedProtocolMessageType('KeysendRequest', (_me
   })
 _sym_db.RegisterMessage(KeysendRequest)
 
+RoutehintRequest = _reflection.GeneratedProtocolMessageType('RoutehintRequest', (_message.Message,), {
+  'DESCRIPTOR' : _ROUTEHINTREQUEST,
+  '__module__' : 'greenlight_pb2'
+  # @@protoc_insertion_point(class_scope:greenlight.RoutehintRequest)
+  })
+_sym_db.RegisterMessage(RoutehintRequest)
+
+RoutehintResponse = _reflection.GeneratedProtocolMessageType('RoutehintResponse', (_message.Message,), {
+  'DESCRIPTOR' : _ROUTEHINTRESPONSE,
+  '__module__' : 'greenlight_pb2'
+  # @@protoc_insertion_point(class_scope:greenlight.RoutehintResponse)
+  })
+_sym_db.RegisterMessage(RoutehintResponse)
+
 StreamLogRequest = _reflection.GeneratedProtocolMessageType('StreamLogRequest', (_message.Message,), {
   'DESCRIPTOR' : _STREAMLOGREQUEST,
   '__module__' : 'greenlight_pb2'
@@ -3331,8 +3412,8 @@ _NODE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=5417,
-  serialized_end=6812,
+  serialized_start=5521,
+  serialized_end=6916,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetInfo',
@@ -3537,8 +3618,8 @@ _HSM = _descriptor.ServiceDescriptor(
   index=1,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=6814,
-  serialized_end=6929,
+  serialized_start=6918,
+  serialized_end=7033,
   methods=[
   _descriptor.MethodDescriptor(
     name='Request',

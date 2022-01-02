@@ -41,10 +41,6 @@ impl Node {
         })
     }
 
-    fn get_info(&self) -> PyResult<Vec<u8>> {
-        convert(exec(self.client.clone().get_info(pb::GetInfoRequest {})).map(|x| x.into_inner()))
-    }
-
     fn stop(&self) -> PyResult<()> {
         let res = exec(self.client.clone().stop(pb::StopRequest {})).map(|x| x.into_inner());
         match res {
@@ -59,17 +55,6 @@ impl Node {
                 self.client
                     .clone()
                     .list_funds(pb::ListFundsRequest::default()),
-            )
-            .map(|x| x.into_inner()),
-        )
-    }
-
-    fn list_invoices(&self) -> PyResult<Vec<u8>> {
-        convert(
-            exec(
-                self.client
-                    .clone()
-                    .list_invoices(pb::ListInvoicesRequest::default()),
             )
             .map(|x| x.into_inner()),
         )
@@ -271,6 +256,35 @@ impl Node {
             }
         };
         Ok(IncomingStream { inner: stream })
+    }
+
+    fn call(&self, method: &str, req: &[u8]) -> PyResult<Vec<u8>> {
+        let res = exec(self.dispatch(method, req));
+        res
+    }
+}
+
+impl Node {
+    async fn dispatch(&self, method: &str, req: &[u8]) -> Result<Vec<u8>, PyErr> {
+        let mut client = self.client.clone();
+        match method {
+            "GetInfo" => convert(
+                client
+                    .get_info(pb::GetInfoRequest::decode(req).unwrap())
+                    .await
+                    .map(|x| x.into_inner()),
+            ),
+            "ListInvoices" => convert(
+                client
+                    .list_invoices(pb::ListInvoicesRequest::decode(req).unwrap())
+                    .await
+                    .map(|x| x.into_inner()),
+            ),
+            m => Err(PyValueError::new_err(format!(
+                "Unmapped method {}, please add it to node.rs",
+                m
+            ))),
+        }
     }
 }
 
