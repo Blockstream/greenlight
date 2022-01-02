@@ -461,10 +461,17 @@ def log(ctx):
 
 
 @cli.command()
+@click.option('--payment-hash', '-h', required=False)
+@click.option('--label', '-l', required=False)
+@click.option('--invoice', '-i', required=False)
 @click.pass_context
-def listinvoices(ctx):
+def listinvoices(ctx, payment_hash=None, label=None, invoice=None):
     node = ctx.obj.get_node()
-    res = node.list_invoices()
+    res = node.list_invoices(
+        payment_hash=payment_hash,
+        invstring=invoice,
+        label=label
+    )
     pbprint(res)
 
 
