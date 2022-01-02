@@ -19,6 +19,6 @@ fi
 
 (
     # Need to run in libs/ so we have access to proto/ and tls/
-    cd $(git rev-parse --show-toplevel)/libs
-    cibuildwheel rust/gl-client-py
+    cd $(git rev-parse --show-toplevel)
+    cibuildwheel libs/gl-client-py
 )

@@ -62,7 +62,7 @@ library. Please refer to its [documentation][glpy-doc] on how to build
 the library from source, and let us know your platform so we can add
 it to our build system if possible.
 
-[glpy-doc]: libs/rust/gl-client-py
+[glpy-doc]: libs/gl-client-py
 
 ## Register / recover an account
 
