@@ -1,0 +1,100 @@
+image: python:latest
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  RUST_VERSION: nightly-2021-08-31
+  PATH: "/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/reference/pip_install/#caching
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
+cache:
+  paths:
+    - .cache/pip
+    - libs/target
+    - venv
+
+stages:
+  - test
+  - package
+
+before_script:
+  - echo $HOME
+  - apt-get update -qq && apt-get install -y -qq wget build-essential clang git
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $RUST_VERSION
+  - $HOME/.cargo/bin/rustup toolchain install $RUST_VERSION --component rustfmt --allow-downgrade
+  - wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1.5.0_linux_amd64 -O /usr/bin/cfssl
+  - chmod a+x /usr/bin/cfssl
+  - wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson
+  - chmod a+x /usr/bin/cfssljson
+  - pip install -U pip
+  - pip install -U wheel maturin cibuildwheel virtualenv
+  - virtualenv venv --py python3.8
+  - source venv/bin/activate
+    
+#test:
+#  stage: test
+#  script: |
+#    #(cd libs; cargo test --all)
+#    pip install -U pip
+#    pip install -U wheel maturin pytest
+#
+#    (
+#      cd libs/gl-client-py
+#      maturin develop
+#    )
+#    
+#    pip install libs/gl-testing
+#
+#    (
+#      cd libs/gl-client-py
+#      pytest tests -vvv
+#    )
+
+gl-client-py-x86_64:
+  stage: test
+  image: "quay.io/pypa/manylinux_2_24_x86_64"
+  variables:
+    CIBW_BUILD_FRONTEND: build
+    PATH: "/opt/_internal/cpython-3.8.12/bin/:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+  script: |
+    apt-get update -qq && apt-get install \
+      build-essential \
+      clang \
+      git \
+      libgmp-dev \
+      pkg-config \
+      libsqlite3-dev \
+      valgrind
+
+    python3 -m pip install -U wheel maturin
+    maturin build \
+      --strip \
+      --release \
+      --out wheelhouse \
+      --manifest-path libs/gl-client-py/Cargo.toml
+
+  artifacts:
+    name: "$env:x86_64"
+    paths:
+      - wheelhouse/*.whl
+
+gl-client-py-i686:
+  stage: package
+  image: "quay.io/pypa/manylinux_2_24_i686"
+  variables:
+    CIBW_BUILD_FRONTEND: build
+    PATH: "/opt/_internal/cpython-3.8.12/bin/:/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+  script: |
+    cd libs/gl-client-py
+    python3.8 -m pip install -U wheel maturin
+    maturin build --strip --release --out ${CI_BUILDS_DIR}/wheelhouse --manifest-path ${CI_BUILDS_DIR}/libs/gl-client-py
+  artifacts:
+    name: "$env:i686"
+    paths:
+      - wheelhouse/*.whl
