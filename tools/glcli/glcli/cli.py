@@ -14,6 +14,7 @@ import re
 import secrets
 import struct
 import sys
+import threading
 import time
 
 
@@ -456,8 +457,14 @@ def keysend(ctx, node_id, amount, label, routehints, extratlvs):
 @click.pass_context
 def log(ctx):
     node = ctx.obj.get_node()
-    for entry in node.stream_log():
-        print(entry.line)
+
+    def tail(node):
+        for entry in node.stream_log():
+            print(entry.line.strip())
+
+    t = threading.Thread(target=tail, args=(node, ), daemon=True)
+    t.start()
+    t.join()
 
 
 @cli.command()
