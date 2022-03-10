@@ -192,6 +192,12 @@ message ScheduleRequest {
 message NodeInfoRequest {
 	bytes node_id = 1;
 	bool wait = 2;
+
+	// If this is a signer we can use this field to tell the
+	// scheduler about which version of the protocol the sigher is
+	// running. The scheduler will remember this and attempt to
+	// upgrade the node to this version if possible.
+	optional string signer_proto = 3;
 };
 
 message NodeInfoResponse {

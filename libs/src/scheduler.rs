@@ -1,6 +1,11 @@
 use crate::pb::scheduler_client::SchedulerClient;
 use crate::tls::TlsConfig;
-use crate::{node, pb, signer::Signer, utils};
+
+use crate::{
+    node, pb,
+    signer::{Signer, LIBHSMD_PROTOCOL},
+    utils, Network,
+};
 use anyhow::Result;
 use bitcoin::Network;
 use tonic::transport::Channel;
@@ -58,6 +63,7 @@ impl Scheduler {
 		signer_proto: signer.version().to_owned(),
 		init_msg: Some(signer.get_init()),
                 signature,
+                signer_proto: LIBHSMD_PROTOCOL.to_string(),
             })
             .await?;
 
