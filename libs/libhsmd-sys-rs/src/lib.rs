@@ -6,6 +6,7 @@ use std::sync::Mutex;
 #[macro_use]
 extern crate lazy_static;
 
+/// ⚠ Keep this in sync with the branch we check out in `build.rs` ⚠
 const LIBHSMD_PROTO: &str = "v0.10.1";
 
 extern "C" {
