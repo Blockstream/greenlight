@@ -8,7 +8,6 @@ use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
 use bitcoin::Network;
 use bytes::{Buf, Bytes};
-pub use libhsmd_sys::LIBHSMD_PROTOCOL;
 use libhsmd_sys::{Capabilities, Capability, Hsmd};
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
@@ -147,7 +146,6 @@ impl Signer {
                 .get_node_info(NodeInfoRequest {
                     node_id: self.id.clone(),
                     wait: true,
-                    signer_proto: Some(LIBHSMD_PROTOCOL.to_string()),
                 })
                 .await
                 .map(|v| v.into_inner())

@@ -54,10 +54,6 @@ impl Scheduler {
                 .get_node_info(pb::NodeInfoRequest {
                     node_id: self.node_id.clone(),
                     wait: false,
-		    // We're a scheduler stub and may not have a
-		    // signer attached. Return an empty version
-		    // instead.
-                    signer_proto: None,
                 })
                 .await;
 
