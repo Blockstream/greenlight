@@ -187,9 +187,20 @@ class Node(object):
             bytes(self.inner.withdraw(req))
         )
 
-    def fund_channel(self, node_id, amount, announce=False, minconf=1) -> nodepb.FundChannelResponse:
+    def fund_channel(
+            self,
+            node_id,
+            amount,
+            announce=False,
+            minconf=1) -> nodepb.FundChannelResponse:
         if len(node_id) == 66:
             node_id = unhexlify(node_id)
+
+        if isinstance(minconf, int):
+            minconf = nodepb.Confirmation(blocks=minconf)
+        elif not isinstance(minconf, nodepb.Confirmation):
+            raise ValueError("'minconf' is neither an int nor a Confirmation")
+
 
         if len(node_id) != 33:
             raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
