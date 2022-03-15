@@ -15,7 +15,6 @@ type Client = SchedulerClient<Channel>;
 #[derive(Clone)]
 pub struct Scheduler {
     node_id: Vec<u8>,
-    network: Network,
     inner: gl_client::scheduler::Scheduler,
 }
 
@@ -37,11 +36,7 @@ impl Scheduler {
             Err(_) => return Err(PyValueError::new_err("could not connect to the scheduler")),
         };
 
-        Ok(Scheduler {
-            node_id,
-            network,
-            inner,
-        })
+        Ok(Scheduler { node_id, inner })
     }
 
     fn register(&self, signer: &Signer) -> PyResult<Vec<u8>> {
@@ -49,9 +44,7 @@ impl Scheduler {
     }
 
     fn recover(&self, signer: &Signer) -> PyResult<Vec<u8>> {
-        convert(exec(
-            async move { self.inner.recover(&signer.inner).await },
-        ))
+        convert(exec(async move { self.inner.recover(&signer.inner).await }))
     }
 
     fn get_node_info(&self) -> PyResult<Vec<u8>> {

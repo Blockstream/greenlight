@@ -1,4 +1,3 @@
-use anyhow::Result;
 use gl_client::tls;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
