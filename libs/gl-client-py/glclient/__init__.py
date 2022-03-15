@@ -57,9 +57,6 @@ class Signer(object):
     def node_id(self):
         return bytes(self.inner.node_id())
 
-    def sign_challenge(self, challenge):
-        return bytes(self.inner.sign_challenge(challenge))
-
 
 class Scheduler(object):
 
@@ -174,7 +171,7 @@ class Node(object):
             bytes(self.inner.disconnect_peer(peer_id, force))
         )
 
-    def new_address(self, address_type: str) -> nodepb.NewAddrResponse:
+    def new_address(self) -> nodepb.NewAddrResponse:
         return nodepb.NewAddrResponse.FromString(
             bytes(self.inner.new_address())
         )
