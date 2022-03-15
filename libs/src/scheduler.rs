@@ -15,7 +15,7 @@ pub struct Scheduler {
 
 impl Scheduler {
     pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
-        let tls = crate::tls::TlsConfig::default();
+        let tls = crate::tls::TlsConfig::new()?;
         let scheduler_uri = utils::scheduler_uri();
 
 	debug!("Connecting to scheduler at {}", scheduler_uri);

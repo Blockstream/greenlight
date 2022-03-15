@@ -1,4 +1,6 @@
+use anyhow::Result;
 use gl_client::tls;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -10,10 +12,10 @@ pub struct TlsConfig {
 #[pymethods]
 impl TlsConfig {
     #[new]
-    fn new() -> TlsConfig {
-        Self {
-            inner: tls::TlsConfig::default(),
-        }
+    fn new() -> PyResult<TlsConfig> {
+        let inner = tls::TlsConfig::new()
+            .map_err(|e| PyValueError::new_err(format!("Error creating TlsConfig: {:?}", e)))?;
+        Ok(Self { inner })
     }
 
     fn identity(&self, cert_pem: Vec<u8>, key_pem: Vec<u8>) -> Self {

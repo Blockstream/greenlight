@@ -1,7 +1,7 @@
 use gl_client::tls;
 use neon::prelude::*;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct TlsConfig {
     pub(crate) inner: tls::TlsConfig,
 }
@@ -10,9 +10,12 @@ impl Finalize for TlsConfig {}
 
 impl TlsConfig {
     pub(crate) fn new(mut cx: FunctionContext) -> JsResult<JsBox<TlsConfig>> {
-        Ok(cx.boxed(Self {
-            inner: tls::TlsConfig::default(),
-        }))
+        let inner = match tls::TlsConfig::new() {
+            Ok(tls) => tls,
+            Err(e) => return cx.throw_error(format!("could not initialize TlsConfig: {:?}", e)),
+        };
+
+        Ok(cx.boxed(Self { inner }))
     }
 
     pub(crate) fn identity(mut cx: FunctionContext) -> JsResult<JsBox<TlsConfig>> {
