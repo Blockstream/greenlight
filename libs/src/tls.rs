@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 lazy_static! {
@@ -26,35 +27,36 @@ pub struct TlsConfig {
     pub ca: Vec<u8>,
 }
 
-fn load_file_or_default(varname: &str, default: Vec<u8>) -> Vec<u8> {
+fn load_file_or_default(varname: &str, default: &Vec<u8>) -> Result<Vec<u8>> {
     match std::env::var(varname) {
         Ok(fname) => {
             debug!("Loading file {} for envvar {}", fname, varname);
-            std::fs::read(fname).expect("reading custom identity file")
+            Ok(std::fs::read(fname.clone())
+                .with_context(|| format!("could not read file {} for envvar {}", fname, varname))?)
         }
-        Err(_) => default,
+        Err(_) => Ok(default.clone()),
     }
 }
 
-impl Default for TlsConfig {
-    fn default() -> Self {
+impl TlsConfig {
+    pub fn new() -> Result<Self> {
         // Allow overriding the defaults through the environment
         // variables, so we don't pollute the public interface with
         // stuff that is testing-related.
-        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT.clone());
-        let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY.clone());
-        let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW.clone());
+        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", &NOBODY_CRT)?;
+        let nobody_key = load_file_or_default("GL_NOBODY_KEY", &NOBODY_KEY)?;
+        let ca_crt = load_file_or_default("GL_CA_CRT", &CA_RAW)?;
 
         let config = ClientTlsConfig::new()
             .domain_name("localhost")
             .ca_certificate(Certificate::from_pem(ca_crt.clone()))
             .identity(Identity::from_pem(nobody_crt, nobody_key));
 
-        TlsConfig {
+        Ok(TlsConfig {
             inner: config,
             private_key: None,
             ca: ca_crt,
-        }
+        })
     }
 }
 
