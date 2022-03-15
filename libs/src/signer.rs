@@ -233,9 +233,3 @@ mod tests {
             .is_err())
     }
 }
-
-#[derive(Debug)]
-struct InitInfo {
-    node_id: Vec<u8>,
-    bip32_ext_key: Vec<u8>,
-}
