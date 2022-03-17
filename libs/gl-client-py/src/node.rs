@@ -6,7 +6,7 @@ use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use std::convert::TryInto;
-use tonic::Status;
+use tonic::{Code, Status};
 
 #[pyclass]
 pub struct Node {
@@ -316,12 +316,21 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
     let res = match r {
         Ok(Some(v)) => v,
         Ok(None) => return Ok(None),
-        Err(e) => {
-            return Err(PyValueError::new_err(format!(
-                "error calling remote method: {}",
-                e
-            )))
-        }
+        Err(e) => match e.code() {
+            Code::Unknown => {
+                // Unknown most likely just means we lost the
+                // connection. This is due to a shutdown and shouldn't
+                // be as noisy as other errors.
+                return Ok(None);
+            }
+            _ => {
+                log::warn!("ERROR {:?}", e);
+                return Err(PyValueError::new_err(format!(
+                    "error calling remote method: {}",
+                    e
+                )));
+            }
+        },
     };
     let mut buf = Vec::new();
     buf.reserve(res.encoded_len());
