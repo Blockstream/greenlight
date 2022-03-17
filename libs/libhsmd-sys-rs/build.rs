@@ -48,7 +48,7 @@ fn main() {
             "--depth=1",
             "--recurse",
             "-b",
-            "libhsmd-rust",
+            "libhsmd-sys-rs-v0.10.1",
             "https://github.com/cdecker/lightning.git",
             &srcdir.to_string_lossy(),
         ])
