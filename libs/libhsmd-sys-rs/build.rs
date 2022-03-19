@@ -170,8 +170,7 @@ fn main() {
         "common/hash_u5.c",
         "common/hsm_encryption.c",
         "common/key_derive.c",
-        // Post v0.10.2 needs this
-        //"common/lease_rates.c",
+        "common/lease_rates.c",
         "common/memleak.c",
         "common/msg_queue.c",
         "common/node_id.c",
