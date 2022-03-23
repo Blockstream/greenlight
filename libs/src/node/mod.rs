@@ -2,8 +2,8 @@ use crate::pb::node_client::NodeClient;
 use crate::pb::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
 use crate::utils;
-use crate::Network;
 use anyhow::{anyhow, Result};
+use bitcoin::Network;
 use tonic::transport::{Channel, Uri};
 use tower::ServiceBuilder;
 

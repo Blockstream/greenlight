@@ -4,8 +4,9 @@
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest};
 use crate::tls::TlsConfig;
-use crate::{node, node::Client, Network};
+use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
+use bitcoin::Network;
 use bytes::{Buf, Bytes};
 use libhsmd_sys::Hsmd;
 use libhsmd_sys::{Capabilities, Capability};
@@ -30,7 +31,7 @@ pub struct Signer {
 
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
-        let hsmd = Hsmd::new(secret, network.into());
+        let hsmd = Hsmd::new(secret, &network.to_string());
         let init = hsmd.init()?;
         let id = init[2..35].to_vec();
 
@@ -220,7 +221,7 @@ mod tests {
     #[tokio::test]
     async fn test_sign_message_rejection() {
         let signer =
-            Signer::new(vec![0 as u8; 32], Network::BITCOIN, TlsConfig::default()).unwrap();
+            Signer::new(vec![0 as u8; 32], Network::Bitcoin, TlsConfig::default()).unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer

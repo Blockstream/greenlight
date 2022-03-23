@@ -1,7 +1,8 @@
 use crate::pb::scheduler_client::SchedulerClient;
 use crate::tls::TlsConfig;
-use crate::{node, pb, signer::Signer, utils, Network};
+use crate::{node, pb, signer::Signer, utils};
 use anyhow::Result;
+use bitcoin::Network;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
@@ -18,7 +19,7 @@ impl Scheduler {
         let tls = crate::tls::TlsConfig::new()?;
         let scheduler_uri = utils::scheduler_uri();
 
-	debug!("Connecting to scheduler at {}", scheduler_uri);
+        debug!("Connecting to scheduler at {}", scheduler_uri);
         let channel = Channel::from_shared(scheduler_uri)?
             .tls_config(tls.inner.clone())?
             .connect()
@@ -45,7 +46,6 @@ impl Scheduler {
             .into_inner();
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
-        let network: &str = self.network.into();
 
         let res = self
             .client
@@ -53,7 +53,7 @@ impl Scheduler {
             .register(pb::RegistrationRequest {
                 node_id: self.node_id.clone(),
                 bip32_key: signer.bip32_ext_key(),
-                network: network.to_string(),
+                network: self.network.to_string(),
                 challenge: challenge.challenge,
                 email: "".to_string(),
                 signature: signature,

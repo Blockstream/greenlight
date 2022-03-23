@@ -20,6 +20,7 @@ rustls-pemfile = "*"
 tokio = { version = "*", features = ["full"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
 tower = { version = "0.4" }
+bitcoin = "0.27"
 
 [build-dependencies]
 tonic-build = "^0.5"

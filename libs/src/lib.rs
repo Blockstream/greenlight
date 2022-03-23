@@ -2,9 +2,7 @@
 //! and sign off on signature requests.
 //!
 
-use std::convert::TryFrom;
 extern crate anyhow;
-use anyhow::{anyhow, Result};
 
 #[macro_use]
 extern crate lazy_static;
@@ -45,38 +43,6 @@ pub mod signer;
 /// ensures that only clients that are authorized can open a
 /// connection to the node.
 pub mod tls;
-
-/// Which network are we running on?
-#[derive(Copy, Clone)]
-pub enum Network {
-    BITCOIN,
-    TESTNET,
-    REGTEST,
-}
-
-impl Into<&'static str> for Network {
-    fn into(self: Network) -> &'static str {
-        match self {
-            Network::BITCOIN => "bitcoin",
-            Network::TESTNET => "testnet",
-            Network::REGTEST => "regtest",
-        }
-    }
-}
-
-impl TryFrom<String> for Network {
-    type Error = anyhow::Error;
-
-    fn try_from(s: String) -> Result<Network> {
-        let s = s.to_lowercase();
-        match s.as_str() {
-            "bitcoin" => Ok(Network::BITCOIN),
-            "testnet" => Ok(Network::TESTNET),
-            "regtest" => Ok(Network::REGTEST),
-            o => Err(anyhow!("Could not parse network {}", o)),
-        }
-    }
-}
 
 /// Tools to interact with a node running on greenlight.
 pub mod utils {

@@ -1,11 +1,11 @@
 use crate::runtime::exec;
 use crate::tls::TlsConfig;
+use bitcoin::Network;
 use gl_client as gl;
 use gl_client::pb;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use std::convert::TryInto;
 use tonic::{Code, Status};
 
 #[pyclass]
@@ -19,7 +19,7 @@ pub struct Node {
 impl Node {
     #[new]
     fn new(node_id: Vec<u8>, network: String, tls: TlsConfig, grpc_uri: String) -> PyResult<Self> {
-        let network: gl::Network = match network.try_into() {
+        let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("unknown network")),
         };
