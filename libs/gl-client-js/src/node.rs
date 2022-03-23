@@ -190,8 +190,7 @@ fn convert_stream_entry<T: Message>(
         Ok(None) => return JsBuffer::new(&mut cx, 0),
         Err(e) => cx.throw_error(format!("error retrieving stream item: {}", e))?,
     };
-    let mut buf = Vec::new();
-    buf.reserve(res.encoded_len());
+    let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
 
     let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
