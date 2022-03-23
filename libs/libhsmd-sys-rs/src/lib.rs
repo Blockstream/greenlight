@@ -86,7 +86,7 @@ impl Eq for Hsmd {}
 impl Hsmd {
     pub fn new(secret: Vec<u8>, network: &str) -> Hsmd {
         Hsmd {
-            secret: secret.clone(),
+            secret,
             network: network.to_string(),
         }
     }
@@ -96,7 +96,7 @@ impl Hsmd {
     pub fn init(&self) -> Result<Vec<u8>, Error> {
         let mut state = MUX.lock().unwrap();
         *state = Some(self.clone());
-        return init(self.secret.clone(), &self.network);
+        init(self.secret.clone(), &self.network)
     }
 
     pub fn handle(
@@ -186,9 +186,8 @@ pub fn init(secret: Vec<u8>, network: &str) -> Result<Vec<u8>, Error> {
     unsafe {
         let reslen = tal_bytelen(res as *const c_void);
         let s = slice::from_raw_parts(res, reslen);
-        let response: Vec<u8> = s.clone().to_vec();
+        let response: Vec<u8> = s.to_vec();
         tal_free(res as *const c_void);
-        drop(res);
         Ok(response)
     }
 }
@@ -214,9 +213,8 @@ pub fn handle(
     unsafe {
         let reslen = tal_bytelen(res as *const c_void);
         let s = slice::from_raw_parts(res, reslen);
-        let response: Vec<u8> = s.clone().to_vec();
+        let response: Vec<u8> = s.to_vec();
         tal_free(res as *const c_void);
-        drop(res);
         Ok(response)
     }
 }

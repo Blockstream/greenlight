@@ -121,7 +121,7 @@ mod stasher {
             self: Pin<&mut Self>,
             _cx: &mut Context<'_>,
         ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-            Poll::Ready(self.project().value.take().map(|v| Ok(v)))
+            Poll::Ready(self.project().value.take().map(Ok))
         }
 
         fn poll_trailers(
