@@ -129,7 +129,7 @@ impl Signer {
     /// directly and start streaming and processing requests.
     pub async fn run_forever(&self) -> Result<()> {
         let scheduler_uri = std::env::var("GL_SCHEDULER_GRPC_URI")
-            .unwrap_or("https://scheduler.gl.blckstrm.com:2601".to_string());
+            .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string());
 
         debug!(
             "Contacting scheduler at {} to get the node address",
@@ -165,7 +165,7 @@ impl Signer {
                 }
             };
 
-            if node_info.grpc_uri == "" {
+            if node_info.grpc_uri.is_empty() {
                 trace!("Got an empty GRPC URI, node is not scheduled, sleeping and retrying");
                 sleep(Duration::from_millis(1000)).await;
                 continue;
@@ -187,7 +187,7 @@ impl Signer {
         }
         let client = self.hsmd.client(MAIN_CAPABILITIES);
 
-        let mut req = vec![0 as u8, 23, 00, 32];
+        let mut req = vec![0_u8, 23, 00, 32];
         req.extend(challenge);
 
         let response = client.handle(req)?;

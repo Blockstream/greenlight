@@ -104,7 +104,7 @@ fn main() {
 
     println!(
         "cargo:rustc-link-search=native={}/external/{}/",
-        srcdir.to_string_lossy().to_string(),
+        srcdir.to_string_lossy(),
         machine
     );
     println!("cargo:rustc-link-lib=static=sodium");
@@ -112,7 +112,7 @@ fn main() {
     if cfg!(target_os = "macos") {
         println!("cargo:rustc-link-lib=wallycore");
     }
-    
+
     println!("cargo:rustc-link-lib=backtrace");
     println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
 

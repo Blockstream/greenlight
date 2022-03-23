@@ -56,7 +56,7 @@ impl Scheduler {
                 network: self.network.to_string(),
                 challenge: challenge.challenge,
                 email: "".to_string(),
-                signature: signature,
+                signature,
             })
             .await?;
 
@@ -82,7 +82,7 @@ impl Scheduler {
             .recover(pb::RecoveryRequest {
                 node_id: self.node_id.clone(),
                 challenge: challenge.challenge,
-                signature: signature,
+                signature,
             })
             .await?;
 

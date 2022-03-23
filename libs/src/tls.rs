@@ -83,7 +83,7 @@ impl TlsConfig {
     pub fn ca_certificate(self, ca: Vec<u8>) -> Self {
         TlsConfig {
             inner: self.inner.ca_certificate(Certificate::from_pem(&ca)),
-            ca: ca.clone(),
+            ca,
             ..self
         }
     }
