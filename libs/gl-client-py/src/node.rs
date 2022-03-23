@@ -175,30 +175,18 @@ impl Node {
     fn stream_log(&self, args: &[u8]) -> PyResult<LogStream> {
         let req = pb::StreamLogRequest::decode(args).map_err(error_decoding_request)?;
 
-        let stream = match exec(self.client.clone().stream_log(req)).map(|x| x.into_inner()) {
-            Ok(s) => s,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "Error starting stream: {}",
-                    e
-                )))
-            }
-        };
+        let stream = exec(self.client.clone().stream_log(req))
+            .map(|x| x.into_inner())
+            .map_err(error_starting_stream)?;
         Ok(LogStream { inner: stream })
     }
 
     fn stream_incoming(&self, args: &[u8]) -> PyResult<IncomingStream> {
         let req = pb::StreamIncomingFilter::decode(args).map_err(error_decoding_request)?;
 
-        let stream = match exec(self.client.clone().stream_incoming(req)).map(|x| x.into_inner()) {
-            Ok(s) => s,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "Error starting stream: {}",
-                    e
-                )))
-            }
-        };
+        let stream = exec(self.client.clone().stream_incoming(req))
+            .map(|x| x.into_inner())
+            .map_err(error_starting_stream)?;
         Ok(IncomingStream { inner: stream })
     }
 
@@ -234,6 +222,14 @@ impl Node {
 
 fn error_decoding_request<D: core::fmt::Display>(e: D) -> PyErr {
     PyValueError::new_err(format!("error decoding request: {}", e))
+}
+
+pub fn error_calling_remote_method<D: core::fmt::Display>(e: D) -> PyErr {
+    PyValueError::new_err(format!("error calling remote method: {}", e))
+}
+
+fn error_starting_stream<D: core::fmt::Display>(e: D) -> PyErr {
+    PyValueError::new_err(format!("Error starting stream: {}", e))
 }
 
 #[pyclass]
@@ -273,10 +269,7 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
             }
             _ => {
                 log::warn!("ERROR {:?}", e);
-                return Err(PyValueError::new_err(format!(
-                    "error calling remote method: {}",
-                    e
-                )));
+                return Err(error_calling_remote_method(e));
             }
         },
     };
@@ -286,15 +279,7 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
 }
 
 pub fn convert<T: Message>(r: Result<T, Status>) -> PyResult<Vec<u8>> {
-    let res = match r {
-        Ok(v) => v,
-        Err(e) => {
-            return Err(PyValueError::new_err(format!(
-                "error calling remote method: {}",
-                e
-            )))
-        }
-    };
+    let res = r.map_err(error_calling_remote_method)?;
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(buf)

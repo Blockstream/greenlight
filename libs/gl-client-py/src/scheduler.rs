@@ -84,15 +84,7 @@ impl Scheduler {
 }
 
 pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
-    let res = match r {
-        Ok(v) => v,
-        Err(e) => {
-            return Err(PyValueError::new_err(format!(
-                "error calling remote method: {}",
-                e
-            )))
-        }
-    };
+    let res = r.map_err(crate::node::error_calling_remote_method)?;
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(buf)
