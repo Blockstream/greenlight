@@ -332,8 +332,7 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
             }
         },
     };
-    let mut buf = Vec::new();
-    buf.reserve(res.encoded_len());
+    let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(Some(buf))
 }
@@ -348,8 +347,7 @@ pub fn convert<T: Message>(r: Result<T, Status>) -> PyResult<Vec<u8>> {
             )))
         }
     };
-    let mut buf = Vec::new();
-    buf.reserve(res.encoded_len());
+    let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(buf)
 }

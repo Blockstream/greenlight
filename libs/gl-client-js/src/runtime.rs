@@ -27,8 +27,7 @@ where
     T: Message,
 {
     let res = r;
-    let mut buf = Vec::new();
-    buf.reserve(res.encoded_len());
+    let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf)?;
     Ok(buf)
 }

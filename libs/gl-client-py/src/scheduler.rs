@@ -64,8 +64,7 @@ impl Scheduler {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("error calling get_node_info")),
         };
-        let mut buf = Vec::new();
-        buf.reserve(res.encoded_len());
+        let mut buf = Vec::with_capacity(res.encoded_len());
         res.encode(&mut buf).unwrap();
         Ok(buf)
     }
@@ -94,8 +93,7 @@ pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
             )))
         }
     };
-    let mut buf = Vec::new();
-    buf.reserve(res.encoded_len());
+    let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(buf)
 }
