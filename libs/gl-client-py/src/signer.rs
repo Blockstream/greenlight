@@ -1,5 +1,5 @@
 use crate::tls::TlsConfig;
-use gl_client::Network;
+use bitcoin::Network;
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -12,14 +12,12 @@ pub struct Signer {
 impl Signer {
     #[new]
     fn new(secret: Vec<u8>, network: String, tls: TlsConfig) -> PyResult<Signer> {
-        let network = match network.as_str() {
-            "bitcoin" => Network::BITCOIN,
-            "testnet" => Network::TESTNET,
-            "regtest" => Network::REGTEST,
-            v => {
+        let network: Network = match network.parse() {
+            Ok(network) => network,
+            Err(_) => {
                 return Err(pyo3::exceptions::PyValueError::new_err(format!(
                     "Unknown / unsupported network {}",
-                    v
+                    network
                 )))
             }
         };

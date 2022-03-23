@@ -2,11 +2,10 @@ use crate::runtime::exec;
 use crate::Signer;
 use crate::{pb, pb::scheduler_client::SchedulerClient};
 use anyhow::Result;
-use gl_client::Network;
+use bitcoin::Network;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use std::convert::TryInto;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
@@ -22,7 +21,7 @@ pub struct Scheduler {
 impl Scheduler {
     #[new]
     fn new(node_id: Vec<u8>, network: String) -> PyResult<Scheduler> {
-        let network: Network = match network.try_into() {
+        let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("Error parsing the network")),
         };

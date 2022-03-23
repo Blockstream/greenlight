@@ -17,6 +17,7 @@ once_cell = "*"
 tonic = "^0.5"
 prost = "0.8"
 anyhow = "*"
+bitcoin = "0.27"
 
 [dependencies.neon]
 version = "0.9"

@@ -2,10 +2,9 @@ use crate::node::Node;
 use crate::runtime::{convert, exec};
 use crate::tls::TlsConfig;
 use crate::Signer;
-use gl_client::Network;
+use bitcoin::Network;
 use neon::prelude::*;
 use prost::Message;
-use std::convert::TryInto;
 
 pub(crate) struct Scheduler {
     inner: gl_client::scheduler::Scheduler,
@@ -17,7 +16,7 @@ impl Scheduler {
         let node_id: Vec<u8> = cx.borrow(&buf, |data| data.as_slice().to_vec());
         let network = cx.argument::<JsString>(1)?.value(&mut cx);
 
-        let network: Network = match network.try_into() {
+        let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => cx.throw_error("Error parsing the network")?,
         };

@@ -1,4 +1,4 @@
-use gl_client::Network;
+use bitcoin::Network;
 use log::debug;
 use neon::prelude::*;
 
@@ -14,12 +14,9 @@ impl Signer {
         let network: String = cx.argument::<JsString>(1)?.value(&mut cx);
         let tls = (&**cx.argument::<JsBox<crate::TlsConfig>>(2)?).clone();
 
-        let network = match network.as_str() {
-            "bitcoin" => Network::BITCOIN,
-            "testnet" => Network::TESTNET,
-            "regtest" => Network::REGTEST,
-            v => panic!("Unknown / unsupported network {}", v),
-        };
+        let network: Network = network
+            .parse()
+            .unwrap_or_else(|_| panic!("Unknown / unsupported network {}", network));
 
         let inner = match gl_client::signer::Signer::new(secret, network, tls.inner) {
             Ok(v) => v,
