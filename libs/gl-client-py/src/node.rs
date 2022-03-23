@@ -143,85 +143,37 @@ impl Node {
     }
 
     fn withdraw(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = match pb::WithdrawRequest::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::WithdrawRequest::decode(args).map_err(error_decoding_request)?;
 
         convert(exec(self.client.clone().withdraw(req)).map(|x| x.into_inner()))
     }
 
     fn fund_channel(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = match pb::FundChannelRequest::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::FundChannelRequest::decode(args).map_err(error_decoding_request)?;
 
         convert(exec(self.client.clone().fund_channel(req)).map(|x| x.into_inner()))
     }
 
     fn create_invoice(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = match pb::InvoiceRequest::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::InvoiceRequest::decode(args).map_err(error_decoding_request)?;
 
         convert(exec(self.client.clone().create_invoice(req)).map(|x| x.into_inner()))
     }
 
     fn pay(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = match pb::PayRequest::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::PayRequest::decode(args).map_err(error_decoding_request)?;
 
         convert(exec(self.client.clone().pay(req)).map(|x| x.into_inner()))
     }
 
     fn keysend(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = match pb::KeysendRequest::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::KeysendRequest::decode(args).map_err(error_decoding_request)?;
 
         convert(exec(self.client.clone().keysend(req)).map(|x| x.into_inner()))
     }
 
     fn stream_log(&self, args: &[u8]) -> PyResult<LogStream> {
-        let req = match pb::StreamLogRequest::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::StreamLogRequest::decode(args).map_err(error_decoding_request)?;
 
         let stream = match exec(self.client.clone().stream_log(req)).map(|x| x.into_inner()) {
             Ok(s) => s,
@@ -236,15 +188,7 @@ impl Node {
     }
 
     fn stream_incoming(&self, args: &[u8]) -> PyResult<IncomingStream> {
-        let req = match pb::StreamIncomingFilter::decode(args) {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(PyValueError::new_err(format!(
-                    "error decoding request: {}",
-                    e
-                )))
-            }
-        };
+        let req = pb::StreamIncomingFilter::decode(args).map_err(error_decoding_request)?;
 
         let stream = match exec(self.client.clone().stream_incoming(req)).map(|x| x.into_inner()) {
             Ok(s) => s,
@@ -286,6 +230,10 @@ impl Node {
             ))),
         }
     }
+}
+
+fn error_decoding_request<D: core::fmt::Display>(e: D) -> PyErr {
+    PyValueError::new_err(format!("error decoding request: {}", e))
 }
 
 #[pyclass]
