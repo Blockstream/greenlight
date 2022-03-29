@@ -248,7 +248,7 @@ mod tests {
             TlsConfig::new().unwrap(),
         )
         .unwrap();
-        assert_eq!(signer.init.len(), 145);
+        assert_eq!(signer.init.len(), 177);
     }
 
     #[tokio::test]

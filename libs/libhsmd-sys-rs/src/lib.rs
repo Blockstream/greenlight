@@ -7,7 +7,7 @@ use std::sync::Mutex;
 extern crate lazy_static;
 
 /// ⚠ Keep this in sync with the branch we check out in `build.rs` ⚠
-const LIBHSMD_PROTO: &str = "v0.10.1";
+const LIBHSMD_PROTO: &str = "v0.10.2";
 
 extern "C" {
     fn c_init(secret: *const u8, network: *const c_char) -> *const u8;
@@ -244,7 +244,7 @@ mod tests {
         let _ = dbg!(hsmd.init()).unwrap();
 
         let response = dbg!(init(secret.to_vec(), network)).unwrap();
-        assert_eq!(response.len(), 145);
+        assert_eq!(response.len(), 177);
         assert_eq!(
             response,
             vec![
@@ -255,7 +255,9 @@ mod tests {
                 142, 127, 239, 60, 157, 212, 3, 162, 85, 18, 86, 240, 176, 177, 84, 94, 241, 92,
                 64, 175, 69, 165, 146, 101, 79, 180, 195, 27, 117, 8, 66, 110, 100, 36, 246, 115,
                 48, 193, 189, 247, 195, 58, 236, 143, 230, 177, 91, 217, 66, 67, 19, 204, 22, 96,
-                65, 140, 86, 195, 109, 50, 228, 94, 193, 173, 103, 252, 196, 192, 173, 243, 223
+                65, 140, 86, 195, 109, 50, 228, 94, 193, 173, 103, 252, 196, 192, 173, 243, 223,
+                127, 5, 118, 244, 107, 113, 69, 246, 232, 45, 169, 141, 60, 45, 217, 83, 168, 194,
+                28, 130, 206, 68, 183, 248, 111, 74, 187, 5, 78, 201, 233, 42
             ]
         );
     }
