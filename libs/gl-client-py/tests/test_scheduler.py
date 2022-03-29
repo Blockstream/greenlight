@@ -1,5 +1,6 @@
 from gltesting.fixtures import *
 from glclient import TlsConfig, Signer, Scheduler, Node
+from binascii import hexlify
 
 
 @pytest.fixture
@@ -62,3 +63,12 @@ def test_schedule_call(sclient, signer, tls):
     tls = tls.identity(req.device_cert, req.device_key)
     node = Node(signer.node_id(), 'regtest', tls, res.grpc_uri)
     info = node.get_info()
+
+
+def test_sign_challenge(signer):
+    """Check that we can sign a challenge
+    """
+    res = signer.sign_challenge(b'\x00' * 32)
+    print(res, len(res))
+    res = hexlify(res)
+    assert res == b'cdd553f30964056a855556b2d4635c6f8872fdc145de0dd336020886a56377a150f70a2a8bc428fabe9be87ede610999af8a14a64f7e9ef73836d78e59d28d92'

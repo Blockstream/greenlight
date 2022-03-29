@@ -60,6 +60,9 @@ class Signer(object):
     def version(self):
         return self.inner.version()
 
+    def sign_challenge(self, message: bytes) -> bytes:
+        return bytes(self.inner.sign_challenge(message))
+
 
 class Scheduler(object):
 
