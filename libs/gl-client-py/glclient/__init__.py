@@ -8,7 +8,7 @@ import logging
 
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
-__version__ = "v0.10.1"
+__version__ = "v0.10.2"
 
 class TlsConfig(object):
     def __init__(self):
