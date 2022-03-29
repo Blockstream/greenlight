@@ -48,7 +48,7 @@ fn main() {
             "--depth=1",
             "--recurse",
             "-b",
-            "v0.10.1",
+            "v0.10.2",
             "https://github.com/ElementsProject/lightning.git",
             &srcdir.to_string_lossy(),
         ])
@@ -96,6 +96,7 @@ fn main() {
 
     Command::new("make")
         .arg("-j8")
+        .arg("lightningd/lightning_hsmd")
         .current_dir(srcdir.clone())
         .spawn()
         .unwrap()
@@ -131,7 +132,6 @@ fn main() {
         "bitcoin/tx.c",
         "bitcoin/varint.c",
         "ccan/ccan/asort/asort.c",
-        "ccan/ccan/autodata/autodata.c",
         "ccan/ccan/breakpoint/breakpoint.c",
         "ccan/ccan/crypto/hkdf_sha256/hkdf_sha256.c",
         "ccan/ccan/crypto/hmac_sha256/hmac_sha256.c",
@@ -158,8 +158,7 @@ fn main() {
         "ccan/ccan/timer/timer.c",
         "ccan/ccan/utf8/utf8.c",
         "common/amount.c",
-        // Post v0.10.2 needs this
-        //"common/autodata.c",
+        "common/autodata.c",
         "common/bigsize.c",
         "common/bip32.c",
         "common/bolt12_merkle.c",

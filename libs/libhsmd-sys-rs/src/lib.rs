@@ -240,7 +240,7 @@ mod tests {
         let secret = [0 as u8; 32];
         let network = "bitcoin";
         let hsmd = Hsmd::new(secret.to_vec(), network);
-        let response = dbg!(hsmd.init()).unwrap();
+        dbg!(hsmd.init()).unwrap();
 
         let response = dbg!(init(secret.to_vec(), network)).unwrap();
         assert_eq!(response.len(), 177);

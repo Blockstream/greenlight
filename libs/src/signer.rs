@@ -223,8 +223,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_sign_message_rejection() {
-        let signer =
-            Signer::new(vec![0 as u8; 32], Network::Bitcoin, TlsConfig::default()).unwrap();
+        let signer = Signer::new(
+            vec![0 as u8; 32],
+            Network::Bitcoin,
+            TlsConfig::new().unwrap(),
+        )
+        .unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
