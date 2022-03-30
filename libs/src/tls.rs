@@ -1,13 +1,9 @@
 use anyhow::{Context, Result};
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
-lazy_static! {
-    static ref CA_RAW: Vec<u8> = include_str!("../tls/ca.pem").as_bytes().to_vec();
-    static ref NOBODY_CRT: Vec<u8> = include_str!("../tls/users-nobody.pem").as_bytes().to_vec();
-    static ref NOBODY_KEY: Vec<u8> = include_str!("../tls/users-nobody-key.pem")
-        .as_bytes()
-        .to_vec();
-}
+const CA_RAW: &[u8] = include_str!("../tls/ca.pem").as_bytes();
+const NOBODY_CRT: &[u8] = include_str!("../tls/users-nobody.pem").as_bytes();
+const NOBODY_KEY: &[u8] = include_str!("../tls/users-nobody-key.pem").as_bytes();
 
 /// In order to allow the clients to talk to the
 /// [`crate::scheduler::Scheduler`] a default certificate and private
@@ -27,14 +23,14 @@ pub struct TlsConfig {
     pub ca: Vec<u8>,
 }
 
-fn load_file_or_default(varname: &str, default: &Vec<u8>) -> Result<Vec<u8>> {
+fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
     match std::env::var(varname) {
         Ok(fname) => {
             debug!("Loading file {} for envvar {}", fname, varname);
             Ok(std::fs::read(fname.clone())
                 .with_context(|| format!("could not read file {} for envvar {}", fname, varname))?)
         }
-        Err(_) => Ok(default.clone()),
+        Err(_) => Ok(default.to_vec()),
     }
 }
 
@@ -43,9 +39,9 @@ impl TlsConfig {
         // Allow overriding the defaults through the environment
         // variables, so we don't pollute the public interface with
         // stuff that is testing-related.
-        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", &NOBODY_CRT)?;
-        let nobody_key = load_file_or_default("GL_NOBODY_KEY", &NOBODY_KEY)?;
-        let ca_crt = load_file_or_default("GL_CA_CRT", &CA_RAW)?;
+        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
+        let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
+        let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW)?;
 
         let config = ClientTlsConfig::new()
             .domain_name("localhost")
