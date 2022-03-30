@@ -34,5 +34,6 @@ panic = "abort"
 members = [
   "gl-client-py",
   "gl-client-js",
+  "uniffi-gl-client",
   "libhsmd-sys-rs",
 ]

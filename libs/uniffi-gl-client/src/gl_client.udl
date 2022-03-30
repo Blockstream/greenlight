@@ -1,0 +1,7 @@
+namespace gl_client {
+  u32 add(u32 a, u32 b);
+  TlsConfig default_tls_config();
+  string print_tls([ByRef] TlsConfig tls_config);
+};
+
+interface TlsConfig {};

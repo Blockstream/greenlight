@@ -1,0 +1,19 @@
+[package]
+name = "uniffi-gl-client"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+uniffi = { version = "0.17", features = ["builtin-bindgen"] }
+uniffi_bindgen = { version = "0.17" }
+uniffi_macros = "0.17" 
+gl-client = { path = ".." }
+
+[build-dependencies]
+uniffi_build = { version = "0.17", features = ["builtin-bindgen"] }
+
+[[bin]]
+name = "generate-bindings"
