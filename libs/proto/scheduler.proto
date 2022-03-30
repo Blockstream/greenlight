@@ -221,7 +221,7 @@ message UpgradeRequest {
 	bytes initmsg = 2;
 };
 message UpgradeResponse {
-	// The version of the node after the upgrade request has been
+	// The version of the node before the upgrade request has been
 	// processed.
-	string node_version = 1;
+	string old_version = 1;
 };
