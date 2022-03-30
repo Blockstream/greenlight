@@ -222,10 +222,11 @@ pub fn handle(
 #[cfg(test)]
 mod tests {
     use super::*;
-    lazy_static! {
-        static ref FUNDCHANNEL_REQ: Vec<u8> = hex::decode("00130200000001f25c0c5f21c46ed3f1063a9a41a489ed4e6bb2c18ef1998eb6618198b17137f90000000000666a6c8001e985010000000000160014f4d3100ee3828a602cbc47b1d70ac204e3342081f06a98200000012d70736274ff0100520200000001f25c0c5f21c46ed3f1063a9a41a489ed4e6bb2c18ef1998eb6618198b17137f90000000000666a6c8001e985010000000000160014f4d3100ee3828a602cbc47b1d70ac204e3342081f06a98200001012ba086010000000000220020cc2ef6e3d8102826a2167b463a77bfaf5b57c1ec24c52115d3c471320ad475720105475221026ecfe4d4dd089bbadcf19c860580dae91b2752261269c1f770f32f80e80680492102df1c73d6d45af5edac96953e0eaae5677411b46791092b4bef2c59648b83c20c52ae220602df1c73d6d45af5edac96953e0eaae5677411b46791092b4bef2c59648b83c20c0841c77c75000000002206026ecfe4d4dd089bbadcf19c860580dae91b2752261269c1f770f32f80e806804908109206e600000000000002df1c73d6d45af5edac96953e0eaae5677411b46791092b4bef2c59648b83c20c039c7fa80e43780ad63af6df575924b4c9ae3f1ad22f74067c28227fb45817b2e301").unwrap();
+    const FUNDCHANNEL_REQ: &str = "00130200000001f25c0c5f21c46ed3f1063a9a41a489ed4e6bb2c18ef1998eb6618198b17137f90000000000666a6c8001e985010000000000160014f4d3100ee3828a602cbc47b1d70ac204e3342081f06a98200000012d70736274ff0100520200000001f25c0c5f21c46ed3f1063a9a41a489ed4e6bb2c18ef1998eb6618198b17137f90000000000666a6c8001e985010000000000160014f4d3100ee3828a602cbc47b1d70ac204e3342081f06a98200001012ba086010000000000220020cc2ef6e3d8102826a2167b463a77bfaf5b57c1ec24c52115d3c471320ad475720105475221026ecfe4d4dd089bbadcf19c860580dae91b2752261269c1f770f32f80e80680492102df1c73d6d45af5edac96953e0eaae5677411b46791092b4bef2c59648b83c20c52ae220602df1c73d6d45af5edac96953e0eaae5677411b46791092b4bef2c59648b83c20c0841c77c75000000002206026ecfe4d4dd089bbadcf19c860580dae91b2752261269c1f770f32f80e806804908109206e600000000000002df1c73d6d45af5edac96953e0eaae5677411b46791092b4bef2c59648b83c20c039c7fa80e43780ad63af6df575924b4c9ae3f1ad22f74067c28227fb45817b2e301";
+    const FUNDCHANNEL_RESP: &str = "0070141f930e76a8303ac0fe0eaa21cd6afd385453784c79799ed54f10f7a0d8980501e4e30f4208e93d526e7f3cb5592b723db5e56cf764e2540113101518fc7fe501";
 
-    static ref FUNDCHANNEL_RESP: Vec<u8> = hex::decode("0070141f930e76a8303ac0fe0eaa21cd6afd385453784c79799ed54f10f7a0d8980501e4e30f4208e93d526e7f3cb5592b723db5e56cf764e2540113101518fc7fe501").unwrap();
+    fn hex_decode(s: &str) -> Vec<u8> {
+        hex::decode(s).unwrap()
     }
 
     #[test]
@@ -241,40 +242,34 @@ mod tests {
 
     #[test]
     fn test_handle() {
-        let secret =
-            hex::decode("9f5a9ba98d7e816eebf496db2ff760dc17a4a2f0ae5a87c37cab4bbf6ee05530")
-                .unwrap();
+        let secret = hex_decode("9f5a9ba98d7e816eebf496db2ff760dc17a4a2f0ae5a87c37cab4bbf6ee05530");
         let network = "testnet";
 
-        let msg = FUNDCHANNEL_REQ.to_vec();
-        let expected = FUNDCHANNEL_RESP.to_vec();
+        let msg = hex_decode(FUNDCHANNEL_REQ);
+        let expected = hex_decode(FUNDCHANNEL_RESP);
 
         let hsmd = Hsmd::new(secret, network);
         let capabilities = Capability::SIGN_REMOTE_TX | Capability::COMMITMENT_POINT;
         let dbid = Some(1);
-        let node_id = Some(
-            hex::decode("02312627fdf07fbdd7e5ddb136611bdde9b00d26821d14d94891395452f67af248")
-                .unwrap(),
-        );
+        let node_id = Some(hex_decode(
+            "02312627fdf07fbdd7e5ddb136611bdde9b00d26821d14d94891395452f67af248",
+        ));
         let res = dbg!(hsmd.handle(capabilities, dbid, node_id, msg));
         assert_eq!(res.unwrap(), expected);
     }
 
     #[test]
     fn test_hsmd_client_handle() {
-        let secret =
-            hex::decode("9f5a9ba98d7e816eebf496db2ff760dc17a4a2f0ae5a87c37cab4bbf6ee05530")
-                .unwrap();
+        let secret = hex_decode("9f5a9ba98d7e816eebf496db2ff760dc17a4a2f0ae5a87c37cab4bbf6ee05530");
         let network = "testnet";
 
-        let msg = FUNDCHANNEL_REQ.to_vec();
-        let expected = FUNDCHANNEL_RESP.to_vec();
+        let msg = hex_decode(FUNDCHANNEL_REQ);
+        let expected = hex_decode(FUNDCHANNEL_RESP);
 
         let capabilities = 24;
         let dbid = 1;
         let node_id =
-            hex::decode("02312627fdf07fbdd7e5ddb136611bdde9b00d26821d14d94891395452f67af248")
-                .unwrap();
+            hex_decode("02312627fdf07fbdd7e5ddb136611bdde9b00d26821d14d94891395452f67af248");
 
         let client = Hsmd::new(secret, network).client_with_context(capabilities, dbid, node_id);
         let res = dbg!(client.handle(msg));
@@ -288,8 +283,8 @@ mod tests {
         let hsmd = Hsmd::new(secret.to_vec(), network);
 
         let cap = 1024;
-        let request = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
-        let expected = hex::decode("007b7fab40f2920dedc9ea573fc1a3eefd0492e85b8e4ee6874d57b12526c3a012694c940072eb12c0d263881b909d3c4bb8ea4ec5cc7bff21922689fb0e2e39018501").unwrap();
+        let request = hex_decode("0017000B48656c6c6f20776f726c64");
+        let expected = hex_decode("007b7fab40f2920dedc9ea573fc1a3eefd0492e85b8e4ee6874d57b12526c3a012694c940072eb12c0d263881b909d3c4bb8ea4ec5cc7bff21922689fb0e2e39018501");
 
         let response = dbg!(hsmd.handle(cap, None, None, request)).unwrap();
         assert_eq!(expected, response);
