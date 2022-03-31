@@ -72,6 +72,11 @@ class SchedulerStub(object):
                 request_serializer=scheduler__pb2.NodeInfoRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.NodeInfoResponse.FromString,
                 )
+        self.MaybeUpgrade = channel.unary_unary(
+                '/scheduler.Scheduler/MaybeUpgrade',
+                request_serializer=scheduler__pb2.UpgradeRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.UpgradeResponse.FromString,
+                )
 
 
 class SchedulerServicer(object):
@@ -200,6 +205,21 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def MaybeUpgrade(self, request, context):
+        """The signer may want to trigger an upgrade of the node
+        before waiting for the node to be scheduled. This ensures
+        that the signer version is in sync with the node
+        version. The scheduler may decide to defer upgrading if the
+        protocols are compatible. Please do not use this directly,
+        rather use the Signer in the client library to trigger this
+        automatically when required. Posting an incomplete or
+        non-functional UpgradeRequest may result in unschedulable
+        nodes.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -227,6 +247,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.GetNodeInfo,
                     request_deserializer=scheduler__pb2.NodeInfoRequest.FromString,
                     response_serializer=scheduler__pb2.NodeInfoResponse.SerializeToString,
+            ),
+            'MaybeUpgrade': grpc.unary_unary_rpc_method_handler(
+                    servicer.MaybeUpgrade,
+                    request_deserializer=scheduler__pb2.UpgradeRequest.FromString,
+                    response_serializer=scheduler__pb2.UpgradeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -353,5 +378,22 @@ class Scheduler(object):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/GetNodeInfo',
             scheduler__pb2.NodeInfoRequest.SerializeToString,
             scheduler__pb2.NodeInfoResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def MaybeUpgrade(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/MaybeUpgrade',
+            scheduler__pb2.UpgradeRequest.SerializeToString,
+            scheduler__pb2.UpgradeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
