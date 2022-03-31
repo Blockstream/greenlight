@@ -81,4 +81,8 @@ impl Signer {
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(e.to_string())),
         }
     }
+
+    fn version(&self) -> PyResult<&'static str> {
+	Ok(self.inner.version())
+    }
 }

@@ -212,6 +212,10 @@ impl Signer {
             .schedule()
             .await
     }
+
+    pub fn version(&self) -> &'static str {
+	libhsmd_sys::Hsmd::version()
+    }
 }
 
 #[cfg(test)]

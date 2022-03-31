@@ -6,6 +6,8 @@ use std::sync::Mutex;
 #[macro_use]
 extern crate lazy_static;
 
+const LIBHSMD_PROTO: &str = "v0.10.1";
+
 extern "C" {
     fn c_init(secret: *const u8, network: *const c_char) -> *const u8;
     fn tal_bytelen(ptr: *const c_void) -> size_t;
@@ -144,6 +146,10 @@ impl Hsmd {
             peer_id: Some(peer_id),
             dbid: Some(dbid),
         }
+    }
+
+    pub fn version() -> &'static str {
+        LIBHSMD_PROTO
     }
 }
 
