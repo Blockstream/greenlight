@@ -104,6 +104,17 @@ service Scheduler {
 	// that signs off on changes, but doesn't want to keep the
 	// node itself scheduled).
 	rpc GetNodeInfo(NodeInfoRequest) returns (NodeInfoResponse) {}
+
+	// The signer may want to trigger an upgrade of the node
+	// before waiting for the node to be scheduled. This ensures
+	// that the signer version is in sync with the node
+	// version. The scheduler may decide to defer upgrading if the
+	// protocols are compatible. Please do not use this directly,
+	// rather use the Signer in the client library to trigger this
+	// automatically when required. Posting an incomplete or
+	// non-functional UpgradeRequest may result in unschedulable
+	// nodes.
+	rpc MaybeUpgrade(UpgradeRequest) returns (UpgradeResponse) {}
 };
 
 message ChallengeRequest {
@@ -198,4 +209,19 @@ message RecoveryRequest {
 message RecoveryResponse {
 	string device_cert = 1;
 	string device_key = 2;
+};
+
+message UpgradeRequest {
+	// The version of the signer, i.e., the maximum version of the
+	// protocol that this signer can understand.
+	string signer_version = 1;
+
+	// The new initmsg matching the above version. Necessary to
+	// schedule the node without a signer present.
+	bytes initmsg = 2;
+};
+message UpgradeResponse {
+	// The version of the node after the upgrade request has been
+	// processed.
+	string node_version = 1;
 };
