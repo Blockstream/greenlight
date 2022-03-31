@@ -125,11 +125,8 @@ message RegistrationRequest {
 	// 33 bytes node public key.
 	bytes node_id = 1;
 
-	bytes bip32_key = 2;
-
-	// Optional, should they ever need assistance recovering
-	// funds.
-	string email = 3;
+	// DEPRECATED: The `init_msg` subsumes this field
+        bytes bip32_key = 2;
 
 	// Which network is this node going to run on? Options are
 	// bitcoin, testnet, and regtest.
@@ -147,6 +144,17 @@ message RegistrationRequest {
         // documentation of `Scheduler.GetChallenge()` for details on
         // how to create this signature.
 	bytes signature = 6;
+
+	// The signer_proto is required in order to determine which
+	// version the node should run. If these don't match the
+	// signer may not be able to sign incoming requests.
+	string signer_proto = 7;
+
+	// The fuil init message returned by the `libhsmd`, this
+	// supersedes the bip32_key field which was a misnomer. Notice
+	// that this includes the prefix 0x006F which is the message
+	// type.
+	optional bytes init_msg = 8;
 };
 
 message RegistrationResponse {

@@ -55,7 +55,8 @@ impl Scheduler {
                 bip32_key: signer.bip32_ext_key(),
                 network: self.network.to_string(),
                 challenge: challenge.challenge,
-                email: "".to_string(),
+		signer_proto: signer.version().to_owned(),
+		init_msg: Some(signer.get_init()),
                 signature,
             })
             .await?;
