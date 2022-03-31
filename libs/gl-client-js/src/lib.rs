@@ -17,6 +17,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("signerRunInThread", Signer::run_in_thread)?;
     cx.export_function("signerRunInForeground", Signer::run_forever)?;
     cx.export_function("signerNodeId", Signer::node_id)?;
+    cx.export_function("signerVersion", Signer::version)?;
 
     cx.export_function("schedulerNew", Scheduler::new)?;
     cx.export_function("schedulerRegister", Scheduler::register)?;

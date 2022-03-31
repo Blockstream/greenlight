@@ -61,6 +61,10 @@ impl Signer {
         cx.borrow(&buf, |buf| buf.as_mut_slice().copy_from_slice(&node_id));
         Ok(buf)
     }
+    pub(crate) fn version(mut cx: FunctionContext) -> JsResult<JsString> {
+        let this = cx.argument::<JsBox<Signer>>(0)?;
+        Ok(JsString::new(&mut cx, this.inner.version()))
+    }
 }
 
 impl Finalize for Signer {}

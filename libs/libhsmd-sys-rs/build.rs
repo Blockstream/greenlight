@@ -48,8 +48,8 @@ fn main() {
             "--depth=1",
             "--recurse",
             "-b",
-            "libhsmd-sys-rs-v0.10.1",
-            "https://github.com/cdecker/lightning.git",
+            "v0.10.1",
+            "https://github.com/ElementsProject/lightning.git",
             &srcdir.to_string_lossy(),
         ])
         .spawn()

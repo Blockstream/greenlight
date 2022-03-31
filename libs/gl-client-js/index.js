@@ -9,6 +9,7 @@ const {
     signerRunInForeground,
     signerSignMessage,
     signerNodeId,
+    signerVersion,
 
     tlsConfigNew,
     tlsConfigIdentity,
@@ -48,6 +49,10 @@ class Signer {
 
     node_id() {
 	return signerNodeId(this.inner);
+    }
+
+    version() {
+	return signerVersion(this.inner);
     }
 }
 
