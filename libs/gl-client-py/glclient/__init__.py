@@ -57,6 +57,9 @@ class Signer(object):
     def node_id(self):
         return bytes(self.inner.node_id())
 
+    def version(self):
+        return self.inner.version()
+
 
 class Scheduler(object):
 
