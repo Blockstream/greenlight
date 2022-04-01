@@ -17,5 +17,8 @@ glclient/greenlight_pb2.py glclient/greenlight_pb2_grpc.py: ../proto/greenlight.
 	# Postprocess the import path
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' glclient/greenlight_pb2_grpc.py
 
+check-py:
+	cd libs/gl-client-py; pytest tests -n 5
+
 clean:
 	rm -f ${PROTOS}

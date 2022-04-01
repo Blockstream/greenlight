@@ -241,10 +241,23 @@ mod tests {
         let secret = [0 as u8; 32];
         let network = "bitcoin";
         let hsmd = Hsmd::new(secret.to_vec(), network);
-        let response = dbg!(hsmd.init()).unwrap();
+        let _ = dbg!(hsmd.init()).unwrap();
 
         let response = dbg!(init(secret.to_vec(), network)).unwrap();
-        assert_eq!(response.len(), 177);
+        assert_eq!(response.len(), 145);
+        assert_eq!(
+            response,
+            vec![
+                0, 111, 2, 5, 142, 139, 108, 42, 211, 99, 236, 89, 170, 19, 100, 41, 37, 109, 116,
+                81, 100, 194, 189, 200, 127, 152, 240, 166, 134, 144, 236, 44, 92, 155, 11, 4, 136,
+                178, 30, 2, 175, 86, 45, 251, 0, 0, 0, 0, 119, 232, 160, 181, 114, 16, 182, 23, 70,
+                246, 204, 254, 122, 233, 131, 242, 174, 134, 193, 120, 104, 70, 176, 202, 168, 243,
+                142, 127, 239, 60, 157, 212, 3, 162, 85, 18, 86, 240, 176, 177, 84, 94, 241, 92,
+                64, 175, 69, 165, 146, 101, 79, 180, 195, 27, 117, 8, 66, 110, 100, 36, 246, 115,
+                48, 193, 189, 247, 195, 58, 236, 143, 230, 177, 91, 217, 66, 67, 19, 204, 22, 96,
+                65, 140, 86, 195, 109, 50, 228, 94, 193, 173, 103, 252, 196, 192, 173, 243, 223
+            ]
+        );
     }
 
     #[test]
@@ -253,7 +266,7 @@ mod tests {
         let network = "testnet";
 
         let msg = hex_decode(FUNDCHANNEL_REQ);
-        let expected = hex_decode(FUNDCHANNEL_RESP);
+        let expected = FUNDCHANNEL_RESP;
 
         let hsmd = Hsmd::new(secret, network);
         let capabilities = Capability::SIGN_REMOTE_TX | Capability::COMMITMENT_POINT;
@@ -262,7 +275,7 @@ mod tests {
             "02312627fdf07fbdd7e5ddb136611bdde9b00d26821d14d94891395452f67af248",
         ));
         let res = dbg!(hsmd.handle(capabilities, dbid, node_id, msg));
-        assert_eq!(res.unwrap(), expected);
+        assert_eq!(hex::encode(res.unwrap()), expected);
     }
 
     #[test]

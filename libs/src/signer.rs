@@ -222,7 +222,7 @@ impl Signer {
     }
 
     pub fn version(&self) -> &'static str {
-	libhsmd_sys::Hsmd::version()
+        libhsmd_sys::Hsmd::version()
     }
 }
 
@@ -238,28 +238,17 @@ mod tests {
             TlsConfig::new().unwrap(),
         )
         .unwrap();
-        assert_eq!(signer.init.len(), 177);
-        assert_eq!(
-            signer.init,
-            vec![
-                0_u8, 111, 2, 5, 142, 139, 108, 42, 211, 99, 236, 89, 170, 19, 100, 41, 37, 109,
-                116, 81, 100, 194, 189, 200, 127, 152, 240, 166, 134, 144, 236, 44, 92, 155, 11, 4,
-                136, 178, 30, 2, 175, 86, 45, 251, 0, 0, 0, 0, 119, 232, 160, 181, 114, 16, 182,
-                23, 70, 246, 204, 254, 122, 233, 131, 242, 174, 134, 193, 120, 104, 70, 176, 202,
-                168, 243, 142, 127, 239, 60, 157, 212, 3, 162, 85, 18, 86, 240, 176, 177, 84, 94,
-                241, 92, 64, 175, 69, 165, 146, 101, 79, 180, 195, 27, 117, 8, 66, 110, 100, 36,
-                246, 115, 48, 193, 189, 247, 195, 58, 236, 143, 230, 177, 91, 217, 66, 67, 19, 204,
-                22, 96, 65, 140, 86, 195, 109, 50, 228, 94, 193, 173, 103, 252, 196, 192, 173, 243,
-                223, 127, 5, 118, 244, 107, 113, 69, 246, 232, 45, 169, 141, 60, 45, 217, 83, 168,
-                194, 28, 130, 206, 68, 183, 248, 111, 74, 187, 5, 78, 201, 233, 42
-            ]
-        );
+        assert_eq!(signer.init.len(), 145);
     }
 
     #[tokio::test]
     async fn test_sign_message_rejection() {
-        let signer =
-            Signer::new(vec![0 as u8; 32], Network::Bitcoin, TlsConfig::default()).unwrap();
+        let signer = Signer::new(
+            vec![0 as u8; 32],
+            Network::Bitcoin,
+            TlsConfig::new().unwrap(),
+        )
+        .unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer

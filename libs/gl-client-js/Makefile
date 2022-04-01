@@ -26,3 +26,6 @@ clean:
 
 publish:
 	bash -x publish.sh
+
+check-js:
+	cd libs/gl-client-js; npm run test
