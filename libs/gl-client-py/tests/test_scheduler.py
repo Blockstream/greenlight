@@ -72,3 +72,7 @@ def test_sign_challenge(signer):
     print(res, len(res))
     res = hexlify(res)
     assert res == b'cdd553f30964056a855556b2d4635c6f8872fdc145de0dd336020886a56377a150f70a2a8bc428fabe9be87ede610999af8a14a64f7e9ef73836d78e59d28d92'
+
+def test_signer_version(signer):
+    import glclient
+    assert glclient.__version__ == signer.version()

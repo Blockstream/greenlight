@@ -7,6 +7,9 @@ from typing import Optional, List
 import logging
 
 
+# Keep in sync with the libhsmd version, this is tested in unit tests.
+__version__ = "v0.10.2"
+
 class TlsConfig(object):
     def __init__(self):
         # We wrap the TlsConfig since some calls cannot yet be routed
