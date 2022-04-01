@@ -1,5 +1,5 @@
-from . import scheduler_pb2_grpc as schedgrpc
-from . import scheduler_pb2 as schedpb
+from glclient import scheduler_pb2_grpc as schedgrpc
+from glclient import scheduler_pb2 as schedpb
 from concurrent.futures import ThreadPoolExecutor
 import grpc
 import logging
