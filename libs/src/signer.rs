@@ -2,7 +2,7 @@
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
-use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest};
+use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
@@ -140,6 +140,15 @@ impl Signer {
             .connect()
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
+
+        scheduler
+            .maybe_upgrade(UpgradeRequest {
+                initmsg: self.init.clone(),
+                signer_version: self.version().to_owned(),
+            })
+            .await
+            .context("Error asking scheduler to upgrade")?;
+
         loop {
             debug!("Calling scheduler.get_node_info");
             let node_info = match scheduler
