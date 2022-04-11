@@ -302,7 +302,7 @@ def disconnect(ctx, node_id):
 @click.pass_context
 def newaddr(ctx):
     node = ctx.obj.get_node()
-    res = node.new_address("bech32")
+    res = node.new_address()
     pbprint(res)
 
 
