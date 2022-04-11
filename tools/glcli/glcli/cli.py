@@ -329,9 +329,9 @@ def withdraw(ctx, destination, amount, minconf=1):
 @cli.command()
 @click.argument("nodeid")
 @click.argument("amount", type=AmountType())
-@click.option("--minconf", required=False, type=int)
+@click.option("--minconf", required=False, type=int, default=1)
 @click.pass_context
-def fundchannel(ctx, nodeid, amount, minconf=1):
+def fundchannel(ctx, nodeid, amount, minconf):
     node = ctx.obj.get_node()
     res = node.fund_channel(
         node_id=nodeid,
