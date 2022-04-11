@@ -198,6 +198,8 @@ class Node(object):
 
         if isinstance(minconf, int):
             minconf = nodepb.Confirmation(blocks=minconf)
+        elif isinstance(minconf, nodepb.Confirmation):
+            pass
         elif not isinstance(minconf, nodepb.Confirmation):
             raise ValueError("'minconf' is neither an int nor a Confirmation")
 
