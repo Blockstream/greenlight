@@ -13,6 +13,7 @@ import time
 
 Node = namedtuple("Node", [
     'node_id',
+    'signer_version',
     'directory',
     'network',
     'running',
@@ -93,6 +94,7 @@ class Scheduler(object):
 
         self.nodes.append(Node(
             node_id=req.node_id,
+            signer_version=req.signer_proto if req.signer_proto is not None else 'v0.10.1',
             bip32_key=req.bip32_key,
             network=req.network,
             directory=directory,
@@ -157,3 +159,8 @@ class Scheduler(object):
         node = self.get_node(req.node_id)
         print(node)
         return schedpb.NodeInfoResponse(node_id=req.node_id)
+
+    def MaybeUpgrade(self, req, ctx):
+        # TODO extract node_id from the request
+        ident = ctx.peer_identities()
+        raise NotImplementedError('Method not implemented!')
