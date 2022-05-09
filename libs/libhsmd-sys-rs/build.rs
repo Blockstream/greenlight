@@ -2,6 +2,8 @@ use std::path::Path;
 use std::process::Command;
 use which::which;
 
+const VERSION: &str = "v0.10.2";
+
 fn main() {
     let bins = [
         ["clang"].iter(),
@@ -42,20 +44,37 @@ fn main() {
     machine.retain(|c| !c.is_whitespace());
     eprintln!("Machine: {}", machine);
 
-    Command::new("git")
-        .args(&[
-            "clone",
-            "--depth=1",
-            "--recurse",
-            "-b",
-            "v0.10.2",
-            "https://github.com/ElementsProject/lightning.git",
-            &srcdir.to_string_lossy(),
-        ])
-        .spawn()
-        .unwrap()
-        .wait()
-        .expect("failed to clone the source directory");
+    if !srcdir.is_dir() {
+        Command::new("git")
+            .args(&[
+                "clone",
+                "--depth=1",
+                "--recurse",
+                "-b",
+                VERSION,
+                "https://github.com/ElementsProject/lightning.git",
+                &srcdir.to_string_lossy(),
+            ])
+            .spawn()
+            .unwrap()
+            .wait()
+            .expect("failed to clone the source directory");
+    } else {
+        Command::new("git")
+            .args(&["fetch", "origin", &format!("{}:{}", VERSION, VERSION)])
+            .current_dir(srcdir.clone())
+            .spawn()
+            .unwrap()
+            .wait()
+            .expect("fetching changes from repo");
+        Command::new("git")
+            .args(&["checkout", VERSION])
+            .current_dir(srcdir.clone())
+            .spawn()
+            .unwrap()
+            .wait()
+            .expect("resetting to version");
+    }
 
     Command::new("./configure")
         .arg("--disable-valgrind")
