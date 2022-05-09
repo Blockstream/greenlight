@@ -89,3 +89,72 @@ impl TlsConfig {
         self.inner.clone()
     }
 }
+
+/// Generate a new device certificate from a fresh set of keys. The path in the
+/// common name (CN) field is "/users/{node_id}/{device}". This certificate is
+/// self signed and needs to be signed off by the users certificate authority to
+/// be valid. This certificate can not act as a ca and sign sub certificates.
+pub fn generate_self_signed_device_cert(
+    node_id: &str,
+    device: &str,
+    subject_alt_names: Vec<String>,
+    ) -> rcgen::Certificate {
+    
+        // Configure the certificate.
+    let mut params = cert_params_from_template(subject_alt_names);
+
+    // Is a leaf certificate only so it is not allowed to sign child 
+    // certificates.
+    params.is_ca = rcgen::IsCa::SelfSignedOnly;
+    params.distinguished_name.push(
+            rcgen::DnType::CommonName,
+            format!("GL /users/{}/{}", node_id, device)
+    );
+
+    rcgen::Certificate::from_params(params).unwrap()
+}
+
+fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::CertificateParams {
+    let mut params = rcgen::CertificateParams::new(subject_alt_names);
+    params.key_pair = None;
+    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+
+    // Certificate can be used to issue unlimited sub certificates for devices.
+    params.distinguished_name.push(
+        rcgen::DnType::CountryName,
+        "US"
+    );
+    params.distinguished_name.push(
+        rcgen::DnType::LocalityName,
+        "SAN FRANCISCO"
+    );
+    params.distinguished_name.push(
+        rcgen::DnType::OrganizationName,
+        "Blockstream"
+    );
+    params.distinguished_name.push(
+        rcgen::DnType::StateOrProvinceName,
+        "CALIFORNIA"
+    );
+    params.distinguished_name.push(
+        rcgen::DnType::OrganizationalUnitName,
+        "CertificateAuthority"
+    );
+
+    return params
+} 
+
+#[cfg(test)]
+pub mod tests{
+    use super::*;
+
+    #[test]
+    fn test_generate_self_signed_device_cert() {
+        let device_cert = generate_self_signed_device_cert(
+            "mynodeid",
+            "device",
+            vec!["localhost".into()]);
+        assert!(device_cert.serialize_pem().unwrap().starts_with("-----BEGIN CERTIFICATE-----"));
+        assert!(device_cert.serialize_private_key_pem().starts_with("-----BEGIN PRIVATE KEY-----"));
+    }
+}
