@@ -58,7 +58,7 @@ test('signer.version()', () => {
 	new glclient.TlsConfig()
     );
     let v = signer.version();
-    expect(v).toEqual("v0.10.2");
+    expect(v).toEqual("v0.11.0.1");
 })
 
 test('Test signer startup and shutdown', () => {
