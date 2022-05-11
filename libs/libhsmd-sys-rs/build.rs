@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::Command;
 use which::which;
 
-const VERSION: &str = "v0.10.2";
+const BRANCH: &str = "v0.11.0.1";
 
 fn main() {
     let bins = [
@@ -51,7 +51,7 @@ fn main() {
                 "--depth=1",
                 "--recurse",
                 "-b",
-                VERSION,
+                BRANCH,
                 "https://github.com/ElementsProject/lightning.git",
                 &srcdir.to_string_lossy(),
             ])
@@ -61,14 +61,14 @@ fn main() {
             .expect("failed to clone the source directory");
     } else {
         Command::new("git")
-            .args(&["fetch", "origin", &format!("{}:{}", VERSION, VERSION)])
+            .args(&["fetch", "origin", &format!("{}:{}", BRANCH, BRANCH)])
             .current_dir(srcdir.clone())
             .spawn()
             .unwrap()
             .wait()
             .expect("fetching changes from repo");
         Command::new("git")
-            .args(&["checkout", VERSION])
+            .args(&["checkout", BRANCH])
             .current_dir(srcdir.clone())
             .spawn()
             .unwrap()
@@ -186,6 +186,7 @@ fn main() {
         "common/daemon_conn.c",
         "common/derive_basepoints.c",
         "common/hash_u5.c",
+        "common/htlc_wire.c",
         "common/hsm_encryption.c",
         "common/key_derive.c",
         "common/lease_rates.c",
@@ -215,6 +216,8 @@ fn main() {
         "external/libwally-core/src/psbt.c",
         "external/libwally-core/src/pullpush.c",
         "external/libwally-core/src/script.c",
+	"external/libwally-core/src/secp256k1/src/precomputed_ecmult_gen.c",
+	"external/libwally-core/src/secp256k1/src/precomputed_ecmult.c",
         "external/libwally-core/src/secp256k1/src/secp256k1.c",
         "external/libwally-core/src/sign.c",
         "external/libwally-core/src/transaction.c",
@@ -227,6 +230,7 @@ fn main() {
         "wire/towire.c",
         "wire/wire_io.c",
         "wire/wire_sync.c",
+	"wire/channel_type_wiregen.c",
     ];
 
     let mut srcs: Vec<String> = src

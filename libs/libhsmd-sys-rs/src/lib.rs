@@ -7,7 +7,7 @@ use std::sync::Mutex;
 extern crate lazy_static;
 
 /// ⚠ Keep this in sync with the branch we check out in `build.rs` ⚠
-const LIBHSMD_PROTO: &str = "v0.10.2";
+const LIBHSMD_PROTO: &str = "v0.11.0.1";
 
 extern "C" {
     fn c_init(secret: *const u8, network: *const c_char) -> *const u8;
