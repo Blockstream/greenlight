@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fscheduler.proto\x12\tscheduler\"M\n\x10\x43hallengeRequest\x12(\n\x05scope\x18\x01 \x01(\x0e\x32\x19.scheduler.ChallengeScope\x12\x0f\n\x07node_id\x18\x02 \x01(\x0c\"&\n\x11\x43hallengeResponse\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\"\xaa\x01\n\x13RegistrationRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x11\n\tbip32_key\x18\x02 \x01(\x0c\x12\x0f\n\x07network\x18\x04 \x01(\t\x12\x11\n\tchallenge\x18\x05 \x01(\x0c\x12\x11\n\tsignature\x18\x06 \x01(\x0c\x12\x14\n\x0csigner_proto\x18\x07 \x01(\t\x12\x15\n\x08init_msg\x18\x08 \x01(\x0cH\x00\x88\x01\x01\x42\x0b\n\t_init_msg\"?\n\x14RegistrationResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\"\"\n\x0fScheduleRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\"0\n\x0fNodeInfoRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x0c\n\x04wait\x18\x02 \x01(\x08\"5\n\x10NodeInfoResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x10\n\x08grpc_uri\x18\x02 \x01(\t\"H\n\x0fRecoveryRequest\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\x12\x11\n\tsignature\x18\x02 \x01(\x0c\x12\x0f\n\x07node_id\x18\x03 \x01(\x0c\";\n\x10RecoveryResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\"9\n\x0eUpgradeRequest\x12\x16\n\x0esigner_version\x18\x01 \x01(\t\x12\x0f\n\x07initmsg\x18\x02 \x01(\x0c\"&\n\x0fUpgradeResponse\x12\x13\n\x0bold_version\x18\x01 \x01(\t*+\n\x0e\x43hallengeScope\x12\x0c\n\x08REGISTER\x10\x00\x12\x0b\n\x07RECOVER\x10\x01\x32\xc7\x03\n\tScheduler\x12M\n\x08Register\x12\x1e.scheduler.RegistrationRequest\x1a\x1f.scheduler.RegistrationResponse\"\x00\x12\x44\n\x07Recover\x12\x1a.scheduler.RecoveryRequest\x1a\x1b.scheduler.RecoveryResponse\"\x00\x12K\n\x0cGetChallenge\x12\x1b.scheduler.ChallengeRequest\x1a\x1c.scheduler.ChallengeResponse\"\x00\x12\x45\n\x08Schedule\x12\x1a.scheduler.ScheduleRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12H\n\x0bGetNodeInfo\x12\x1a.scheduler.NodeInfoRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12G\n\x0cMaybeUpgrade\x12\x19.scheduler.UpgradeRequest\x1a\x1a.scheduler.UpgradeResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fscheduler.proto\x12\tscheduler\"M\n\x10\x43hallengeRequest\x12(\n\x05scope\x18\x01 \x01(\x0e\x32\x19.scheduler.ChallengeScope\x12\x0f\n\x07node_id\x18\x02 \x01(\x0c\"&\n\x11\x43hallengeResponse\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\"\xc4\x01\n\x13RegistrationRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x11\n\tbip32_key\x18\x02 \x01(\x0c\x12\x0f\n\x07network\x18\x04 \x01(\t\x12\x11\n\tchallenge\x18\x05 \x01(\x0c\x12\x11\n\tsignature\x18\x06 \x01(\x0c\x12\x14\n\x0csigner_proto\x18\x07 \x01(\t\x12\x15\n\x08init_msg\x18\x08 \x01(\x0cH\x00\x88\x01\x01\x12\x10\n\x03\x63sr\x18\t \x01(\x0cH\x01\x88\x01\x01\x42\x0b\n\t_init_msgB\x06\n\x04_csr\"?\n\x14RegistrationResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\"\"\n\x0fScheduleRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\"0\n\x0fNodeInfoRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x0c\n\x04wait\x18\x02 \x01(\x08\"5\n\x10NodeInfoResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x10\n\x08grpc_uri\x18\x02 \x01(\t\"H\n\x0fRecoveryRequest\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\x12\x11\n\tsignature\x18\x02 \x01(\x0c\x12\x0f\n\x07node_id\x18\x03 \x01(\x0c\";\n\x10RecoveryResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\"9\n\x0eUpgradeRequest\x12\x16\n\x0esigner_version\x18\x01 \x01(\t\x12\x0f\n\x07initmsg\x18\x02 \x01(\x0c\"&\n\x0fUpgradeResponse\x12\x13\n\x0bold_version\x18\x01 \x01(\t*+\n\x0e\x43hallengeScope\x12\x0c\n\x08REGISTER\x10\x00\x12\x0b\n\x07RECOVER\x10\x01\x32\xc7\x03\n\tScheduler\x12M\n\x08Register\x12\x1e.scheduler.RegistrationRequest\x1a\x1f.scheduler.RegistrationResponse\"\x00\x12\x44\n\x07Recover\x12\x1a.scheduler.RecoveryRequest\x1a\x1b.scheduler.RecoveryResponse\"\x00\x12K\n\x0cGetChallenge\x12\x1b.scheduler.ChallengeRequest\x1a\x1c.scheduler.ChallengeResponse\"\x00\x12\x45\n\x08Schedule\x12\x1a.scheduler.ScheduleRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12H\n\x0bGetNodeInfo\x12\x1a.scheduler.NodeInfoRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12G\n\x0cMaybeUpgrade\x12\x19.scheduler.UpgradeRequest\x1a\x1a.scheduler.UpgradeResponse\"\x00\x62\x06proto3')
 
 _CHALLENGESCOPE = DESCRIPTOR.enum_types_by_name['ChallengeScope']
 ChallengeScope = enum_type_wrapper.EnumTypeWrapper(_CHALLENGESCOPE)
@@ -115,30 +115,30 @@ _SCHEDULER = DESCRIPTOR.services_by_name['Scheduler']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _CHALLENGESCOPE._serialized_start=762
-  _CHALLENGESCOPE._serialized_end=805
+  _CHALLENGESCOPE._serialized_start=788
+  _CHALLENGESCOPE._serialized_end=831
   _CHALLENGEREQUEST._serialized_start=30
   _CHALLENGEREQUEST._serialized_end=107
   _CHALLENGERESPONSE._serialized_start=109
   _CHALLENGERESPONSE._serialized_end=147
   _REGISTRATIONREQUEST._serialized_start=150
-  _REGISTRATIONREQUEST._serialized_end=320
-  _REGISTRATIONRESPONSE._serialized_start=322
-  _REGISTRATIONRESPONSE._serialized_end=385
-  _SCHEDULEREQUEST._serialized_start=387
-  _SCHEDULEREQUEST._serialized_end=421
-  _NODEINFOREQUEST._serialized_start=423
-  _NODEINFOREQUEST._serialized_end=471
-  _NODEINFORESPONSE._serialized_start=473
-  _NODEINFORESPONSE._serialized_end=526
-  _RECOVERYREQUEST._serialized_start=528
-  _RECOVERYREQUEST._serialized_end=600
-  _RECOVERYRESPONSE._serialized_start=602
-  _RECOVERYRESPONSE._serialized_end=661
-  _UPGRADEREQUEST._serialized_start=663
-  _UPGRADEREQUEST._serialized_end=720
-  _UPGRADERESPONSE._serialized_start=722
-  _UPGRADERESPONSE._serialized_end=760
-  _SCHEDULER._serialized_start=808
-  _SCHEDULER._serialized_end=1263
+  _REGISTRATIONREQUEST._serialized_end=346
+  _REGISTRATIONRESPONSE._serialized_start=348
+  _REGISTRATIONRESPONSE._serialized_end=411
+  _SCHEDULEREQUEST._serialized_start=413
+  _SCHEDULEREQUEST._serialized_end=447
+  _NODEINFOREQUEST._serialized_start=449
+  _NODEINFOREQUEST._serialized_end=497
+  _NODEINFORESPONSE._serialized_start=499
+  _NODEINFORESPONSE._serialized_end=552
+  _RECOVERYREQUEST._serialized_start=554
+  _RECOVERYREQUEST._serialized_end=626
+  _RECOVERYRESPONSE._serialized_start=628
+  _RECOVERYRESPONSE._serialized_end=687
+  _UPGRADEREQUEST._serialized_start=689
+  _UPGRADEREQUEST._serialized_end=746
+  _UPGRADERESPONSE._serialized_start=748
+  _UPGRADERESPONSE._serialized_end=786
+  _SCHEDULER._serialized_start=834
+  _SCHEDULER._serialized_end=1289
 # @@protoc_insertion_point(module_scope)

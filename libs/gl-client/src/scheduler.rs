@@ -1,5 +1,5 @@
 use crate::pb::scheduler_client::SchedulerClient;
-use crate::tls::TlsConfig;
+use crate::tls::{self, TlsConfig};
 
 use crate::{node, pb, signer::Signer, utils};
 use anyhow::Result;
@@ -48,10 +48,16 @@ impl Scheduler {
             })
             .await?
             .into_inner();
-
+            
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
+        let device_cert = tls::generate_self_signed_device_cert(
+            &hex::encode(self.node_id.clone()),
+            "default".into(),
+            vec!["localhost".into()]);
+        let device_csr = device_cert.serialize_request_pem()?;
+        debug!("Requesting registration with csr:\n{}", device_csr);
 
-        let res = self
+        let mut res = self
             .client
             .clone()
             .register(pb::RegistrationRequest {
@@ -62,10 +68,17 @@ impl Scheduler {
                 signer_proto: signer.version().to_owned(),
                 init_msg: signer.get_init(),
                 signature,
+                csr: device_csr.into_bytes(),
             })
-            .await?;
+            .await?
+            .into_inner();
+        
+        // We intercept the response and replace the private key with the
+        // private key of the device_cert. This private key has been generated
+        // on and has never left the client device. 
+        res.device_key = device_cert.serialize_private_key_pem();
 
-        Ok(res.into_inner())
+        Ok(res)
     }
 
     pub async fn recover(&self, signer: &Signer) -> Result<pb::RecoveryResponse> {
