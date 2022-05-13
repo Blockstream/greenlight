@@ -47,8 +47,8 @@ def test_connect(scheduler, tls):
 
 def test_register(sclient, signer):
     res = sclient.register(signer)
-    assert(res.device_cert)
     assert(res.device_key)
+    assert(res.device_cert)
 
 
 def test_recover(sclient, signer):
