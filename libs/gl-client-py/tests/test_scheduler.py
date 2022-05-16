@@ -52,10 +52,10 @@ def test_register(sclient, signer):
 
 
 def test_recover(sclient, signer):
-    res = sclient.register(signer)
+    sclient.register(signer)
     rec = sclient.recover(signer)
-    assert(res.device_cert)
-    assert(res.device_key)
+    assert(rec.device_cert)
+    assert(rec.device_key)
 
 
 @unittest.skip("Scheduler is being reworked")
