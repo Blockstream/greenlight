@@ -29,90 +29,14 @@ pub struct Signer {
     network: Network,
 }
 
-mod persist {
-    use lightning_signer::bitcoin::secp256k1::PublicKey;
-    use lightning_signer::chain::tracker::ChainTracker;
-    use lightning_signer::channel::{Channel, ChannelId, ChannelStub};
-    use lightning_signer::monitor::ChainMonitor;
-    use lightning_signer::node::NodeConfig;
-    use lightning_signer::persist::model;
-    use lightning_signer::persist::Persist;
-
-    pub struct DummyPersister;
-
-    impl Persist for DummyPersister {
-        fn new_node(&self, node_id: &PublicKey, config: &NodeConfig, seed: &[u8]) {
-            info!("new_node: node_id={node_id:?}, config={config:?}, seed={seed:?}");
-        }
-
-        fn delete_node(&self, node_id: &PublicKey) {
-            info!("delete_node: node_id={node_id:?}");
-        }
-
-        fn new_channel(&self, node_id: &PublicKey, stub: &ChannelStub) -> Result<(), ()> {
-            info!("new_channel: node_id={node_id:?}, stub={stub:?}");
-            Ok(())
-        }
-
-        fn new_chain_tracker(&self, node_id: &PublicKey, tracker: &ChainTracker<ChainMonitor>) {}
-
-        fn update_tracker(
-            &self,
-            node_id: &PublicKey,
-            tracker: &ChainTracker<ChainMonitor>,
-        ) -> Result<(), ()> {
-            Ok(())
-        }
-
-        fn get_tracker(&self, node_id: &PublicKey) -> Result<ChainTracker<ChainMonitor>, ()> {
-            Err(())
-        }
-
-        fn update_channel(&self, node_id: &PublicKey, channel: &Channel) -> Result<(), ()> {
-            Ok(())
-        }
-
-        fn get_channel(
-            &self,
-            node_id: &PublicKey,
-            channel_id: &ChannelId,
-        ) -> Result<model::ChannelEntry, ()> {
-            Err(())
-        }
-
-        fn get_node_channels(&self, node_id: &PublicKey) -> Vec<(ChannelId, model::ChannelEntry)> {
-            Vec::new()
-        }
-
-        fn update_node_allowlist(
-            &self,
-            node_id: &PublicKey,
-            allowlist: Vec<String>,
-        ) -> Result<(), ()> {
-            Ok(())
-        }
-
-        fn get_node_allowlist(&self, node_id: &PublicKey) -> Vec<String> {
-            Vec::new()
-        }
-
-        fn get_nodes(&self) -> Vec<(PublicKey, model::NodeEntry)> {
-            Vec::new()
-        }
-
-        fn clear_database(&self) {}
-    }
-}
-
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
-        info!("Initializing signer for {VERSION}");
+	info!("Initializing signer for {VERSION}");
         let mut sec: [u8; 32] = [0; 32];
         sec.copy_from_slice(&secret[0..32]);
 
-        let persist = persist::DummyPersister;
+        let persist = lightning_signer_server::persist::persist_json::KVJsonPersister::new("state");
         let handler = Arc::new(vls_protocol_signer::handler::RootHandler::new(
-	    network,
             0 as u64,
             Some(sec),
             Arc::new(persist),
