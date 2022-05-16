@@ -8,18 +8,18 @@ use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
 use bitcoin::Network;
 use bytes::{Buf, Bytes};
-use libhsmd_sys::{Capabilities, Capability, Hsmd};
-use tokio::sync::mpsc;
+use std::convert::TryInto;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
 use tonic::Request;
+use vls_protocol_signer::handler::Handler;
 
-static MAIN_CAPABILITIES: Capabilities =
-    Capability::MASTER | Capability::SIGN_GOSSIP | Capability::ECDH;
+const VERSION: &str = "v0.11.0.1";
 
 #[derive(Clone)]
 pub struct Signer {
-    hsmd: Hsmd,
+    handler: Arc<vls_protocol_signer::handler::RootHandler>,
     tls: TlsConfig,
     id: Vec<u8>,
 
@@ -31,18 +31,48 @@ pub struct Signer {
 
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
-        let hsmd = Hsmd::new(secret, &network.to_string());
-        let init = hsmd.init()?;
+	info!("Initializing signer for {VERSION}");
+        let mut sec: [u8; 32] = [0; 32];
+        sec.copy_from_slice(&secret[0..32]);
+
+        let persist = lightning_signer_server::persist::persist_json::KVJsonPersister::new("state");
+        let handler = Arc::new(vls_protocol_signer::handler::RootHandler::new(
+            0 as u64,
+            Some(sec),
+            Arc::new(persist),
+            Vec::new(),
+        ));
+
+        let init = Signer::initmsg(&handler)?;
         let id = init[2..35].to_vec();
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
-            hsmd,
+            handler,
             tls,
             id,
             init,
             network,
         })
+    }
+
+    fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
+        let query = vls_protocol::msgs::HsmdInit {
+            key_version: vls_protocol::model::Bip32KeyVersion {
+                pubkey_version: 0,
+                privkey_version: 0,
+            },
+            chain_params: vls_protocol::model::BlockId([0; 32]),
+            encryption_key: None,
+            dev_privkey: None,
+            dev_bip32_seed: None,
+            dev_channel_secrets: None,
+            dev_channel_secrets_shaseed: None,
+        };
+        Ok(handler
+            .handle(vls_protocol::msgs::Message::HsmdInit(query))
+            .unwrap()
+            .as_vec())
     }
 
     /// Given the URI of the running node, connect to it and stream
@@ -93,20 +123,25 @@ impl Signer {
             return Err(anyhow!("Cannot process sign-message requests from node."));
         }
 
-        let client = match req.context {
-            Some(HsmRequestContext {
-                dbid: 0,
-                capabilities,
-                ..
-            }) => self.hsmd.client(capabilities),
-            Some(c) => self
-                .hsmd
-                .client_with_context(c.capabilities, c.dbid, c.node_id),
-            None => self.hsmd.client(MAIN_CAPABILITIES),
-        };
+        let msg = vls_protocol::msgs::from_vec(req.raw)?;
+
+        let response = match req.context {
+            Some(HsmRequestContext { dbid: 0, .. }) | None => {
+                // This is the main daemon talking to us.
+                //self.handler.
+                self.handler.handle(msg)
+            }
+            Some(c) => {
+                let pk: [u8; 33] = c.node_id.try_into().unwrap();
+                let pk = vls_protocol::model::PubKey(pk);
+                let h = self.handler.for_new_client(1 as u64, pk, c.dbid);
+                h.handle(msg)
+            }
+        }
+        .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
         Ok(HsmResponse {
-            raw: client.handle(req.raw)?,
+            raw: response.as_vec(),
             request_id: req.request_id,
         })
     }
@@ -229,24 +264,12 @@ impl Signer {
             ));
         }
 
-        let client = self.hsmd.client(MAIN_CAPABILITIES);
-        let mut req = vec![0_u8, 23];
-        req.extend(len);
-        req.extend(msg);
-
-        let response = client.handle(req)?;
-        if response[1] != 123 {
-            return Err(anyhow!(
-                "Expected response type to be 123, got {}",
-                response[1]
-            ));
-        } else if response.len() != 2 + 64 + 1 {
-            return Err(anyhow!(
-                "Malformed response to msg, unexpected length {}",
-                response.len()
-            ));
-        }
-        Ok(response[2..66].to_vec())
+        let req = vls_protocol::msgs::SignMessage { message: msg };
+        let response = self
+            .handler
+            .handle(vls_protocol::msgs::Message::SignMessage(req))
+            .unwrap();
+        Ok(response.as_vec()[2..66].to_vec())
     }
 
     /// Create a Node stub from this instance of the signer, configured to
@@ -258,7 +281,7 @@ impl Signer {
     }
 
     pub fn version(&self) -> &'static str {
-        libhsmd_sys::Hsmd::version()
+        "v0.11.0.1"
     }
 }
 
