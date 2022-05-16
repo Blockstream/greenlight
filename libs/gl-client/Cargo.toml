@@ -7,7 +7,6 @@ edition = "2018"
 use-serde = [ "serde" ]
 
 [dependencies]
-libhsmd-sys = { path = "../libhsmd-sys-rs" }
 anyhow = "*"
 base64 = "*"
 bytes = "*"
@@ -24,6 +23,10 @@ tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 bitcoin = "0.28"
 serde = { version = "1", features = [ "derive" ], optional = true }
+lightning-signer-core = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
+lightning-signer-server = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
+vls-protocol-signer = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
+vls-protocol = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
 
 [build-dependencies]
 tonic-build = "^0.8"
