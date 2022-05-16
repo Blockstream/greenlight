@@ -4,7 +4,6 @@ version = "0.1.4"
 edition = "2018"
 
 [features]
-use-serde = [ "serde" ]
 
 [dependencies]
 anyhow = "*"
@@ -24,7 +23,7 @@ tower = { version = "0.4" }
 rcgen = { version = "0.9.2", features = ["pem", "x509-parser"]}
 tempfile = "3.3.0"
 bitcoin = "^0"
-serde = { version = "1", features = ["derive"], optional = true }
+serde = { version = "1", features = [ "derive" ] }
 lightning-signer-core = { path="../../vls/lightning-signer-core" }
 lightning-signer-server = { path="../../vls/lightning-signer-server", features = ["persist"]}
 vls-protocol-signer = { path="../../vls/vls-protocol-signer" }
@@ -34,4 +33,4 @@ serde_json = "^1.0"
 
 [build-dependencies]
 tonic-build = "^0.8"
-serde = { version = "1", features = [ "derive" ], optional = true }
+serde = { version = "1", features = [ "derive" ] }

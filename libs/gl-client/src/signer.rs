@@ -41,7 +41,7 @@ impl Signer {
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
 
-        info!("Initializing signer for {VERSION}");
+        info!("Initializing signer for {VERSION} (VLS)");
         let mut sec: [u8; 32] = [0; 32];
         sec.copy_from_slice(&secret[0..32]);
 
@@ -166,8 +166,6 @@ impl Signer {
             }
         }
         .map_err(|e| anyhow!("processing request: {e:?}"))?;
-
-        self.state.lock().unwrap().dump();
 
         Ok(HsmResponse {
             raw: response.as_vec(),
@@ -301,6 +299,7 @@ impl Signer {
             .handler()
             .handle(vls_protocol::msgs::Message::SignMessage(req))
             .unwrap();
+
         Ok(response.as_vec()[2..66].to_vec())
     }
 
@@ -355,11 +354,8 @@ mod tests {
 
     #[test]
     fn test_sign_message_max_size() {
-        let signer = Signer::new(
-            vec![0u8; 32],
-            Network::Bitcoin,
-            TlsConfig::new().unwrap(),
-        ).unwrap();
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
 
         // We test if we reject a message that is too long.
         let msg = [0u8; u16::MAX as usize + 1];
