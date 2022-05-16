@@ -30,6 +30,6 @@ impl TlsConfig {
     }
 
     fn ca_certificate(&self) -> Vec<u8> {
-	self.inner.ca.clone()
+        self.inner.ca.clone()
     }
 }
