@@ -344,22 +344,13 @@ def fundchannel(ctx, nodeid, amount, minconf):
 
 
 @cli.command()
-@click.argument("nodeid")
+@click.argument("peer_id")
 @click.option("--timeout", required=False, type=int)
 @click.option("--address", required=False, type=str)
 @click.pass_context
-def close(ctx, nodeid, timeout=None, address=None):
+def close(ctx, peer_id, timeout=None, address=None):
     node = ctx.obj.get_node()
-    args = {
-        "node_id": unhexlify(nodeid),
-    }
-    if timeout is not None:
-        args["unilateraltimeout"] = pb.Timeout(seconds=timeout)
-
-    if address is not None:
-        args["destination"] = pb.BitcoinAddress(address=address)
-
-    res = node.CloseChannel(pb.CloseChannelRequest(**args))
+    res = node.close_channel(peer_id, timeout=timeout, address=address)
     pbprint(res)
 
 

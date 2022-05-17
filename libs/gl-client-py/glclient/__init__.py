@@ -227,17 +227,18 @@ class Node(object):
             bytes(self.inner.fund_channel(req))
         )
 
-    def close_channel(peer_id, timeout=None, address=None) -> nodepb.CloseChannelResponse:
-        if len(node_id) == 66:
-            node_id = unhexlify(node_id)
+    def close_channel(self, peer_id, timeout=None, address=None) -> nodepb.CloseChannelResponse:
+        breakpoint()
+        if len(peer_id) == 66:
+            peer_id = unhexlify(peer_id)
 
-        if len(node_id) != 33:
+        if len(peer_id) != 33:
             raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
 
-        if isinstance(node_id, str):
-            node_id = node_id.encode('ASCII')
+        if isinstance(peer_id, str):
+            node_id = peer_id.encode('ASCII')
 
-        return nodepb.CloseChannelResponse.FromString(bytes(self.inner.close_channel(
+        return nodepb.CloseChannelResponse.FromString(bytes(self.inner.close(
             peer_id,
             timeout,
             address,
