@@ -228,7 +228,6 @@ class Node(object):
         )
 
     def close_channel(self, peer_id, timeout=None, address=None) -> nodepb.CloseChannelResponse:
-        breakpoint()
         if len(peer_id) == 66:
             peer_id = unhexlify(peer_id)
 
