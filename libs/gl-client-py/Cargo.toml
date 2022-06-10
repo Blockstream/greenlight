@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 anyhow = "*"
 bytes = "*"
 env_logger = "*"
-gl-client = { path = ".." }
+gl-client = { path = "../gl-client" }
 hex = "*"
 log = "*"
 once_cell = "*"
