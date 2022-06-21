@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0.7",
-    "cargo-cp-artifact": "^0.1",
+    "cargo-cp-artifact": "^0.1.6",
     "protobufjs": "^6.11.2"
   }
 }

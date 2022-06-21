@@ -1,10 +1,16 @@
 use bitcoin::Network;
 use log::debug;
 use neon::prelude::*;
-
+use tokio::sync::mpsc;
+use log::warn;
 #[derive(Clone)]
 pub struct Signer {
     pub(crate) inner: gl_client::signer::Signer,
+}
+
+#[derive(Clone)]
+pub struct SignerHandle {
+    pub(crate) signal: mpsc::Sender<()>,
 }
 
 impl Signer {
@@ -27,7 +33,7 @@ impl Signer {
         Ok(cx.boxed(Signer { inner }))
     }
 
-    pub(crate) fn run_in_thread(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    pub(crate) fn run_in_thread(mut cx: FunctionContext) -> JsResult<JsBox<SignerHandle>> {
         let this = cx.argument::<JsBox<Signer>>(0)?;
         let inner = this.inner.clone();
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -35,22 +41,25 @@ impl Signer {
             .build()
             .unwrap();
 
+        let (tx, rx) = mpsc::channel(1);
+
         std::thread::spawn(move || {
             runtime.block_on(async move {
                 debug!("Running signer");
-                inner.run_forever().await
+                inner.run_forever(rx).await
             })
         });
-        Ok(cx.undefined())
+        Ok(cx.boxed(SignerHandle { signal: tx }))
     }
 
     pub(crate) fn run_forever(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let this = cx.argument::<JsBox<Signer>>(0)?;
+        let (_tx, rx) = mpsc::channel(1);
         let _ = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap()
-            .block_on(this.inner.run_forever());
+            .block_on(this.inner.run_forever(rx));
         Ok(cx.undefined())
     }
 
@@ -67,4 +76,15 @@ impl Signer {
     }
 }
 
+impl SignerHandle {
+    pub(crate) fn shutdown(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let this = cx.argument::<JsBox<SignerHandle>>(0)?;
+        if let Err(e) = this.signal.try_send(()) {
+	    warn!("Failed to send shutdown signal, signer may already be stopped: {e}");
+	}
+        Ok(cx.undefined())
+    }
+}
+
 impl Finalize for Signer {}
+impl Finalize for SignerHandle {}
