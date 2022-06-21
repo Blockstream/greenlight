@@ -60,3 +60,16 @@ test('signer.version()', () => {
     let v = signer.version();
     expect(v).toEqual("v0.10.1");
 })
+
+test('Test signer startup and shutdown', () => {
+    var signer = new glclient.Signer(
+	buffer.Buffer("00000000000000000000000000000000"),
+	"bitcoin",
+	new glclient.TlsConfig()
+    );
+    expect(signer.handle).toBeUndefined();
+    signer.run_in_thread();
+    expect(signer.handle).toBeDefined();
+    signer.shutdown();
+    expect(signer.handle).toBeUndefined();
+})

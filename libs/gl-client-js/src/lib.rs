@@ -5,7 +5,7 @@ mod scheduler;
 mod signer;
 use node::{IncomingStream, LogStream, Node};
 use scheduler::Scheduler;
-use signer::Signer;
+use signer::{Signer, SignerHandle};
 mod tls;
 use tls::TlsConfig;
 mod runtime;
@@ -33,6 +33,8 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
     cx.export_function("tlsConfigNew", TlsConfig::new)?;
     cx.export_function("tlsConfigIdentity", TlsConfig::identity)?;
+
+    cx.export_function("signerHandleShutdown", SignerHandle::shutdown)?;
 
     Ok(())
 }

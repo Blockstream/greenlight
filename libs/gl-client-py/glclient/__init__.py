@@ -50,9 +50,13 @@ class Signer(object):
     def __init__(self, secret: bytes, network: str, tls: TlsConfig):
         self.inner = native.Signer(secret, network, tls.inner)
         self.tls = tls
+        self.handle = None
 
     def run_in_thread(self):
-        return self.inner.run_in_thread()
+        if self.handle is not None:
+            raise ValueError("This signer is already running, please shut it down before starting it again")
+        self.handle = self.inner.run_in_thread()
+        return self.handle
 
     def run_in_foreground(self):
         return self.inner.run_in_foreground()
@@ -65,6 +69,15 @@ class Signer(object):
 
     def sign_challenge(self, message: bytes) -> bytes:
         return bytes(self.inner.sign_challenge(message))
+
+    def shutdown(self):
+        if self.handle is None:
+            raise ValueError("Attempted to shut down a signer that is not running")
+        self.handle.shutdown()
+        self.handle = None
+
+    def is_running(self):
+        return self.handle is not None
 
 
 class Scheduler(object):

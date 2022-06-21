@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context, Result};
 use bitcoin::Network;
 use bytes::{Buf, Bytes};
 use libhsmd_sys::{Capabilities, Capability, Hsmd};
+use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
 use tonic::Request;
@@ -126,7 +127,7 @@ impl Signer {
     /// `GL_SCHEDULER_GRPC_URI` (of the default URI) and wait for the
     /// node to be scheduled. Once scheduled, connect to the node
     /// directly and start streaming and processing requests.
-    pub async fn run_forever(&self) -> Result<()> {
+    pub async fn run_forever(&self, mut shutdown: mpsc::Receiver<()>) -> Result<()> {
         let scheduler_uri = std::env::var("GL_SCHEDULER_GRPC_URI")
             .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string());
 
@@ -151,42 +152,51 @@ impl Signer {
 
         loop {
             debug!("Calling scheduler.get_node_info");
-            let node_info = match scheduler
-                .get_node_info(NodeInfoRequest {
-                    node_id: self.id.clone(),
-                    wait: true,
-                })
-                .await
-                .map(|v| v.into_inner())
-            {
-                Ok(v) => {
-                    debug!("Got node_info from scheduler: {:?}", v);
-                    v
-                }
-                Err(e) => {
-                    trace!(
-                        "Got an error from the scheduler: {}. Sleeping before retrying",
-                        e
-                    );
-                    sleep(Duration::from_millis(1000)).await;
-                    continue;
-                }
+            let get_node = scheduler.get_node_info(NodeInfoRequest {
+                node_id: self.id.clone(),
+                wait: true,
+            });
+            tokio::select! {
+                info = get_node => {
+            let node_info = match info
+                            .map(|v| v.into_inner())
+                        {
+                            Ok(v) => {
+                                debug!("Got node_info from scheduler: {:?}", v);
+                                v
+                            }
+                            Err(e) => {
+                                trace!(
+                                    "Got an error from the scheduler: {}. Sleeping before retrying",
+                                    e
+                                );
+                                sleep(Duration::from_millis(1000)).await;
+                                continue;
+                            }
+                        };
+
+                        if node_info.grpc_uri.is_empty() {
+                            trace!("Got an empty GRPC URI, node is not scheduled, sleeping and retrying");
+                            sleep(Duration::from_millis(1000)).await;
+                            continue;
+                        }
+
+                        if let Err(e) = self
+                            .run_once(Uri::from_maybe_shared(node_info.grpc_uri)?)
+                        .await {
+                            warn!("Error running against node: {}", e);
+                        }
+
+
+                    },
+                _ = shutdown.recv() => {
+		    debug!("Received the signal to exit the signer loop");
+		    break;
+		},
             };
-
-            if node_info.grpc_uri.is_empty() {
-                trace!("Got an empty GRPC URI, node is not scheduled, sleeping and retrying");
-                sleep(Duration::from_millis(1000)).await;
-                continue;
-            }
-
-            match self
-                .run_once(Uri::from_maybe_shared(node_info.grpc_uri)?)
-                .await
-            {
-                Ok(()) => continue,
-                Err(e) => warn!("Error running against node: {}", e),
-            }
         }
+        info!("Exiting the signer loop");
+        Ok(())
     }
 
     pub fn sign_challenge(&self, challenge: Vec<u8>) -> Result<Vec<u8>> {

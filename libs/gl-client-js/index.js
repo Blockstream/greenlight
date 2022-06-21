@@ -25,6 +25,8 @@ const {
     nodeCallStreamIncoming,
     incomingStreamNext,
 
+    signerHandleShutdown,
+
 } = require(binding_path);
 
 const proto = require('./proto.js');
@@ -38,11 +40,19 @@ class Signer {
     constructor(secret, network, tls) {
         this.inner = signerNew(secret, network, tls.inner);
 	this.tls = tls;
+	this.handle = undefined;
     }
 
     run_in_thread() {
-	signerRunInThread(this.inner);
+	this.handle = signerRunInThread(this.inner);
+	return this.handle;
     }
+
+    shutdown() {
+	signerHandleShutdown(this.handle);
+	this.handle = undefined;
+    }
+
     run_in_foreground() {
 	signerRunInForeground(this.inner);
     }

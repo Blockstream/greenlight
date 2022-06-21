@@ -1,6 +1,8 @@
 use crate::tls::TlsConfig;
 use bitcoin::Network;
+use log::warn;
 use pyo3::prelude::*;
+use tokio::sync::mpsc;
 
 #[pyclass]
 #[derive(Clone)]
@@ -35,24 +37,27 @@ impl Signer {
         Ok(Signer { inner })
     }
 
-    fn run_in_thread(&mut self) -> PyResult<()> {
+    fn run_in_thread(&mut self) -> PyResult<SignerHandle> {
         trace!("Starting a new thread for signer");
         let inner = self.inner.clone();
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
 
-        std::thread::spawn(move || runtime.block_on(async move { inner.run_forever().await }));
-        Ok(())
+        let (tx, rx) = mpsc::channel(1);
+
+        std::thread::spawn(move || runtime.block_on(async move { inner.run_forever(rx).await }));
+        Ok(SignerHandle { signal: tx })
     }
 
     fn run_in_foreground(&self) -> PyResult<()> {
         trace!("Running signer in foreground thread");
+        let (_tx, rx) = mpsc::channel(1);
         let res = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap()
-            .block_on(async { self.inner.run_forever().await });
+            .block_on(async { self.inner.run_forever(rx).await });
 
         match res {
             Ok(_) => Ok(()),
@@ -83,6 +88,23 @@ impl Signer {
     }
 
     fn version(&self) -> PyResult<&'static str> {
-	Ok(self.inner.version())
+        Ok(self.inner.version())
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct SignerHandle {
+    pub(crate) signal: mpsc::Sender<()>,
+}
+
+#[pymethods]
+impl SignerHandle {
+    fn shutdown(&self) -> PyResult<()> {
+        if let Err(e) = self.signal.try_send(()) {
+            warn!("Failed to send shutdown signal, signer may already be stopped: {e}");
+        }
+
+        Ok(())
     }
 }
