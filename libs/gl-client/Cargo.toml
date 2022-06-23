@@ -20,9 +20,11 @@ tokio = { version = "*", features = ["full"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 bitcoin = "0.27"
+serde = { version = "*", features = ["derive"] }
 
 [build-dependencies]
 tonic-build = "^0.5"
+serde = { version = "*", features = ["derive"] }
 
 [profile.release]
 lto = true
