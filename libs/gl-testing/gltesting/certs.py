@@ -1,9 +1,13 @@
 # Utilities to generate a CA and any dependent cetificates
+from distutils.util import convert_path
 import logging
 import tempfile
 import json
 import os
 from sh import cfssl, openssl, cfssljson
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat._oid import NameOID
 from .identity import Identity
 
 
@@ -136,7 +140,6 @@ def gencrt(path, force=False):
 
     return fname
 
-
 def genca(idpath):
     """Generate an (intermediate) CA that can sign further certificates"""
     logging.debug(f"Generating a new CA for path {idpath}")
@@ -197,6 +200,7 @@ def gencert(idpath):
     profile = "leaf"
     mycsr = csr.copy()
     mycsr["CN"] = f"GL {idpath}"
+    print(mycsr)
     del mycsr["ca"]
 
     parent = parent_ca(idpath)
@@ -239,3 +243,54 @@ def gencert(idpath):
     postprocess_private_key(path[1])
     gencrt(idpath, force=True)
     return Identity.from_path(idpath)
+
+def gencert_from_csr(csr: bytes):
+    """Generate a leaf certificate to be used for actual communication from
+    certificate signing request."""
+    # Get idpath from CN value in certificate signing request
+    mycsr = x509.load_pem_x509_csr(csr, default_backend)
+    idpath = mycsr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+
+    parent = parent_ca(idpath)
+    print(f"Using CA {parent} as parent")
+    path = path_to_identity(idpath)
+    parent = path_to_identity(parent)
+    for f in path:
+        if os.path.exists(f):
+            logging.info(f"Not overwriting existing file {f}")
+            return
+
+    tmpcsr = tempfile.NamedTemporaryFile(mode="w")
+    tmpcsr.write(csr.decode('ASCII'))
+    tmpcsr.flush()
+
+    # Write config
+    tmpconfig = tempfile.NamedTemporaryFile(mode="w")
+    tmpconfig.write(config)
+    tmpconfig.flush()
+    directory = os.path.dirname(path[0])
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    cfssljson(
+        cfssl(
+            "sign",
+            f"-ca={parent[0]}",
+            f"-ca-key={parent[1]}",
+            tmpcsr.name,
+        ),
+        "-bare",
+        path[3],
+    )
+    # Cleanup the temporary certificate signature request
+    os.remove(path[3] + ".csr")
+    
+    # Generate, read and return cert chain
+    gencrt(idpath, force=True)
+    assert(os.path.exists(f"{path[3]}.crt"))
+    certf = open(f"{path[3]}.crt")
+    cert = certf.read()
+    certf.close()
+    return cert
+
