@@ -1,11 +1,17 @@
 fn main() {
     let mut builder = tonic_build::configure();
-    for object in OBJECTS {
-        builder = builder.type_attribute(object, ATTR);
+
+    if cfg!(feature = "serde") {
+        for object in OBJECTS {
+            builder = builder.type_attribute(object, ATTR);
+        }
     }
 
     builder
-        .compile(&["../proto/greenlight.proto", "../proto/scheduler.proto"], &["../proto"])
+        .compile(
+            &["../proto/greenlight.proto", "../proto/scheduler.proto"],
+            &["../proto"],
+        )
         .unwrap();
 }
 
