@@ -81,7 +81,10 @@ impl Scheduler {
         Ok(res)
     }
 
-    pub async fn recover(&self, signer: &Signer) -> Result<pb::RecoveryResponse> {
+    pub async fn recover(
+        &self,
+        signer: &Signer,
+    ) -> Result<pb::RecoveryResponse> {
         let challenge = self
             .client
             .clone()
@@ -93,18 +96,31 @@ impl Scheduler {
             .into_inner();
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
+        let device_cert = tls::generate_self_signed_device_cert(
+            &hex::encode(self.node_id.clone()),
+            "default".into(),
+            vec!["localhost".into()]);
+        let device_csr = device_cert.serialize_request_pem()?;
+        debug!("Requesting recovery with csr:\n{}", device_csr);
 
-        let res = self
+        let mut res = self
             .client
             .clone()
             .recover(pb::RecoveryRequest {
                 node_id: self.node_id.clone(),
                 challenge: challenge.challenge,
                 signature,
+                csr: device_csr.into_bytes(),
             })
-            .await?;
+            .await?
+            .into_inner();
+        
+        // We intercept the response and replace the private key with the
+        // private key of the device_cert. This private key has been generated
+        // on and has never left the client device. 
+        res.device_key = device_cert.serialize_private_key_pem();
 
-        Ok(res.into_inner())
+        Ok(res)
     }
 
     pub async fn schedule(&self, tls: TlsConfig) -> Result<node::Client> {
