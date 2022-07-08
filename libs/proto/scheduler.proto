@@ -214,6 +214,10 @@ message RecoveryRequest {
 	bytes challenge = 1;
 	bytes signature = 2;
 	bytes node_id = 3;
+	// The certificate signing request that will be signed by the
+	// greenlight backend. Notice that this must have the valid
+	// CN corresponding to the node_id e.g. /users/{node_id} set.
+	bytes csr = 9;
 };
 
 message RecoveryResponse {
