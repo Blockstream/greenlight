@@ -176,12 +176,20 @@ class Scheduler(object):
         assert challenge.scope == schedpb.ChallengeScope.RECOVER
         # TODO Verify that the response matches the challenge.
         hex_node_id = challenge.node_id.hex()
-        device_id = certs.gencert(
-            f"/users/{hex_node_id}/recover-{len(self.challenges)}"
-        )
+        
+        # Check if the request contains a csr and use it to generate the 
+        # certificate. Use the old flow if csr is not present.
+        if req.csr is not None:
+            device_cert = certs.gencert_from_csr(req.csr, recover=True)
+            device_key = None
+        else:
+            device_id = certs.gencert(f"/users/{hex_node_id}/recover-{len(self.challenges)}")
+            device_key = device_id.private_key
+            device_cert = device_id.cert_chain
+
         return schedpb.RecoveryResponse(
-            device_cert=device_id.cert_chain,
-            device_key=device_id.private_key,
+            device_cert=device_cert,
+            device_key=device_key
         )
 
     def GetChallenge(self, req, ctx):

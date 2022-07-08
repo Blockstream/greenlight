@@ -38,7 +38,6 @@ impl Scheduler {
     pub(crate) fn recover(mut cx: FunctionContext) -> JsResult<JsBuffer> {
         let this = cx.argument::<JsBox<Scheduler>>(0)?;
         let signer = cx.argument::<JsBox<Signer>>(1)?;
-
         jsconvert(exec(this.inner.recover(&signer.inner)), cx)
     }
 

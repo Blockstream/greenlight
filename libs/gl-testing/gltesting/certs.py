@@ -244,7 +244,7 @@ def gencert(idpath):
     gencrt(idpath, force=True)
     return Identity.from_path(idpath)
 
-def gencert_from_csr(csr: bytes):
+def gencert_from_csr(csr: bytes, recover=False):
     """Generate a leaf certificate to be used for actual communication from
     certificate signing request."""
     # Get idpath from CN value in certificate signing request
@@ -256,7 +256,7 @@ def gencert_from_csr(csr: bytes):
     path = path_to_identity(idpath)
     parent = path_to_identity(parent)
     for f in path:
-        if os.path.exists(f):
+        if os.path.exists(f) and not recover:
             logging.info(f"Not overwriting existing file {f}")
             return
 
