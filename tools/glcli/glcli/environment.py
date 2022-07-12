@@ -64,11 +64,7 @@ A1UdEwEB/wQIMAYBAf8CAQMwHQYDVR0OBBYEFM6ha+o75cd25WbWGqXGR1WKTikj
 MAoGCCqGSM49BAMCA0gAMEUCIGBkjyp1Nd/m/b3jEAUmxAisqCahuQUPuyQrIwo0
 ZF/9AiEAsZ8qZfkUZH2Ya7y6ccFTDps/ahsFWSrRao8ru3yhhrs=
 -----END CERTIFICATE-----"""
-users_nobody_key = b"""-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmA2Srb58ZaDIW6sR
-B+1E6X8UnxMDeJPsnB4LVgpJyfuhRANCAASyjOUTUsZcvG19zwuN/t9CHZgGhOpC
-JgcYMvjjEsb17Lxhl9Ni6VgDqeXUaOFgUwkDewyarml2yY1oDv6CdrxV
------END PRIVATE KEY-----"""
+users_nobody_key = os.environb.get(b"NOBODY_KEY")
 
 prod = {
     # Used by glcli
