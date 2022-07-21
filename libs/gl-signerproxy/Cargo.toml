@@ -1,0 +1,23 @@
+[package]
+name = "gl-signerproxy"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "gl-signerproxy"
+path = "src/bin/signerproxy.rs"
+
+[build-dependencies]
+tonic-build = "0.3"
+
+[dependencies]
+anyhow = "*"
+env_logger = "^0.7"
+tokio = { version = "0.2", features = ["full"] }
+tonic = { version = "0.3", features = ["tls", "transport"] }
+prost = "0.6"
+log = "*"
+tower = "0.3"
+which = "4.0.2"
+libc = "0.2"
+byteorder = "1.3.4"
