@@ -1,0 +1,19 @@
+[package]
+name = "gl-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "plugin"
+path = "src/bin/plugin.rs"
+
+[dependencies]
+env_logger = "^0.7.0"
+log = "0.4"
+tokio = { version = "=1.14", features = ["full"] }
+tonic = { version = "^0.5", features = ["tls", "transport"] }
+prost = "0.8"
+linemux = "0.2"
+
+[build-dependencies]
+tonic-build = "^0.5"
