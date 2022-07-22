@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 gl-client = { path = "../gl-client" }
-tokio = "*"
+tokio = "1"
 log = "*"
 env_logger = "*"
 once_cell = "*"

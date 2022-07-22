@@ -19,7 +19,7 @@ pin-project = "*"
 prost = "0.11"
 ring = "*"
 rustls-pemfile = "*"
-tokio = { version = "*", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 bitcoin = "0.28"
