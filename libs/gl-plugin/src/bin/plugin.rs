@@ -1,13 +1,15 @@
-use std::env;
+use anyhow::Error;
 use log::info;
+use std::env;
 
 #[tokio::main]
-async fn main() -> Result<(), std::io::Error> {
-    env_logger::builder()
-        .target(env_logger::Target::Stderr)
-        .init();
-    // Setup the TLS configuration
+async fn main() -> Result<(), Error> {
     let cwd = env::current_dir()?;
     info!("Running in {}", cwd.to_str().unwrap());
-Ok(())
+    let plugin = gl_plugin::init()?;
+    if let Some(plugin) = plugin.start().await? {
+        plugin.join().await
+    } else {
+        Ok(()) // This is just an invocation with `--help`, we're good to exit
+    }
 }
