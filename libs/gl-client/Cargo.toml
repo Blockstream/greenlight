@@ -28,9 +28,3 @@ serde = { version = "1", features = [ "derive" ], optional = true }
 [build-dependencies]
 tonic-build = "^0.8"
 serde = { version = "1", features = [ "derive" ], optional = true }
-
-[profile.release]
-lto = true
-opt-level = "z"
-codegen-units = 1
-panic = "abort"
