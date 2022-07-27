@@ -60,26 +60,16 @@ impl Node {
         let node_uri = Uri::from_maybe_shared(node_uri)?;
         info!("Connecting to node at {}", node_uri);
 
-        // If this is not yet a node-domain address we need to also
-        // accept "localhost" as domain name from the certificate.
-        let host = node_uri.host().unwrap();
-        let tls = if host.starts_with("gl") {
-            trace!(
-                "Using real hostname {}, expecting the node to have a matching certificate",
-                host
-            );
-            self.tls.clone()
-        } else {
-            trace!(
-                "Overriding hostname, since this is not a gl node domain: {}",
-                host
-            );
-            let mut tls = self.tls.clone();
-            tls.inner = tls.inner.domain_name("localhost");
-            tls
-        };
+        let hostname = node_uri
+            .clone()
+            .host()
+            .ok_or_else(|| anyhow!("No hostname in node uri {}",
+                node_uri.to_string()))?
+            .to_string();
 
-        let layer = match tls.private_key {
+        debug!("Setting tls host_name {}", &hostname);
+
+        let layer = match self.tls.private_key {
             Some(k) => service::AuthLayer::new(k)?,
             None => {
                 return Err(anyhow!(
@@ -89,7 +79,10 @@ impl Node {
         };
 
         let chan: tonic::transport::Channel = Channel::builder(node_uri)
-            .tls_config(tls.inner)?
+            .tls_config(
+                self.tls.inner
+                .domain_name(hostname)
+            )?
             .connect()
             .await?;
 
