@@ -11,6 +11,8 @@ PROTOS= \
 	${DIR}/glclient/greenlight_pb2_grpc.py \
 	${DIR}/glclient/node_pb2_grpc.py
 
+RUST_LOG="debug"
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
   OS = linux
