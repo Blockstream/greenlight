@@ -63,8 +63,7 @@ impl Node {
         let hostname = node_uri
             .clone()
             .host()
-            .ok_or_else(|| anyhow!("No hostname in node uri {}",
-                node_uri.to_string()))?
+            .ok_or_else(|| anyhow!("No hostname in node uri {}", node_uri.to_string()))?
             .to_string();
 
         debug!("Setting tls host_name {}", &hostname);
@@ -78,17 +77,50 @@ impl Node {
             }
         };
 
-        let chan: tonic::transport::Channel = Channel::builder(node_uri)
-            .tls_config(
-                self.tls.inner
-                .domain_name(hostname)
-            )?
-            .connect()
-            .await?;
+        // We strip off the scheme as we are only interested in the hostname and
+        // the port for domain name validation.
+        let mut host = String::from(node_uri.host().unwrap_or(""));
+        match node_uri.port() {
+            Some(p) => {
+                host.push_str(":");
+                host.push_str(p.as_str());
+            }
+            None => {}
+        }
 
-        let chan = ServiceBuilder::new().layer(layer).service(chan);
+        // Tls does not like things other than a domain name in the server name
+        // record. As we do a canary rollout, node_id can be either an ip or a
+        // domain name. To accomplish for this choice we need to parse the
+        // node_id. If the node_uri is a valid domain name we assume that the
+        // proxy should be used and set the server name tls extension.
+        if domain_parser::parse(host.as_str()) {
+            // node_uri is a valid domain name, set tls extension server name.
+            debug!("Setting tls extension server name {}", host.to_string());
+            // Connect the channel and add auth middleware.
+            let chan = Channel::builder(node_uri)
+                .tls_config(self.tls.inner.domain_name(host))?
+                .connect()
+                .await?;
 
-        Ok(C::new_with_inner(chan))
+            let chan = ServiceBuilder::new().layer(layer).service(chan);
+
+            Ok(C::new_with_inner(chan))
+        } else {
+            // node_uri is not a valid domain name, skip tls extension server
+            // name.
+            debug!(
+                "Skipping tls extension, got node_uri {}",
+                node_uri.to_string()
+            );
+            let chan = Channel::builder(node_uri)
+                .tls_config(self.tls.inner)?
+                .connect()
+                .await?;
+
+            let chan = ServiceBuilder::new().layer(layer).service(chan);
+
+            Ok(C::new_with_inner(chan))
+        }
     }
 
     pub async fn schedule_with_uri<C>(self, scheduler_uri: String) -> Result<C>
@@ -182,5 +214,49 @@ mod stasher {
         fn from(v: StashBody) -> BoxBody {
             BoxBody::new(v)
         }
+    }
+}
+
+mod domain_parser {
+    use addr::{parser::DomainName, psl::List};
+
+    // parse returns true if the target is a valid domain name, false otherwise.
+    pub fn parse(target: &str) -> bool {
+        List.parse_domain_name(target).is_ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    const MAX_LABEL_LEN: usize = 63;
+
+    #[test]
+    fn domain_name_too_long() {
+        let _tmp = [b'1'; MAX_LABEL_LEN + 1];
+        let label = std::str::from_utf8(&_tmp).unwrap();
+
+        let valid = crate::node::domain_parser::parse(label);
+        assert!(!valid)
+    }
+
+    #[test]
+    fn domain_name_has_port() {
+        let input = "blckstrm.com:1111";
+        let valid = crate::node::domain_parser::parse(input);
+        assert!(!valid)
+    }
+
+    #[test]
+    fn domain_name_is_ip() {
+        let input = "127.0.0.1";
+        let valid = crate::node::domain_parser::parse(input);
+        assert!(!valid)
+    }
+
+    #[test]
+    fn domain_name() {
+        let input = "mynode.gl.blckstrm.com";
+        let valid = crate::node::domain_parser::parse(input);
+        assert!(valid)
     }
 }
