@@ -36,6 +36,7 @@ pub struct GlPlugin {
 pub struct Builder {
     inner: cln_plugin::Builder<GlPlugin, tokio::io::Stdin, tokio::io::Stdout>,
     events: broadcast::Sender<Event>,
+    state: GlPlugin,
 }
 
 impl Builder {
@@ -43,7 +44,7 @@ impl Builder {
         self.events.subscribe()
     }
     pub async fn start(self) -> Result<Option<Plugin>> {
-        self.inner.start().await
+        self.inner.start(self.state).await
     }
 
     pub fn hook<C, F>(self, hookname: &str, callback: C) -> Self
@@ -108,9 +109,9 @@ pub fn init() -> Result<Builder> {
         _stage: stage,
     };
 
-    let inner = cln_plugin::Builder::new(state, tokio::io::stdin(), tokio::io::stdout())
+    let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
         .hook("invoice_payment", on_invoice_payment);
-    Ok(Builder { inner, events })
+    Ok(Builder { state, inner, events })
 }
 
 /// Notification handler that receives notifications on incoming
