@@ -139,12 +139,14 @@ def gencrt(path, force=False):
 
 def genca(idpath):
     """Generate an (intermediate) CA that can sign further certificates"""
+    logging.debug(f"Generating a new CA for path {idpath}")
     profile = "inner"
     mycsr = csr.copy()
     mycsr["CN"] = f"GL {idpath}"
     del mycsr["hosts"]
     parent = parent_ca(idpath)
-    print(f"Using CA {parent} as parent")
+    logging.debug(f"Using CA {parent} as parent")
+
     _path = idpath
     parent = path_to_identity(parent)
     path = path_to_identity(idpath)
@@ -191,6 +193,7 @@ def genca(idpath):
 
 def gencert(idpath):
     """Generate a leaf certificate to be used for actual communication."""
+    logging.debug(f"Generating a new certificate for {idpath}")
     profile = "leaf"
     mycsr = csr.copy()
     mycsr["CN"] = f"GL {idpath}"
