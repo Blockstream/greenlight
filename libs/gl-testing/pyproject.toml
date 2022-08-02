@@ -2,14 +2,27 @@
 name = "gltesting"
 version = "0.1.0"
 description = ""
-authors = ["Christian Decker <decker.christian@gmail.com>"]
+authors = ["Christian Decker <decker@blockstream.com>"]
+license = "MIT"
+
+packages = [
+    { include = "gltesting" },
+]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 ephemeral-port-reserve = "^1.1.4"
 sh = "^1.14.2"
+pytest-timeout = "^2.1.0"
+gl-client-py = {path = "../gl-client-py"}
+pytest-xdist = "^2.5.0"
+rich = "^12.5.1"
 
 [tool.poetry.dev-dependencies]
+mypy = "^0.971"
+typed-ast = "^1.5.4"
+pytest = "^7.1.2"
+pytest-cov = "^3.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

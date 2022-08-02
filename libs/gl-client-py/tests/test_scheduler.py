@@ -1,6 +1,7 @@
 from gltesting.fixtures import *
 from glclient import TlsConfig, Signer, Scheduler, Node
 from binascii import hexlify
+import unittest
 
 
 @pytest.fixture
@@ -57,6 +58,7 @@ def test_recover(sclient, signer):
     assert(res.device_key)
 
 
+@unittest.skip("Scheduler is being reworked")
 def test_schedule_call(sclient, signer, tls):
     req = sclient.register(signer)
     res = sclient.schedule()
