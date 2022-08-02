@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import logging
 import sys
+from pyln.testing.fixtures import bitcoind, teardown_checks
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
