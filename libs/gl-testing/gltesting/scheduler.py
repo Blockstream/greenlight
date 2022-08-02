@@ -10,35 +10,64 @@ from gltesting import certs
 from gltesting.node import MockNode
 from ephemeral_port_reserve import reserve
 import time
+from dataclasses import dataclass
+from gltesting.identity import Identity
+from enum import Enum
+import os
+import subprocess
+import shutil
+from typing import Optional
+from gltesting.utils import NodeVersion, SignerVersion, Network
 
-Node = namedtuple("Node", [
-    'node_id',
-    'signer_version',
-    'directory',
-    'network',
-    'running',
-    'identity',
-    'bip32_key',
-    'instance'
-])
-Challenge = namedtuple("Challenge", [
-    "node_id",
-    "challenge",
-    "scope",
-    "used"
-])
+@dataclass
+class Node:
+    node_id: bytes
+    signer_version: SignerVersion
+    directory: Path
+    network: Network
+    initmsg: bytes
+    identity: Identity
+    process: Optional[subprocess.Popen]
+    plugin_grpc_uri: Optional[str]
+
+
+@dataclass
+class Challenge:
+    node_id: bytes
+    challenge: bytes
+    scope: str
+    used: bool
+
+
+def enumerate_cln_versions():
+    """Search `$PATH` and `$CLN_PATH` for CLN versions."""
+    path = os.environ["PATH"].split(":")
+    path += os.environ.get("CLN_PATH", "").split(":")
+    path = [p for p in path if p != ""]
+    version_paths = [shutil.which("lightningd", path=p) for p in path]
+    version_paths = [p for p in version_paths if p is not None]
+
+    versions = {}
+    for v in version_paths:
+        vs = subprocess.check_output([v, "--version"]).strip().decode("ASCII")
+        versions[vs] = NodeVersion(path=v, name=vs)
+
+    logging.info(f"Found {len(versions)} versions: {versions}")
+    return versions
 
 
 class Scheduler(object):
+    """A mock Scheduler simulating Greenlight's behavior."""
+
     def __init__(self, grpc_port=2601, identity=None, node_directory=None):
         self.grpc_port = grpc_port
         self.server = None
         print("Starting scheduler with caroot", identity.caroot)
         self.identity = identity
-
-        self.challenges = []
-        self.next_challenge = 0
-        self.nodes = []
+        self.challenges: List[Challenge] = []
+        self.next_challenge: int = 1
+        self.nodes: List[Node] = []
+        self.versions = enumerate_cln_versions()
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -57,7 +86,7 @@ class Scheduler(object):
         cred = self.identity.to_server_credentials()
         self.server = grpc.server(ThreadPoolExecutor(max_workers=10))
         schedgrpc.add_SchedulerServicer_to_server(self, self.server)
-        self.server.add_secure_port(f'[::]:{self.grpc_port}', cred)
+        self.server.add_secure_port(f"[::]:{self.grpc_port}", cred)
         self.server.start()
         logging.info(f"Scheduler started on port {self.grpc_port}")
 
@@ -69,7 +98,9 @@ class Scheduler(object):
         for n in self.nodes:
             if n.node_id == node_id:
                 return n
-        raise ValueError(f"No node with node_id={node_id} found in gltesting scheduler, do you need to register it first?")
+        raise ValueError(
+            f"No node with node_id={node_id} found in gltesting scheduler, do you need to register it first?"
+        )
 
     def Register(self, req, ctx):
         challenge = None
@@ -77,9 +108,9 @@ class Scheduler(object):
             if c.challenge == req.challenge and not c.used:
                 challenge = c
                 break
-        assert(challenge is not None)
-        assert(challenge.node_id == req.node_id)
-        assert(challenge.scope == schedpb.ChallengeScope.REGISTER)
+        assert challenge is not None
+        assert challenge.node_id == req.node_id
+        assert challenge.scope == schedpb.ChallengeScope.REGISTER
         # TODO Verify that the response matches the challenge.
 
         num = len(self.nodes)
@@ -89,23 +120,22 @@ class Scheduler(object):
         device_id = certs.gencert(f"/users/{hex_node_id}/device")
         node_cert = certs.gencert(f"/users/{hex_node_id}/node")
 
-        directory = self.node_directory / f'node-{num}'
+        directory = self.node_directory / f"node-{num}"
         directory.mkdir(parents=True)
-
-        self.nodes.append(Node(
-            node_id=req.node_id,
-            signer_version=req.signer_proto if req.signer_proto is not None else 'v0.10.1',
-            bip32_key=req.bip32_key,
-            network=req.network,
-            directory=directory,
-            identity=device_id,
-            running=False,
-            instance=MockNode(
-                req.node_id,
-                identity=node_cert,
-                grpc_port=reserve(),
-            ),
-        ))
+        self.nodes.append(
+            Node(
+                node_id=req.node_id,
+                signer_version=req.signer_proto
+                if req.signer_proto is not None
+                else "v0.10.1",
+                initmsg=req.init_msg,
+                network=req.network,
+                directory=directory,
+                identity=device_id,
+                process=None,
+                plugin_grpc_uri=None,
+            )
+        )
 
         return schedpb.RegistrationResponse(
             device_cert=device_id.cert_chain,
@@ -118,24 +148,25 @@ class Scheduler(object):
             if c.challenge == req.challenge and not c.used:
                 challenge = c
                 break
-        assert(challenge is not None)
-        assert(challenge.node_id == req.node_id)
-        assert(challenge.scope == schedpb.ChallengeScope.RECOVER)
+        assert challenge is not None
+        assert challenge.node_id == req.node_id
+        assert challenge.scope == schedpb.ChallengeScope.RECOVER
         # TODO Verify that the response matches the challenge.
         hex_node_id = challenge.node_id.hex()
-        device_id = certs.gencert(f"/users/{hex_node_id}/recover-{len(self.challenges)}")
+        device_id = certs.gencert(
+            f"/users/{hex_node_id}/recover-{len(self.challenges)}"
+        )
         return schedpb.RecoveryResponse(
             device_cert=device_id.cert_chain,
             device_key=device_id.private_key,
         )
 
     def GetChallenge(self, req, ctx):
-
         challenge = Challenge(
             node_id=req.node_id,
             scope=req.scope,
-            challenge=bytes([self.next_challenge]*32),
-            used=False
+            challenge=bytes([self.next_challenge] * 32),
+            used=False,
         )
         self.next_challenge = (self.next_challenge + 1) % 256
 
@@ -163,4 +194,4 @@ class Scheduler(object):
     def MaybeUpgrade(self, req, ctx):
         # TODO extract node_id from the request
         ident = ctx.peer_identities()
-        raise NotImplementedError('Method not implemented!')
+        raise NotImplementedError("Method not implemented!")
