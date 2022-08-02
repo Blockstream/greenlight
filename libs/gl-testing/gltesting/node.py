@@ -1,9 +1,29 @@
+from gltesting.identity import Identity
+from gltesting.utils import NodeVersion
 from binascii import hexlify
 from glclient import greenlight_pb2_grpc as nodegrpc
 from glclient import greenlight_pb2 as nodepb
 import logging
 import grpc
 from concurrent.futures import ThreadPoolExecutor
+
+
+class Node:
+    """A node running under the control of a scheduler.
+
+    Clients can control it over the grpc plugin, and signers can
+    attach to provide signatures when required.
+    """
+
+    def __init__(self, identity: Identity, version: NodeVersion):
+        self.identity = identity
+        self.version  = version
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
 
 
 class MockNode:
