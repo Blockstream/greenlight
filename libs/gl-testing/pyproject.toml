@@ -17,6 +17,7 @@ pytest-timeout = "^2.1.0"
 gl-client-py = {path = "../gl-client-py"}
 pytest-xdist = "^2.5.0"
 rich = "^12.5.1"
+pyln-testing = "^0.11.1"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.971"
