@@ -7,7 +7,18 @@ def test_scheduler_start(scheduler):
 
 def test_scheduler_register(scheduler, clients):
     c = clients.new()
-    signer = c.signer()
-    # Use the signer to sign registration requests.
-    r = c.scheduler().register(signer)
+    r = c.register(configure=True)
+    assert((c.directory / "device.crt").exists())
+    assert((c.directory / "device-key.pem").exists())
     pprint(r)
+
+
+def test_scheduler_recover(scheduler, clients):
+    c = clients.new()
+    r = c.register(configure=False)
+    assert(not (c.directory / "device.crt").exists())
+    assert(not (c.directory / "device-key.pem").exists())
+    r = c.recover(configure=True)
+
+    assert((c.directory / "device.crt").exists())
+    assert((c.directory / "device-key.pem").exists())
