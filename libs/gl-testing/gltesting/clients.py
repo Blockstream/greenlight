@@ -83,6 +83,27 @@ class Client:
     def node(self):
         pass
 
+    def register(self, configure: bool = True) -> None:
+        """A helper to register and configure the node
+
+        Keyword arguments:
+        configure -- Whether or not we should store the certificate in our dir
+        """
+        r = self.scheduler().register(self.signer())
+        if configure:
+            with (self.directory / "device.crt").open("w") as f:
+                f.write(r.device_cert)
+            with (self.directory / "device-key.pem").open("w") as f:
+                f.write(r.device_key)
+
+    def recover(self, configure: bool = True) -> None:
+        r = self.scheduler().recover(self.signer())
+        if configure:
+            with (self.directory / "device.crt").open("w") as f:
+                f.write(r.device_cert)
+            with (self.directory / "device-key.pem").open("w") as f:
+                f.write(r.device_key)
+
 
 class Clients:
     """A helper object with utilities to manage clients.
