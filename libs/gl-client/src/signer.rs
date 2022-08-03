@@ -30,7 +30,7 @@ pub struct Signer {
 }
 
 mod persist {
-    use bitcoin::secp256k1::PublicKey;
+    use lightning_signer::bitcoin::secp256k1::PublicKey;
     use lightning_signer::chain::tracker::ChainTracker;
     use lightning_signer::channel::{Channel, ChannelId, ChannelStub};
     use lightning_signer::monitor::ChainMonitor;
@@ -112,6 +112,7 @@ impl Signer {
 
         let persist = persist::DummyPersister;
         let handler = Arc::new(vls_protocol_signer::handler::RootHandler::new(
+	    network,
             0 as u64,
             Some(sec),
             Arc::new(persist),
