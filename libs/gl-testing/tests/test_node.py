@@ -4,7 +4,7 @@ from rich.pretty import pprint
 
 def test_node_start(scheduler, clients, bitcoind):
     c = clients.new()
-    cs = c.signer()
-    res = c.scheduler().register(cs)
+    res = c.register(configure=True)
     pprint(res)
-    bitcoind.generate_block(100)
+
+    node_info = c.scheduler().schedule()
