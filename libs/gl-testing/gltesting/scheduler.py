@@ -18,6 +18,7 @@ import subprocess
 import shutil
 from typing import Optional
 from gltesting.utils import NodeVersion, SignerVersion, Network
+from gltesting.node import NodeProcess
 
 @dataclass
 class Node:
@@ -27,7 +28,7 @@ class Node:
     network: Network
     initmsg: bytes
     identity: Identity
-    process: Optional[subprocess.Popen]
+    process: Optional[NodeProcess]
     plugin_grpc_uri: Optional[str]
 
 
@@ -50,7 +51,7 @@ def enumerate_cln_versions():
     versions = {}
     for v in version_paths:
         vs = subprocess.check_output([v, "--version"]).strip().decode("ASCII")
-        versions[vs] = NodeVersion(path=v, name=vs)
+        versions[vs] = NodeVersion(path=Path(v).resolve(), name=vs)
 
     logging.info(f"Found {len(versions)} versions: {versions}")
     return versions
@@ -93,6 +94,10 @@ class Scheduler(object):
     def stop(self):
         self.server.stop(grace=1)
         self.server = None
+        for n in self.nodes:
+            if n.process:
+                n.process.stop()
+                n.process = None
 
     def get_node(self, node_id):
         for n in self.nodes:
@@ -119,19 +124,20 @@ class Scheduler(object):
 
         device_id = certs.gencert(f"/users/{hex_node_id}/device")
         node_cert = certs.gencert(f"/users/{hex_node_id}/node")
-
         directory = self.node_directory / f"node-{num}"
         directory.mkdir(parents=True)
+
+        vstr = req.signer_proto if req.signer_proto is not None else "v0.10.1"
+        sv = SignerVersion(name=vstr)
+
         self.nodes.append(
             Node(
                 node_id=req.node_id,
-                signer_version=req.signer_proto
-                if req.signer_proto is not None
-                else "v0.10.1",
+                signer_version=sv,
                 initmsg=req.init_msg,
                 network=req.network,
                 directory=directory,
-                identity=device_id,
+                identity=node_cert,
                 process=None,
                 plugin_grpc_uri=None,
             )
@@ -175,16 +181,32 @@ class Scheduler(object):
         return schedpb.ChallengeResponse(challenge=challenge.challenge)
 
     def Schedule(self, req, ctx):
-        node = self.get_node(req.node_id)
+        n = self.get_node(req.node_id)
 
-        if node.instance.server is None:
-            node.instance.start()
+        # If already running we just return the existing binding
+        if n.process:
+            return schedpb.NodeInfoResponse(
+                node_id=n.node_id,
+                grpc_uri=n.process.bind,
+            )
 
-        time.sleep(0.1)
-        return schedpb.NodeInfoResponse(
-            node_id=node.node_id,
-            grpc_uri=node.instance.grpc_addr,
+        node_version = n.signer_version.get_node_version()
+        node_version = self.versions[node_version]
+        # Otherwise we need to start a new process
+        n.process = NodeProcess(
+            node_id=req.node_id,
+            init_msg=n.initmsg,
+            directory=n.directory,
+            network=n.network,
+            identity=n.identity,
+            version=node_version,
         )
+        n.process.start()
+        return schedpb.NodeInfoResponse(
+            node_id=n.node_id,
+            grpc_uri=n.process.bind,
+        )
+
 
     def GetNodeInfo(self, req, ctx):
         node = self.get_node(req.node_id)
