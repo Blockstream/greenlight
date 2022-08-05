@@ -25,6 +25,17 @@ class SignerVersion:
 
         return self.name in compat[nv.name]
 
+    def get_node_version(self):
+        """Return the node version we should start for this signer version.
+        """
+        m = {
+            "v0.10.1": "v0.10.1",
+            "v0.10.2": "v0.10.2",
+            "v0.11.0.1": "v0.11.2gl2",
+            "v0.11.2": "v0.11.2gl2",
+        }
+        return m[self.name]
+
 
 class Network(Enum):
     """Supported networks."""
