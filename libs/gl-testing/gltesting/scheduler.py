@@ -20,6 +20,9 @@ from typing import Optional
 from gltesting.utils import NodeVersion, SignerVersion, Network
 from gltesting.node import NodeProcess
 from pyln.testing.utils import BitcoinD
+from binascii import unhexlify
+from threading import Condition
+
 
 @dataclass
 class Node:
@@ -31,6 +34,8 @@ class Node:
     identity: Identity
     process: Optional[NodeProcess]
     plugin_grpc_uri: Optional[str]
+    # Condition we wait on in GetNodeInfo for signers
+    condition: Condition
 
 
 @dataclass
@@ -142,6 +147,7 @@ class Scheduler(object):
                 identity=node_cert,
                 process=None,
                 plugin_grpc_uri=None,
+                condition=Condition(),
             )
         )
 
@@ -205,6 +211,10 @@ class Scheduler(object):
             bitcoind=self.bitcoind,
         )
         n.process.start()
+
+        with n.condition:
+            n.condition.notify_all()
+
         return schedpb.NodeInfoResponse(
             node_id=n.node_id,
             grpc_uri=n.process.grpc_uri,
@@ -213,9 +223,26 @@ class Scheduler(object):
     def GetNodeInfo(self, req, ctx):
         node = self.get_node(req.node_id)
         print(node)
-        return schedpb.NodeInfoResponse(node_id=req.node_id)
+
+        if req.wait:
+            with node.condition:
+                while node.process is None:
+                    logging.info(f"Signer waiting for node {node.node_id.hex()} to get scheduled")
+                    node.condition.wait()
+
+        return schedpb.NodeInfoResponse(
+            node_id=req.node_id,
+            grpc_uri=node.process.grpc_uri
+        )
 
     def MaybeUpgrade(self, req, ctx):
-        # TODO extract node_id from the request
-        ident = ctx.peer_identities()
-        raise NotImplementedError("Method not implemented!")
+        # Very roundabout way of extracting the x509 common name from
+        # which we can extract the node_id
+        # TODO Implement version ordering and upgrade here
+        #common_name = ctx.auth_context()['x509_common_name'][0].decode('ASCII')
+        #node_id = common_name.split('/')[2]
+        #node = self.get_node(unhexlify(node_id))
+
+        return schedpb.UpgradeResponse(
+            old_version="v0.11.0.1",
+        )
