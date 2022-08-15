@@ -189,7 +189,7 @@ class Scheduler(object):
         if n.process:
             return schedpb.NodeInfoResponse(
                 node_id=n.node_id,
-                grpc_uri=n.process.bind,
+                grpc_uri=n.process.grpc_uri,
             )
 
         node_version = n.signer_version.get_node_version()
@@ -207,9 +207,8 @@ class Scheduler(object):
         n.process.start()
         return schedpb.NodeInfoResponse(
             node_id=n.node_id,
-            grpc_uri=n.process.bind,
+            grpc_uri=n.process.grpc_uri,
         )
-
 
     def GetNodeInfo(self, req, ctx):
         node = self.get_node(req.node_id)
