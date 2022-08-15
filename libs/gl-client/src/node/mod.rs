@@ -37,6 +37,7 @@ impl Node {
 
     pub async fn connect(self, node_uri: String) -> Result<Client> {
         let node_uri = Uri::from_maybe_shared(node_uri)?;
+        info!("Connecting to node at {}", node_uri);
 
         let layer = match self.tls.private_key {
             Some(k) => service::AuthLayer::new(k)?,
