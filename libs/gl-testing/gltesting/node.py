@@ -14,6 +14,18 @@ from ephemeral_port_reserve import reserve
 import os
 
 
+target_dir = Path(
+    os.environ.get(
+        'CARGO_TARGET_DIR',
+        Path(__file__).parent / ".." / ".." / "target"
+    )
+)
+
+bin_dir = target_dir / os.environ.get('RUST_PROFILE', 'debug')
+plugin_path = bin_dir / "gl-plugin"
+signerproxy_path = bin_dir / "gl-signerproxy"
+
+
 class NodeProcess(TailableProc):
     """A node running under the control of a scheduler.
 
@@ -52,10 +64,10 @@ class NodeProcess(TailableProc):
         with (self.directory / "certs" / "ca.pem").open("wb") as f:
             f.write(identity.caroot)
 
-        with (self.directory / "server-key.pem").open("wb") as f:
+        with (cert_path / "server-key.pem").open("wb") as f:
             f.write(identity.private_key)
 
-        with (self.directory / "server.crt").open("wb") as f:
+        with (cert_path / "server.crt").open("wb") as f:
             f.write(identity.cert_chain)
         self.p2p_port = reserve()
 
@@ -73,20 +85,30 @@ class NodeProcess(TailableProc):
             "--log-timestamps=false",
             "--cltv-final=6",
             f"--addr=127.0.0.1:{self.p2p_port}",
+            # Stock `cln-grpc` disabled in favor of `gl-plugin`
             '--disable-plugin=cln-grpc',
+            f'--subdaemon=hsmd:{signerproxy_path}',
+            f'--important-plugin={plugin_path}',
         ]
 
     def start(self):
+        path = os.environ.get('PATH')
+        # Need to add the subdaemon directory to PATH so the
+        # signerproxy can find the version.
+        libexec_path = self.executable.parent / '..' / 'libexec' / 'c-lightning'
+
         self.grpc_port = reserve()
         self.bind = f"127.0.0.1:{self.grpc_port}"
+        self.grpc_uri = f"https://localhost:{self.grpc_port}"
         self.env.update({
             "GL_CERT_PATH": self.directory / "certs",
-            "PATH": f"{self.version.path}:{os.environ.get('PATH')}",
+            "PATH": f"{self.version.path}:{libexec_path}:{path}",
             "CLN_VERSION": self.version.name,
             "GL_NODE_NETWORK": self.network,
             "GL_NODE_ID": self.node_id.hex(),
             "GL_NODE_INIT": self.init_msg.hex(),
             "GL_NODE_BIND": self.bind,
+            "GL_PLUGIN_CLIENTCA_PATH": str(self.directory / "certs" / "ca.pem"),
         })
 
         TailableProc.start(self, stdin=None, stdout=None, stderr=None)

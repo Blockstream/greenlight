@@ -81,7 +81,7 @@ class Client:
         return glclient.Signer(secret=secret, network=NETWORK, tls=self.tls())
 
     def node(self):
-        pass
+        return self.scheduler().node()
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node
