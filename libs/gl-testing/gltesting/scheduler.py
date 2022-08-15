@@ -19,6 +19,7 @@ import shutil
 from typing import Optional
 from gltesting.utils import NodeVersion, SignerVersion, Network
 from gltesting.node import NodeProcess
+from pyln.testing.utils import BitcoinD
 
 @dataclass
 class Node:
@@ -60,7 +61,7 @@ def enumerate_cln_versions():
 class Scheduler(object):
     """A mock Scheduler simulating Greenlight's behavior."""
 
-    def __init__(self, grpc_port=2601, identity=None, node_directory=None):
+    def __init__(self, bitcoind: BitcoinD, grpc_port=2601, identity=None, node_directory=None):
         self.grpc_port = grpc_port
         self.server = None
         print("Starting scheduler with caroot", identity.caroot)
@@ -69,6 +70,7 @@ class Scheduler(object):
         self.next_challenge: int = 1
         self.nodes: List[Node] = []
         self.versions = enumerate_cln_versions()
+        self.bitcoind = bitcoind
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -200,6 +202,7 @@ class Scheduler(object):
             network=n.network,
             identity=n.identity,
             version=node_version,
+            bitcoind=self.bitcoind,
         )
         n.process.start()
         return schedpb.NodeInfoResponse(
