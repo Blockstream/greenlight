@@ -1,5 +1,6 @@
 from gltesting.identity import Identity
 from gltesting.fixtures import *
+from pyln.testing.utils import wait_for
 from rich.pretty import pprint
 from glclient import nodepb
 
@@ -41,3 +42,30 @@ def test_node_signer(clients, executor):
     pprint(inv)
     h.shutdown()
 
+
+def test_node_network(node_factory, clients, bitcoind):
+    """Setup a small network and check that we can send/receive payments.
+
+    ```dot
+    l1 -> l2 -> gl1
+    ```
+    """
+    l1, l2 = node_factory.line_graph(2)
+    c = clients.new()
+    c.register(configure=True)
+    gl1 = c.node()
+
+    # Handshake needs signer for ECDH of Noise_XK exchange
+    s = c.signer().run_in_thread()
+    gl1.connect_peer(l2.info['id'], f'127.0.0.1:{l2.daemon.port}')
+
+    # Now open a channel from l2 -> gl1
+    l2.fundwallet(sats=2*10**6)
+    l2.rpc.fundchannel(c.node_id.hex(), 'all')
+    bitcoind.generate_block(1, wait_for_mempool=1)
+
+    # Now wait for the channel to confirm
+    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 'CHANNELD_NORMAL')
+
+    inv = gl1.create_invoice('test', nodepb.Amount(millisatoshi=10000)).bolt11
+    l1.rpc.pay(inv)
