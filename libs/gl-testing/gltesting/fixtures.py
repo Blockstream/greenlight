@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import logging
 import sys
-from pyln.testing.fixtures import bitcoind, teardown_checks
+from pyln.testing.fixtures import bitcoind, teardown_checks, node_factory, node_cls, test_name, executor, db_provider, test_base_dir, throttler, jsonschemas
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
