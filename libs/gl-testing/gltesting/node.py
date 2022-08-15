@@ -9,7 +9,7 @@ import grpc
 from concurrent.futures import ThreadPoolExecutor
 import subprocess
 from gltesting.utils import NodeVersion, Network
-from pyln.testing.utils import TailableProc
+from pyln.testing.utils import TailableProc, BitcoinD
 from ephemeral_port_reserve import reserve
 import os
 
@@ -28,7 +28,8 @@ class NodeProcess(TailableProc):
             directory: Path,
             network: Network,
             identity: Identity,
-            version: NodeVersion
+            version: NodeVersion,
+            bitcoind: BitcoinD,
     ):
         TailableProc.__init__(self, str(directory), verbose=False)
         self.identity = identity
@@ -39,8 +40,10 @@ class NodeProcess(TailableProc):
         self.init_msg = init_msg
         self.executable = self.version.path
         self.bind: Optional[str] = None
+        self.grpc_uri: Optional[str] = None
         self.network = network
         self.verbose = True
+        self.bitcoind = bitcoind
 
         # Stage the identity so the plugin can pick it up.
         cert_path = self.directory / "certs" / "users" / "1"
@@ -61,6 +64,9 @@ class NodeProcess(TailableProc):
             f'--lightning-dir={directory}',
             f'--network={network}',
             '--log-level=debug',
+            '--bitcoin-rpcuser=rpcuser',
+            '--bitcoin-rpcpassword=rpcpass',
+            f'--bitcoin-rpcconnect=localhost:{self.bitcoind.rpcport}',
             #'--log-file=-',
             #'--log-file={directory}/log',
             '--rescan=1',
