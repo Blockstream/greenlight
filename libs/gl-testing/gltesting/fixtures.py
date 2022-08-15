@@ -71,9 +71,9 @@ def nobody_id(users_id):
 
 
 @pytest.fixture()
-def scheduler(scheduler_id):
+def scheduler(scheduler_id, bitcoind):
     grpc_port = reserve()
-    s = Scheduler(grpc_port=grpc_port, identity=scheduler_id)
+    s = Scheduler(bitcoind=bitcoind, grpc_port=grpc_port, identity=scheduler_id)
     logger.debug(f"Scheduler is running at {s.grpc_addr}")
     os.environ.update(
         {
