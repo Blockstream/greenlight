@@ -43,7 +43,7 @@ class NodeProcess(TailableProc):
             version: NodeVersion,
             bitcoind: BitcoinD,
     ):
-        TailableProc.__init__(self, str(directory), verbose=False)
+        TailableProc.__init__(self, str(directory), verbose=True)
         self.identity = identity
         self.version  = version
         self.proc: Optional[subprocess.Popen] = None
@@ -54,8 +54,8 @@ class NodeProcess(TailableProc):
         self.bind: Optional[str] = None
         self.grpc_uri: Optional[str] = None
         self.network = network
-        self.verbose = True
         self.bitcoind = bitcoind
+        self.prefix = "node"
 
         # Stage the identity so the plugin can pick it up.
         cert_path = self.directory / "certs" / "users" / "1"
@@ -73,14 +73,16 @@ class NodeProcess(TailableProc):
 
         self.cmd_line = [
             str(self.executable),
-            f'--lightning-dir={directory}',
+            f'--lightning-dir={self.directory}',
             f'--network={network}',
             '--log-level=debug',
             '--bitcoin-rpcuser=rpcuser',
             '--bitcoin-rpcpassword=rpcpass',
             f'--bitcoin-rpcconnect=localhost:{self.bitcoind.rpcport}',
-            #'--log-file=-',
-            #'--log-file={directory}/log',
+            # The following will allow us to support the `stream_log`
+            #RPC method after updating to pyln-testing==0.12
+            #f'--log-file=log',
+            #f'--log-file=-',
             '--rescan=1',
             "--log-timestamps=false",
             "--cltv-final=6",
@@ -111,7 +113,11 @@ class NodeProcess(TailableProc):
             "GL_NODE_INIT": self.init_msg.hex(),
             "GL_NODE_BIND": self.bind,
             "GL_PLUGIN_CLIENTCA_PATH": str(self.directory / "certs" / "ca.pem"),
+            "RUST_LOG": os.environ.get(
+                "RUST_LOG",
+                "gl_client=trace,gl_signerproxy=trace,gl_plugin=trace,cln_plugin=trace,cln_rpc=trace,cln_grpc=trace,info"
+            ),
         })
 
-        TailableProc.start(self, stdin=None, stdout=None, stderr=None)
+        TailableProc.start(self)
         self.wait_for_log("Server started with public key")

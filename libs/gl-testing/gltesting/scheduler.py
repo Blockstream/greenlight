@@ -3,16 +3,11 @@ from glclient import scheduler_pb2 as schedpb
 from concurrent.futures import ThreadPoolExecutor
 import grpc
 import logging
-from collections import namedtuple
 import tempfile
 from pathlib import Path
 from gltesting import certs
-from gltesting.node import MockNode
-from ephemeral_port_reserve import reserve
-import time
 from dataclasses import dataclass
 from gltesting.identity import Identity
-from enum import Enum
 import os
 import subprocess
 import shutil
@@ -20,7 +15,6 @@ from typing import Optional
 from gltesting.utils import NodeVersion, SignerVersion, Network
 from gltesting.node import NodeProcess
 from pyln.testing.utils import BitcoinD
-from binascii import unhexlify
 from threading import Condition
 
 
