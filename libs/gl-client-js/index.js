@@ -37,6 +37,7 @@ const fs = require("fs");
 const buffer = require("buffer");
 
 const nodeCallAsync = promisify(nodeCall);
+const schedulerScheduleAsync = promisify(schedulerSchedule);
 
 class Signer {
     constructor(secret, network, tls) {
@@ -88,9 +89,9 @@ class Scheduler {
 	)
     }
 
-    schedule() {
+    async schedule() {
 	let n = new Node()
-	n.inner = schedulerSchedule(this.inner, this.tls.inner)
+	n.inner = await schedulerScheduleAsync(this.inner, this.tls.inner)
 	return n
     }
 }

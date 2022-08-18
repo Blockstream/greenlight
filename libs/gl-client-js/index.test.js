@@ -98,7 +98,7 @@ test('Test node scheduler and getinfo', async () => {
 	"testnet",
 	tls
     )
-    var node = scheduler.schedule();
+    var node = await scheduler.schedule();
     var info = await node.get_info();
     console.log(info);
 })
