@@ -38,6 +38,7 @@ const buffer = require("buffer");
 
 const nodeCallAsync = promisify(nodeCall);
 const schedulerScheduleAsync = promisify(schedulerSchedule);
+const schedulerRecoverAsync = promisify(schedulerRecover);
 
 class Signer {
     constructor(secret, network, tls) {
@@ -77,9 +78,9 @@ class Scheduler {
 	this.tls = tls;
     }
 
-    recover(signer) {
+    async recover(signer) {
 	return proto.scheduler.RecoveryResponse.decode(
-	    schedulerRecover(this.inner, signer.inner)
+	    await schedulerRecoverAsync(this.inner, signer.inner)
 	)
     }
 
