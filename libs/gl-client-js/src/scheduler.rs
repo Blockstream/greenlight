@@ -36,10 +36,40 @@ impl Scheduler {
         jsconvert(exec(this.inner.register(&signer.inner)), cx)
     }
 
-    pub(crate) fn recover(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+    pub(crate) fn recover(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let this = Arc::clone(&&cx.argument::<JsBox<Arc<Scheduler>>>(0)?);
         let signer = Arc::clone(&&cx.argument::<JsBox<Arc<Signer>>>(1)?);
-        jsconvert(exec(this.inner.recover(&signer.inner)), cx)
+
+        // Callback and synchronous queue used to report the result in a promise
+        let callback = cx.argument::<JsFunction>(2)?.root(&mut cx);
+        let chan = cx.channel();
+
+        get_runtime().spawn(async move {
+            let res = this.inner.recover(&signer.inner).await;
+            chan.send(move |mut cx| {
+                let callback = callback.into_inner(&mut cx);
+                let this = cx.undefined();
+
+                let r = match res {
+                    Ok(v) => v,
+                    Err(e) => cx.throw_error(format!("{}", e))?,
+                };
+
+                let buf = match convert(r) {
+                    Ok(v) => v,
+                    Err(e) => cx.throw_error(format!("{}", e))?,
+                };
+
+                let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
+                cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
+
+                let args = vec![cx.undefined().upcast::<JsValue>(), jsbuf.upcast()];
+                callback.call(&mut cx, this, args)?;
+                Ok(())
+            });
+        });
+        // Dummy result, the real one is returned above
+        Ok(cx.undefined())
     }
 
     pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsUndefined> {

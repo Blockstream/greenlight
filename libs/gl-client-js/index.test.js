@@ -83,7 +83,7 @@ test('Test node scheduler and getinfo', async () => {
 
     // Don't want to add keys here, so let's recover
     var scheduler = new glclient.Scheduler(signer.node_id(), "testnet", new glclient.TlsConfig())
-    var rec = scheduler.recover(signer)
+    var rec = await scheduler.recover(signer);
 
     var tls = new glclient.TlsConfig();
     tls.inner = tls.identity(
