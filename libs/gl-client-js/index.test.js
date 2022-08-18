@@ -73,3 +73,34 @@ test('Test signer startup and shutdown', () => {
     signer.shutdown();
     expect(signer.handle).toBeUndefined();
 })
+
+test('Test node scheduler and getinfo', async () => {
+    var signer = new glclient.Signer(
+	buffer.Buffer("00000000000000000000000000000000"),
+	"testnet",
+	new glclient.TlsConfig()
+    );
+
+    // Don't want to add keys here, so let's recover
+    var scheduler = new glclient.Scheduler(signer.node_id(), "testnet", new glclient.TlsConfig())
+    var rec = scheduler.recover(signer)
+
+    console.log(rec.deviceCert)
+    console.log(rec.deviceKey)
+    var tls = new glclient.TlsConfig();
+    tls.inner = tls.identity(
+	buffer.Buffer(rec.deviceCert),
+	buffer.Buffer(rec.deviceKey)
+    );
+
+    // Now that we have an identity matching the key above, we have to
+    // reinit the scheduler stub to use it.
+    var scheduler = new glclient.Scheduler(
+	signer.node_id(),
+	"testnet",
+	tls
+    )
+    var node = scheduler.schedule();
+    var info = await node.get_info();
+    console.log(info);
+})

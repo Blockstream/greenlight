@@ -5,6 +5,7 @@ use crate::Signer;
 use bitcoin::Network;
 use neon::prelude::*;
 use prost::Message;
+use std::sync::Arc;
 
 pub(crate) struct Scheduler {
     inner: gl_client::scheduler::Scheduler,
@@ -42,7 +43,7 @@ impl Scheduler {
         jsconvert(exec(this.inner.recover(&signer.inner)), cx)
     }
 
-    pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsBox<Node>> {
+    pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsBox<Arc<Node>>> {
         let this = cx.argument::<JsBox<Scheduler>>(0)?;
         let tls = cx.argument::<JsBox<TlsConfig>>(1)?;
 

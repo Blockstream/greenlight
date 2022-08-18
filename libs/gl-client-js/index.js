@@ -32,9 +32,11 @@ const {
 const proto = require('./proto.js');
 
 const protobuf = require("protobufjs");
-const promisify  = require("util");
+const { promisify }  = require("util");
 const fs = require("fs");
 const buffer = require("buffer");
+
+const nodeCallAsync = promisify(nodeCall);
 
 class Signer {
     constructor(secret, network, tls) {
@@ -183,10 +185,10 @@ function parseBtcAddress(a) {
 }
 
 class Node {
-    _call(method, reqType, resType, properties) {
+    async _call(method, reqType, resType, properties) {
 	let req = reqType.create(properties)
 	var raw = reqType.encode(req).finish();
-	raw = nodeCall(
+	raw = await nodeCallAsync(
 	    this.inner,
 	    method,
 	    raw
@@ -195,7 +197,7 @@ class Node {
 	return resp;
     }
 
-    get_info() {
+    async get_info() {
 	return this._call(
 	    "get_info",
 	    proto.greenlight.GetInfoRequest,
@@ -204,7 +206,7 @@ class Node {
 	)
     }
 
-    stop() {
+    async stop() {
 	try {
 	    this._call(
 		"stop",
@@ -218,7 +220,7 @@ class Node {
 	}
     }
 
-    list_funds() {
+    async list_funds() {
 	return this._call(
 		"listfunds",
 		proto.greenlight.ListFundsRequest,
@@ -227,7 +229,7 @@ class Node {
 	    )
     }
 
-    list_invoices() {
+    async list_invoices() {
 	return this._call(
 		"listinvoices",
 		proto.greenlight.ListInvoicesRequest,
@@ -236,7 +238,7 @@ class Node {
 	    )
     }
 
-    list_payments() {
+    async list_payments() {
 	return this._call(
 		"listpayments",
 		proto.greenlight.ListPaymentsRequest,
@@ -245,7 +247,7 @@ class Node {
 	    )
     }
 
-    list_peers(node_id=null) {
+    async list_peers(node_id=null) {
 	return this._call(
 	    "listpeers",
 	    proto.greenlight.ListPeersRequest,
@@ -256,7 +258,7 @@ class Node {
 	)
     }
 
-    connect_peer(node_id, addr=null) {
+    async connect_peer(node_id, addr=null) {
 	return this._call(
 	    "connect_peer",
 	    proto.greenlight.ConnectRequest,
@@ -268,7 +270,7 @@ class Node {
 	)
     }
 
-    close(node_id, {unilateraltimeout=null, destination=null}={}) {
+    async close(node_id, {unilateraltimeout=null, destination=null}={}) {
 	return this._call(
 	    "close_channel",
 	    proto.greenlight.CloseChannelRequest,
@@ -281,7 +283,7 @@ class Node {
 	)
     }
 
-    disconnect_peer(node_id, force=false) {
+    async disconnect_peer(node_id, force=false) {
 	return this._call(
 	    "disconnect",
 	    proto.greenlight.DisconnectRequest,
@@ -293,7 +295,7 @@ class Node {
 	)
     }
 
-    new_address(addressType=null) {
+    async new_address(addressType=null) {
 	return this._call(
 	    "newaddr",
 	    proto.greenlight.NewAddrRequest,
@@ -304,7 +306,7 @@ class Node {
 	)
     }
 
-    withdraw(destination, amount, {feerate=null, minconf=null}={}) {
+    async withdraw(destination, amount, {feerate=null, minconf=null}={}) {
 	return this._call(
 	    "withdraw",
 	    proto.greenlight.WithdrawRequest,
@@ -319,7 +321,7 @@ class Node {
 	)
     }
 
-    fund_channel(node_id, amount, {feerate=null, announce=false, minconf=null, close_to=null}={}) {
+    async fund_channel(node_id, amount, {feerate=null, announce=false, minconf=null, close_to=null}={}) {
 	return this._call(
 	    "fund_channel",
 	    proto.greenlight.FundChannelRequest,
@@ -335,7 +337,7 @@ class Node {
 	)
     }
 
-    create_invoice(amount, label, description=null) {
+    async create_invoice(amount, label, description=null) {
 	return this._call(
 	    "create_invoice",
 	    proto.greenlight.InvoiceRequest,
@@ -348,7 +350,7 @@ class Node {
 	)
     }
 
-    pay(bolt11, {amount=null, timeout=null}={}) {
+    async pay(bolt11, {amount=null, timeout=null}={}) {
 	return this._call(
 	    "pay",
 	    proto.greenlight.PaymentRequest,
@@ -361,7 +363,7 @@ class Node {
 	)
     }
 
-    keysend(node_id, amount, label=null, {routehints=null, extratlvs=null}={}) {
+    async keysend(node_id, amount, label=null, {routehints=null, extratlvs=null}={}) {
 	return this._call(
 	    "keysend",
 	    proto.greenlight.KeysendRequest,
