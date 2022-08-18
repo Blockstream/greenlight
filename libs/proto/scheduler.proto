@@ -165,7 +165,7 @@ message RegistrationRequest {
 	// supersedes the bip32_key field which was a misnomer. Notice
 	// that this includes the prefix 0x006F which is the message
 	// type.
-	optional bytes init_msg = 8;
+	bytes init_msg = 8;
 };
 
 message RegistrationResponse {

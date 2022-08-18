@@ -57,7 +57,7 @@ impl Scheduler {
                 network: self.network.to_string(),
                 challenge: challenge.challenge,
                 signer_proto: signer.version().to_owned(),
-                init_msg: Some(signer.get_init()),
+                init_msg: signer.get_init(),
                 signature,
             })
             .await?;
