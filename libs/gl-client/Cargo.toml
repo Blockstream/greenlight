@@ -16,17 +16,17 @@ http = "0.2"
 http-body = "*"
 log = "*"
 pin-project = "*"
-prost = "0.8"
+prost = "0.11"
 ring = "*"
 rustls-pemfile = "*"
 tokio = { version = "*", features = ["full"] }
-tonic = { version = "^0.5", features = ["tls", "transport"] }
+tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 bitcoin = "0.27"
 serde = { version = "1", features = [ "derive" ], optional = true }
 
 [build-dependencies]
-tonic-build = "^0.5"
+tonic-build = "^0.8"
 serde = { version = "1", features = [ "derive" ], optional = true }
 
 [profile.release]

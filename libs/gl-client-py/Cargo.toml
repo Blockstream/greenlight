@@ -15,8 +15,8 @@ gl-client = { path = "../gl-client" }
 hex = "*"
 log = "*"
 once_cell = "*"
-prost = "0.8"
+prost = "0.11"
 pyo3 = {version = "0.14.1", features = ["extension-module", "serde"]}
 tokio = { version = "*", features = ["full"] }
-tonic = { version = "^0.5", features = ["tls", "transport"] }
+tonic = { version = "^0.8", features = ["tls", "transport"] }
 bitcoin = "0.27"
