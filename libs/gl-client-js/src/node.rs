@@ -1,4 +1,4 @@
-use crate::runtime::{convert, exec};
+use crate::runtime::{convert, exec, get_runtime};
 use anyhow::{anyhow, Result};
 use gl_client::{node::Client, pb};
 use neon::prelude::*;
@@ -10,8 +10,8 @@ pub(crate) struct Node {
 }
 
 impl Node {
-    pub(crate) fn new(client: Client) -> Self {
-        Node { client }
+    pub(crate) fn new(client: Client) -> Arc<Self> {
+        Arc::new(Node { client })
     }
 
     async fn dispatch(&self, method: &str, req: &[u8]) -> Result<Vec<u8>> {
@@ -103,20 +103,42 @@ impl Node {
         }
     }
 
-    pub(crate) fn call(mut cx: FunctionContext) -> JsResult<JsBuffer> {
-        let this = cx.argument::<JsBox<Node>>(0)?;
+    pub(crate) fn call(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+        let this = Arc::clone(&&cx.argument::<JsBox<Arc<Node>>>(0)?);
         let method = cx.argument::<JsString>(1)?.value(&mut cx);
         let buf = cx.argument::<JsBuffer>(2)?;
         let args: Vec<u8> = cx.borrow(&buf, |data| data.as_slice().to_vec());
 
-        match exec(this.dispatch(method.as_ref(), &args)) {
-            Ok(res) => {
+        // Callback and synchronous queue used to report the result in a promise
+        let callback = cx.argument::<JsFunction>(3)?.root(&mut cx);
+        let chan = cx.channel();
+
+        get_runtime().spawn(async move {
+            let res = this.dispatch(method.as_ref(), &args).await;
+
+            // Back in sync with the JS EventQueue
+            chan.send(move |mut cx| {
+                let res = match res {
+                    Ok(r) => r,
+                    Err(e) => cx.throw_error(format!("error calling {}: {}", method, e))?,
+                };
+
+		// Encode the response using protobuf
+                let callback = callback.into_inner(&mut cx);
+                let this = cx.undefined();
+
                 let jsbuf = JsBuffer::new(&mut cx, res.len() as u32)?;
                 cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&res));
-                Ok(jsbuf)
-            }
-            Err(e) => cx.throw_error(format!("error calling {}: {}", method, e))?,
-        }
+
+                let args = vec![cx.undefined().upcast::<JsValue>(), jsbuf.upcast()];
+                callback.call(&mut cx, this, args)?;
+
+                Ok(())
+            });
+        });
+
+        // Dummy result, the real one is returned above
+        Ok(cx.undefined())
     }
 
     pub(crate) fn call_stream_log(mut cx: FunctionContext) -> JsResult<JsBox<LogStream>> {
