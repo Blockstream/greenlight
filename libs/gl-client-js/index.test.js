@@ -85,8 +85,6 @@ test('Test node scheduler and getinfo', async () => {
     var scheduler = new glclient.Scheduler(signer.node_id(), "testnet", new glclient.TlsConfig())
     var rec = scheduler.recover(signer)
 
-    console.log(rec.deviceCert)
-    console.log(rec.deviceKey)
     var tls = new glclient.TlsConfig();
     tls.inner = tls.identity(
 	buffer.Buffer(rec.deviceCert),
