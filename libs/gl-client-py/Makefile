@@ -20,5 +20,5 @@ glclient/greenlight_pb2.py glclient/greenlight_pb2_grpc.py: ../proto/greenlight.
 check-py:
 	cd libs/gl-client-py; pytest tests -n 5
 
-clean:
+clean-py:
 	rm -f ${PROTOS}
