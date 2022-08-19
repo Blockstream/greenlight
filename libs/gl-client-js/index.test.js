@@ -1,6 +1,5 @@
 const glclient = require('./index');
 const buffer = require('buffer');
-const prom = require('timers/promises');
 const fs = require("fs");
 
 var rewire = require('rewire');
