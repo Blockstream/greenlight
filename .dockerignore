@@ -1,0 +1,4 @@
+libs/target
+libs/gl-client-js/node_modules
+libs/gl-client-js/build
+libs/gl-client-js/index.node

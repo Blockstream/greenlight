@@ -14,7 +14,9 @@ python = "^3.7"
 ephemeral-port-reserve = "^1.1.4"
 sh = "^1.14.2"
 pytest-timeout = "^2.1.0"
-gl-client-py = {path = "../gl-client-py"}
+# `pip` doesn't like relative-path dependencies. Should be ok once we
+# publish this on PyPI so pip can find it too.
+#gl-client-py = {path = "../gl-client-py"}
 pytest-xdist = "^2.5.0"
 rich = "^12.5.1"
 pyln-testing = "^0.11.1"
