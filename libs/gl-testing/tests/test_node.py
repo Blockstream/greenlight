@@ -66,7 +66,10 @@ def test_node_network(node_factory, clients, bitcoind):
 
     # Now wait for the channel to confirm
     wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 'CHANNELD_NORMAL')
+    import time
+    time.sleep(5)
 
     inv = gl1.create_invoice('test', nodepb.Amount(millisatoshi=10000)).bolt11
-    pprint(l1.rpc.decodepay(inv))
+    decoded = l1.rpc.decodepay(inv)
+    pprint(decoded)
     l1.rpc.pay(inv)
