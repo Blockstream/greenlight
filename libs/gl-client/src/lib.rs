@@ -45,7 +45,18 @@ pub mod tls;
 pub mod utils {
 
     pub fn scheduler_uri() -> String {
-        std::env::var("GL_SCHEDULER_GRPC_URI")
-            .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string())
+        match std::env::var("GL_SCHEDULER_GRPC_URI") {
+            Ok(var) => {
+                if std::path::Path::new(&var).is_file() {
+                    std::fs::read_to_string(&var).expect(&format!(
+                        "could not read file {} for envvar GL_SCHEDULER_GRPC_URI",
+                        var
+                    ))
+                } else {
+                    var
+                }
+            }
+            Err(_) => "https://scheduler.gl.blckstrm.com:2601".to_string(),
+        }
     }
 }
