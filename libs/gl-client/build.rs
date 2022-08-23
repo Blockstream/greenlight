@@ -16,7 +16,7 @@ fn main() {
 }
 
 const ATTR: &'static str = "#[derive(serde::Serialize, serde::Deserialize)]";
-const OBJECTS: [&'static str; 45] = [
+const OBJECTS: [&'static str; 44] = [
     "ConnectRequest",
     "ConnectResponse",
     "DisconnectRequest",
@@ -59,7 +59,6 @@ const OBJECTS: [&'static str; 45] = [
     "NewAddrRequest",
     "NewAddrResponse",
     "PayRequest",
-    "Payment",
     "WithdrawRequest",
     "WithdrawResponse",
 ];
