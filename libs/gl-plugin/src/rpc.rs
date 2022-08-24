@@ -1,13 +1,13 @@
 use crate::{requests, responses};
 use clightningrpc::{error::Error, Response};
+use cln_rpc::codec::JsonCodec;
+use futures::{SinkExt, StreamExt};
 use log::{debug, error, trace, warn};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Deserializer, Value};
 use std::path::{Path, PathBuf};
 use tokio::net::UnixStream;
 use tokio_util::codec::Framed;
-use cln_rpc::codec::JsonCodec;
-use futures::{SinkExt, StreamExt};
 
 #[derive(Clone, Debug)]
 pub struct LightningClient {
@@ -158,5 +158,22 @@ impl LightningClient {
     pub async fn listincoming(&self) -> Result<crate::responses::ListIncoming, Error> {
         self.call("listincoming", crate::requests::ListIncoming {})
             .await
+    }
+
+    pub async fn listchannels(
+        &self,
+        short_channel_id: Option<String>,
+        source: Option<String>,
+        destination: Option<String>,
+    ) -> Result<crate::responses::ListChannels, Error> {
+        self.call(
+            "listchannels",
+            crate::requests::ListChannels {
+                short_channel_id,
+                source,
+                destination,
+            },
+        )
+        .await
     }
 }
