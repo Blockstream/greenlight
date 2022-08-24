@@ -193,3 +193,13 @@ pub struct Keysend {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ListIncoming {}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ListChannels {
+     #[serde(skip_serializing_if = "Option::is_none")]
+    pub short_channel_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub destination: Option<String>,
+}

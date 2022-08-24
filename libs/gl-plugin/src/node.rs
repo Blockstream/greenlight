@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::messages;
 use crate::pb::{self, node_server::Node};
 use crate::rpc::LightningClient;
 use crate::stager;
@@ -86,55 +85,78 @@ impl PluginNodeServer {
     }
 
     /// Fetch a list of usable single-hop routehints corresponding to
-    /// our active incoming channels.
+    /// our active incoming channels. The tricky part here is that we
+    /// listen to `listpeers` to enumerate the channels we might want
+    /// to return, and then ask `listchannels` for the routing
+    /// details, which comes from a different subsystem. So we need to
+    /// match the two up, using `listpeers` as the minimal viable
+    /// result, and then loop until that minimal result is satisfied.
     async fn get_routehints(&self) -> Result<Vec<pb::Routehint>, Error> {
-        use crate::responses::Peer;
+        use tokio::time::{sleep, Duration};
+        info!("Retrieving incoming channels for routehints");
         let rpc = self.get_rpc().await;
+        let myid = rpc.getinfo().await?.id;
 
-        // Get a list of active channels to peers so we can filter out
-        // offline peers or peers with unconfirmed or closing
-        // channels.
-        let res = rpc
-            .listpeers(None)
-            .await?
-            .peers
-            .into_iter()
-            .filter(|p| p.connected && p.channels.len() > 0)
-            .collect::<Vec<Peer>>();
-
-        // Now project channels to their state and flatten into a vec
-        // of short_channel_ids
-        let active: Vec<String> = res
-            .into_iter()
-            .map(|p| {
-                p.channels
-                    .into_iter()
-                    .filter(|c| c.state == "CHANNELD_NORMAL")
-                    .filter_map(|c| c.short_channel_id)
-            })
-            .flatten()
+        // Retrieve peers so we know what to expect at a minimum.
+        let peers = rpc.listpeers(None).await?.peers;
+        let peer_ids: Vec<String> = peers
+            .iter()
+            .filter(|p| p.channels.iter().any(|c| c.state == "CHANNELD_NORMAL"))
+            .map(|p| p.id.clone())
             .collect();
 
-        // Now we can listincoming, filter with the above active list,
-        // and then map to become `pb::Routehint` instances
-        Ok(rpc
-            .listincoming()
-            .await?
-            .incoming
+        info!(
+            "We have {} channels recorded for peers: {:?}",
+            peer_ids.len(),
+            peer_ids
+        );
+
+        // Now try for up to 5 seconds to see if we get the channel's
+        // we expect in the `listchannels` output.
+        for _ in 1..=10 {
+            let found: Vec<String> = rpc
+                .listchannels(None, None, Some(myid.clone()))
+                .await?
+                .channels
+                .into_iter()
+                .map(|c| c.source)
+                .collect();
+
+            // Check that all peer_ids are also in the channels we
+            // found. May mismatch the actual channel IDs, due to
+            // aliasing.
+            if peer_ids.iter().all(|item| found.contains(&item)) {
+                break;
+            } else {
+                warn!(
+                    "Missing channels from `listchannels`: {:?} > {:?}",
+                    peer_ids, found
+                );
+                sleep(Duration::from_millis(500)).await;
+            }
+        }
+
+        let chans = dbg!(rpc.listchannels(None, None, Some(myid.clone())).await?).channels;
+        info!(
+            "Currently have {} channels from listchannels: {:?}",
+            chans.len(),
+            chans
+        );
+        let hops: Vec<pb::Routehint> = chans
             .into_iter()
-            .filter(|i| active.contains(&i.short_channel_id))
             .map(|i| pb::Routehint {
                 hops: vec![pb::RoutehintHop {
-                    node_id: hex::decode(i.id).expect("hex-decoding node_id"),
+                    node_id: hex::decode(i.source).expect("hex-decoding source node_id"),
                     short_channel_id: i.short_channel_id,
-                    fee_base: messages::Amount::from_string(&i.fee_base_msat)
-                        .expect("parsing fee_base")
-                        .msatoshi as u64,
-                    fee_prop: i.fee_proportional_millionths,
-                    cltv_expiry_delta: i.cltv_expiry_delta,
+                    fee_base: i.base_fee_millisatoshi,
+                    fee_prop: i.fee_per_millionth,
+                    cltv_expiry_delta: i.delay,
                 }],
             })
-            .collect())
+            .collect();
+
+        info!("Returning {} hops: {:?}", hops.len(), hops);
+        return Ok(hops);
     }
 }
 
