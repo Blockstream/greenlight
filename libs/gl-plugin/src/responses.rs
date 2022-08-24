@@ -1,8 +1,8 @@
-/// Various structs representing JSON-RPC responses
-use serde::Deserialize;
+//! Various structs representing JSON-RPC responses
+
 use clightningrpc::common::MSat;
 pub use clightningrpc::responses::*;
-
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Withdraw {
@@ -235,4 +235,22 @@ pub struct Peer {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ListPeers {
     pub peers: Vec<Peer>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListChannelsChannel {
+    pub source: String,
+    pub destination: String,
+    pub short_channel_id: String,
+    pub public: bool,
+    pub satoshis: u64,
+    pub active: bool,
+    pub base_fee_millisatoshi: u64,
+    pub fee_per_millionth: u32,
+    pub delay: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListChannels {
+    pub channels: Vec<ListChannelsChannel>,
 }
