@@ -21,7 +21,7 @@ rustls-pemfile = "*"
 tokio = { version = "1", features = ["full"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
-bitcoin = "0.28"
+bitcoin = "0.29"
 serde = { version = "1", features = [ "derive" ], optional = true }
 lightning-signer-core = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
 lightning-signer-server = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
