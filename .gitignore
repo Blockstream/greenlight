@@ -6,3 +6,4 @@ hsm_secret
 *.so
 .coverage
 libs/Cargo.lock
+*~
