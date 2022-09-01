@@ -12,12 +12,13 @@ packages = [
 name = "gl-client-py"
 
 [tool.poetry.dependencies]
-python = ">=3.6.2,<4.0"
-grpcio = "^1.41.1"
+python = ">=3.7,<4.0"
+grpcio = ">=1.44,=<1.47.0"
 protobuf = "^3.19.1"
+maturin = "^0.13"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6"
+pytest = ">=7.0.1,<8.0.0"
 gltesting = { path = "../gl-testing/", develop = true }
 pytest-repeat = "^0.9.1"
 pytest-xdist = "^2.4.0"
