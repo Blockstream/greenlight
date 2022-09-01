@@ -110,22 +110,23 @@ ENV RUST_VERSION=1.63.0
 ENV GRPC_ENABLE_FORK_SUPPORT=0
 
 RUN apt-get update && apt-get install -qqy \
-    python3 \
     autoconf \
-    python3-pip \
-    python3-venv \
-    libtool \
-    git \
-    unzip \
-    libgmp-dev \
-    curl \
-    libsqlite3-dev \
-    libsodium23 \
     clang \
-    pkgconf \
-    wget \
+    curl \
+    git \
+    libgmp-dev \
+    libsodium23 \
+    libsqlite3-dev \
+    libtool \
     nodejs \
     npm \
+    pkgconf \
+    python3 \
+    python3-pip \
+    python3-venv \
+    socat \
+    unzip \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Enumerate all CLN version we want `gl-testing` to find.
