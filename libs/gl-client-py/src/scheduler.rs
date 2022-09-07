@@ -3,6 +3,7 @@ use crate::Signer;
 use crate::{pb, pb::scheduler_client::SchedulerClient};
 use anyhow::Result;
 use bitcoin::Network;
+use gl_client::tls::TlsConfig;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -91,13 +92,18 @@ pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
 }
 
 impl Scheduler {
-    async fn connect(&self) -> Result<Client> {
-        let uri = gl_client::utils::scheduler_uri();
-        let client_tls = gl_client::tls::TlsConfig::new()?.client_tls_config();
+    async fn connect_with(&self, uri: String, tls: &TlsConfig) -> Result<Client> {
+        let client_tls = tls.client_tls_config();
         let channel = Channel::from_shared(uri)?
-            .tls_config(client_tls.clone())?
+            .tls_config(client_tls)?
             .connect()
             .await?;
         Ok(SchedulerClient::new(channel))
+    }
+
+    async fn connect(&self) -> Result<Client> {
+        let uri = gl_client::utils::scheduler_uri();
+        let tls = TlsConfig::new()?;
+        self.connect_with(uri, &tls).await
     }
 }

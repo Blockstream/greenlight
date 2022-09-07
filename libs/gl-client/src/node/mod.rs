@@ -57,8 +57,7 @@ impl Node {
         Ok(NodeClient::new(chan))
     }
 
-    pub async fn schedule(self) -> Result<Client> {
-        let scheduler_uri = utils::scheduler_uri();
+    pub async fn schedule_with_uri(self, scheduler_uri: String) -> Result<Client> {
         debug!(
             "Contacting scheduler at {} to get the node address",
             scheduler_uri
@@ -80,6 +79,11 @@ impl Node {
         debug!("Node scheduled at {}", node_info.grpc_uri);
 
         self.connect(node_info.grpc_uri).await
+    }
+
+    pub async fn schedule(self) -> Result<Client> {
+        let uri = utils::scheduler_uri();
+        self.schedule_with_uri(uri).await
     }
 }
 

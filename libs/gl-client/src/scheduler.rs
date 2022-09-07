@@ -16,12 +16,9 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
-        let tls = crate::tls::TlsConfig::new()?;
-        let scheduler_uri = utils::scheduler_uri();
-
-        debug!("Connecting to scheduler at {}", scheduler_uri);
-        let channel = Channel::from_shared(scheduler_uri)?
+    pub async fn with(node_id: Vec<u8>, network: Network, uri: String, tls: &TlsConfig) -> Result<Scheduler> {
+        debug!("Connecting to scheduler at {}", uri);
+        let channel = Channel::from_shared(uri)?
             .tls_config(tls.inner.clone())?
             .connect()
             .await?;
@@ -33,6 +30,12 @@ impl Scheduler {
             node_id,
             network,
         })
+    }
+
+    pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
+        let tls = crate::tls::TlsConfig::new()?;
+        let uri = utils::scheduler_uri();
+        Self::with(node_id, network, uri, &tls).await
     }
 
     pub async fn register(&self, signer: &Signer) -> Result<pb::RegistrationResponse> {
