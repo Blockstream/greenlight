@@ -36,13 +36,14 @@ fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
 
 impl TlsConfig {
     pub fn new() -> Result<Self> {
-        // Allow overriding the defaults through the environment
-        // variables, so we don't pollute the public interface with
-        // stuff that is testing-related.
+        // Allow overriding the defaults through the environment variables
         let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
         let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
         let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW)?;
 
+        Self::with(nobody_crt, nobody_key, ca_crt)
+    }
+    pub fn with(nobody_crt: Vec<u8>, nobody_key: Vec<u8>, ca_crt: Vec<u8>) -> Result<Self> {
         let config = ClientTlsConfig::new()
             .domain_name("localhost")
             .ca_certificate(Certificate::from_pem(ca_crt.clone()))
