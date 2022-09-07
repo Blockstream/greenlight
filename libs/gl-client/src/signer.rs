@@ -128,8 +128,7 @@ impl Signer {
     /// node to be scheduled. Once scheduled, connect to the node
     /// directly and start streaming and processing requests.
     pub async fn run_forever(&self, mut shutdown: mpsc::Receiver<()>) -> Result<()> {
-        let scheduler_uri = std::env::var("GL_SCHEDULER_GRPC_URI")
-            .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string());
+        let scheduler_uri = crate::utils::scheduler_uri();
 
         debug!(
             "Contacting scheduler at {} to get the node address",
