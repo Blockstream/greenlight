@@ -43,16 +43,16 @@ impl TlsConfig {
 
         Self::with(nobody_crt, nobody_key, ca_crt)
     }
-    pub fn with(nobody_crt: Vec<u8>, nobody_key: Vec<u8>, ca_crt: Vec<u8>) -> Result<Self> {
+    pub fn with<V: AsRef<[u8]>>(nobody_crt: V, nobody_key: V, ca_crt: V) -> Result<Self> {
         let config = ClientTlsConfig::new()
             .domain_name("localhost")
-            .ca_certificate(Certificate::from_pem(ca_crt.clone()))
+            .ca_certificate(Certificate::from_pem(ca_crt.as_ref()))
             .identity(Identity::from_pem(nobody_crt, nobody_key));
 
         Ok(TlsConfig {
             inner: config,
             private_key: None,
-            ca: ca_crt,
+            ca: ca_crt.as_ref().to_vec(),
         })
     }
 }
