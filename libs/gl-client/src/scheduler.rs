@@ -96,9 +96,10 @@ impl Scheduler {
             .into_inner();
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
+        let name = format!("recovered-{}", hex::encode(&challenge.challenge[0..8]));
         let device_cert = tls::generate_self_signed_device_cert(
             &hex::encode(self.node_id.clone()),
-            "default".into(),
+            &name,
             vec!["localhost".into()]);
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting recovery with csr:\n{}", device_csr);

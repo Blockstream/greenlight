@@ -108,7 +108,7 @@ pub fn generate_self_signed_device_cert(
     params.is_ca = rcgen::IsCa::SelfSignedOnly;
     params.distinguished_name.push(
             rcgen::DnType::CommonName,
-            format!("GL /users/{}/{}", node_id, device)
+            format!("/users/{}/{}", node_id, device)
     );
 
     rcgen::Certificate::from_params(params).unwrap()
