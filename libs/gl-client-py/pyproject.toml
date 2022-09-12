@@ -10,11 +10,10 @@ packages = [
 
 [project]
 name = "gl-client-py"
-
-[tool.poetry.dependencies]
-python = ">=3.6.2,<4.0"
-grpcio = "^1.41.1"
-protobuf = "^3.19.1"
+dependencies = [
+  "grpcio~=1.47",
+  "protobuf~=3.19.1",
+]
 
 [tool.poetry.dev-dependencies]
 pytest = "^6"
