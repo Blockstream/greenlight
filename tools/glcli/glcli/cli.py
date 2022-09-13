@@ -28,6 +28,7 @@ logger.addHandler(handler)
 
 
 class Context:
+    signer = None
     def __init__(self, network='testnet', start_hsmd=False):
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
@@ -54,7 +55,10 @@ class Context:
             with open(secrets_file, "rb") as f:
                 secret = f.read(32)
 
-        self.signer = Signer(secret, network, self.tls)
+        if self.signer is None:
+            logger.debug(f"Initializing signer singleton")
+            self.signer = Signer(secret, network, self.tls)
+
         self.node_id = bytes(self.signer.node_id())
         self.scheduler = Scheduler(self.node_id, network, self.tls)
         self.scheduler.tls = self.tls
@@ -186,7 +190,6 @@ def scheduler():
 @click.pass_context
 def register(ctx, network):
     # Reinitialize the signer with the right network, so register will pick that up
-    ctx.obj = Context(network=network, start_hsmd=False)
     signer = ctx.obj.signer
     node_id = ctx.obj.node_id
     hex_node_id = hexlify(node_id).decode("ASCII")
