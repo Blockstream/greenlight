@@ -9,10 +9,10 @@ use-serde = [ "serde" ]
 [dependencies]
 anyhow = "*"
 base64 = "*"
-bytes = "*"
+bytes = "1.2.1"
 hex = "*"
 http = "0.2"
-http-body = "*"
+http-body = "^0.4"
 log = "*"
 pin-project = "*"
 prost = "0.11"

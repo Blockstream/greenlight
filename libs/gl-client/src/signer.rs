@@ -10,6 +10,7 @@ use bitcoin::Network;
 use bytes::{Buf, Bytes};
 use std::convert::TryInto;
 use std::sync::Arc;
+use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
 use tonic::Request;
@@ -31,16 +32,36 @@ pub struct Signer {
 
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
-	info!("Initializing signer for {VERSION}");
+        use lightning_signer::node::NodeServices;
+        use lightning_signer::policy::simple_validator::SimpleValidatorFactory;
+        use lightning_signer::signer::ClockStartingTimeFactory;
+        use lightning_signer::util::clock::StandardClock;
+        use vls_protocol_signer::handler;
+
+        info!("Initializing signer for {VERSION}");
         let mut sec: [u8; 32] = [0; 32];
         sec.copy_from_slice(&secret[0..32]);
 
-        let persist = lightning_signer_server::persist::persist_json::KVJsonPersister::new("state");
-        let handler = Arc::new(vls_protocol_signer::handler::RootHandler::new(
+        // The persister takes care of persisting metadata across
+        // restarts
+        let persister = Arc::new(vls_persist::kv_json::KVJsonPersister::new("state"));
+        let validator_factory = Arc::new(SimpleValidatorFactory::new());
+        let starting_time_factory = ClockStartingTimeFactory::new();
+        let clock = Arc::new(StandardClock());
+
+        let services = NodeServices {
+            validator_factory,
+            starting_time_factory,
+            persister,
+            clock,
+        };
+
+        let handler = Arc::new(handler::RootHandler::new(
+            network,
             0 as u64,
             Some(sec),
-            Arc::new(persist),
             Vec::new(),
+            services,
         ));
 
         let init = Signer::initmsg(&handler)?;
