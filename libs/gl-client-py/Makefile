@@ -20,5 +20,33 @@ glclient/greenlight_pb2.py glclient/greenlight_pb2_grpc.py: ../proto/greenlight.
 check-py:
 	cd libs/gl-client-py; pytest tests -n 5
 
-clean-py:
-	rm -f ${PROTOS}
+clean:
+	rm -f ${PROTOS} build dist
+
+# Linux builds are performed in a docker container so we link against
+# an oldish glibc, increasing portability.
+build-linux:
+	docker build -t gl-client-py-builder .
+	docker run -v $(shell pwd)/..:/io gl-client-py-builder
+
+test: build-linux
+	virtualenv .tmpenv --python=$(which python3) --download --always-copy --clear
+	.tmpenv/bin/python3 -m pip install -U pip wheel pytest pytest-timeout
+	.tmpenv/bin/python3 -m pip install -f ../dist gl-client-py ../gl-testing
+	cd .tmpenv && bin/pytest ../tests
+	rm -rf .tmpenv
+
+build-macos:
+	# Build with `cargo` first so we don't get stuck on the `mako` issue in libhsmd-sys-rs
+	PKG_CONFIG_SYSROOT_DIR=/ cargo build --profile=release --target aarch64-apple-darwin
+	PKG_CONFIG_SYSROOT_DIR=/ maturin build --profile=release --target aarch64-apple-darwin --find-interpreter --out=$(shell pwd)/../dist
+
+	# Build with `cargo` first so we don't get stuck on the `mako` issue in libhsmd-sys-rs
+	PKG_CONFIG_SYSROOT_DIR=/ cargo build --profile=release --target x86_64-apple-darwin
+	PKG_CONFIG_SYSROOT_DIR=/ maturin build --profile=release --target x86_64-apple-darwin --find-interpreter --out=$(shell pwd)/../dist
+
+sdist:
+	python setup.py sdist
+
+publish: sdist
+	twine upload --repository-url https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/ dist/gl-client-*.tar.gz
