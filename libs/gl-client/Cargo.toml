@@ -24,7 +24,7 @@ tower = { version = "0.4" }
 bitcoin = "0.29"
 serde = { version = "1", features = [ "derive" ], optional = true }
 lightning-signer-core = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
-lightning-signer-server = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
+lightning-signer-server = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main", features = ["persist"] }
 vls-protocol-signer = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
 vls-protocol = { git="https://gitlab.com/lightning-signer/validating-lightning-signer.git", branch="main" }
 
