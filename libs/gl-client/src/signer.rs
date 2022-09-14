@@ -222,6 +222,33 @@ impl Signer {
         Ok(response[2..66].to_vec())
     }
 
+    /// Signs the devices public key. This signature is meant to be appended
+    /// to any payload signed by the device so that the signer can verify that
+    /// it knows the device.
+    pub fn sign_device_key(&self, key: &[u8]) -> Result<Vec<u8>> {
+        if key.len() != 65 {
+            return Err(anyhow!("key is not 65 bytes long"));
+        }
+        let client = self.hsmd.client(MAIN_CAPABILITIES);
+
+        let mut req = vec![0_u8, 23, 00, 65];
+        req.extend(key);
+
+        let response = client.handle(req)?;
+        if response[1] != 123 {
+            return Err(anyhow!(
+                "Expected response type to be 123, got {}",
+                response[1]
+            ));
+        } else if response.len() != 2 + 64 + 1 {
+            return Err(anyhow!(
+                "Malformed response to sign_device_key, unexpected length {}",
+                response.len()
+            ));
+        }
+        Ok(response[2..66].to_vec())
+    }
+
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
     pub async fn node(&self) -> Result<Client> {
