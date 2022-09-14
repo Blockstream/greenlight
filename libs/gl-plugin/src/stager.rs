@@ -81,10 +81,13 @@ impl Stage {
                     Ok(())
                 }
             }
-            None => Err(anyhow!(
-                "Request {} not found, is this a duplicate result?",
-                response.request_id
-            )),
+            None => {
+                trace!(
+                    "Request {} not found, is this a duplicate result?",
+                    response.request_id
+                );
+                Ok(())
+            }
         }
     }
 
