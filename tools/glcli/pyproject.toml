@@ -19,3 +19,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 glcli = 'glcli.cli:cli'
+
+[[tool.poetry.source]]
+name = "greenlight"
+url = "https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/simple/"
