@@ -17,6 +17,7 @@ import struct
 import sys
 import threading
 import time
+from filelock import FileLock
 
 
 logger = logging.getLogger("glapi.cli")
@@ -48,6 +49,9 @@ class Signer:
     def __init__(self, tls: Tls, network='testnet'):
         """Initialize the signer based on the cwd
         """
+        self.lock = FileLock("hsm_secret.lock")
+
+        self.lock.acquire()
         secrets_file = Path("hsm_secret")
         if not secrets_file.exists():
             logger.info(f"No {secrets_file} file found, generating a new secret key")
