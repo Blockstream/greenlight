@@ -202,24 +202,7 @@ impl Signer {
         if challenge.len() != 32 {
             return Err(anyhow!("challenge is not 32 bytes long"));
         }
-        let client = self.hsmd.client(MAIN_CAPABILITIES);
-
-        let mut req = vec![0_u8, 23, 00, 32];
-        req.extend(challenge);
-
-        let response = client.handle(req)?;
-        if response[1] != 123 {
-            return Err(anyhow!(
-                "Expected response type to be 123, got {}",
-                response[1]
-            ));
-        } else if response.len() != 2 + 64 + 1 {
-            return Err(anyhow!(
-                "Malformed response to sign_challenge, unexpected length {}",
-                response.len()
-            ));
-        }
-        Ok(response[2..66].to_vec())
+        self.sign_message(challenge)
     }
 
     /// Signs the devices public key. This signature is meant to be appended
@@ -229,10 +212,27 @@ impl Signer {
         if key.len() != 65 {
             return Err(anyhow!("key is not 65 bytes long"));
         }
-        let client = self.hsmd.client(MAIN_CAPABILITIES);
+        self.sign_message(key.to_vec())
+    }
 
-        let mut req = vec![0_u8, 23, 00, 65];
-        req.extend(key);
+    /// Signs a message with the hsmd client.
+    fn sign_message(&self, msg: Vec<u8>) -> Result<Vec<u8>> {
+        if msg.len() > u16::MAX as usize {
+            return Err(anyhow!("Message exceeds max len of {}", u16::MAX));
+        }
+
+        let len = u16::to_be_bytes(msg.len() as u16);
+        if len.len() != 2 {
+            return Err(anyhow!(
+                "Message to be signed has unexpected len {}",
+                len.len()
+            ));
+        }
+
+        let client = self.hsmd.client(MAIN_CAPABILITIES);
+        let mut req = vec![0_u8, 23];
+        req.extend(len);
+        req.extend(msg);
 
         let response = client.handle(req)?;
         if response[1] != 123 {
@@ -242,7 +242,7 @@ impl Signer {
             ));
         } else if response.len() != 2 + 64 + 1 {
             return Err(anyhow!(
-                "Malformed response to sign_device_key, unexpected length {}",
+                "Malformed response to msg, unexpected length {}",
                 response.len()
             ));
         }
@@ -295,5 +295,21 @@ mod tests {
             })
             .await
             .is_err())
+    }
+
+    #[test]
+    fn test_sign_message_max_size() {
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            TlsConfig::new().unwrap(),
+        ).unwrap();
+
+        // We test if we reject a message that is too long.
+        let msg = [0u8; u16::MAX as usize + 1];
+        assert_eq!(
+            signer.sign_message(msg.to_vec()).unwrap_err().to_string(),
+            format!("Message exceeds max len of {}", u16::MAX)
+        );
     }
 }
