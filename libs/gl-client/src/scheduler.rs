@@ -73,11 +73,17 @@ impl Scheduler {
             .await?
             .into_inner();
         
-        debug!("Received signed certificate:\n{}", &res.device_cert);
-        // We intercept the response and replace the private key with the
-        // private key of the device_cert. This private key has been generated
-        // on and has never left the client device. 
-        res.device_key = device_cert.serialize_private_key_pem();
+        // This step ensures backwards compatibility with the backend. If we did
+        // receive a device key, the backend did not sign the csr and we need to
+        // return the response as it is. If the device key is empty, the csr was
+        // signed and we return the client side generated private key.
+        if res.device_key.is_empty() {
+            debug!("Received signed certificate:\n{}", &res.device_cert);
+            // We intercept the response and replace the private key with the
+            // private key of the device_cert. This private key has been generated
+            // on and has never left the client device. 
+            res.device_key = device_cert.serialize_private_key_pem();
+        }
 
         // We ask the signer for a signature of the public key to append the
         // public key to any payload that is sent to a node.
@@ -124,12 +130,18 @@ impl Scheduler {
             .await?
             .into_inner();
         
-        debug!("Received signed certificate:\n{}", &res.device_cert);
-        // We intercept the response and replace the private key with the
-        // private key of the device_cert. This private key has been generated
-        // on and has never left the client device. 
-        res.device_key = device_cert.serialize_private_key_pem();
-
+        // This step ensures backwards compatibility with the backend. If we did
+        // receive a device key, the backend did not sign the csr and we need to
+        // return the response as it is. If the device key is empty, the csr was
+        // signed and we return the client side generated private key.
+        if res.device_key.is_empty() {
+            debug!("Received signed certificate:\n{}", &res.device_cert);
+            // We intercept the response and replace the private key with the
+            // private key of the device_cert. This private key has been generated
+            // on and has never left the client device. 
+            res.device_key = device_cert.serialize_private_key_pem();
+        }
+        
         // We ask the signer for a signature of the public key to append the
         // public key to any payload that is sent to a node.
         let public_key = device_cert.get_key_pair().public_key_raw();
