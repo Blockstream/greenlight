@@ -100,7 +100,7 @@ pub fn generate_self_signed_device_cert(
     subject_alt_names: Vec<String>,
     ) -> rcgen::Certificate {
     
-        // Configure the certificate.
+    // Configure the certificate.
     let mut params = cert_params_from_template(subject_alt_names);
 
     // Is a leaf certificate only so it is not allowed to sign child 
