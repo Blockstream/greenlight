@@ -174,16 +174,14 @@ message RegistrationRequest {
 };
 
 message RegistrationResponse {
-	// Upon registering the user receives back the certificate over
-	// the public key that was sent in the reqistration request, so
-	// they can authenticate themselves in the future.
+	// Upon registering the user receives back the signed certificate that
+	// belongs to the certificate signing request the that was sent in the
+	// registration request, so they can authenticate themselves in the future.
 	string device_cert = 1;
 
-	// The private key that was used to create the certificate with. 
-	// This is empty on return of the scheduler if the public key was given on
-	// registration request.
+	// The private key that was used to create the certificate with. This key
+	// is used to sign the requests to the node.
 	string device_key = 2;
-
 };
 
 // Ask the scheduler to schedule the node to be run on an available nodelet.
