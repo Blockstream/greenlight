@@ -6,6 +6,14 @@ PROTOS= \
 	glclient/scheduler_pb2_grpc.py \
 	glclient/greenlight_pb2_grpc.py
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+  OS = linux
+endif
+ifeq ($(UNAME_S),Darwin)
+  OS = macos
+endif
+
 all: ${PROTOS}
 
 glclient/scheduler_pb2.py glclient/scheduler_pb2_grpc.py: ../proto/scheduler.proto
@@ -29,7 +37,7 @@ build-linux:
 	docker build -t gl-client-py-builder .
 	docker run -v $(shell pwd)/..:/io gl-client-py-builder
 
-test: build-linux
+test: build
 	virtualenv .tmpenv --python=$(which python3) --download --always-copy --clear
 	.tmpenv/bin/python3 -m pip install -U pip wheel pytest pytest-timeout
 	.tmpenv/bin/python3 -m pip install -f ../dist gl-client-py ../gl-testing
@@ -44,6 +52,9 @@ build-macos:
 	# Build with `cargo` first so we don't get stuck on the `mako` issue in libhsmd-sys-rs
 	PKG_CONFIG_SYSROOT_DIR=/ cargo build --profile=release --target x86_64-apple-darwin
 	PKG_CONFIG_SYSROOT_DIR=/ maturin build --profile=release --target x86_64-apple-darwin --find-interpreter --out=$(shell pwd)/../dist
+
+build: build-${OS}
+	maturin sdist --out ../dist
 
 sdist:
 	python setup.py sdist
