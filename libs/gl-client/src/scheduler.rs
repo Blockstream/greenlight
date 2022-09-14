@@ -56,7 +56,7 @@ impl Scheduler {
             vec!["localhost".into()]);
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting registration with csr:\n{}", device_csr);
-
+        
         let mut res = self
             .client
             .clone()
@@ -73,10 +73,18 @@ impl Scheduler {
             .await?
             .into_inner();
         
+        debug!("Received signed certificate:\n{}", &res.device_cert);
         // We intercept the response and replace the private key with the
         // private key of the device_cert. This private key has been generated
         // on and has never left the client device. 
         res.device_key = device_cert.serialize_private_key_pem();
+
+        // We ask the signer for a signature of the public key to append the
+        // public key to any payload that is sent to a node.
+        let public_key = device_cert.get_key_pair().public_key_raw();
+        debug!("Asking singer to sign public key {}", hex::encode(public_key));
+        let r = signer.sign_device_key(public_key)?;
+        debug!("Got signature: {}", hex::encode(r));
 
         Ok(res)
     }
@@ -116,10 +124,18 @@ impl Scheduler {
             .await?
             .into_inner();
         
+        debug!("Received signed certificate:\n{}", &res.device_cert);
         // We intercept the response and replace the private key with the
         // private key of the device_cert. This private key has been generated
         // on and has never left the client device. 
         res.device_key = device_cert.serialize_private_key_pem();
+
+        // We ask the signer for a signature of the public key to append the
+        // public key to any payload that is sent to a node.
+        let public_key = device_cert.get_key_pair().public_key_raw();
+        debug!("Asking singer to sign public key {}", hex::encode(public_key));
+        let r = signer.sign_device_key(public_key)?;
+        debug!("Got signature: {}", hex::encode(r));
 
         Ok(res)
     }
