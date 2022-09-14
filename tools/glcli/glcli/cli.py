@@ -1,6 +1,6 @@
 from binascii import hexlify, unhexlify
 from glcli import environment as env
-from glclient import Signer, TlsConfig, Scheduler, Amount, nodepb as pb
+from glclient import TlsConfig, Scheduler, Amount, nodepb as pb
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
 from threading import Thread
@@ -10,6 +10,7 @@ import grpc
 import json
 import logging
 import os
+import glclient
 import re
 import secrets
 import struct
@@ -27,12 +28,13 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-class Context:
-    signer = None
-    def __init__(self, network='testnet', start_hsmd=False):
+class Tls:
+    """Encapsulation of the fs convention followed by glcli
+    """
+    def __init__(self):
+        self.tls = TlsConfig()
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
-        self.tls = TlsConfig()
         have_certs = cert_path.exists() and key_path.exists()
         if have_certs:
             device_cert = open('device.crt', 'rb').read()
@@ -42,6 +44,10 @@ class Context:
         else:
             logger.info("Configuring client with the NOBODY identity.")
 
+class Signer:
+    def __init__(self, tls: Tls, network='testnet'):
+        """Initialize the signer based on the cwd
+        """
         secrets_file = Path("hsm_secret")
         if not secrets_file.exists():
             logger.info(f"No {secrets_file} file found, generating a new secret key")
@@ -55,21 +61,41 @@ class Context:
             with open(secrets_file, "rb") as f:
                 secret = f.read(32)
 
-        if self.signer is None:
-            logger.debug(f"Initializing signer singleton")
-            self.signer = Signer(secret, network, self.tls)
+        self.inner = glclient.Signer(secret, network, tls.tls)
 
-        self.node_id = bytes(self.signer.node_id())
-        self.scheduler = Scheduler(self.node_id, network, self.tls)
+
+class Context:
+    def load_metadata(self, tls):
+        """Load the metadata from the metadata.toml file if it exists.
+
+        If it doesn't exist, create it by instantiating a signer
+        briefly, extract the information and then destroy the signer
+        again, unlocking the state directory for other signers.
+
+        """
+        path = Path("metadata.json")
+        if not path.exists():
+            signer = Signer(self.tls)
+            node_id = signer.inner.node_id()
+            self.metadata = {
+                'hex_node_id': signer.inner.node_id().hex(),
+                'signer_version': signer.inner.version(),
+            }
+            del signer
+            json.dump(self.metadata, path.open(mode='w'), sort_keys=True, indent=2)
+            self.metadata['node_id'] = node_id
+        else:
+            self.metadata = json.load(path.open(mode='r'))
+            self.metadata['node_id'] = bytes.fromhex(self.metadata['hex_node_id'])
+
+    def __init__(self, network='testnet', start_hsmd=False):
+        self.tls = Tls().tls
+        self.load_metadata(self.tls)
+        self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls)
         self.scheduler.tls = self.tls
         self.node = None
-
-        if start_hsmd and have_certs:
-            self.signer.run_in_thread()
-        elif start_hsmd and not have_certs:
-            logger.warning("We don't have user device certificates, not starting signer")
-
         self.scheduler_chan = None
+        self.node_id = self.metadata['node_id']
 
     def get_node(self):
         if self.node is None:
@@ -255,7 +281,8 @@ def schedule(ctx):
 @click.pass_context
 def hsmd(ctx):
     """Run the hsmd against the scheduler."""
-    hsm = ctx.obj.signer.run_in_foreground()
+    signer = Signer(Tls())
+    hsm = signer.inner.run_in_foreground()
 
 
 @cli.command()
