@@ -1,13 +1,13 @@
 use crate::{requests, responses};
 use clightningrpc::{error::Error, Response};
-use log::{debug, error, trace, warn};
+use cln_rpc::codec::JsonCodec;
+use futures::{SinkExt, StreamExt};
+use log::{debug, error, warn};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Deserializer, Value};
 use std::path::{Path, PathBuf};
 use tokio::net::UnixStream;
 use tokio_util::codec::Framed;
-use cln_rpc::codec::JsonCodec;
-use futures::{SinkExt, StreamExt};
 
 #[derive(Clone, Debug)]
 pub struct LightningClient {
@@ -41,7 +41,10 @@ impl LightningClient {
             "jsonrpc": "2.0",
         });
 
-        debug!("Sending request to JSON-RPC: {}", request);
+        debug!(
+            "Sending request to JSON-RPC: {}",
+            serde_json::to_string(&request).unwrap()
+        );
 
         if let Err(e) = codec.send(request).await {
             warn!("Error sending request to RPC interface: {}", e);
@@ -60,7 +63,10 @@ impl LightningClient {
             }
         };
 
-        debug!("Read response from JSON-RPC: {:?}", response);
+        debug!(
+            "Read response from JSON-RPC: {}",
+            serde_json::to_string(&response).unwrap()
+        );
 
         // TODO (cdecker) inefficient: serialize just to re-serialize,
         // but it's how I got it working.
