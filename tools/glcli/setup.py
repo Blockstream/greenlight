@@ -8,7 +8,7 @@ package_data = \
 {'': ['*'], 'glcli': ['bin/*']}
 
 install_requires = \
-['click>=7.1.2,<7.2.0', 'grpcio', 'protobuf', 'gl-client-py']
+['click>=7.1.2,<7.2.0', 'protobuf', 'gl-client-py']
 
 entry_points = \
 {'console_scripts': ['glcli = glcli.cli:cli']}
