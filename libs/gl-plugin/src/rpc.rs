@@ -41,7 +41,7 @@ impl LightningClient {
             "jsonrpc": "2.0",
         });
 
-        trace!("Sending request to JSON-RPC: {}", request);
+        debug!("Sending request to JSON-RPC: {}", request);
 
         if let Err(e) = codec.send(request).await {
             warn!("Error sending request to RPC interface: {}", e);
@@ -60,7 +60,7 @@ impl LightningClient {
             }
         };
 
-        trace!("Read response from JSON-RPC: {:?}", response);
+        debug!("Read response from JSON-RPC: {:?}", response);
 
         // TODO (cdecker) inefficient: serialize just to re-serialize,
         // but it's how I got it working.
