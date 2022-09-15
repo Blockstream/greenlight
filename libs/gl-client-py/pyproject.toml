@@ -11,7 +11,6 @@ packages = [
 [project]
 name = "gl-client-py"
 dependencies = [
-  "grpcio~=1.47",
   "protobuf~=3.19.1",
 ]
 
