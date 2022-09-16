@@ -31,6 +31,8 @@ pub mod scheduler;
 /// move your funds.
 pub mod signer;
 
+mod persist;
+
 /// Helpers to configure the mTLS connection authentication.
 ///
 /// mTLS configuration for greenlight clients. Clients are
