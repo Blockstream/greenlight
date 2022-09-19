@@ -6,7 +6,6 @@ from pathlib import Path
 from threading import Thread
 import click
 import functools
-import grpc
 import json
 import logging
 import os
