@@ -1,8 +1,8 @@
 tonic::include_proto!("greenlight");
-use cln_rpc::primitives::ShortChannelId;
 use crate::{messages, requests, responses};
 use anyhow::{anyhow, Context, Result};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use cln_rpc::primitives::ShortChannelId;
 use log::warn;
 use std::str::FromStr;
 
@@ -293,6 +293,12 @@ impl TryFrom<InvoiceRequest> for requests::Invoice {
         // We can unwrap since we checked the None case above.
         let amt = i.amount.unwrap();
 
+        let preimage = if i.preimage.len() == 0 {
+            None
+        } else {
+            Some(hex::encode(i.preimage))
+        };
+
         if let Some(amount::Unit::All(_)) = amt.unit {
             return Err(anyhow!(
 		"Amount cannot be set to `all`. Use Amount(any=true) if you want an amountless invoice"
@@ -305,6 +311,7 @@ impl TryFrom<InvoiceRequest> for requests::Invoice {
             description: i.description,
             exposeprivatechannels: None,
             dev_routes: None,
+            preimage,
         })
     }
 }

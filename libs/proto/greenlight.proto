@@ -367,6 +367,7 @@ message InvoiceRequest {
 	Amount amount = 1;
 	string label = 2;
 	string description = 3;
+	bytes preimage = 4;
 }
 
 enum InvoiceStatus {

@@ -117,6 +117,9 @@ pub struct Invoice {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exposeprivatechannels: Option<Vec<String>>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preimage: Option<String>,
+
     #[serde(rename = "dev-routes", skip_serializing_if = "Option::is_none")]
     pub dev_routes: Option<Vec<Vec<RoutehintHopDev>>>,
 }
