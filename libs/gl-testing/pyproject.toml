@@ -20,6 +20,8 @@ pytest-timeout = "^2.1.0"
 pytest-xdist = "^2.5.0"
 rich = "^12.5.1"
 pyln-testing = "^0.11.1"
+protobuf = ">=3"
+grpcio = "^1"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.971"
