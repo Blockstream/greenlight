@@ -257,11 +257,18 @@ class Node(object):
         )))
 
 
-    def create_invoice(self, label: str, amount=None, description=None) -> nodepb.Invoice:
+    def create_invoice(
+            self,
+            label: str,
+            amount=None,
+            description: Optional[str]=None,
+            preimage: Optional[bytes]=None
+    ) -> nodepb.Invoice:
         req = nodepb.InvoiceRequest(
             amount=amount,
             label=label,
             description=description,
+            preimage=bytes.fromhex(preimage) if preimage is not None else None,
         ).SerializeToString()
 
         return nodepb.Invoice.FromString(
