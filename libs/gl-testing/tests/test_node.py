@@ -73,3 +73,24 @@ def test_node_network(node_factory, clients, bitcoind):
     decoded = l1.rpc.decodepay(inv)
     pprint(decoded)
     l1.rpc.pay(inv)
+
+
+def test_node_invoice_preimage(clients):
+    """Test that we can create an invoice with a specific preimage
+    """
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+
+    preimage = "00"*32
+    expected = '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925'
+
+    i = gl1.create_invoice(
+        label='lbl',
+        amount=nodepb.Amount(millisatoshi=21000000),
+        description="desc",
+        preimage=preimage,
+    )
+
+    assert i.payment_hash.hex() == expected
