@@ -186,6 +186,7 @@ impl Persist for WrappingPersister {
             state.into(),
         );
     }
+
     fn update_node(
         &self,
         node_id: &bitcoin::secp256k1::PublicKey,
