@@ -137,7 +137,7 @@ impl State {
             .insert(key, (0u64, serde_json::to_value(tracker).unwrap()));
     }
 
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.values.clear();
     }
 
@@ -185,7 +185,6 @@ impl Persist for WrappingPersister {
             },
             state.into(),
         );
-
     }
     fn update_node(
         &self,
@@ -377,29 +376,6 @@ impl Persist for WrappingPersister {
         }
 
         let nodes = res;
-
-        eprintln!(
-            "{:?}",
-            nodes
-                .iter()
-                .map(|i| hex::encode(i.0.serialize()))
-                .collect::<Vec<String>>()
-        );
-        eprintln!(
-            "{:?}",
-            nodes
-                .iter()
-                .map(|i| {
-                    serde_json::to_string(&vls_persist::model::NodeEntry {
-                        key_derivation_style: i.1.key_derivation_style,
-                        network: i.1.network.clone(),
-                        seed: i.1.seed.clone(),
-                    })
-                    .unwrap()
-                })
-                .collect::<Vec<String>>()
-        );
-
         nodes
     }
     fn clear_database(&self) {
