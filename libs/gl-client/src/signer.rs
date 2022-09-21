@@ -167,6 +167,8 @@ impl Signer {
         }
         .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
+        self.state.lock().unwrap().dump();
+
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
