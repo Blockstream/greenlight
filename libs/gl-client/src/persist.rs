@@ -137,7 +137,7 @@ impl State {
             .insert(key, (0u64, serde_json::to_value(tracker).unwrap()));
     }
 
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.values.clear();
     }
 
@@ -185,7 +185,6 @@ impl Persist for WrappingPersister {
             },
             state.into(),
         );
-
     }
     fn update_node(
         &self,
@@ -376,30 +375,39 @@ impl Persist for WrappingPersister {
             ));
         }
 
+        let mut res = Vec::new();
+        for node_id in node_ids.iter() {
+            let node_key = format!("{NODE_PREFIX}/{node_id}");
+            let state_key = format!("{NODE_STATE_PREFIX}/{node_id}");
+
+            let node: vls_persist::model::NodeEntry =
+                serde_json::from_value(state.values.get(&node_key).unwrap().1.clone()).unwrap();
+            let node_state: vls_persist::model::NodeStateEntry =
+                serde_json::from_value(state.values.get(&state_key).unwrap().1.clone()).unwrap();
+
+            let state = lightning_signer::node::NodeState {
+                invoices: Default::default(),
+                issued_invoices: Default::default(),
+                payments: Default::default(),
+                excess_amount: 0,
+                log_prefix: "".to_string(),
+                velocity_control: node_state.velocity_control.into(),
+            };
+            let entry = lightning_signer::persist::model::NodeEntry {
+                seed: node.seed,
+                key_derivation_style: node.key_derivation_style,
+                network: node.network,
+                state,
+            };
+
+            let key: Vec<u8> = hex::decode(node_id).unwrap();
+            res.push((
+                bitcoin::secp256k1::PublicKey::from_slice(key.as_slice()).unwrap(),
+                entry,
+            ));
+        }
+
         let nodes = res;
-
-        eprintln!(
-            "{:?}",
-            nodes
-                .iter()
-                .map(|i| hex::encode(i.0.serialize()))
-                .collect::<Vec<String>>()
-        );
-        eprintln!(
-            "{:?}",
-            nodes
-                .iter()
-                .map(|i| {
-                    serde_json::to_string(&vls_persist::model::NodeEntry {
-                        key_derivation_style: i.1.key_derivation_style,
-                        network: i.1.network.clone(),
-                        seed: i.1.seed.clone(),
-                    })
-                    .unwrap()
-                })
-                .collect::<Vec<String>>()
-        );
-
         nodes
     }
     fn clear_database(&self) {
