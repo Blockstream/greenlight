@@ -8,19 +8,23 @@ use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
 use bitcoin::Network;
 use bytes::{Buf, Bytes};
+use lightning_signer::node::NodeServices;
 use std::convert::TryInto;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
 use tonic::Request;
+use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 
 const VERSION: &str = "v0.11.0.1";
 
 #[derive(Clone)]
 pub struct Signer {
-    handler: Arc<vls_protocol_signer::handler::RootHandler>,
+    secret: [u8; 32],
+    services: NodeServices,
     tls: TlsConfig,
     id: Vec<u8>,
 
@@ -28,15 +32,14 @@ pub struct Signer {
     init: Vec<u8>,
 
     network: Network,
+    state: Arc<Mutex<crate::persist::State>>,
 }
 
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
-        use lightning_signer::node::NodeServices;
         use lightning_signer::policy::simple_validator::SimpleValidatorFactory;
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
-        use vls_protocol_signer::handler;
 
         info!("Initializing signer for {VERSION}");
         let mut sec: [u8; 32] = [0; 32];
@@ -52,29 +55,33 @@ impl Signer {
         let services = NodeServices {
             validator_factory,
             starting_time_factory,
-            persister,
+            persister: persister.clone(),
             clock,
         };
 
-        let handler = Arc::new(handler::RootHandler::new(
-            network,
-            0 as u64,
-            Some(sec),
-            Vec::new(),
-            services,
-        ));
+        let handler = handler::RootHandlerBuilder::new(network, 0 as u64, services.clone())
+            .seed_opt(Some(sec))
+            .build();
 
         let init = Signer::initmsg(&handler)?;
         let id = init[2..35].to_vec();
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
-            handler,
+            secret: sec,
+            services,
             tls,
             id,
             init,
             network,
+            state: persister.state(),
         })
+    }
+
+    fn handler(&self) -> handler::RootHandler {
+        handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone())
+            .seed_opt(Some(self.secret))
+            .build()
     }
 
     fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
@@ -149,17 +156,18 @@ impl Signer {
         let response = match req.context {
             Some(HsmRequestContext { dbid: 0, .. }) | None => {
                 // This is the main daemon talking to us.
-                //self.handler.
-                self.handler.handle(msg)
+                self.handler().handle(msg)
             }
             Some(c) => {
                 let pk: [u8; 33] = c.node_id.try_into().unwrap();
                 let pk = vls_protocol::model::PubKey(pk);
-                let h = self.handler.for_new_client(1 as u64, pk, c.dbid);
+                let h = self.handler().for_new_client(1 as u64, pk, c.dbid);
                 h.handle(msg)
             }
         }
         .map_err(|e| anyhow!("processing request: {e:?}"))?;
+
+        self.state.lock().unwrap().dump();
 
         Ok(HsmResponse {
             raw: response.as_vec(),
@@ -212,43 +220,43 @@ impl Signer {
                 wait: true,
             });
             tokio::select! {
-                info = get_node => {
-            let node_info = match info
-                            .map(|v| v.into_inner())
-                        {
-                            Ok(v) => {
-                                debug!("Got node_info from scheduler: {:?}", v);
-                                v
-                            }
-                            Err(e) => {
-                                trace!(
-                                    "Got an error from the scheduler: {}. Sleeping before retrying",
-                                    e
-                                );
+                    info = get_node => {
+                let node_info = match info
+                                .map(|v| v.into_inner())
+                            {
+                                Ok(v) => {
+                                    debug!("Got node_info from scheduler: {:?}", v);
+                                    v
+                                }
+                                Err(e) => {
+                                    trace!(
+                                        "Got an error from the scheduler: {}. Sleeping before retrying",
+                                        e
+                                    );
+                                    sleep(Duration::from_millis(1000)).await;
+                                    continue;
+                                }
+                            };
+
+                            if node_info.grpc_uri.is_empty() {
+                                trace!("Got an empty GRPC URI, node is not scheduled, sleeping and retrying");
                                 sleep(Duration::from_millis(1000)).await;
                                 continue;
                             }
-                        };
 
-                        if node_info.grpc_uri.is_empty() {
-                            trace!("Got an empty GRPC URI, node is not scheduled, sleeping and retrying");
-                            sleep(Duration::from_millis(1000)).await;
-                            continue;
-                        }
-
-                        if let Err(e) = self
-                            .run_once(Uri::from_maybe_shared(node_info.grpc_uri)?)
-                        .await {
-                            warn!("Error running against node: {}", e);
-                        }
+                            if let Err(e) = self
+                                .run_once(Uri::from_maybe_shared(node_info.grpc_uri)?)
+                            .await {
+                                warn!("Error running against node: {}", e);
+                            }
 
 
-                    },
-                _ = shutdown.recv() => {
-		    debug!("Received the signal to exit the signer loop");
-		    break;
-		},
-            };
+                        },
+                    _ = shutdown.recv() => {
+                debug!("Received the signal to exit the signer loop");
+                break;
+            },
+                };
         }
         info!("Exiting the signer loop");
         Ok(())
@@ -287,7 +295,7 @@ impl Signer {
 
         let req = vls_protocol::msgs::SignMessage { message: msg };
         let response = self
-            .handler
+            .handler()
             .handle(vls_protocol::msgs::Message::SignMessage(req))
             .unwrap();
         Ok(response.as_vec()[2..66].to_vec())
