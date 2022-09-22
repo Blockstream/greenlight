@@ -46,12 +46,14 @@ impl Hsm for StagingHsmServer {
             return Ok(Response::new(HsmResponse {
                 request_id: req.request_id,
                 raw: self.node_info.initmsg.clone(),
+		signer_state: Vec::new(), // the signerproxy doesn't care about state
             }));
         } else if req.get_type() == 33 {
             debug!("Returning stashed dev-memleak response");
             return Ok(Response::new(HsmResponse {
                 request_id: req.request_id,
                 raw: vec![0, 133, 0],
+		signer_state: Vec::new(), // the signerproxy doesn't care about state
             }));
         }
 

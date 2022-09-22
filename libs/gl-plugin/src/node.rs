@@ -317,6 +317,8 @@ impl Node for PluginNodeServer {
                     hsm_id
                 );
 
+		// TODO Fetch and add the current signer state to the request
+
                 if let Err(e) = tx.send(Ok(req.request)).await {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
                     break;
