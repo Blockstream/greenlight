@@ -120,12 +120,20 @@ message HsmRequestContext {
 message HsmResponse {
 	uint32 request_id = 1;
 	bytes raw = 2;
+
+	// A list of updated key-value-version tuples that is to be
+	// merged into the state tracked by the plugin.
+	repeated SignerStateEntry signer_state = 5;
 }
 
 message HsmRequest {
 	uint32 request_id = 1;
 	HsmRequestContext context = 2;
 	bytes raw = 3;
+
+	// A list of key-value-version tuples that the signer should
+	// use to update its internal state.
+	repeated SignerStateEntry signer_state = 4;
 }
 
 message Empty {}
@@ -509,4 +517,10 @@ message KeysendRequest {
 message StreamLogRequest {};
 message LogEntry {
 	string line = 1;
+}
+
+message SignerStateEntry {
+	uint64 version = 1;
+	string key = 2;
+	bytes value = 3;
 }

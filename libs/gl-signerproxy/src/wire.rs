@@ -3,7 +3,6 @@ use anyhow::{anyhow, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
 use log::trace;
 use std::os::unix::io::{AsRawFd, RawFd};
-use std::os::unix::net::UnixStream as StdStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 use tokio::sync::Mutex;
@@ -57,12 +56,6 @@ impl DaemonConnection {
         DaemonConnection {
             conn: Mutex::new(connection),
         }
-    }
-
-    pub fn new_with_fd(fd: RawFd) -> Result<Self> {
-        use std::os::unix::io::FromRawFd;
-        let ms = unsafe { StdStream::from_raw_fd(fd) };
-        Ok(DaemonConnection::new(UnixStream::from_std(ms)?))
     }
 
     fn count_fds(typ: u16) -> i8 {

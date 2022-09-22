@@ -4,7 +4,7 @@ use crate::pb::{hsm_client::HsmClient, Empty, HsmRequest, HsmRequestContext};
 use crate::wire::{DaemonConnection, Message};
 use anyhow::{anyhow, Context};
 use anyhow::{Error, Result};
-use log::{error, info, debug, warn};
+use log::{debug, error, info, warn};
 use std::convert::TryFrom;
 use std::env;
 use std::os::unix::io::{AsRawFd, FromRawFd};
@@ -99,6 +99,7 @@ async fn process_requests(
                         context: context.clone(),
                         raw: msg.body.clone(),
                         request_id: request_counter.fetch_add(1, atomic::Ordering::Relaxed) as u32,
+                        signer_state: Vec::new(),
                     });
                     debug!("Got a message from node: {:?}", &req);
                     let res = server.request(req).await?.into_inner();
