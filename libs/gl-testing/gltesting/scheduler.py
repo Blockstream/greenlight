@@ -16,7 +16,7 @@ from gltesting.utils import NodeVersion, SignerVersion, Network
 from gltesting.node import NodeProcess
 from pyln.testing.utils import BitcoinD
 from threading import Condition
-
+from pyln.client import LightningRpc
 
 @dataclass
 class Node:
@@ -30,6 +30,9 @@ class Node:
     plugin_grpc_uri: Optional[str]
     # Condition we wait on in GetNodeInfo for signers
     condition: Condition
+
+    def rpc(self) -> LightningRpc:
+        return LightningRpc(self.directory / "regtest" / "lightning-rpc")
 
 
 @dataclass
