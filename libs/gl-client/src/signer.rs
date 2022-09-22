@@ -60,13 +60,8 @@ impl Signer {
             clock,
         };
 
-        let handler = handler::RootHandler::new(
-            network,
-            0 as u64,
-            Some(sec),
-            Vec::new(),
-            services.clone(),
-        );
+        let handler =
+            handler::RootHandler::new(network, 0 as u64, Some(sec), Vec::new(), services.clone());
 
         let init = Signer::initmsg(&handler)?;
         let id = init[2..35].to_vec();
@@ -155,6 +150,8 @@ impl Signer {
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse> {
         let mut b = Bytes::from(req.raw.clone());
 
+        // TODO merge in changes from the node
+
         if b.get_u16() == 23 {
             warn!("Refusing to process sign-message request");
             return Err(anyhow!("Cannot process sign-message requests from node."));
@@ -177,14 +174,13 @@ impl Signer {
         }
         .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
-        self.state.lock().unwrap().dump();
+        let new_state = { (*self.state.lock().unwrap()).clone() };
+        let signer_state: Vec<crate::pb::SignerStateEntry> = new_state.into();
 
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
-
-            // TODO Fill in the diff here
-            signer_state: Vec::new(),
+            signer_state,
         })
     }
 

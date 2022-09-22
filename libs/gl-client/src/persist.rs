@@ -15,7 +15,7 @@ const CHANNEL_PREFIX: &str = "channels";
 const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct State {
     values: BTreeMap<String, (u64, serde_json::Value)>,
 }
@@ -140,13 +140,67 @@ impl State {
     pub fn clear(&mut self) {
         self.values.clear();
     }
+}
 
-    pub(crate) fn dump(&self) {
-        eprintln!(
-            "SIGNERSTATE: {}",
-            serde_json::to_string_pretty(&self.values).unwrap()
-        );
-        eprintln!("Size: {}", serde_json::to_vec(&self.values).unwrap().len());
+impl State {
+    /// Take another `State` and attempt to update ourselves with any
+    /// entry that is newer than ours. This may fail if the other
+    /// state includes states that are older than our own.
+    pub fn merge(&mut self, other: &State) -> anyhow::Result<Vec<(String, Option<u64>, u64)>> {
+        let mut res = Vec::new();
+        for (key, (version, value)) in other.values.iter() {
+            let local = self.values.get_mut(key);
+
+            match local {
+                None => {
+                    trace!("Insert new key {}: version={}", key, *version);
+                    res.push((key.to_owned(), None, *version));
+                    self.values.insert(key.clone(), (*version, value.clone()));
+                }
+                Some(v) => {
+                    if v.0 == *version {
+                        continue;
+                    }
+
+                    trace!(
+                        "Updating key {}: version={} => version={}",
+                        key,
+                        v.0,
+                        *version
+                    );
+                    res.push((key.to_owned(), Some(v.0), *version));
+                    *v = (*version, value.clone());
+                }
+            }
+        }
+        Ok(res)
+    }
+}
+
+impl Into<Vec<crate::pb::SignerStateEntry>> for State {
+    fn into(self) -> Vec<crate::pb::SignerStateEntry> {
+        self.values
+            .iter()
+            .map(|(k, v)| crate::pb::SignerStateEntry {
+                key: k.to_owned(),
+                value: serde_json::to_vec(&v.1).unwrap(),
+                version: v.0,
+            })
+            .collect()
+    }
+}
+
+impl From<Vec<crate::pb::SignerStateEntry>> for State {
+    fn from(v: Vec<crate::pb::SignerStateEntry>) -> State {
+        use std::iter::FromIterator;
+        let values = BTreeMap::from_iter(v.iter().map(|v| {
+            (
+                v.key.to_owned(),
+                (v.version, serde_json::from_slice(&v.value).unwrap()),
+            )
+        }));
+
+        State { values }
     }
 }
 
@@ -186,6 +240,7 @@ impl Persist for WrappingPersister {
             state.into(),
         );
     }
+
     fn update_node(
         &self,
         node_id: &bitcoin::secp256k1::PublicKey,
@@ -195,6 +250,7 @@ impl Persist for WrappingPersister {
         self.state.lock().unwrap().update_node(&key, state.into());
         Ok(())
     }
+
     fn delete_node(&self, node_id: &bitcoin::secp256k1::PublicKey) {
         let key = hex::encode(node_id.serialize());
         self.state.lock().unwrap().delete_node(&key);
