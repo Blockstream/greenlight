@@ -40,6 +40,7 @@ class Client:
     def __init__(
         self,
         directory: Path,
+        scheduler: Scheduler,
         secret: Optional[bytes] = None,
         name: Optional[str] = None,
     ):
@@ -51,6 +52,7 @@ class Client:
         self.log = logging.getLogger(name if name else "gltesting.clients.Client")
         self.directory = directory
         self.directory.mkdir(parents=True, exist_ok=True)
+        self.schedsvc = scheduler
 
         if secret is not None:
             self.log.debug("Initializing hsm_secret with provided secret")
@@ -140,6 +142,14 @@ class Client:
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
 
+    def find_node(self):
+        """If we registered find the matching node in the scheduler
+        """
+        for n in self.schedsvc.nodes:
+            if n.node_id == self.node_id:
+                return n
+        return None
+
 
 class Clients:
     """A helper object with utilities to manage clients.
@@ -174,7 +184,12 @@ class Clients:
             secret = bytes([id] * 32)
 
         logging.debug(f"Creating new client in {directory}")
-        c = Client(directory=directory, secret=secret, name=f"Client-{id}")
+        c = Client(
+            scheduler=self.scheduler,
+            directory=directory,
+            secret=secret,
+            name=f"Client-{id}"
+        )
         return c
 
     def new_keyless(self):
