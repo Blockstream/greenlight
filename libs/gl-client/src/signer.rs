@@ -172,6 +172,9 @@ impl Signer {
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
+
+            // TODO Fill in the diff here
+            signer_state: Vec::new(),
         })
     }
 
@@ -343,7 +346,8 @@ mod tests {
             .process_request(HsmRequest {
                 request_id: 0,
                 context: None,
-                raw: msg
+                raw: msg,
+                signer_state: vec![],
             })
             .await
             .is_err())
