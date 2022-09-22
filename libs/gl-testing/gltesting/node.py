@@ -117,6 +117,7 @@ class NodeProcess(TailableProc):
                 "RUST_LOG",
                 "gl_client=trace,gl_signerproxy=trace,gl_plugin=trace,cln_plugin=trace,cln_rpc=trace,cln_grpc=trace,info"
             ),
+            "CLN_PLUGIN_LOG": "gl_plugin=trace,gl_signerproxy=trace,cln_client=trace,cln_grpc=trace,cln_rpc=trace,info",
         })
 
         TailableProc.start(self)
