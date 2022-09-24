@@ -1,3 +1,4 @@
+use gl_client::persist::State;
 use crate::config::Config;
 use crate::messages;
 use crate::pb::{self, node_server::Node};
@@ -39,6 +40,7 @@ pub struct PluginNodeServer {
     pub stage: Arc<stager::Stage>,
     pub rpc: Arc<Mutex<LightningClient>>,
     events: tokio::sync::broadcast::Sender<super::Event>,
+    signer_state: Arc<Mutex<State>>,
     grpc_binding: String,
 }
 
@@ -69,11 +71,14 @@ impl PluginNodeServer {
             }
         });
 
+	let signer_state = Arc::new(Mutex::new(State::new()));
+
         Ok(PluginNodeServer {
             tls,
             rpc,
             stage,
             events,
+	    signer_state,
             grpc_binding: config.node_grpc_binding,
         })
     }
