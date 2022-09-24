@@ -101,7 +101,10 @@ pub fn init() -> Result<Builder> {
     // need to poll from the client.
     let node_server =
         crate::node::PluginNodeServer::new(stage.clone(), config.clone(), events.clone())?;
-    tokio::spawn(node_server.run());
+
+    tokio::spawn(async move {
+        node_server.run().await.unwrap();
+    });
 
     let state = GlPlugin {
         events: events.clone(),
@@ -111,7 +114,11 @@ pub fn init() -> Result<Builder> {
 
     let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
         .hook("invoice_payment", on_invoice_payment);
-    Ok(Builder { state, inner, events })
+    Ok(Builder {
+        state,
+        inner,
+        events,
+    })
 }
 
 /// Notification handler that receives notifications on incoming

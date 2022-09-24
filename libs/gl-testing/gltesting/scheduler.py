@@ -17,6 +17,8 @@ from gltesting.node import NodeProcess
 from pyln.testing.utils import BitcoinD
 from threading import Condition
 from pyln.client import LightningRpc
+import time
+import socket
 
 @dataclass
 class Node:
@@ -240,6 +242,20 @@ class Scheduler(object):
 
         with n.condition:
             n.condition.notify_all()
+
+        # Wait for the grpc port to be accessible
+        start_time = time.perf_counter()
+        timeout = 10
+        while True:
+            try:
+                with socket.create_connection(("localhost", n.process.grpc_port), timeout=0.1):
+                    break
+            except:
+                time.sleep(0.01)
+                if time.perf_counter() - start_time >= timeout:
+                    raise TimeoutError(f'Waited too for port localhost:{n.process.grpc_port} to become reachable')
+        # TODO Actually wait for the port to be accessible
+        time.sleep(1)
 
         return schedpb.NodeInfoResponse(
             node_id=n.node_id,
