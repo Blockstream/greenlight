@@ -113,11 +113,9 @@ class NodeProcess(TailableProc):
             "GL_NODE_INIT": self.init_msg.hex(),
             "GL_NODE_BIND": self.bind,
             "GL_PLUGIN_CLIENTCA_PATH": str(self.directory / "certs" / "ca.pem"),
-            "RUST_LOG": os.environ.get(
-                "RUST_LOG",
-                "gl_client=trace,gl_signerproxy=trace,gl_plugin=trace,cln_plugin=trace,cln_rpc=trace,cln_grpc=trace,info"
-            ),
-            "CLN_PLUGIN_LOG": "gl_plugin=trace,gl_signerproxy=trace,cln_client=trace,cln_grpc=trace,cln_rpc=trace,info",
+            "CLN_PLUGIN_LOG": "cln_rpc=trace,gl_plugin=trace,gl_client=trace,debug",
+            #"gl_signerproxy=trace,gl_plugin=trace,cln_rpc=trace,cln_grpc=trace,gl_client=trace,info",
+            #"RUST_LOG": "cln_rpc=trace,gl_plugin=trace,gl_client=trace,debug",
         })
 
         TailableProc.start(self)
