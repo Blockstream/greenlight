@@ -31,7 +31,7 @@ pub mod scheduler;
 /// move your funds.
 pub mod signer;
 
-mod persist;
+pub mod persist;
 
 /// Helpers to configure the mTLS connection authentication.
 ///

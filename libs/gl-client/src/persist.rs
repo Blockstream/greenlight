@@ -16,7 +16,7 @@ const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
 
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct State {
+pub struct State {
     values: BTreeMap<String, (u64, serde_json::Value)>,
 }
 
@@ -143,6 +143,12 @@ impl State {
 }
 
 impl State {
+    pub fn new() -> Self {
+        State {
+            values: BTreeMap::new(),
+        }
+    }
+
     /// Take another `State` and attempt to update ourselves with any
     /// entry that is newer than ours. This may fail if the other
     /// state includes states that are older than our own.
