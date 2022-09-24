@@ -78,6 +78,24 @@ impl PluginNodeServer {
         })
     }
 
+    pub async fn init(&self) -> Result<()> {
+        let _state = self.signer_state.lock().await;
+        let rpc = self.rpc.lock().await;
+
+        debug!("Waiting for RPC socket to appear");
+        loop {
+            if let Err(_e) = rpc.getinfo().await {
+                trace!("RPC socket not ready yet, sleeping");
+                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+            } else {
+                break;
+            }
+        }
+
+        // TODO Fetch state from `datastore` and merge with `state`
+        Ok(())
+    }
+
     pub async fn get_rpc(&self) -> LightningClient {
         let rpc = self.rpc.lock().await;
         let r = rpc.clone();

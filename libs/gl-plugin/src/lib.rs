@@ -101,7 +101,11 @@ pub fn init() -> Result<Builder> {
     // need to poll from the client.
     let node_server =
         crate::node::PluginNodeServer::new(stage.clone(), config.clone(), events.clone())?;
-    tokio::spawn(node_server.run());
+
+    tokio::spawn(async move {
+        node_server.init().await.unwrap();
+        node_server.run().await.unwrap();
+    });
 
     let state = GlPlugin {
         events: events.clone(),
