@@ -2,7 +2,7 @@ use anyhow::Error;
 use log::info;
 use std::env;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
     let cwd = env::current_dir()?;
     info!("Running in {}", cwd.to_str().unwrap());

@@ -3,7 +3,8 @@ use crate::messages;
 use crate::pb::{self, node_server::Node};
 use crate::rpc::LightningClient;
 use crate::stager;
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
+use gl_client::persist::State;
 use governor::{
     clock::DefaultClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -40,6 +41,8 @@ pub struct PluginNodeServer {
     pub rpc: Arc<Mutex<LightningClient>>,
     events: tokio::sync::broadcast::Sender<super::Event>,
     grpc_binding: String,
+    signer_state: Arc<Mutex<State>>,
+    socket_path: std::path::PathBuf,
 }
 
 impl PluginNodeServer {
@@ -52,11 +55,12 @@ impl PluginNodeServer {
             .identity(config.identity.id)
             .client_ca_root(config.identity.ca);
 
-        let mut sock_path = std::env::current_dir().unwrap();
-        sock_path.push("lightning-rpc");
-        info!("Connecting to lightning-rpc at {:?}", sock_path);
+        let mut socket_path = std::env::current_dir().unwrap();
+        socket_path.push("lightning-rpc");
+        info!("Connecting to lightning-rpc at {:?}", socket_path);
 
-        let rpc = Arc::new(Mutex::new(LightningClient::new(sock_path)));
+        let rpc = Arc::new(Mutex::new(LightningClient::new(socket_path.clone())));
+        let signer_state = Arc::new(Mutex::new(State::new()));
 
         // Bridge the RPC_BCAST into the events queue
         let tx = events.clone();
@@ -75,6 +79,8 @@ impl PluginNodeServer {
             stage,
             events,
             grpc_binding: config.node_grpc_binding,
+            signer_state,
+            socket_path: socket_path.into(),
         })
     }
 
@@ -402,9 +408,46 @@ impl Node for PluginNodeServer {
         &self,
         request: Request<pb::HsmResponse>,
     ) -> Result<Response<pb::Empty>, Status> {
-        if let Err(e) = self.stage.respond(request.into_inner()).await {
+        let req = request.into_inner();
+
+        // Create a state from the key-value-version tuples. Need to
+        // convert here, since `pb` is duplicated in the two different
+        // crates.
+        let signer_state: Vec<gl_client::pb::SignerStateEntry> = req
+            .signer_state
+            .iter()
+            .map(|i| gl_client::pb::SignerStateEntry {
+                key: i.key.to_owned(),
+                value: i.value.to_owned(),
+                version: i.version,
+            })
+            .collect();
+        let new_state: gl_client::persist::State = signer_state.into();
+
+        // TODO: Compute the diff and only apply that
+        let changes = req.signer_state.clone();
+
+        if let Err(e) = self.stage.respond(req).await {
             warn!("Suppressing error: {:?}", e);
         }
+
+        let _self = self.clone();
+        tokio::spawn(async move {
+            debug!("Storing {} changes to the signer state", changes.len());
+            for u in changes {
+                if let Err(e) = _self.signer_state_update(u).await {
+                    warn!("Error updating signer state entry: {:?}", e);
+                }
+            }
+        });
+
+        let mut state = self.signer_state.lock().await;
+        state.merge(&new_state).map_err(|e| {
+            Status::new(
+                Code::Internal,
+                format!("Error updating internal state: {e}"),
+            )
+        })?;
         Ok(Response::new(pb::Empty::default()))
     }
 
@@ -710,7 +753,101 @@ impl Node for PluginNodeServer {
 
 use nix::sys::signal;
 use nix::unistd::getppid;
+use prost::Message;
 impl PluginNodeServer {
+    /// Attempt to update a given signer state entry. By using both
+    /// version to determine whether we want to update, and the
+    /// generation to avoid clobbering concurrent calls this is a safe
+    /// way of updating.
+    async fn signer_state_update(&self, entry: pb::SignerStateEntry) -> Result<()> {
+        debug!("Storing version={} for key={:?}", entry.version, entry.key);
+        let key = vec!["_signer".to_owned(), entry.key.to_owned()];
+        let mut value = vec![];
+        entry.encode(&mut value)?;
+        loop {
+            debug!("Fetching previous version of {key:?}");
+            let (gen, prev) = match self.signer_state_get(&key).await {
+                Ok((g, p)) => (g, Some(p)),
+                Err(_) => (None, None),
+            };
+
+            // Exit if we're already up to date or even further along.
+            if let Some(prev) = prev {
+                if prev.version >= entry.version {
+                    trace!(
+                        "Abandonging update, entry version {} is below current version {}",
+                        prev.version,
+                        entry.version
+                    );
+                    return Ok(());
+                }
+            }
+
+            // Now try to update based on the generation `gen` we've
+            // seen. A concurrent call may end up bumping generation
+            // before we get to it, so repeat on failure. Eventually
+            // we'll get our write in.
+            let mut rpc = cln_rpc::ClnRpc::new(&self.socket_path).await.unwrap();
+
+            if let Err(e) = rpc
+                .call(cln_rpc::Request::Datastore(
+                    cln_rpc::model::DatastoreRequest {
+                        key: key.to_owned(),
+                        generation: gen,
+                        hex: Some(hex::encode(&value)),
+                        string: None,
+                        mode: Some(match gen {
+                            None => cln_rpc::model::DatastoreMode::MUST_CREATE,
+                            Some(_) => cln_rpc::model::DatastoreMode::MUST_REPLACE,
+                        }),
+                    },
+                ))
+                .await
+            {
+                debug!(
+                    "Failed to write signer state for {:?}, retrying: {:?}",
+                    key, e
+                );
+                continue;
+            } else {
+                trace!("Write to {:?} succeeded", key);
+                return Ok(());
+            }
+        }
+    }
+
+    async fn signer_state_get(
+        &self,
+        key: &Vec<String>,
+    ) -> Result<(Option<u64>, pb::SignerStateEntry)> {
+        let mut rpc = cln_rpc::ClnRpc::new(&self.socket_path).await?;
+        let prev = rpc
+            .call(cln_rpc::Request::ListDatastore(
+                cln_rpc::model::ListdatastoreRequest {
+                    key: Some(key.to_vec()),
+                },
+            ))
+            .await;
+
+        let res = match prev {
+            Ok(cln_rpc::Response::ListDatastore(l)) => l,
+            Err(e) => return Err(anyhow!("Error calling ListDatastore: {:?}", e)),
+            _ => return Err(anyhow!("Unexpected response type from ListDatastore")),
+        };
+
+        // We're looking for a specific value, it can only have 0 or 1
+        // entries
+        assert!(res.datastore.len() <= 1);
+
+        match res.datastore.first() {
+            None => Err(anyhow!("No such entry")),
+            Some(d) => {
+                let raw = hex::decode(d.hex.as_ref().unwrap())?;
+                Ok((d.generation, pb::SignerStateEntry::decode(raw.as_slice())?))
+            }
+        }
+    }
+
     pub async fn run(self) -> Result<()> {
         let addr = self.grpc_binding.parse().unwrap();
         let router = tonic::transport::Server::builder()
