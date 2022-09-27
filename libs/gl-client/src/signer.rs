@@ -145,8 +145,23 @@ impl Signer {
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse> {
         let mut b = Bytes::from(req.raw.clone());
+        let diff: crate::persist::State = req.signer_state.into();
+        let prestate = {
+            debug!("Updating local signer state with state from node");
+            let mut state = self.state.lock().unwrap();
+            trace!(
+                "Applying diff between local and remote state: {:?}",
+                state.diff(&diff)
+            );
 
-        // TODO merge in changes from the node
+            state.merge(&diff).unwrap();
+            trace!(
+                "Processing request {} with state {}",
+                hex::encode(&req.raw),
+                serde_json::to_string_pretty(&state.clone()).unwrap()
+            );
+            state.clone()
+        };
 
         if b.get_u16() == 23 {
             warn!("Refusing to process sign-message request");
@@ -169,8 +184,18 @@ impl Signer {
         }
         .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
-        let new_state = { (*self.state.lock().unwrap()).clone() };
-        let signer_state: Vec<crate::pb::SignerStateEntry> = new_state.into();
+        let signer_state: Vec<crate::pb::SignerStateEntry> = {
+            debug!("Serializing state changes to report to node");
+            let state = self.state.lock().unwrap();
+            trace!(
+                "Result {} with state {}",
+                hex::encode(&response.0.as_vec()),
+                serde_json::to_string_pretty(&state.clone()).unwrap()
+            );
+	    trace!("Diff to state pre-request: {:?}", prestate.diff(&state).unwrap());
+            state.clone().into()
+
+        };
 
         Ok(HsmResponse {
             raw: response.as_vec(),
