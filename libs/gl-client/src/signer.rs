@@ -48,7 +48,7 @@ impl Signer {
 
         // The persister takes care of persisting metadata across
         // restarts
-        let persister = Arc::new(crate::persist::WrappingPersister::new("state"));
+        let persister = Arc::new(crate::persist::MemoryPersister::new("state"));
         let validator_factory = Arc::new(SimpleValidatorFactory::new());
         let starting_time_factory = ClockStartingTimeFactory::new();
         let clock = Arc::new(StandardClock());
