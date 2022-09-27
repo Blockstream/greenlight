@@ -260,16 +260,16 @@ impl From<Vec<crate::pb::SignerStateEntry>> for State {
     }
 }
 
-pub(crate) struct WrappingPersister {
+pub(crate) struct MemoryPersister {
     state: Arc<Mutex<State>>,
 }
 
-impl WrappingPersister {
-    pub fn new(_path: &str) -> Self {
+impl MemoryPersister {
+    pub fn new() -> Self {
         let state = Arc::new(Mutex::new(State {
             values: BTreeMap::new(),
         }));
-        WrappingPersister { state }
+        MemoryPersister { state }
     }
 
     pub fn state(&self) -> Arc<Mutex<State>> {
@@ -277,7 +277,7 @@ impl WrappingPersister {
     }
 }
 
-impl Persist for WrappingPersister {
+impl Persist for MemoryPersister {
     fn new_node(
         &self,
         node_id: &bitcoin::secp256k1::PublicKey,
