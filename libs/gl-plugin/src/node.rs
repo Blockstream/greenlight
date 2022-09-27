@@ -84,8 +84,46 @@ impl PluginNodeServer {
         })
     }
 
+    async fn load_signer_state(&self) -> Result<()> {
+        let mut rpc = cln_rpc::ClnRpc::new(&self.socket_path).await?;
+        let key = ["_signer".to_owned()];
+
+        let state: Vec<gl_client::pb::SignerStateEntry> = match rpc
+            .call(cln_rpc::Request::ListDatastore(
+                cln_rpc::model::ListdatastoreRequest {
+                    key: Some(key.to_vec()),
+                },
+            ))
+            .await
+        {
+            Ok(cln_rpc::Response::ListDatastore(r)) => r
+                .datastore
+                .iter()
+                .map(|entry| {
+                    pb::SignerStateEntry::decode(
+                        &*hex::decode(entry.hex.as_ref().unwrap()).unwrap(),
+                    )
+                    .unwrap()
+                })
+                .map(|s| gl_client::pb::SignerStateEntry {
+                    key: s.key,
+                    value: s.value,
+                    version: s.version,
+                })
+                .collect(),
+            Err(e) => return Err(anyhow!("Error fetching signer state from RPC: {e:?}")),
+            Ok(_) => return Err(anyhow!("Unexpected non-listdatastore result")),
+        };
+
+        let state: gl_client::persist::State = state.into();
+        let mut signer_state = self.signer_state.lock().await;
+
+        signer_state.merge(&state)?;
+        debug!("State loaded from persistence");
+        Ok(())
+    }
+
     pub async fn init(&self) -> Result<()> {
-        let _state = self.signer_state.lock().await;
         let rpc = self.rpc.lock().await;
 
         debug!("Waiting for RPC socket to appear");
@@ -99,6 +137,9 @@ impl PluginNodeServer {
         }
 
         // TODO Fetch state from `datastore` and merge with `state`
+        self.load_signer_state()
+            .await
+            .expect("loading signer state from RPC");
         Ok(())
     }
 
