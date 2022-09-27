@@ -303,10 +303,11 @@ impl Node for PluginNodeServer {
 
         let (tx, rx) = mpsc::channel(10);
         let mut stream = self.stage.mystream().await;
+        let signer_state = self.signer_state.clone();
         tokio::spawn(async move {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
             loop {
-                let req = match stream.next().await {
+                let mut req = match stream.next().await {
                     Err(e) => {
                         error!(
                             "Could not get next request from stage: {:?} for hsm_id={}",
@@ -322,7 +323,20 @@ impl Node for PluginNodeServer {
                     hsm_id
                 );
 
-		// TODO Fetch and add the current signer state to the request
+                let state = signer_state.lock().await.clone();
+                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
+
+                // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
+                let state: Vec<pb::SignerStateEntry> = state
+                    .into_iter()
+                    .map(|s| pb::SignerStateEntry {
+                        key: s.key,
+                        version: s.version,
+                        value: s.value,
+                    })
+                    .collect();
+
+                req.request.signer_state = state.into();
 
                 if let Err(e) = tx.send(Ok(req.request)).await {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
