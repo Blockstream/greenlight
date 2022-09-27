@@ -468,6 +468,17 @@ impl Node for PluginNodeServer {
         // TODO: Compute the diff and only apply that
         let changes = req.signer_state.clone();
 
+        // Print the changes to logs so if we lose some change we can extract it.
+
+        for v in changes.iter() {
+            eprintln!(
+                "State update: {} {}: {}",
+                v.key,
+                v.version,
+                hex::encode(&v.value)
+            );
+        }
+
         if let Err(e) = self.stage.respond(req).await {
             warn!("Suppressing error: {:?}", e);
         }
