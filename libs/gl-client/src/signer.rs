@@ -149,8 +149,13 @@ impl Signer {
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse> {
         let mut b = Bytes::from(req.raw.clone());
-
-        // TODO merge in changes from the node
+        let diff: crate::persist::State = req.signer_state.into();
+        {
+            debug!("Updating local signer state with state from node");
+            let mut state = self.state.lock().unwrap();
+            state.merge(&diff).unwrap();
+            drop(state);
+        }
 
         if b.get_u16() == 23 {
             warn!("Refusing to process sign-message request");
@@ -174,8 +179,11 @@ impl Signer {
         }
         .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
-        let new_state = { (*self.state.lock().unwrap()).clone() };
-        let signer_state: Vec<crate::pb::SignerStateEntry> = new_state.into();
+        let signer_state: Vec<crate::pb::SignerStateEntry> = {
+            debug!("Serializing state changes to report to node");
+            let state = self.state.lock().unwrap();
+            state.clone().into()
+        };
 
         Ok(HsmResponse {
             raw: response.as_vec(),
