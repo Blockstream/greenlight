@@ -60,13 +60,11 @@ impl Signer {
             clock,
         };
 
-        let handler = handler::RootHandler::new(
+        let handler = handler::RootHandlerBuilder::new(
             network,
             0 as u64,
-            Some(sec),
-            Vec::new(),
             services.clone(),
-        );
+        ).seed_opt(Some(sec)).build();
 
         let init = Signer::initmsg(&handler)?;
         let id = init[2..35].to_vec();
@@ -84,13 +82,11 @@ impl Signer {
     }
 
     fn handler(&self) -> handler::RootHandler {
-        handler::RootHandler::new(
+        handler::RootHandlerBuilder::new(
             self.network,
             0 as u64,
-            Some(self.secret),
-            Vec::new(),
             self.services.clone(),
-        )
+        ).seed_opt(Some(self.secret)).build()
     }
 
     fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
