@@ -19,4 +19,4 @@ prost = "0.11"
 pyo3 = {version = "0.14.1", features = ["extension-module", "serde"]}
 tokio = { version = "1", features = ["full"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
-bitcoin = "0.28"
+bitcoin = "^0"
