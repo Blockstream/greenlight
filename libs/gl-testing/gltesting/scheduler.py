@@ -108,7 +108,7 @@ class Scheduler(object):
             f"No node with node_id={node_id} found in gltesting scheduler, do you need to register it first?"
         )
 
-    def Register(self, req, ctx):
+    def Register(self, req: schedpb.RegistrationRequest, ctx):
         challenge = None
         for c in self.challenges:
             if c.challenge == req.challenge and not c.used:
@@ -123,8 +123,14 @@ class Scheduler(object):
         hex_node_id = challenge.node_id.hex()
         certs.genca(f"/users/{hex_node_id}")
 
-        device_id = certs.gencert(f"/users/{hex_node_id}/device")
+        # Check if the request contains a csr and use it to generate the 
+        # certificate. Use the old flow if csr is not present.
+        if req.csr is not None:
+            device_cert = certs.gencert_from_csr(req.csr)
+        else:
+            device_cert = certs.gencert(f"/users/{hex_node_id}/device")
         node_cert = certs.gencert(f"/users/{hex_node_id}/node")
+        
         directory = self.node_directory / f"node-{num}"
         directory.mkdir(parents=True)
 
@@ -145,9 +151,18 @@ class Scheduler(object):
             )
         )
 
+        crt = device_cert
+        key = None
+
+        # No csr was provided, we need to get the cert and the key from the
+        # identity.
+        if req.csr is None:
+            crt = device_cert.cert_chain
+            key = device_cert.private_key
+
         return schedpb.RegistrationResponse(
-            device_cert=device_id.cert_chain,
-            device_key=device_id.private_key,
+            device_cert=crt,
+            device_key=key,
         )
 
     def Recover(self, req, ctx):
@@ -161,12 +176,20 @@ class Scheduler(object):
         assert challenge.scope == schedpb.ChallengeScope.RECOVER
         # TODO Verify that the response matches the challenge.
         hex_node_id = challenge.node_id.hex()
-        device_id = certs.gencert(
-            f"/users/{hex_node_id}/recover-{len(self.challenges)}"
-        )
+        
+        # Check if the request contains a csr and use it to generate the 
+        # certificate. Use the old flow if csr is not present.
+        if req.csr is not None:
+            device_cert = certs.gencert_from_csr(req.csr, recover=True)
+            device_key = None
+        else:
+            device_id = certs.gencert(f"/users/{hex_node_id}/recover-{len(self.challenges)}")
+            device_key = device_id.private_key
+            device_cert = device_id.cert_chain
+
         return schedpb.RecoveryResponse(
-            device_cert=device_id.cert_chain,
-            device_key=device_id.private_key,
+            device_cert=device_cert,
+            device_key=device_key
         )
 
     def GetChallenge(self, req, ctx):

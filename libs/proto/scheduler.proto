@@ -143,17 +143,17 @@ message RegistrationRequest {
 	// bitcoin, testnet, and regtest.
 	string network = 4;
 
-        // An previously unused challenge as retrieved from
-        // `Scheduler.GetChallenge() with `scope=REGISTER`. In
-        // combination with the `signature` below this is used to
-        // authenticate the caller and ensure the caller has access to
-        // the secret keys corresponding to the `node_id`.
+	// An previously unused challenge as retrieved from
+	// `Scheduler.GetChallenge() with `scope=REGISTER`. In
+	// combination with the `signature` below this is used to
+	// authenticate the caller and ensure the caller has access to
+	// the secret keys corresponding to the `node_id`.
 	bytes challenge = 5;
 
-        // A signature for the `challenge` signed by the secret key
-        // corresponding to the `node_id`. Please refer to the
-        // documentation of `Scheduler.GetChallenge()` for details on
-        // how to create this signature.
+	// A signature for the `challenge` signed by the secret key
+	// corresponding to the `node_id`. Please refer to the
+	// documentation of `Scheduler.GetChallenge()` for details on
+	// how to create this signature.
 	bytes signature = 6;
 
 	// The signer_proto is required in order to determine which
@@ -166,13 +166,21 @@ message RegistrationRequest {
 	// that this includes the prefix 0x006F which is the message
 	// type.
 	bytes init_msg = 8;
+
+	// The certificate signing request that will be signed by the
+	// greenlight backend. Notice that this must have the valid
+	// CN corresponding to the node_id e.g. /users/{node_id} set.
+	bytes csr = 9;
 };
 
 message RegistrationResponse {
-	// Upon registering the user receives back the device private
-	// key and certificate so they can authenticate themselves in
-	// the future.
+	// Upon registering the user receives back the signed certificate that
+	// belongs to the certificate signing request the that was sent in the
+	// registration request, so they can authenticate themselves in the future.
 	string device_cert = 1;
+
+	// The private key that was used to create the certificate with. This key
+	// is used to sign the requests to the node.
 	string device_key = 2;
 };
 
@@ -204,6 +212,10 @@ message RecoveryRequest {
 	bytes challenge = 1;
 	bytes signature = 2;
 	bytes node_id = 3;
+	// The certificate signing request that will be signed by the
+	// greenlight backend. Notice that this must have the valid
+	// CN corresponding to the node_id e.g. /users/{node_id} set.
+	bytes csr = 9;
 };
 
 message RecoveryResponse {
