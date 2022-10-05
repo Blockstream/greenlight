@@ -18,6 +18,7 @@ pub mod requests;
 pub mod responses;
 pub mod rpc;
 pub mod stager;
+pub mod storage;
 #[cfg(unix)]
 mod unix;
 
@@ -81,7 +82,7 @@ impl GlPlugin {
 
 /// Initialize the plugin, but don't start it yet. Allows attaching
 /// additional methods, hooks, and subscriptions.
-pub fn init() -> Result<Builder> {
+pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Result<Builder> {
     let (events, _) = tokio::sync::broadcast::channel(16);
     let rpc = Arc::new(Mutex::new(LightningClient::new("lightning-rpc")));
     let stage = Arc::new(stager::Stage::new());
@@ -99,8 +100,12 @@ pub fn init() -> Result<Builder> {
     // We also run the grpc interface for clients already, since we
     // can wait on the RPC becoming reachable, and this way we don't
     // need to poll from the client.
-    let node_server =
-        crate::node::PluginNodeServer::new(stage.clone(), config.clone(), events.clone())?;
+    let node_server = crate::node::PluginNodeServer::new(
+        stage.clone(),
+        config.clone(),
+        events.clone(),
+        signer_state_store,
+    ).await?;
 
     tokio::spawn(async move {
         node_server.run().await.unwrap();

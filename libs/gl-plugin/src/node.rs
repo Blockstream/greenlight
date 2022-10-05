@@ -1,10 +1,11 @@
-use gl_client::persist::State;
 use crate::config::Config;
 use crate::messages;
 use crate::pb::{self, node_server::Node};
 use crate::rpc::LightningClient;
 use crate::stager;
+use crate::storage::StateStore;
 use anyhow::{Context, Error, Result};
+use gl_client::persist::State;
 use governor::{
     clock::DefaultClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -42,13 +43,15 @@ pub struct PluginNodeServer {
     events: tokio::sync::broadcast::Sender<super::Event>,
     signer_state: Arc<Mutex<State>>,
     grpc_binding: String,
+    signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
 }
 
 impl PluginNodeServer {
-    pub fn new(
+    pub async fn new(
         stage: Arc<stager::Stage>,
         config: Config,
         events: tokio::sync::broadcast::Sender<super::Event>,
+        signer_state_store: Box<dyn StateStore>,
     ) -> Result<Self, Error> {
         let tls = ServerTlsConfig::new()
             .identity(config.identity.id)
@@ -71,14 +74,15 @@ impl PluginNodeServer {
             }
         });
 
-	let signer_state = Arc::new(Mutex::new(State::new()));
+        let signer_state = signer_state_store.read().await?;
 
         Ok(PluginNodeServer {
             tls,
             rpc,
             stage,
             events,
-	    signer_state,
+            signer_state: Arc::new(Mutex::new(signer_state)),
+            signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
         })
     }
@@ -403,7 +407,46 @@ impl Node for PluginNodeServer {
         &self,
         request: Request<pb::HsmResponse>,
     ) -> Result<Response<pb::Empty>, Status> {
-        if let Err(e) = self.stage.respond(request.into_inner()).await {
+        let req = request.into_inner();
+        // Create a state from the key-value-version tuples. Need to
+        // convert here, since `pb` is duplicated in the two different
+        // crates.
+        let signer_state: Vec<gl_client::pb::SignerStateEntry> = req
+            .signer_state
+            .iter()
+            .map(|i| gl_client::pb::SignerStateEntry {
+                key: i.key.to_owned(),
+                value: i.value.to_owned(),
+                version: i.version,
+            })
+            .collect();
+        let new_state: gl_client::persist::State = signer_state.into();
+
+        {
+            // Apply state changes to the in-memory state
+            let mut state = self.signer_state.lock().await;
+            state.merge(&new_state).map_err(|e| {
+                Status::new(
+                    Code::Internal,
+                    format!("Error updating internal state: {e}"),
+                )
+            })?;
+
+            // Send changes to the signer_state_store for persistence
+            self.signer_state_store
+                .lock()
+                .await
+                .write(state.clone())
+                .await
+                .map_err(|e| {
+                    Status::new(
+                        Code::Internal,
+                        format!("error persisting state changes: {}", e),
+                    )
+                })?;
+        }
+
+        if let Err(e) = self.stage.respond(req).await {
             warn!("Suppressing error: {:?}", e);
         }
         Ok(Response::new(pb::Empty::default()))
