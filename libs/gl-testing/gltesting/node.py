@@ -122,3 +122,7 @@ class NodeProcess(TailableProc):
 
         TailableProc.start(self)
         self.wait_for_log("Server started with public key")
+
+    def restart(self):
+        self.stop()
+        self.start()
