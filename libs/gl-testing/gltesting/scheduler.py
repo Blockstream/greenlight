@@ -264,11 +264,10 @@ class Scheduler(object):
 
     def GetNodeInfo(self, req, ctx):
         node = self.get_node(req.node_id)
-        print(node)
 
         if req.wait:
             with node.condition:
-                while node.process is None:
+                while node.process.proc is None:
                     logging.info(f"Signer waiting for node {node.node_id.hex()} to get scheduled")
                     node.condition.wait()
 
