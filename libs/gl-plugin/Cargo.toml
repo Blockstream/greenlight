@@ -26,10 +26,13 @@ nix = "0.17.0"
 prost = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
-tokio = { version = "=1.14", features = ["full"] }
+thiserror = "*"
+tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.6", features = ["codec"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
+lightning-storage-server = { path = "../../vls/lightning-storage-server" }
+sled = "*"
 
 [build-dependencies]
 tonic-build = "^0.5"
