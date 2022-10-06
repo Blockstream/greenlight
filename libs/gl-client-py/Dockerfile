@@ -56,6 +56,7 @@ RUN  git clone https://github.com/pyenv/pyenv.git ~/.pyenv && \
 RUN python3 -m pip install -U pip tomli && \
     python3 -m pip install maturin mako mrkd cffi
 
-WORKDIR /io/gl-client-py
-CMD bash -c "cargo build --release && \
+WORKDIR /io/
+CMD bash -c "cd /io/libs/gl-client-py && \
+    cargo build --release && \
     maturin build --release --out=../dist --compatibility=2_27"
