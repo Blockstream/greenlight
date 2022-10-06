@@ -178,4 +178,13 @@ impl Scheduler {
             .connect(uri)
             .await
     }
+
+    pub async fn get_invite_codes(&self) -> Result<pb::ListInviteCodesResponse> {
+        let res = self
+            .client
+            .clone()
+            .list_invite_codes(pb::ListInviteCodesRequest {})
+            .await?;
+        Ok(res.into_inner())
+    }
 }
