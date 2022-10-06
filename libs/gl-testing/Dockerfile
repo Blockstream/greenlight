@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -qqy \
     automake \
     build-essential \
     git \
+    jq \
     libtool \
     libgmp-dev \
     libsqlite3-dev \
