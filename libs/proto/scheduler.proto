@@ -115,6 +115,11 @@ service Scheduler {
 	// non-functional UpgradeRequest may result in unschedulable
 	// nodes.
 	rpc MaybeUpgrade(UpgradeRequest) returns (UpgradeResponse) {}
+
+	// This call is used to fetch a list of invite codes associated
+	// with the node id of the client. These invite codes can be used
+	// for further registration of new nodes.
+	rpc ListInviteCodes(ListInviteCodesRequest) returns (ListInviteCodesResponse) {}
 };
 
 message ChallengeRequest {
@@ -237,3 +242,14 @@ message UpgradeResponse {
 	// processed.
 	string old_version = 1;
 };
+
+message ListInviteCodesRequest {};
+
+message ListInviteCodesResponse {
+	repeated InviteCode invite_code_list = 1;
+};
+
+message InviteCode {
+	string code = 1;
+	bool is_redeemed = 2;
+};	
