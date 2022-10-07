@@ -133,13 +133,24 @@ impl Signer {
                     return Ok(());
                 }
             };
-            trace!("Received request {}", hex::encode(&req.raw));
-            let response = self.process_request(req).await?;
-            trace!("Sending response {}", hex::encode(&response.raw));
-            client
-                .respond_hsm_request(response)
-                .await
-                .context("sending response to hsm request")?;
+            let hex_req = hex::encode(&req.raw);
+            let signer_state = req.signer_state.clone();
+            trace!("Received request {}", hex_req);
+            match self.process_request(req).await {
+                Ok(response) => {
+                    trace!("Sending response {}", hex::encode(&response.raw));
+                    client
+                        .respond_hsm_request(response)
+                        .await
+                        .context("sending response to hsm request")?;
+                }
+                Err(e) => {
+                    warn!(
+                        "Ignoring error {} for request {} with state {:?}",
+                        e, hex_req, signer_state,
+                    )
+                }
+            };
         }
     }
 
