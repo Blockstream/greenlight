@@ -12,6 +12,8 @@ pub enum Error {
     Sled(#[from] ::sled::Error),
     #[error("state corruption: {0}")]
     CorruptState(#[from] serde_json::Error),
+    #[error("unhandled error: {0}")]
+    Other(Box<dyn std::error::Error + Send + Sync>),
 }
 
 #[async_trait]
