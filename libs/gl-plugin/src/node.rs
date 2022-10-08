@@ -159,7 +159,7 @@ impl Node for PluginNodeServer {
         LIMITER.until_ready().await;
         let rpc = self.get_rpc().await;
 
-        let res: Result<crate::responses::GetInfo, clightningrpc::Error> =
+        let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
             rpc.call("getinfo", json!({})).await;
 
         match res {
@@ -460,7 +460,7 @@ impl Node for PluginNodeServer {
         // TODO Add the spent parameter to the call
         let rpc = self.rpc.lock().await;
 
-        let res: Result<clightningrpc::responses::ListFunds, clightningrpc::Error> =
+        let res: Result<clightningrpc::responses::ListFunds, crate::rpc::Error> =
             rpc.call("listfunds", crate::requests::ListFunds {}).await;
 
         match res {
@@ -526,7 +526,7 @@ impl Node for PluginNodeServer {
             feerate: feerate,
         };
 
-        let res: Result<crate::responses::Withdraw, clightningrpc::Error> =
+        let res: Result<crate::responses::Withdraw, crate::rpc::Error> =
             rpc.call("withdraw", req).await;
 
         match res {
@@ -546,7 +546,7 @@ impl Node for PluginNodeServer {
             Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
         };
 
-        let response: Result<crate::responses::FundChannel, clightningrpc::Error> =
+        let response: Result<crate::responses::FundChannel, crate::rpc::Error> =
             rpc.call("fundchannel", r).await;
 
         match response {
@@ -564,7 +564,7 @@ impl Node for PluginNodeServer {
         let r = self.get_rpc().await;
 
         let req: requests::CloseChannel = req.into();
-        let res: Result<responses::CloseChannel, clightningrpc::Error> = r.call("close", req).await;
+        let res: Result<responses::CloseChannel, crate::rpc::Error> = r.call("close", req).await;
 
         match res {
             // Conversion may fail, so handle that case here.
@@ -627,7 +627,7 @@ impl Node for PluginNodeServer {
                 .collect()
         });
 
-        let res: Result<crate::responses::Invoice, clightningrpc::Error> =
+        let res: Result<crate::responses::Invoice, crate::rpc::Error> =
             rpc.call("invoice", pbreq).await;
 
         match res {
@@ -651,7 +651,7 @@ impl Node for PluginNodeServer {
         let req = req.into_inner();
         let req: crate::requests::Pay = req.into();
 
-        let res: Result<crate::responses::Pay, clightningrpc::Error> = rpc.call("pay", req).await;
+        let res: Result<crate::responses::Pay, crate::rpc::Error> = rpc.call("pay", req).await;
 
         match res {
             // Conversion may fail, so handle that case here.
@@ -679,7 +679,7 @@ impl Node for PluginNodeServer {
             }
         };
 
-        let res: Result<crate::responses::ListPays, clightningrpc::Error> =
+        let res: Result<crate::responses::ListPays, crate::rpc::Error> =
             rpc.call("listpays", req).await;
 
         match res {
@@ -699,7 +699,7 @@ impl Node for PluginNodeServer {
             Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
         };
         let rpc = self.rpc.lock().await;
-        let res: Result<crate::responses::ListInvoices, clightningrpc::Error> =
+        let res: Result<crate::responses::ListInvoices, crate::rpc::Error> =
             rpc.call("listinvoices", req).await;
 
         match res {
@@ -739,7 +739,7 @@ impl Node for PluginNodeServer {
         match async {
             let rpcreq: crate::requests::Keysend = request.into_inner().try_into().unwrap();
             let rpc = self.get_rpc().await;
-            let res: Result<crate::responses::Keysend, clightningrpc::Error> =
+            let res: Result<crate::responses::Keysend, crate::rpc::Error> =
                 rpc.call("keysend", rpcreq).await;
 
             res
@@ -772,7 +772,7 @@ impl PluginNodeServer {
             use tokio::time::{sleep, Duration};
             let rpc = rpc.lock().await;
             loop {
-                let res: Result<crate::responses::GetInfo, clightningrpc::Error> =
+                let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
                     rpc.call("getinfo", json!({})).await;
                 match res {
                     Ok(_) => break,
