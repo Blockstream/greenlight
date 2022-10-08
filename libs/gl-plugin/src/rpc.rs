@@ -1,14 +1,43 @@
 use crate::{requests, responses};
-use clightningrpc::{error::Error, Response};
+use clightningrpc::Response;
 use cln_rpc::codec::JsonCodec;
 use futures::{SinkExt, StreamExt};
 use log::{debug, error, warn};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{json, Deserializer, Value};
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 use tokio::net::UnixStream;
 use tokio_util::codec::Framed;
 
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("error calling RPC: {0}")]
+    RpcError(clightningrpc::Error),
+    #[error("error calling RPC: {0}")]
+    ClnRpcError(anyhow::Error),
+    #[error("empty result from RPC")]
+    EmptyResult,
+    #[error("this is unsupported: {0}")]
+    Unsupported(String),
+    #[error("IO error talking to RPC: {0}")]
+    IoError(std::io::Error),
+    #[error("error serializing / deserializing: {0}")]
+    Serialization(serde_json::Error),
+    #[error("unknown error {0}")]
+    Other(Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::IoError(e)
+    }
+}
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::Serialization(e)
+    }
+}
 #[derive(Clone, Debug)]
 pub struct LightningClient {
     sockpath: PathBuf,
@@ -48,18 +77,18 @@ impl LightningClient {
 
         if let Err(e) = codec.send(request).await {
             warn!("Error sending request to RPC interface: {}", e);
-            return Err(Error::NonceMismatch);
+            return Err(Error::ClnRpcError(e));
         }
 
         let response = match codec.next().await {
             Some(Ok(v)) => v,
             Some(Err(e)) => {
                 warn!("Error from RPC: {:?}", e);
-                return Err(Error::NonceMismatch);
+                return Err(Error::ClnRpcError(e));
             }
             None => {
                 warn!("Error reading response from RPC interface, returned None");
-                return Err(Error::NonceMismatch);
+                return Err(Error::EmptyResult);
             }
         };
 
@@ -73,7 +102,7 @@ impl LightningClient {
         let response: Response<D> = Deserializer::from_str(&response.to_string())
             .into_iter()
             .next()
-            .map_or(Err(Error::NoErrorOrResult), |res| Ok(res?))?;
+            .map_or(Err(Error::EmptyResult), |res| Ok(res?))?;
         Ok(response)
     }
 
@@ -84,8 +113,9 @@ impl LightningClient {
         input: T,
     ) -> Result<U, Error> {
         self.send_request(method, input)
-            .await
-            .and_then(|res| res.into_result())
+            .await?
+            .into_result()
+            .map_err(|e| Error::RpcError(e))
     }
 
     /// Show information about this node.
@@ -126,8 +156,9 @@ impl LightningClient {
 
     pub async fn disconnect(&self, node_id: &str, force: bool) -> Result<(), Error> {
         if force {
-            error!("Force-disconnects are currently not supported");
-            return Err(Error::NonceMismatch);
+            return Err(Error::Unsupported(
+                "Force-disconnects are currently not supported".to_owned(),
+            ));
         }
 
         self.call::<requests::Disconnect, responses::Disconnect>(
