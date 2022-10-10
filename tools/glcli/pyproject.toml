@@ -11,7 +11,6 @@ click = "^8"
 grpcio = "^1.46.1"
 protobuf = "^3.20.1"
 gl-client-py = "^0.1"
-filelock = "^3.8.0"
 
 [tool.poetry.dev-dependencies]
 gl-client-py = { path = "../../libs/gl-client-py/", develop = true }
