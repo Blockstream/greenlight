@@ -7,21 +7,7 @@ from pathlib import Path
 from typing import Optional
 import logging
 import glclient
-import threading
 import os
-
-
-# Native signers for each of the directories. These need to be
-# singletons since they'd otherwise be unable to acquire the FS
-# lock. This is only temporary until we get rid of the Disk
-# persistence.
-signers = {}
-
-# Temporary! We need to chdir when initializing the signer, otherwise
-# we end up with the VLS KVJsonPersister running in the current
-# directory.
-cwdlock = threading.Lock()
-
 
 # We only run on regtest!
 NETWORK = "regtest"
@@ -98,23 +84,8 @@ class Client:
         keypath = self.directory / "device-key.pem"
         have_certs = keypath.exists()
 
-        # Have a temporary directory for unconfigured nodes (these
-        # will only be used to register and recover, never to actually
-        # work with the node.
-        scratch_dir = self.directory / "scratch"
-        signer_dir = self.directory if have_certs else scratch_dir
-        signer_dir.mkdir(exist_ok=True)
-        if not have_certs:
-            self.log.debug(f"Using scratch directory for signer {signer_dir}")
-        if signer_dir not in signers:
-            with cwdlock:
-                cwd = os.getcwd()
-                os.chdir(signer_dir)
-                signer = glclient.Signer(secret, NETWORK, self.tls())
-                os.chdir(cwd)
-            signers[signer_dir] = signer
-        else:
-            signer = signers[signer_dir]
+        self.directory.mkdir(exist_ok=True)
+        signer = glclient.Signer(secret, NETWORK, self.tls())
 
         return signer
 
