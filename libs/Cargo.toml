@@ -9,7 +9,6 @@ members = [
   "gl-client",
   "gl-client-py",
   "gl-client-js",
-  "libhsmd-sys-rs",
   "gl-plugin",
   "gl-signerproxy",
 ]
