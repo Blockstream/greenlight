@@ -283,13 +283,11 @@ impl Persist for MemoryPersister {
         node_id: &bitcoin::secp256k1::PublicKey,
         config: &NodeConfig,
         state: &NodeState,
-        seed: &[u8],
     ) {
         let key = hex::encode(node_id.serialize());
         self.state.lock().unwrap().insert_node(
             &key,
             vls_persist::model::NodeEntry {
-                seed: seed.to_vec(),
                 key_derivation_style: config.key_derivation_style as u8,
                 network: config.network.to_string(),
             },
@@ -474,7 +472,6 @@ impl Persist for MemoryPersister {
                 velocity_control: node_state.velocity_control.into(),
             };
             let entry = lightning_signer::persist::model::NodeEntry {
-                seed: node.seed,
                 key_derivation_style: node.key_derivation_style,
                 network: node.network,
                 state,
