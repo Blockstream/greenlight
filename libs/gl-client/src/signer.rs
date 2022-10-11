@@ -59,11 +59,10 @@ impl Signer {
             clock,
         };
 
-        let handler = handler::RootHandlerBuilder::new(network, 0 as u64, services.clone())
-            .seed_opt(Some(sec))
-            .build();
+        let handler =
+            handler::RootHandlerBuilder::new(network, 0 as u64, services.clone(), sec).build();
 
-        let init = Signer::initmsg(&handler)?;
+        let init = Signer::initmsg(&handler.0)?;
         let id = init[2..35].to_vec();
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
@@ -79,9 +78,9 @@ impl Signer {
     }
 
     fn handler(&self) -> handler::RootHandler {
-        handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone())
-            .seed_opt(Some(self.secret))
+        handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone(), self.secret)
             .build()
+            .0
     }
 
     fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
@@ -100,6 +99,7 @@ impl Signer {
         Ok(handler
             .handle(vls_protocol::msgs::Message::HsmdInit(query))
             .unwrap()
+            .0
             .as_vec())
     }
 
@@ -209,7 +209,7 @@ impl Signer {
         };
 
         Ok(HsmResponse {
-            raw: response.as_vec(),
+            raw: response.0.as_vec(),
             request_id: req.request_id,
             signer_state,
         })
@@ -339,7 +339,7 @@ impl Signer {
             .handle(vls_protocol::msgs::Message::SignMessage(req))
             .unwrap();
 
-        Ok(response.as_vec()[2..66].to_vec())
+        Ok(response.0.as_vec()[2..66].to_vec())
     }
 
     /// Create a Node stub from this instance of the signer, configured to
