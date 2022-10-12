@@ -92,10 +92,10 @@ class Context:
             self.metadata['node_id'] = bytes.fromhex(self.metadata['hex_node_id'])
 
     def __init__(self, network='testnet', start_hsmd=False):
-        self.tls = Tls().tls
-        self.load_metadata(self.tls)
+        self.tls = Tls()
+        self.load_metadata(self.tls.tls)
         self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls)
-        self.scheduler.tls = self.tls
+        self.scheduler.tls = self.tls.tls
         self.node = None
         self.scheduler_chan = None
         self.node_id = self.metadata['node_id']
