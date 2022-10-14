@@ -22,3 +22,12 @@ def test_scheduler_recover(scheduler, clients):
 
     assert((c.directory / "device.crt").exists())
     assert((c.directory / "device-key.pem").exists())
+
+
+def test_scheduler_duplicate_node(scheduler, clients):
+    """The scheduler must fail duplicate register calls
+    """
+    c = clients.new()
+    r = c.register(configure=False)
+    with pytest.raises(Exception):
+        r = c.register(configure=False)
