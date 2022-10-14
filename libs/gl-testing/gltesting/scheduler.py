@@ -119,6 +119,12 @@ class Scheduler(object):
         assert challenge.scope == schedpb.ChallengeScope.REGISTER
         # TODO Verify that the response matches the challenge.
 
+        # Check that we don't already have this node registered:
+        if len([n for n in self.nodes if n.node_id == req.node_id]) > 0:
+            raise ValueError(
+                "could not register the node with the DB, does the node already exist?"
+            )
+
         num = len(self.nodes)
         hex_node_id = challenge.node_id.hex()
         certs.genca(f"/users/{hex_node_id}")
