@@ -215,12 +215,12 @@ def scheduler():
 @click.pass_context
 def register(ctx, network):
     # Reinitialize the signer with the right network, so register will pick that up
-    signer = ctx.obj.signer
+    signer = Signer(Tls())
     node_id = ctx.obj.node_id
     hex_node_id = hexlify(node_id).decode("ASCII")
     logger.debug(f"Registering new node with node_id={hex_node_id} for {network}")
     scheduler = ctx.obj.scheduler
-    res = scheduler.register(signer)
+    res = scheduler.register(signer.inner)
 
     with open("device-key.pem", "w") as f:
         f.write(res.device_key)
@@ -237,12 +237,12 @@ def register(ctx, network):
 @scheduler.command()
 @click.pass_context
 def recover(ctx):
-    signer = ctx.obj.signer
+    signer = Signer(Tls())
     node_id = ctx.obj.node_id
     logger.debug(f"Recovering access to node_id={hexlify(node_id).decode('ASCII')}")
     scheduler = ctx.obj.scheduler
 
-    res = scheduler.recover(signer)
+    res = scheduler.recover(signer.inner)
 
     with open("device-key.pem", "w") as f:
         f.write(res.device_key)

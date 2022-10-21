@@ -268,7 +268,7 @@ class Node(object):
             amount=amount,
             label=label,
             description=description,
-            preimage=bytes.fromhex(preimage) if preimage is not None else None,
+            preimage=preimage
         ).SerializeToString()
 
         return nodepb.Invoice.FromString(
@@ -307,7 +307,7 @@ class Node(object):
         )
 
     def call(self, method: str, request: bytes) -> bytes:
-        self.logger.debug(f"Calling {method} with request {request}")
+        self.logger.debug(f"Calling {method}")
         return bytes(self.inner.call(method, request))
 
     def stream_log(self):
