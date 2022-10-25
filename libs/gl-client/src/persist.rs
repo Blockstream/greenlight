@@ -149,11 +149,6 @@ pub struct StateChange {
     new: (u64, serde_json::Value),
 }
 
-pub struct StateEntry {
-    version: u64,
-    value: serde_json::Value,
-}
-
 use core::fmt::Display;
 
 impl Display for StateChange {
