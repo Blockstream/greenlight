@@ -49,17 +49,6 @@ impl Node {
         }
     }
 
-    fn list_funds(&self) -> PyResult<Vec<u8>> {
-        convert(
-            exec(
-                self.client
-                    .clone()
-                    .list_funds(pb::ListFundsRequest::default()),
-            )
-            .map(|x| x.into_inner()),
-        )
-    }
-
     fn list_payments(&self) -> PyResult<Vec<u8>> {
         convert(
             exec(
@@ -209,6 +198,12 @@ impl Node {
             "ListInvoices" => convert(
                 client
                     .list_invoices(pb::ListInvoicesRequest::decode(req).unwrap())
+                    .await
+                    .map(|x| x.into_inner()),
+            ),
+            "ListFunds" => convert(
+                client
+                    .list_funds(pb::ListFundsRequest::decode(req).unwrap())
                     .await
                     .map(|x| x.into_inner()),
             ),

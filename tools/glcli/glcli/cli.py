@@ -286,7 +286,7 @@ def hsmd(ctx):
 
 @cli.command()
 @click.pass_context
-def getinfo(ctx):
+def getinfo(ctx) -> None:
     node = ctx.obj.get_node()
     res = node.get_info()
     pbprint(res)
@@ -294,7 +294,7 @@ def getinfo(ctx):
 
 @cli.command()
 @click.pass_context
-def stop(ctx):
+def stop(ctx) -> None:
     node = ctx.obj.get_node()
     res = node.stop()
     print("Node shut down")
@@ -492,7 +492,7 @@ def log(ctx):
 @click.option('--label', '-l', required=False)
 @click.option('--invoice', '-i', required=False)
 @click.pass_context
-def listinvoices(ctx, payment_hash=None, label=None, invoice=None):
+def listinvoices(ctx, payment_hash: str=None, label=None, invoice=None):
     node = ctx.obj.get_node()
     res = node.list_invoices(
         payment_hash=payment_hash,

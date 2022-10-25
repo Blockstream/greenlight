@@ -1,9 +1,11 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
 from . import glclient as native
+from google.protobuf.message import Message as PbMessage
+
 from .greenlight_pb2 import Amount
 from binascii import hexlify, unhexlify
-from typing import Optional, List
+from typing import Optional, List, Union, Tuple, Iterable, SupportsIndex, Type, Any, TypeVar
 import logging
 
 
@@ -11,14 +13,14 @@ import logging
 __version__ = "v0.11.0.1"
 
 class TlsConfig(object):
-    def __init__(self):
+    def __init__(self) -> None:
         # We wrap the TlsConfig since some calls cannot yet be routed
         # through the rust library (streaming calls)
         self.inner = native.TlsConfig()
-        self.ca = None
-        self.id = (None, None)
+        self.ca: Optional[bytes] = None
+        self.id: Tuple[Optional[bytes], Optional[bytes]] = (None, None)
 
-    def identity(self, cert_pem, key_pem):
+    def identity(self, cert_pem: Union[str, bytes], key_pem: Union[str, bytes]) -> "TlsConfig":
         if isinstance(cert_pem, str):
             cert_pem = cert_pem.encode('ASCII')
 
@@ -31,9 +33,10 @@ class TlsConfig(object):
         c.id = (cert_pem, key_pem)
         return c
 
-    def with_ca_certificate(self, ca):
+    def with_ca_certificate(self, ca: Union[str, bytes]) -> "TlsConfig":
         if isinstance(ca, str):
             ca = ca.encode('ASCII')
+
 
         c = TlsConfig()
         c.inner = self.inner.with_ca_certificate(ca)
@@ -42,7 +45,8 @@ class TlsConfig(object):
         return c
 
 
-def _convert(cls, res):
+E = TypeVar('E', bound=PbMessage)
+def _convert(cls: Type[E], res: Iterable[SupportsIndex]) -> E:
     return cls.FromString(bytes(res))
 
 
@@ -50,33 +54,33 @@ class Signer(object):
     def __init__(self, secret: bytes, network: str, tls: TlsConfig):
         self.inner = native.Signer(secret, network, tls.inner)
         self.tls = tls
-        self.handle = None
+        self.handle: Optional[native.SignerHandle] = None
 
-    def run_in_thread(self):
+    def run_in_thread(self) -> "native.SignerHandle":
         if self.handle is not None:
             raise ValueError("This signer is already running, please shut it down before starting it again")
         self.handle = self.inner.run_in_thread()
         return self.handle
 
-    def run_in_foreground(self):
+    def run_in_foreground(self) -> None:
         return self.inner.run_in_foreground()
 
-    def node_id(self):
+    def node_id(self) -> bytes:
         return bytes(self.inner.node_id())
 
-    def version(self):
+    def version(self) -> str:
         return self.inner.version()
 
     def sign_challenge(self, message: bytes) -> bytes:
         return bytes(self.inner.sign_challenge(message))
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         if self.handle is None:
             raise ValueError("Attempted to shut down a signer that is not running")
         self.handle.shutdown()
         self.handle = None
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.handle is not None
 
 
@@ -117,7 +121,7 @@ class Scheduler(object):
 
 
 class Node(object):
-    def __init__(self, node_id, network, tls, grpc_uri):
+    def __init__(self, node_id: bytes, network: str, tls: TlsConfig, grpc_uri: str) -> None:
         self.tls = tls
         self.grpc_uri = grpc_uri
         self.inner = native.Node(
@@ -134,12 +138,24 @@ class Node(object):
             bytes(self.call("GetInfo", req))
         )
 
-    def stop(self) -> nodepb.StopResponse:
+    def stop(self) -> None:
         return self.inner.stop()
 
-    def list_funds(self) -> nodepb.ListFundsResponse:
+    def list_funds(
+            self,
+            minconf: Union[nodepb.Confirmation, int]=1
+    ) -> nodepb.ListFundsResponse:
+        if isinstance(minconf, int):
+            minconf = nodepb.Confirmation(
+                blocks=minconf
+            )
+
+        req = nodepb.ListFundsRequest(
+            minconf=minconf,
+        ).SerializeToString()
+
         return nodepb.ListFundsResponse.FromString(
-            bytes(self.inner.list_funds())
+            bytes(self.inner.call("ListFunds", req))
         )
 
     def list_peers(self) -> nodepb.ListPeersResponse:
@@ -154,10 +170,11 @@ class Node(object):
 
     def list_invoices(self, label: str = None, invstring: str = None, payment_hash: bytes = None) -> nodepb.ListInvoicesResponse:
         if sum([bool(a) for a in [label, invstring, payment_hash]]) >= 2:
+            hexhash = hexlify(payment_hash).decode('ASCII') if payment_hash else None
             raise ValueError(
                 f"Cannot specify multiple filters for list_invoices: "
                 f"label={label}, invstring={invstring}, or "
-                f"paymen_hash={payment_hash}"
+                f"paymen_hash={hexhash}"
             )
 
         if label is not None:
@@ -189,7 +206,7 @@ class Node(object):
         )
 
     def disconnect_peer(self, peer_id, force=False) -> nodepb.DisconnectResponse:
-        return nodepb.ConnectResponse.FromString(
+        return nodepb.DisconnectResponse.FromString(
             bytes(self.inner.disconnect_peer(peer_id, force))
         )
 
@@ -262,12 +279,22 @@ class Node(object):
             label: str,
             amount=None,
             description: Optional[str]=None,
-            preimage: Optional[bytes]=None
+            preimage: Optional[Union[str,bytes]]=None
     ) -> nodepb.Invoice:
+        if preimage is None:
+            preimage = b""
+        else:
+            if isinstance(preimage, str) and len(preimage) == 64:
+                preimage = bytes.fromhex(preimage)
+            elif isinstance(preimage, bytes) and len(preimage) == 32:
+                pass
+            elif isinstance(preimage, str):
+                raise ValueError("Preimage must be 32 bytes, either as bytes or as hex-encoded string.")
+
         req = nodepb.InvoiceRequest(
             amount=amount,
             label=label,
-            description=description,
+            description=description if description else "",
             preimage=preimage
         ).SerializeToString()
 
@@ -297,7 +324,7 @@ class Node(object):
         req = nodepb.KeysendRequest(
             node_id=normalize_node_id(node_id),
             amount=amount,
-            label=label,
+            label=label if label else "",
             routehints=routehints,
             extratlvs=extratlvs,
         ).SerializeToString()
@@ -307,7 +334,8 @@ class Node(object):
         )
 
     def call(self, method: str, request: bytes) -> bytes:
-        self.logger.debug(f"Calling {method}")
+        hexreq = hexlify(request).decode('ASCII')
+        self.logger.debug(f"Calling {method} with request {hexreq}")
         return bytes(self.inner.call(method, request))
 
     def stream_log(self):
