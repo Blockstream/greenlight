@@ -12,6 +12,7 @@ use governor::{
 use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
 use serde_json::json;
+use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -40,6 +41,7 @@ pub struct PluginNodeServer {
     pub tls: ServerTlsConfig,
     pub stage: Arc<stager::Stage>,
     pub rpc: Arc<Mutex<LightningClient>>,
+    rpc_path: PathBuf,
     events: tokio::sync::broadcast::Sender<super::Event>,
     signer_state: Arc<Mutex<State>>,
     grpc_binding: String,
@@ -57,11 +59,11 @@ impl PluginNodeServer {
             .identity(config.identity.id)
             .client_ca_root(config.identity.ca);
 
-        let mut sock_path = std::env::current_dir().unwrap();
-        sock_path.push("lightning-rpc");
-        info!("Connecting to lightning-rpc at {:?}", sock_path);
+        let mut rpc_path = std::env::current_dir().unwrap();
+        rpc_path.push("lightning-rpc");
+        info!("Connecting to lightning-rpc at {:?}", rpc_path);
 
-        let rpc = Arc::new(Mutex::new(LightningClient::new(sock_path)));
+        let rpc = Arc::new(Mutex::new(LightningClient::new(rpc_path.clone())));
 
         // Bridge the RPC_BCAST into the events queue
         let tx = events.clone();
@@ -81,6 +83,7 @@ impl PluginNodeServer {
             rpc,
             stage,
             events,
+            rpc_path,
             signer_state: Arc::new(Mutex::new(signer_state)),
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
@@ -752,14 +755,21 @@ impl Node for PluginNodeServer {
     }
 }
 
+use cln_grpc::pb::node_server::NodeServer;
 use nix::sys::signal;
 use nix::unistd::getppid;
+
 impl PluginNodeServer {
     pub async fn run(self) -> Result<()> {
         let addr = self.grpc_binding.parse().unwrap();
         let router = tonic::transport::Server::builder()
             .tcp_keepalive(Some(tokio::time::Duration::from_secs(1)))
             .tls_config(self.tls.clone())?
+            .add_service(NodeServer::new(
+                cln_grpc::Server::new(&self.rpc_path)
+                    .await
+                    .context("creating NodeServer instance")?,
+            ))
             .add_service(crate::pb::node_server::NodeServer::with_interceptor(
                 self.clone(),
                 intercept,
