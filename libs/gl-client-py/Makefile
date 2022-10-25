@@ -1,13 +1,15 @@
 REPO_ROOT=$(shell git rev-parse --show-toplevel)
 DIR=${REPO_ROOT}/libs/gl-client-py
 
-PROTOC_OPTS=-I${DIR}/../proto --python_out=${DIR}/glclient --grpc_python_out=${DIR}glclient --experimental_allow_proto3_optional
+PROTOC_OPTS=-I${DIR}/../proto --python_out=${DIR}/glclient --grpc_python_out=${DIR}/glclient --experimental_allow_proto3_optional
 
 PROTOS= \
 	${DIR}/glclient/scheduler_pb2.py \
 	${DIR}/glclient/greenlight_pb2.py \
+	${DIR}/glclient/node_pb2.py \
 	${DIR}/glclient/scheduler_pb2_grpc.py \
-	${DIR}/glclient/greenlight_pb2_grpc.py
+	${DIR}/glclient/greenlight_pb2_grpc.py \
+	${DIR}/glclient/node_pb2_grpc.py
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -23,10 +25,16 @@ ${DIR}/glclient/scheduler_pb2.py ${DIR}/glclient/scheduler_pb2_grpc.py: ${DIR}/.
 	python -m grpc_tools.protoc ${PROTOC_OPTS} scheduler.proto
 	# Postprocess the import path
 	sed -i 's/import scheduler_pb2 as scheduler__pb2/from . import scheduler_pb2 as scheduler__pb2/g' ${DIR}/glclient/scheduler_pb2_grpc.py
+
 glclient/greenlight_pb2.py glclient/greenlight_pb2_grpc.py: ../proto/greenlight.proto
 	python -m grpc_tools.protoc ${PROTOC_OPTS} greenlight.proto
 	# Postprocess the import path
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${DIR}/glclient/greenlight_pb2_grpc.py
+
+glclient/node_pb2.py glclient/node_pb2_grpc.py: ../proto/node.proto
+	python -m grpc_tools.protoc ${PROTOC_OPTS} node.proto
+	# Postprocess the import path
+	sed -i 's/import node_pb2 as node__pb2/from . import node_pb2 as node__pb2/g' ${DIR}/glclient/node_pb2_grpc.py
 
 check-py:
 	cd ${DIR}/; pytest tests -n $(shell nproc)
