@@ -94,3 +94,33 @@ def test_node_invoice_preimage(clients):
     )
 
     assert i.payment_hash.hex() == expected
+
+
+def test_cln_grpc_interface(clients):
+    """Test that we can talk to the cln-grpc interface.
+
+    Temporarily bypasses the Rust library, and is not signed
+    therefore, until we map the methods into the Rust library.
+
+    """
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+
+    gl1 = c.node()
+
+    # Reach into the node configuration
+    from glclient import node_pb2_grpc as clngrpc
+    from glclient import node_pb2 as clnpb
+    import grpc
+    cred = grpc.ssl_channel_credentials(
+        root_certificates=gl1.tls.ca,
+        private_key=gl1.tls.id[1],
+        certificate_chain=gl1.tls.id[0]
+    )
+    grpc_uri = gl1.grpc_uri[8:]  # Strip the `https://` prefix
+    chan = grpc.secure_channel(grpc_uri, cred)
+    client = clngrpc.NodeStub(chan)
+
+    info = client.Getinfo(clnpb.GetinfoRequest())
+    print(info)
