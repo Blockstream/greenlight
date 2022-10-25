@@ -7,6 +7,11 @@ authors = ["Christian Decker <decker.christian@gmail.com>"]
 packages = [
     { include = "glclient" },
 ]
+[tool.poetry.group.dev.dependencies]
+grpcio-tools = "^1.50.0"
+grpcio = "^1.50.0"
+grpclib = "^0.4.3"
+
 
 [project]
 name = "gl-client-py"

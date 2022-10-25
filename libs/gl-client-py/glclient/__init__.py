@@ -1,5 +1,6 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
+from . import greenlight_pb2 as clnpb
 from . import glclient as native
 from google.protobuf.message import Message as PbMessage
 
