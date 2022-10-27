@@ -82,6 +82,10 @@ impl Scheduler {
                 .into_inner())
         }))
     }
+
+    fn get_invite_codes(&self) -> PyResult<Vec<u8>> {
+        convert(exec(async move { self.inner.get_invite_codes().await }))
+    }
 }
 
 pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {

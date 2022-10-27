@@ -119,6 +119,10 @@ class Scheduler(object):
             grpc_uri=res.grpc_uri
         )
 
+    def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
+        res = self.inner.get_invite_codes()
+        return schedpb.ListInviteCodesResponse.FromString(bytes(res))
+
 
 class Node(object):
     def __init__(self, node_id: bytes, network: str, tls: TlsConfig, grpc_uri: str) -> None:

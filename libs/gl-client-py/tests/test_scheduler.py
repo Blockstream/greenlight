@@ -78,3 +78,6 @@ def test_sign_challenge(signer):
 def test_signer_version(signer):
     import glclient
     assert glclient.__version__ == signer.version()
+
+def test_fetch_invite_codes(scheduler):
+    scheduler.add_invite_codes([{"code": "ABC", "is_redeemed": False}, {"code": "HELLO", "is_redeemed": True}])
