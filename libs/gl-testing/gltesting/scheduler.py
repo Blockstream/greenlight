@@ -19,6 +19,8 @@ from threading import Condition
 from pyln.client import LightningRpc
 import time
 import socket
+from typing import List
+
 
 @dataclass
 class Node:
@@ -44,6 +46,11 @@ class Challenge:
     scope: str
     used: bool
 
+
+@dataclass
+class InviteCode:
+    code: str
+    is_redeemed: bool
 
 def enumerate_cln_versions():
     """Search `$PATH` and `$CLN_PATH` for CLN versions."""
@@ -75,6 +82,7 @@ class Scheduler(object):
         self.nodes: List[Node] = []
         self.versions = enumerate_cln_versions()
         self.bitcoind = bitcoind
+        self.invite_codes = []
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -113,7 +121,11 @@ class Scheduler(object):
             f"No node with node_id={node_id} found in gltesting scheduler, do you need to register it first?"
         )
 
-    def Register(self, req: schedpb.RegistrationRequest, ctx):
+    def add_invite_codes(self, codes: List[schedpb.InviteCode]):
+        for code in codes:
+            self.invite_codes.append(code)
+
+    def Register(self, req, ctx):
         challenge = None
         for c in self.challenges:
             if c.challenge == req.challenge and not c.used:
@@ -287,3 +299,15 @@ class Scheduler(object):
         return schedpb.UpgradeResponse(
             old_version="v0.11.0.1",
         )
+    
+    def ListInviteCodes(self, req, ctx):
+        # Mocks the invite code return. The Server might be started
+        # with a list of invite codes.
+        res = schedpb.ListInviteCodesResponse()
+        for code in self.invite_codes:
+            print(f"ADD CODE: {code}")
+            res.invite_code_list.extend([schedpb.InviteCode(
+                code=code["code"],
+	            is_redeemed=code["is_redeemed"],
+            )])
+        return res
