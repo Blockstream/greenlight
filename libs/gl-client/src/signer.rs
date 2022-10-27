@@ -231,12 +231,15 @@ impl Signer {
     /// `GL_SCHEDULER_GRPC_URI` (of the default URI) and wait for the
     /// node to be scheduled. Once scheduled, connect to the node
     /// directly and start streaming and processing requests.
-    pub async fn run_forever(&self, mut shutdown: mpsc::Receiver<()>) -> Result<()> {
+    pub async fn run_forever(&self, shutdown: mpsc::Receiver<()>) -> Result<()> {
         let scheduler_uri = crate::utils::scheduler_uri();
+        Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await
+    }
 
+    pub async fn run_forever_with_uri(&self, mut shutdown: mpsc::Receiver<()>, scheduler_uri: String) -> Result<()> {
         debug!(
             "Contacting scheduler at {} to get the node address",
-            scheduler_uri
+            &scheduler_uri
         );
 
         let channel = Channel::from_shared(scheduler_uri)?
