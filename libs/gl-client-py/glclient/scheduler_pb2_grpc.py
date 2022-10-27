@@ -77,6 +77,11 @@ class SchedulerStub(object):
                 request_serializer=scheduler__pb2.UpgradeRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.UpgradeResponse.FromString,
                 )
+        self.ListInviteCodes = channel.unary_unary(
+                '/scheduler.Scheduler/ListInviteCodes',
+                request_serializer=scheduler__pb2.ListInviteCodesRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.ListInviteCodesResponse.FromString,
+                )
 
 
 class SchedulerServicer(object):
@@ -220,6 +225,15 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ListInviteCodes(self, request, context):
+        """This call is used to fetch a list of invite codes associated
+        with the node id of the client. These invite codes can be used
+        for further registration of new nodes.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -252,6 +266,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.MaybeUpgrade,
                     request_deserializer=scheduler__pb2.UpgradeRequest.FromString,
                     response_serializer=scheduler__pb2.UpgradeResponse.SerializeToString,
+            ),
+            'ListInviteCodes': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListInviteCodes,
+                    request_deserializer=scheduler__pb2.ListInviteCodesRequest.FromString,
+                    response_serializer=scheduler__pb2.ListInviteCodesResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -395,5 +414,22 @@ class Scheduler(object):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/MaybeUpgrade',
             scheduler__pb2.UpgradeRequest.SerializeToString,
             scheduler__pb2.UpgradeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ListInviteCodes(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ListInviteCodes',
+            scheduler__pb2.ListInviteCodesRequest.SerializeToString,
+            scheduler__pb2.ListInviteCodesResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
