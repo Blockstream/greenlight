@@ -83,6 +83,7 @@ class Scheduler(object):
         self.versions = enumerate_cln_versions()
         self.bitcoind = bitcoind
         self.invite_codes = []
+        self.received_invite_code = None
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -125,7 +126,9 @@ class Scheduler(object):
         for code in codes:
             self.invite_codes.append(code)
 
-    def Register(self, req, ctx):
+    def Register(self, req: schedpb.RegistrationRequest, ctx):
+        self.received_invite_code = req.invite_code
+
         challenge = None
         for c in self.challenges:
             if c.challenge == req.challenge and not c.used:
