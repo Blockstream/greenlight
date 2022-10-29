@@ -102,8 +102,8 @@ class Scheduler(object):
         res = self.inner.schedule()
         return schedpb.NodeInfoResponse.FromString(bytes(res))
 
-    def register(self, signer: Signer) -> schedpb.RegistrationResponse:
-        res = self.inner.register(signer.inner)
+    def register(self, signer: Signer, invite_code: Optional[str] = None) -> schedpb.RegistrationResponse:
+        res = self.inner.register(signer.inner, invite_code)
         return schedpb.RegistrationResponse.FromString(bytes(res))
 
     def recover(self, signer: Signer) -> schedpb.RecoveryResponse:
