@@ -35,6 +35,13 @@ impl Scheduler {
         jsconvert(exec(this.inner.register(&signer.inner)), cx)
     }
 
+    pub(crate) fn register_with_invite_code(mut cx: FunctionContext) -> JsResult<JsBuffer> {
+        let this = cx.argument::<JsBox<Scheduler>>(0)?;
+        let signer = cx.argument::<JsBox<Signer>>(1)?;
+        let invite_code = cx.argument::<JsString>(2)?.value(&mut cx);
+        jsconvert(exec(this.inner.register_with_invite_code(&signer.inner, invite_code)), cx)
+    }
+
     pub(crate) fn recover(mut cx: FunctionContext) -> JsResult<JsBuffer> {
         let this = cx.argument::<JsBox<Scheduler>>(0)?;
         let signer = cx.argument::<JsBox<Signer>>(1)?;
