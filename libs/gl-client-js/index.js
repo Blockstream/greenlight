@@ -16,6 +16,7 @@ const {
 
     schedulerNew,
     schedulerRegister,
+	schedulerRegisterWithInviteCode,
     schedulerRecover,
     schedulerSchedule,
 

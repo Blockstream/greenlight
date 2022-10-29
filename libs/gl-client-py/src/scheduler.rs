@@ -39,10 +39,10 @@ impl Scheduler {
         Ok(Scheduler { node_id, inner })
     }
 
-    fn register(&self, signer: &Signer) -> PyResult<Vec<u8>> {
-        convert(exec(self.inner.register(&signer.inner)))
+    fn register(&self, signer: &Signer, invite_code: Option<String>) -> PyResult<Vec<u8>> {
+        convert(exec(self.inner.register(&signer.inner, invite_code)))
     }
-
+    
     fn recover(&self, signer: &Signer) -> PyResult<Vec<u8>> {
         convert(exec(async move { self.inner.recover(&signer.inner).await }))
     }

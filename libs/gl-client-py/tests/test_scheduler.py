@@ -79,5 +79,11 @@ def test_signer_version(signer):
     import glclient
     assert glclient.__version__ == signer.version()
 
-def test_fetch_invite_codes(scheduler):
+def test_get_invite_codes(scheduler, sclient):
     scheduler.add_invite_codes([{"code": "ABC", "is_redeemed": False}, {"code": "HELLO", "is_redeemed": True}])
+    invite_codes = sclient.get_invite_codes()
+    print(f"Got codes: {invite_codes}")
+
+def test_register_with_invite_code(scheduler, sclient, signer):
+    sclient.register(signer, "some-invite-code")
+    assert scheduler.received_invite_code == "some-invite-code"
