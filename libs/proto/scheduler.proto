@@ -176,6 +176,11 @@ message RegistrationRequest {
 	// greenlight backend. Notice that this must have the valid
 	// CN corresponding to the node_id e.g. /users/{node_id} set.
 	bytes csr = 9;
+
+	// An optional invite code. We may want to throttle the
+	// registration rate. Therefore we might check that a registration
+	// request has a valid invite code.
+	string invite_code = 10;
 };
 
 message RegistrationResponse {
