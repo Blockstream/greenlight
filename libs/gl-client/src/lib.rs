@@ -45,10 +45,46 @@ pub mod tls;
 
 /// Tools to interact with a node running on greenlight.
 pub mod utils {
+    use bech32::{self, ToBase32};
+    use anyhow::Result;
+
 
     pub fn scheduler_uri() -> String {
         std::env::var("GL_SCHEDULER_GRPC_URI")
             .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string())
+    }
+
+    /// Used to get the uri of the node. The nodes uri is of the form
+    /// `https://[node_id: bech32].node.gl.blckstrm.com`. The node id is bech32
+    /// formatted as a DNS label has a max length of 63 octets. We use the hrp
+    /// `gl` to indicate that this "address" is meant to be used with
+    ///  greenlight.
+    pub fn get_node_uri(node_id: Vec<u8>) -> Result<String> {
+        // Override the uri is mainly used for test purposes.
+        match std::env::var("GL_NODE_URI") {
+            Ok(uri) => return Ok(uri),
+            Err(_) => (),
+        };
+
+        // Encode to bech32 to match the DNS label limit of 63 octets
+        // per label.
+        let label = bech32::encode("gl",node_id.to_base32(), bech32::Variant::Bech32)?;
+        Ok(format!("https://{}.nodes.gl.blckstrm.com", label))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{utils};
+    use anyhow::Result;
+    use hex::FromHex;
+    
+    #[test]
+    fn test_get_node_uri() -> Result<()> {
+        let node_id = Vec::from_hex("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")?;
+        let uri = utils::get_node_uri(node_id)?;
+        assert!(uri == "https://gl1qfumuen7l8wthtz45p3ftn58pvrs9xlumvkuu2xet8egzkcklqtesc2mj04.nodes.gl.blckstrm.com");
+        Ok(())
     }
 }
 

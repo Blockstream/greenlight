@@ -10,6 +10,7 @@ permissive = []
 addr = "0.15.4"
 anyhow = "*"
 base64 = "*"
+bech32 = "0.9.1"
 bytes = "1.2.1"
 hex = "*"
 http = "0.2"

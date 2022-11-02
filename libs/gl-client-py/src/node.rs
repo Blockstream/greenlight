@@ -79,6 +79,13 @@ fn error_starting_stream<D: core::fmt::Display>(e: D) -> PyErr {
     PyValueError::new_err(format!("Error starting stream: {}", e))
 }
 
+/// Fetch the uri of the node. This is an url of the form
+/// `https://[node_id: bech32].node.gl.blckstrm.com` and can be overridden via
+/// the environmental variable `GL_NODE_URI`.
+pub fn get_node_uri(node_id: String) -> String {
+    gl_client::utils::get_node_uri(node_id)
+}
+
 #[pyclass]
 struct LogStream {
     inner: tonic::codec::Streaming<pb::LogEntry>,
