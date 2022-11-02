@@ -13,6 +13,12 @@ use tower::ServiceBuilder;
 /// mTLS keypair.
 pub type Client = NodeClient<service::AuthService>;
 
+pub type GClient = GenericClient<service::AuthService>;
+
+pub trait GrpcClient {
+    fn new_with_inner(inner: service::AuthService) -> Self;
+}
+
 /// A builder to configure a [`Client`] that can either connect to a
 /// node directly, assuming you have the `grpc_uri` that the node is
 /// listening on, or it can talk to the
@@ -26,6 +32,18 @@ pub struct Node {
     tls: TlsConfig,
 }
 
+impl GrpcClient for Client {
+    fn new_with_inner(inner: service::AuthService) -> Self {
+        Client::new(inner)
+    }
+}
+
+impl GrpcClient for GClient {
+    fn new_with_inner(inner: service::AuthService) -> Self {
+        GenericClient::new(inner)
+    }
+}
+
 impl Node {
     pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig) -> Node {
         Node {
@@ -35,7 +53,10 @@ impl Node {
         }
     }
 
-    pub async fn connect(self, node_uri: String) -> Result<Client> {
+    pub async fn connect<C>(self, node_uri: String) -> Result<C>
+    where
+        C: GrpcClient,
+    {
         let node_uri = Uri::from_maybe_shared(node_uri)?;
         info!("Connecting to node at {}", node_uri);
 
@@ -55,10 +76,13 @@ impl Node {
 
         let chan = ServiceBuilder::new().layer(layer).service(chan);
 
-        Ok(NodeClient::new(chan))
+        Ok(C::new_with_inner(chan))
     }
 
-    pub async fn schedule_with_uri(self, scheduler_uri: String) -> Result<Client> {
+    pub async fn schedule_with_uri<C>(self, scheduler_uri: String) -> Result<C>
+    where
+        C: GrpcClient,
+    {
         debug!(
             "Contacting scheduler at {} to get the node address",
             scheduler_uri
@@ -82,13 +106,18 @@ impl Node {
         self.connect(node_info.grpc_uri).await
     }
 
-    pub async fn schedule(self) -> Result<Client> {
+    pub async fn schedule<C>(self) -> Result<C>
+    where
+        C: GrpcClient,
+    {
         let uri = utils::scheduler_uri();
         self.schedule_with_uri(uri).await
     }
 }
 
+mod generic;
 mod service;
+pub use generic::GenericClient;
 
 mod stasher {
     use bytes::Bytes;
