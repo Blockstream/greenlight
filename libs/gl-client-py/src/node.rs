@@ -13,6 +13,7 @@ pub struct Node {
     _inner: gl::node::Node,
     client: gl::node::Client,
     _node_id: Vec<u8>,
+    gclient: gl::node::GClient,
 }
 
 #[pymethods]
@@ -25,19 +26,19 @@ impl Node {
         };
 
         let inner = gl::node::Node::new(node_id.clone(), network, tls.inner);
-        let client = match exec(inner.clone().connect(grpc_uri)) {
-            Ok(c) => c,
-            Err(e) => {
-                return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                    "could not connect to node: {}",
-                    e
-                )))
-            }
-        };
+        let client = exec(inner.clone().connect(grpc_uri.clone())).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
+        })?;
+
+        let gclient = exec(inner.clone().connect(grpc_uri.clone())).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
+        })?;
+
         Ok(Node {
             _inner: inner,
             client,
             _node_id: node_id,
+            gclient,
         })
     }
 
@@ -61,14 +62,16 @@ impl Node {
     }
 
     fn list_peers(&self) -> PyResult<Vec<u8>> {
-        convert(
-            exec(
-                self.client
-                    .clone()
-                    .list_peers(pb::ListPeersRequest::default()),
-            )
-            .map(|x| x.into_inner()),
-        )
+        let req = pb::ListPeersRequest {};
+        let mut buf: Vec<u8> = Vec::new();
+        req.encode(&mut buf).unwrap();
+        self.call("/greenlight.Node/ListPeers", buf)
+    }
+
+    fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {
+        exec(self.gclient.clone().call(method, payload))
+            .map(|x| x.into_inner().to_vec())
+            .map_err(|s| PyValueError::new_err(format!("Error calling {}: {}", method, s)))
     }
 
     fn connect_peer(&self, node_id: String, addr: Option<String>) -> PyResult<Vec<u8>> {
@@ -177,11 +180,6 @@ impl Node {
             .map(|x| x.into_inner())
             .map_err(error_starting_stream)?;
         Ok(IncomingStream { inner: stream })
-    }
-
-    fn call(&self, method: &str, req: &[u8]) -> PyResult<Vec<u8>> {
-        let res = exec(self.dispatch(method, req));
-        res
     }
 }
 
