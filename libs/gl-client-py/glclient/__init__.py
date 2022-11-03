@@ -1,6 +1,6 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
-from . import greenlight_pb2 as clnpb
+from . import node_pb2 as clnpb
 from . import glclient as native
 from google.protobuf.message import Message as PbMessage
 
@@ -133,9 +133,9 @@ class Node(object):
         self.logger = logging.getLogger("glclient.Node")
 
     def get_info(self) -> nodepb.GetInfoResponse:
-        uri = "/greenlight.Node/GetInfo"
-        req = nodepb.GetInfoRequest().SerializeToString()
-        res = nodepb.GetInfoResponse
+        uri = "/cln.Node/Getinfo"
+        req = clnpb.GetinfoRequest().SerializeToString()
+        res = clnpb.GetinfoResponse
 
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
