@@ -61,6 +61,8 @@ where
             .unary(tonic::Request::new(payload), path, CODEC)
             .await
     }
+
+    // TODO Add a `streaming_call` for methods that return a stream to the client
 }
 
 /// `tonic::client::Grpc<T>` requires a codec to convert between the

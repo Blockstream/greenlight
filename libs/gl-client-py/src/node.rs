@@ -42,126 +42,10 @@ impl Node {
         })
     }
 
-    fn stop(&self) -> PyResult<()> {
-        let res = exec(self.client.clone().stop(pb::StopRequest {})).map(|x| x.into_inner());
-        match res {
-            Ok(_) => panic!("stop returned a response, when it really should just have stopped"),
-            Err(_) => Ok(()),
-        }
-    }
-
-    fn list_payments(&self) -> PyResult<Vec<u8>> {
-        convert(
-            exec(
-                self.client
-                    .clone()
-                    .list_payments(pb::ListPaymentsRequest::default()),
-            )
-            .map(|x| x.into_inner()),
-        )
-    }
-
-    fn list_peers(&self) -> PyResult<Vec<u8>> {
-        let req = pb::ListPeersRequest {};
-        let mut buf: Vec<u8> = Vec::new();
-        req.encode(&mut buf).unwrap();
-        self.call("/greenlight.Node/ListPeers", buf)
-    }
-
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {
         exec(self.gclient.clone().call(method, payload))
             .map(|x| x.into_inner().to_vec())
             .map_err(|s| PyValueError::new_err(format!("Error calling {}: {}", method, s)))
-    }
-
-    fn connect_peer(&self, node_id: String, addr: Option<String>) -> PyResult<Vec<u8>> {
-        trace!("Connecting to node_id={} at addr={:?}", node_id, addr);
-        convert(
-            exec(self.client.clone().connect_peer(pb::ConnectRequest {
-                node_id: node_id,
-                addr: addr.unwrap_or_default(),
-            }))
-            .map(|x| x.into_inner()),
-        )
-    }
-
-    fn close(
-        &self,
-        peer_id: Vec<u8>,
-        timeout: Option<u32>,
-        address: Option<String>,
-    ) -> PyResult<Vec<u8>> {
-        convert(
-            exec(self.client.clone().close_channel(pb::CloseChannelRequest {
-                node_id: peer_id,
-                unilateraltimeout: timeout.map(|s| pb::Timeout { seconds: s }),
-                destination: address.map(|a| pb::BitcoinAddress { address: a }),
-            }))
-            .map(|x| x.into_inner()),
-        )
-    }
-
-    fn disconnect_peer(&self, peer_id: String, force: Option<bool>) -> PyResult<Vec<u8>> {
-        let force = force.unwrap_or(false);
-        trace!("Disconnecting from peer_id={} at force={}", peer_id, force);
-        convert(
-            exec(self.client.clone().disconnect(pb::DisconnectRequest {
-                node_id: peer_id,
-                force: force,
-            }))
-            .map(|x| x.into_inner()),
-        )
-    }
-
-    fn new_address(&self, address_type: Option<&str>) -> PyResult<Vec<u8>> {
-        let typ = match address_type {
-            None => pb::BtcAddressType::Bech32,
-            Some("bech32") => pb::BtcAddressType::P2shSegwit,
-            Some("p2sh-segwit") => pb::BtcAddressType::P2shSegwit,
-            Some(v) => {
-                return Err(PyValueError::new_err(format!(
-                    "Unknown address type {}, available types are bech32 and p2sh-segwit",
-                    v
-                )))
-            }
-        };
-
-        convert(
-            exec(self.client.clone().new_addr(pb::NewAddrRequest {
-                address_type: typ as i32,
-            }))
-            .map(|x| x.into_inner()),
-        )
-    }
-
-    fn withdraw(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = pb::WithdrawRequest::decode(args).map_err(error_decoding_request)?;
-
-        convert(exec(self.client.clone().withdraw(req)).map(|x| x.into_inner()))
-    }
-
-    fn fund_channel(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = pb::FundChannelRequest::decode(args).map_err(error_decoding_request)?;
-
-        convert(exec(self.client.clone().fund_channel(req)).map(|x| x.into_inner()))
-    }
-
-    fn create_invoice(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = pb::InvoiceRequest::decode(args).map_err(error_decoding_request)?;
-
-        convert(exec(self.client.clone().create_invoice(req)).map(|x| x.into_inner()))
-    }
-
-    fn pay(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = pb::PayRequest::decode(args).map_err(error_decoding_request)?;
-
-        convert(exec(self.client.clone().pay(req)).map(|x| x.into_inner()))
-    }
-
-    fn keysend(&self, args: &[u8]) -> PyResult<Vec<u8>> {
-        let req = pb::KeysendRequest::decode(args).map_err(error_decoding_request)?;
-
-        convert(exec(self.client.clone().keysend(req)).map(|x| x.into_inner()))
     }
 
     fn stream_log(&self, args: &[u8]) -> PyResult<LogStream> {
@@ -180,36 +64,6 @@ impl Node {
             .map(|x| x.into_inner())
             .map_err(error_starting_stream)?;
         Ok(IncomingStream { inner: stream })
-    }
-}
-
-impl Node {
-    async fn dispatch(&self, method: &str, req: &[u8]) -> Result<Vec<u8>, PyErr> {
-        let mut client = self.client.clone();
-        match method {
-            "GetInfo" => convert(
-                client
-                    .get_info(pb::GetInfoRequest::decode(req).unwrap())
-                    .await
-                    .map(|x| x.into_inner()),
-            ),
-            "ListInvoices" => convert(
-                client
-                    .list_invoices(pb::ListInvoicesRequest::decode(req).unwrap())
-                    .await
-                    .map(|x| x.into_inner()),
-            ),
-            "ListFunds" => convert(
-                client
-                    .list_funds(pb::ListFundsRequest::decode(req).unwrap())
-                    .await
-                    .map(|x| x.into_inner()),
-            ),
-            m => Err(PyValueError::new_err(format!(
-                "Unmapped method {}, please add it to node.rs",
-                m
-            ))),
-        }
     }
 }
 
@@ -269,11 +123,4 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(Some(buf))
-}
-
-pub fn convert<T: Message>(r: Result<T, Status>) -> PyResult<Vec<u8>> {
-    let res = r.map_err(error_calling_remote_method)?;
-    let mut buf = Vec::with_capacity(res.encoded_len());
-    res.encode(&mut buf).unwrap();
-    Ok(buf)
 }
