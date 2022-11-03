@@ -22,7 +22,7 @@ build-self: ensure-docker
 	pip install --force-reinstall /tmp/target/wheels/gl_client_py*.whl)
 
 check-self: ensure-docker
-	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing -n=$(shell nproc)
+	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing -n=$(shell nproc) --cov=glclient --cov-report=html
 
 ensure-docker:
 	@if [ "x${GL_DOCKER}" != "x1" ]; then \
