@@ -1,6 +1,6 @@
 use crate::runtime::{convert, exec};
 use anyhow::{anyhow, Result};
-use gl_client::{node::Client, pb};
+use gl_client::{node::Client, pb, utils};
 use neon::prelude::*;
 use prost::Message;
 use tonic::Status;
@@ -197,4 +197,15 @@ fn convert_stream_entry<T: Message>(
     cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
 
     Ok(jsbuf)
+}
+
+pub fn get_node_uri(mut cx: FunctionContext) -> JsResult<JsString> {
+    let buf = cx.argument::<JsBuffer>(0)?;
+    let node_id: Vec<u8> = cx.borrow(&buf, |data| data.as_slice().to_vec());
+    let uri = match utils::get_node_uri(node_id) {
+        Ok(s) => s,
+        Err(e) => cx.throw_error(format!("Error getting node uri: {}", e))?,
+    };
+
+    Ok(cx.string(uri))
 }
