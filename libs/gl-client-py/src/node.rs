@@ -82,8 +82,12 @@ fn error_starting_stream<D: core::fmt::Display>(e: D) -> PyErr {
 /// Fetch the uri of the node. This is an url of the form
 /// `https://[node_id: bech32].node.gl.blckstrm.com` and can be overridden via
 /// the environmental variable `GL_NODE_URI`.
-pub fn get_node_uri(node_id: String) -> String {
-    gl_client::utils::get_node_uri(node_id)
+#[pyfunction]
+pub fn get_node_uri(node_id: Vec<u8>) -> PyResult<String> {
+    match gl_client::utils::get_node_uri(node_id) {
+        Ok(uri) => return Ok(uri),
+        Err(e) => return Err(PyValueError::new_err(format!("Error getting node uri: {}", e))),
+    };
 }
 
 #[pyclass]

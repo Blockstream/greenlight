@@ -49,11 +49,26 @@ def test_signer_version(signer):
     import glclient
     assert glclient.__version__ == signer.version()
 
+
 def test_get_invite_codes(scheduler, sclient):
     scheduler.add_invite_codes([{"code": "ABC", "is_redeemed": False}, {"code": "HELLO", "is_redeemed": True}])
     invite_codes = sclient.get_invite_codes()
     print(f"Got codes: {invite_codes}")
 
+
 def test_register_with_invite_code(scheduler, sclient, signer):
     sclient.register(signer, "some-invite-code")
     assert scheduler.received_invite_code == "some-invite-code"
+
+
+def test_get_node(sclient, signer):
+    """Check that the environmental variable to override the node_uri
+    is set correctly."""
+    sclient.register(signer)
+    res = sclient.schedule()
+    os.environ.update({"GL_NODE_URI": res.grpc_uri})
+    try:
+        n1 = sclient.node()
+        n1.get_info()
+    except Exception as e:
+        pytest.fail(f"Could not get node: {e}")

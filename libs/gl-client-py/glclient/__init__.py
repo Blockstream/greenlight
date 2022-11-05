@@ -111,12 +111,12 @@ class Scheduler(object):
         return schedpb.RecoveryResponse.FromString(bytes(res))
 
     def node(self) -> "Node":
-        res = self.schedule()
+        grpc_uri = native.get_node_uri(self.node_id)
         return Node(
             node_id=self.node_id,
             network=self.network,
             tls=self.tls,
-            grpc_uri=res.grpc_uri
+            grpc_uri=grpc_uri
         )
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
