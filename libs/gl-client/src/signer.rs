@@ -342,6 +342,19 @@ impl Signer {
         Ok(response.0.as_vec()[2..66].to_vec())
     }
 
+    /// Signs an invoice.
+    pub fn sign_invoice(&self, msg: Vec<u8>) -> Result<Vec<u8>> {
+        if msg.len() > u16::MAX as usize {
+            return Err(anyhow!("Message exceeds max len of {}", u16::MAX));
+        }
+
+        let sig = self
+            .handler()
+            .handle(vls_protocol::msgs::from_vec(msg.clone())?)
+            .map_err(|_| anyhow!("Sign invoice failed"))?;
+        Ok(sig.as_vec())
+    }
+
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
     pub async fn node(&self) -> Result<Client> {
