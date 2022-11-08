@@ -134,6 +134,10 @@ message HsmRequest {
 	// A list of key-value-version tuples that the signer should
 	// use to update its internal state.
 	repeated SignerStateEntry signer_state = 4;
+
+	// Currently active requests that are used to justify changes
+	// in state.
+	repeated PendingRequest requests = 5;
 }
 
 message Empty {}
@@ -523,4 +527,16 @@ message SignerStateEntry {
 	uint64 version = 1;
 	string key = 2;
 	bytes value = 3;
+}
+
+// This represents a grpc request that is currently pending, along
+// with the pubkey of the client issuing the request and a matching
+// signature. This allows the signer to verify that the state changes
+// implied in a signature request correspond to authentic grpc
+// commands, and were not injected somewhere along the way.
+message PendingRequest {
+	bytes request = 1;
+	string uri = 2;
+	bytes signature = 3;
+	bytes pubkey = 4;
 }

@@ -151,7 +151,8 @@ mod test {
                         request_id: i,
                         context: None,
                         raw: vec![],
-			signer_state: vec![],
+                        signer_state: vec![],
+                        requests: vec![],
                     })
                     .await
                     .unwrap(),
@@ -168,7 +169,7 @@ mod test {
                     .send(pb::HsmResponse {
                         request_id: r.request.request_id,
                         raw: vec![],
-			signer_state: vec![],
+                        signer_state: vec![],
                     })
                     .await
                 {
@@ -186,7 +187,7 @@ mod test {
                     .send(pb::HsmResponse {
                         request_id: r.request.request_id,
                         raw: vec![],
-			signer_state: vec![],
+                        signer_state: vec![],
                     })
                     .await
                 {
@@ -204,7 +205,8 @@ mod test {
                         request_id: i,
                         context: None,
                         raw: vec![],
-			signer_state: vec![],
+                        signer_state: vec![],
+                        requests: vec![],
                     })
                     .await
                     .unwrap(),

@@ -231,8 +231,8 @@ impl HsmRequestContext {
         let caps = msg.get_u64();
 
         Ok(HsmRequestContext {
+            dbid,
             node_id: node_id.to_vec(),
-            dbid: dbid,
             capabilities: caps,
         })
     }
