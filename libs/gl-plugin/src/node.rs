@@ -269,12 +269,15 @@ impl Node for PluginNodeServer {
             tokio::spawn(async move {
                 match async {
                     while let Some(line) = file.next_line().await? {
-                        tx.send(Ok(pb::LogEntry { line: line })).await?
+                        tx.send(Ok(pb::LogEntry {
+                            line: line.trim().to_owned(),
+                        }))
+                        .await?
                     }
 
                     while let Ok(Some(line)) = lines.next_line().await {
                         tx.send(Ok(pb::LogEntry {
-                            line: line.line().to_string(),
+                            line: line.line().trim().to_string(),
                         }))
                         .await?;
                     }
