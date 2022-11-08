@@ -99,6 +99,7 @@ async fn process_requests(
                         context: context.clone(),
                         raw: msg.body.clone(),
                         request_id: request_counter.fetch_add(1, atomic::Ordering::Relaxed) as u32,
+                        requests: Vec::new(),
                         signer_state: Vec::new(),
                     });
                     debug!("Got a message from node: {:?}", &req);
