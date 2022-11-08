@@ -352,7 +352,7 @@ impl Signer {
             .handler()
             .handle(vls_protocol::msgs::from_vec(msg.clone())?)
             .map_err(|_| anyhow!("Sign invoice failed"))?;
-        Ok(sig.as_vec())
+        Ok(sig.0.as_vec())
     }
 
     /// Create a Node stub from this instance of the signer, configured to
