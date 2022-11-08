@@ -19,6 +19,8 @@ pytest-timeout = "^2.1.0"
 # publish this on PyPI so pip can find it too.
 #gl-client-py = {path = "../gl-client-py"}
 pytest-xdist = "^2.5.0"
+pytest = "^7.1.2"
+pytest-cov = "^3.0.0"
 rich = "^12.5.1"
 pyln-testing = "^0.11.1"
 protobuf = ">=3"
@@ -27,8 +29,6 @@ grpcio = "^1"
 [tool.poetry.dev-dependencies]
 mypy = "^0.971"
 typed-ast = "^1.5.4"
-pytest = "^7.1.2"
-pytest-cov = "^3.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
