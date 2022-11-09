@@ -8,7 +8,11 @@ use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
 use bitcoin::Network;
 use bytes::{Buf, Bytes};
-use lightning_signer::node::NodeServices;
+use lightning_signer::{
+    node::NodeServices,
+    policy::{filter::PolicyFilter, simple_validator::SimplePolicy},
+    util::velocity::VelocityControlSpec,
+};
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -48,7 +52,23 @@ impl Signer {
         // The persister takes care of persisting metadata across
         // restarts
         let persister = Arc::new(crate::persist::MemoryPersister::new());
-        let validator_factory = Arc::new(SimpleValidatorFactory::new());
+        let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(SimplePolicy {
+            min_delay: 144,  // LDK min
+            max_delay: 2016, // LDK max
+            max_channel_size_sat: 1_000_000_001,
+            epsilon_sat: 10_000,
+            max_htlcs: 1000,
+            max_htlc_value_sat: 16_777_216,
+            use_chain_state: false,
+            min_feerate_per_kw: 253,    // mainnet observed
+            max_feerate_per_kw: 25_000, // equiv to 100 sat/vb
+            require_invoices: false,
+            enforce_balance: false,
+            max_routing_fee_msat: 10000,
+            dev_flags: None,
+            filter: PolicyFilter::new_permissive(),
+            global_velocity_control: VelocityControlSpec::UNLIMITED,
+        }));
         let starting_time_factory = ClockStartingTimeFactory::new();
         let clock = Arc::new(StandardClock());
 
