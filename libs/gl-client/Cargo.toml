@@ -4,6 +4,7 @@ version = "0.1.4"
 edition = "2018"
 
 [features]
+permissive = []
 
 [dependencies]
 anyhow = "*"
