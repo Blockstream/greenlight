@@ -9,7 +9,7 @@ name = "gl_client_js"
 crate-type = ["cdylib"]
 
 [dependencies]
-gl-client = { path = "../gl-client" }
+gl-client = { path = "../gl-client", features = ["permissive"] }
 tokio = "1"
 log = "*"
 env_logger = "*"

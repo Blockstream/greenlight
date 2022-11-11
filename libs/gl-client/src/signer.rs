@@ -66,7 +66,10 @@ impl Signer {
             enforce_balance: false,
             max_routing_fee_msat: 10000,
             dev_flags: None,
+            #[cfg(feature = "permissive")]
             filter: PolicyFilter::new_permissive(),
+            #[cfg(not(feature = "permissive"))]
+            filter: PolicyFilter::default(),
             global_velocity_control: VelocityControlSpec::UNLIMITED,
         }));
         let starting_time_factory = ClockStartingTimeFactory::new();
@@ -223,9 +226,11 @@ impl Signer {
                 hex::encode(&response.0.as_vec()),
                 serde_json::to_string_pretty(&state.clone()).unwrap()
             );
-	    trace!("Diff to state pre-request: {:?}", prestate.diff(&state).unwrap());
+            trace!(
+                "Diff to state pre-request: {:?}",
+                prestate.diff(&state).unwrap()
+            );
             state.clone().into()
-
         };
 
         Ok(HsmResponse {
