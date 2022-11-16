@@ -212,14 +212,14 @@ class Node(object):
         else:
             f = None
 
-        uri = "/greenlight.Node/ListPeers"
+        uri = "/greenlight.Node/ListInvoices"
         res = nodepb.ListInvoicesResponse
         req = nodepb.ListInvoicesRequest(
             identifier=f
         ).SerializeToString()
 
         return res.FromString(
-            bytes(self.call("ListInvoices", bytes(req)))
+            bytes(self.inner.call(uri, bytes(req)))
         )
 
     def connect_peer(self, node_id, addr=None) -> nodepb.ConnectResponse:
