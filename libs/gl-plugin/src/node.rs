@@ -768,15 +768,14 @@ impl PluginNodeServer {
         let router = tonic::transport::Server::builder()
             .tcp_keepalive(Some(tokio::time::Duration::from_secs(1)))
             .tls_config(self.tls.clone())?
+            .layer(SignatureContextLayer::default())
             .add_service(NodeServer::new(
                 cln_grpc::Server::new(&self.rpc_path)
                     .await
                     .context("creating NodeServer instance")?,
             ))
-            .add_service(crate::pb::node_server::NodeServer::with_interceptor(
-                self.clone(),
-                intercept,
-            ));
+            .add_service(crate::pb::node_server::NodeServer::new(self.clone()));
+
         info!("Starting grpc server on {}", addr);
 
         let rpc = self.rpc.clone();
@@ -830,9 +829,88 @@ impl PluginNodeServer {
     }
 }
 
-fn intercept(req: Request<()>) -> Result<Request<()>, Status> {
-    // Spawn a tokio task so we can make use to the state guarded by
-    // an async lock.
-    let _ = RPC_BCAST.clone().send(super::Event::RpcCall);
-    Ok(req)
+use tower::{Layer, Service};
+
+#[derive(Debug, Clone, Default)]
+struct SignatureContextLayer;
+
+impl<S> Layer<S> for SignatureContextLayer {
+    type Service = SignatureContextService<S>;
+
+    fn layer(&self, service: S) -> Self::Service {
+        SignatureContextService { inner: service }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SignatureContextService<S> {
+    inner: S,
+}
+
+impl<S> Service<hyper::Request<hyper::Body>> for SignatureContextService<S>
+where
+    S: Service<hyper::Request<hyper::Body>, Response = hyper::Response<tonic::body::BoxBody>>
+        + Clone
+        + Send
+        + 'static,
+    S::Future: Send + 'static,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, request: hyper::Request<hyper::Body>) -> Self::Future {
+        // This is necessary because tonic internally uses `tower::buffer::Buffer`.
+        // See https://github.com/tower-rs/tower/issues/547#issuecomment-767629149
+        // for details on why this is necessary
+        let clone = self.inner.clone();
+        let mut inner = std::mem::replace(&mut self.inner, clone);
+
+        Box::pin(async move {
+            use tonic::codegen::Body;
+            let _ = RPC_BCAST.clone().send(super::Event::RpcCall);
+            let (parts, mut body) = request.into_parts();
+
+            let uri = parts.uri.path_and_query().unwrap();
+
+            let pubkey = parts
+                .headers
+                .get("glauthpubkey")
+                .map(|k| base64::decode(k).ok())
+                .flatten();
+
+            let sig = parts
+                .headers
+                .get("glauthsig")
+                .map(|s| base64::decode(s).ok())
+                .flatten();
+
+            if let (Some(pk), Some(sig)) = (pubkey, sig) {
+                // Now that we know we'll be adding this to the
+                // context we can start buffering the request.
+                let data = body.data().await.unwrap().unwrap();
+                trace!(
+                    "Got a request for {} with pubkey={} and sig={}",
+                    uri,
+                    hex::encode(pk),
+                    hex::encode(sig)
+                );
+                let body: hyper::Body = data.into();
+                let request = hyper::Request::from_parts(parts, body);
+                inner.call(request).await
+            } else {
+                // No point in buffering the request, we're not going
+                // to add it to the `HsmRequestContext`
+                let request = hyper::Request::from_parts(parts, body);
+                inner.call(request).await
+            }
+        })
+    }
 }
