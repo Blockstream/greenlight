@@ -148,9 +148,9 @@ class Node(object):
         try:
             # This fails, since we just get disconnected, but that's
             # on purpose, so drop the error silently.
-            self.call(uri, bytes(req))
-        except:
-            pass
+            self.inner.call(uri, bytes(req))
+        except ValueError as e:
+            self.logger.debug(f"Caught an expected exception: {e}. Don't worry it's expected.")
 
     def list_funds(
             self,
