@@ -4,7 +4,7 @@
 /// devices.
 use crate::pb;
 use anyhow::{anyhow, Error};
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use std::collections;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -40,19 +40,19 @@ impl Stage {
         request: pb::HsmRequest,
     ) -> Result<mpsc::Receiver<pb::HsmResponse>, Error> {
         let mut requests = self.requests.lock().await;
-        let (sender, receiver): (
+        let (response, receiver): (
             mpsc::Sender<pb::HsmResponse>,
             mpsc::Receiver<pb::HsmResponse>,
         ) = mpsc::channel(1);
-        let r = Request {
-            request: request,
-            response: sender,
-        };
+
+        let r = Request { request, response };
 
         requests.insert(r.request.request_id, r.clone());
-        if let Err(e) = self.notify.send(r) {
-            eprintln!("Error notifying hsmd request streams {:?}", e);
+
+        if let Err(_) = self.notify.send(r) {
+            warn!("Error notifying hsmd request stream, likely lost connection.");
         }
+
         Ok(receiver)
     }
 

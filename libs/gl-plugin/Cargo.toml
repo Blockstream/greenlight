@@ -32,8 +32,11 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.6", features = ["codec"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
+tower = { version = "0.4" }
 lightning-storage-server = { path = "../../vls/lightning-storage-server" }
 sled = "*"
+hyper = "0.14.23"
+base64 = "0.13.1"
 
 [build-dependencies]
 tonic-build = "^0.5"
