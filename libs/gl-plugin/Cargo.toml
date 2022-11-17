@@ -18,7 +18,7 @@ cln-rpc = "*"
 env_logger = "^0.7.0"
 futures = "0.3"
 gl-client = { version = "0.1.4", path = "../gl-client" }
-governor = "0.4"
+governor = "0.5"
 hex = "0.4"
 lazy_static = "^1.4.0"
 linemux = "0.2"
