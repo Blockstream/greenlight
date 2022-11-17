@@ -1,7 +1,7 @@
 use crate::pb::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
 
-use crate::{node, pb, signer::Signer, utils};
+use crate::{node, pb, signer::Signer, utils, serialize};
 use anyhow::Result;
 use bitcoin::Network;
 use tonic::transport::Channel;
@@ -13,6 +13,7 @@ pub struct Scheduler {
     node_id: Vec<u8>,
     client: Client,
     network: Network,
+    ca: Vec<u8>,
 }
 
 impl Scheduler {
@@ -29,6 +30,7 @@ impl Scheduler {
             client,
             node_id,
             network,
+            ca: tls.ca.clone(),
         })
     }
 
@@ -92,6 +94,16 @@ impl Scheduler {
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
 
+        // Serialize an auth blob that can be used to store the device cert
+        // and the device key. This blob can later be used to load the auth
+        // credentials.
+        let cf = serialize::CertFile { 
+            cert: res.device_cert.clone().into_bytes(), 
+            key: res.device_key.clone().into_bytes(),
+            ca: self.ca.clone(),
+         };
+         res.auth = cf.serialize()?;
+
         Ok(res)
     }
 
@@ -148,6 +160,16 @@ impl Scheduler {
         debug!("Asking singer to sign public key {}", hex::encode(public_key));
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
+
+        // Serialize an auth blob that can be used to store the device cert
+        // and the device key. This blob can later be used to load the auth
+        // credentials.
+        let cf = serialize::CertFile { 
+            cert: res.device_cert.clone().into_bytes(), 
+            key: res.device_key.clone().into_bytes(),
+            ca: self.ca.clone(),
+         };
+         res.auth = cf.serialize()?;
 
         Ok(res)
     }

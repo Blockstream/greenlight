@@ -174,14 +174,21 @@ message RegistrationRequest {
 };
 
 message RegistrationResponse {
-	// Upon registering the user receives back the signed certificate that
-	// belongs to the certificate signing request the that was sent in the
-	// registration request, so they can authenticate themselves in the future.
+	// DEPRECATED: Upon registering the user receives back the signed 
+	// certificate that belongs to the certificate signing request the
+	// that was sent in the registration request, so they can 
+	// authenticate themselves in the future.
 	string device_cert = 1;
 
-	// The private key that was used to create the certificate with. This key
-	// is used to sign the requests to the node.
+	// DEPRECATED: The private key that was used to create the 
+	// certificate with. This key is used to sign the requests to the 
+	// node.
 	string device_key = 2;
+
+	// Auth contains a serialized version of the device certificate 
+	// and the device key that is used to authenticate a device at the
+	// backend.
+	bytes auth = 3;
 };
 
 // Ask the scheduler to schedule the node to be run on an available nodelet.
@@ -221,6 +228,10 @@ message RecoveryRequest {
 message RecoveryResponse {
 	string device_cert = 1;
 	string device_key = 2;
+	// Auth contains a serialized version of the device certificate 
+	// and the device key that is used to authenticate a device at the
+	// backend.
+	bytes auth = 3;
 };
 
 message UpgradeRequest {
