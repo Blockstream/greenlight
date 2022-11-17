@@ -51,3 +51,5 @@ pub mod utils {
             .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string())
     }
 }
+
+pub mod serialize;
