@@ -1,6 +1,9 @@
 use prost::{self, Message};
 use anyhow::Result;
 
+/// CertFile is used to serialize the certificates that are used to
+/// configure the tls connection into a single blob that can be stored
+/// outside of the gl-client.
 #[derive(Clone, PartialEq, Message)]
 pub struct CertFile {
     #[prost(bytes, tag = "1")]
