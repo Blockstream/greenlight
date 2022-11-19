@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
+use crate::{serialize};
 const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
 const NOBODY_CRT: &[u8] = include_str!("../../tls/users-nobody.pem").as_bytes();
 const NOBODY_KEY: &[u8] = include_str!("../../tls/users-nobody-key.pem").as_bytes();
@@ -54,6 +55,11 @@ impl TlsConfig {
             private_key: None,
             ca: ca_crt.as_ref().to_vec(),
         })
+    }
+
+    pub fn with_auth<V: AsRef<[u8]>>(auth: &[u8]) -> Result<Self> {
+        let cf = serialize::CertFile::deserialize(auth)?;
+        Self::with(cf.cert, cf.key, cf.ca)
     }
 }
 
