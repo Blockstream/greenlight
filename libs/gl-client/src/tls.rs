@@ -57,7 +57,8 @@ impl TlsConfig {
         })
     }
 
-    pub fn with_auth<V: AsRef<[u8]>>(auth: &[u8]) -> Result<Self> {
+    /// Create a `TlsConfig` from a serialized auth blob.
+    pub fn with_auth(auth: &[u8]) -> Result<Self> {
         let cf = serialize::CertFile::deserialize(auth)?;
         Self::with(cf.cert, cf.key, cf.ca)
     }
