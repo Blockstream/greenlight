@@ -22,6 +22,8 @@ pub mod storage;
 #[cfg(unix)]
 mod unix;
 
+mod context;
+
 #[derive(Clone)]
 pub struct GlPlugin {
     rpc: Arc<Mutex<LightningClient>>,
