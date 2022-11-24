@@ -158,7 +158,7 @@ impl Signer {
     pub async fn run_once(&self, node_uri: Uri) -> Result<()> {
         debug!("Connecting to node at {}", node_uri);
         let c = Channel::builder(node_uri)
-            .tls_config(self.tls.inner.clone())?
+            .tls_config(self.tls.inner.clone().domain_name("localhost"))?
             .connect()
             .await?;
 

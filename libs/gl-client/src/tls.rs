@@ -45,7 +45,6 @@ impl TlsConfig {
     }
     pub fn with<V: AsRef<[u8]>>(nobody_crt: V, nobody_key: V, ca_crt: V) -> Result<Self> {
         let config = ClientTlsConfig::new()
-            .domain_name("localhost")
             .ca_certificate(Certificate::from_pem(ca_crt.as_ref()))
             .identity(Identity::from_pem(nobody_crt, nobody_key));
 
