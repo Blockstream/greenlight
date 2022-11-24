@@ -46,6 +46,7 @@ pub struct PluginNodeServer {
     signer_state: Arc<Mutex<State>>,
     grpc_binding: String,
     signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
+    ctx: crate::context::Context,
 }
 
 impl PluginNodeServer {
@@ -78,7 +79,10 @@ impl PluginNodeServer {
 
         let signer_state = signer_state_store.read().await?;
 
+        let ctx = crate::context::Context::new();
+
         Ok(PluginNodeServer {
+            ctx,
             tls,
             rpc,
             stage,
@@ -775,7 +779,9 @@ impl PluginNodeServer {
         let router = tonic::transport::Server::builder()
             .tcp_keepalive(Some(tokio::time::Duration::from_secs(1)))
             .tls_config(self.tls.clone())?
-            .layer(SignatureContextLayer::default())
+            .layer(SignatureContextLayer {
+                ctx: self.ctx.clone(),
+            })
             .add_service(RpcWaitService {
                 inner: cln_node,
                 rpc_path: self.rpc_path.clone(),
@@ -837,20 +843,26 @@ impl PluginNodeServer {
 
 use tower::{Layer, Service};
 
-#[derive(Debug, Clone, Default)]
-struct SignatureContextLayer;
+#[derive(Debug, Clone)]
+struct SignatureContextLayer {
+    ctx: crate::context::Context,
+}
 
 impl<S> Layer<S> for SignatureContextLayer {
     type Service = SignatureContextService<S>;
 
     fn layer(&self, service: S) -> Self::Service {
-        SignatureContextService { inner: service }
+        SignatureContextService {
+            inner: service,
+            ctx: self.ctx.clone(),
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 struct SignatureContextService<S> {
     inner: S,
+    ctx: crate::context::Context,
 }
 
 impl<S> Service<hyper::Request<hyper::Body>> for SignatureContextService<S>
@@ -878,6 +890,7 @@ where
         // for details on why this is necessary
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
+        let reqctx = self.ctx.clone();
 
         Box::pin(async move {
             use tonic::codegen::Body;
@@ -905,12 +918,25 @@ where
                 trace!(
                     "Got a request for {} with pubkey={} and sig={}",
                     uri,
-                    hex::encode(pk),
-                    hex::encode(sig)
+                    hex::encode(&pk),
+                    hex::encode(&sig)
                 );
+                let req = crate::context::Request::new(uri.to_string(), data.clone(), pk, sig);
+
+                reqctx.add_request(req.clone()).await;
+
                 let body: hyper::Body = data.into();
                 let request = hyper::Request::from_parts(parts, body);
-                inner.call(request).await
+                let res = inner.call(request).await;
+
+		// Defer cleanup into a separate task, otherwise we'd
+		// need `res` to be `Send` which we can't
+		// guarantee. This is needed since adding an await
+		// point splits the state machine at that point.
+                tokio::spawn(async move {
+                    reqctx.remove_request(req).await;
+                });
+                res
             } else {
                 // No point in buffering the request, we're not going
                 // to add it to the `HsmRequestContext`
