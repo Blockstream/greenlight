@@ -318,6 +318,8 @@ impl Node for PluginNodeServer {
         let (tx, rx) = mpsc::channel(10);
         let mut stream = self.stage.mystream().await;
         let signer_state = self.signer_state.clone();
+        let ctx = self.ctx.clone();
+
         tokio::spawn(async move {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
             loop {
@@ -351,6 +353,7 @@ impl Node for PluginNodeServer {
                     .collect();
 
                 req.request.signer_state = state.into();
+                req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
 
                 if let Err(e) = tx.send(Ok(req.request)).await {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
