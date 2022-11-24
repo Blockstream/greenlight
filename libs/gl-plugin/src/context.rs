@@ -41,6 +41,17 @@ impl Request {
     }
 }
 
+impl From<Request> for crate::pb::PendingRequest {
+    fn from(r: crate::context::Request) -> Self {
+        crate::pb::PendingRequest {
+            pubkey: r.pubkey,
+            signature: r.signature,
+            request: r.payload.to_vec(),
+            uri: r.uri,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Context {
     // List of currently pending requests.
