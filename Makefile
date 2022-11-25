@@ -20,6 +20,7 @@ build-self: ensure-docker
 	(cd libs/gl-client-py && \
 	maturin build --strip && \
 	pip install --force-reinstall /tmp/target/wheels/gl_client_py*.whl)
+	pip install coverage
 
 check-self: ensure-docker
 	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing -n=$(shell nproc) --cov=glclient --cov-report=html
