@@ -90,16 +90,23 @@ class Context:
     def __init__(self, network='testnet', start_hsmd=False):
         self.tls = Tls()
         self.load_metadata(self.tls.tls)
-        self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls)
-        self.scheduler.tls = self.tls.tls
+
+        self._scheduler: Optional[Scheduler] = None
+        self.network = network
         self.node = None
         self.scheduler_chan = None
         self.node_id = self.metadata['node_id']
 
     def get_node(self):
         if self.node is None:
-            self.node = self.scheduler.node()
+            self.node = self.scheduler().node()
         return self.node
+
+    def scheduler(self):
+        if self._scheduler is None:
+            self._scheduler = Scheduler(self.metadata['node_id'], self.network, self.tls)
+            self._scheduler.tls = self.tls.tls
+        return self._scheduler
 
 
 class AmountType(click.ParamType):
@@ -219,7 +226,7 @@ def register(ctx, network):
     node_id = ctx.obj.node_id
     hex_node_id = hexlify(node_id).decode("ASCII")
     logger.debug(f"Registering new node with node_id={hex_node_id} for {network}")
-    scheduler = ctx.obj.scheduler
+    scheduler = ctx.obj.scheduler()
     res = scheduler.register(signer.inner)
 
     with open("device-key.pem", "w") as f:
@@ -240,7 +247,7 @@ def recover(ctx):
     signer = Signer(Tls())
     node_id = ctx.obj.node_id
     logger.debug(f"Recovering access to node_id={hexlify(node_id).decode('ASCII')}")
-    scheduler = ctx.obj.scheduler
+    scheduler = ctx.obj.scheduler()
 
     res = scheduler.recover(signer.inner)
 
@@ -260,7 +267,7 @@ def recover(ctx):
 @click.pass_context
 def ping(ctx):
     node_id = ctx.obj.node_id
-    pbprint(ctx.obj.scheduler.get_node_info())
+    pbprint(ctx.obj.scheduler().get_node_info())
 
 
 @scheduler.command()
@@ -269,7 +276,7 @@ def schedule(ctx):
     grpc_uri = os.environ.get("GL_SCHEDULER_GRPC_URI")
     node_id = ctx.obj.node_id
     logger.info(f"Scheduling {node_id.hex()} with scheduler {grpc_uri}")
-    scheduler = ctx.obj.scheduler
+    scheduler = ctx.obj.scheduler()
     try:
         res = scheduler.schedule()
         pbprint(res)
