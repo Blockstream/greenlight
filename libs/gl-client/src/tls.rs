@@ -56,12 +56,6 @@ impl TlsConfig {
             ca: ca_crt.as_ref().to_vec(),
         })
     }
-
-    /// Create a `TlsConfig` from a serialized auth blob.
-    pub fn with_auth(auth: &[u8]) -> Result<Self> {
-        let cf = serialize::CertFile::deserialize(auth)?;
-        Self::with(cf.cert, cf.key, cf.ca)
-    }
 }
 
 impl TlsConfig {
