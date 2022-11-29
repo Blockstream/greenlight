@@ -1,3 +1,4 @@
+use crate::pb::cln::node_client::NodeClient as ClnClient;
 use crate::pb::node_client::NodeClient;
 use crate::pb::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
@@ -41,6 +42,12 @@ impl GrpcClient for Client {
 impl GrpcClient for GClient {
     fn new_with_inner(inner: service::AuthService) -> Self {
         GenericClient::new(inner)
+    }
+}
+
+impl GrpcClient for ClnClient<service::AuthService> {
+    fn new_with_inner(inner: service::AuthService) -> Self {
+        ClnClient::new(inner)
     }
 }
 
