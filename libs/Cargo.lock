@@ -1035,6 +1035,7 @@ dependencies = [
  "base64 0.21.0",
  "bitcoin",
  "bytes 1.3.0",
+ "cln-grpc",
  "hex",
  "http",
  "http-body 0.4.5",
