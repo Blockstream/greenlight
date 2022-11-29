@@ -79,6 +79,17 @@ impl TlsConfig {
         }
     }
 
+    /// This function is used to upgrade the anonymous `NOBODY` configuration to
+    /// a fully authenticated configuration using an auth blob. Uses the
+    /// identity function with the cert and key that are serialized in the auth
+    /// blob.
+    pub fn identity_from_auth(self, auth: &[u8]) -> Result<Self> {
+        let cf = serialize::CertFile::deserialize(auth)?;
+        let tls = self.identity(cf.cert, cf.key);
+        Ok(tls)
+        // Ok(self.identity(cf.cert, cf.key))
+    }
+
     /// This function is mostly used to allow running integration
     /// tests against a local mock of the service. It should not be
     /// used in production, since the preconfigured CA ensures that
