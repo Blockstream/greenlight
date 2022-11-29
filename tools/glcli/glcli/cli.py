@@ -34,8 +34,13 @@ class Tls:
         self.tls = TlsConfig()
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
+        auth_path = Path("auth.id")
         have_certs = cert_path.exists() and key_path.exists()
-        if have_certs:
+        if auth_path.exists():
+            auth = auth_path.open("rb").read()
+            self.tls = self.tls.identity_from_auth(auth)
+            logger.info("Configuring with auth identity")
+        elif have_certs:
             device_cert = open('device.crt', 'rb').read()
             device_key = open('device-key.pem', 'rb').read()
             self.tls = self.tls.identity(device_cert, device_key)
@@ -222,14 +227,8 @@ def register(ctx, network):
     scheduler = ctx.obj.scheduler
     res = scheduler.register(signer.inner)
 
-    with open("device-key.pem", "w") as f:
-        f.write(res.device_key)
-
-    with open("device.crt", "w") as f:
-        f.write(res.device_cert)
-
-    with open("ca.pem", "wb") as f:
-        f.write(env.ca_pem)
+    with open("auth.id", "wb") as f:
+        f.write(res.auth)
 
     pbprint(res)
 
@@ -244,14 +243,8 @@ def recover(ctx):
 
     res = scheduler.recover(signer.inner)
 
-    with open("device-key.pem", "w") as f:
-        f.write(res.device_key)
-
-    with open("device.crt", "w") as f:
-        f.write(res.device_cert)
-
-    with open("ca.pem", "wb") as f:
-        f.write(env.ca_pem)
+    with open("auth.id", "wb") as f:
+        f.write(res.auth)
 
     pbprint(res)
 
