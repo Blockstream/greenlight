@@ -20,6 +20,7 @@ class TlsConfig(object):
         self.inner = native.TlsConfig()
         self.ca: Optional[bytes] = None
         self.id: Tuple[Optional[bytes], Optional[bytes]] = (None, None)
+        self.auth: Optional[bytes] = None
 
     def identity(self, cert_pem: Union[str, bytes], key_pem: Union[str, bytes]) -> "TlsConfig":
         if isinstance(cert_pem, str):
@@ -34,6 +35,13 @@ class TlsConfig(object):
         c.id = (cert_pem, key_pem)
         return c
 
+    def identity_from_auth(self, auth: bytes) -> "TlsConfig":
+        c = TlsConfig()
+        c.inner = self.inner.identity_from_auth(auth)
+        c.ca = self.ca
+        self.auth = auth
+        return c
+
     def with_ca_certificate(self, ca: Union[str, bytes]) -> "TlsConfig":
         if isinstance(ca, str):
             ca = ca.encode('ASCII')
@@ -43,7 +51,6 @@ class TlsConfig(object):
         c.ca = ca
         c.id = self.id
         return c
-
 
 E = TypeVar('E', bound=PbMessage)
 def _convert(cls: Type[E], res: Iterable[SupportsIndex]) -> E:

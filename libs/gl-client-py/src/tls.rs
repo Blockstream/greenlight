@@ -23,6 +23,16 @@ impl TlsConfig {
         }
     }
 
+    /// This function upgrades the `TlsConfig` with an identity from the given
+    /// auth blob.
+    fn identity_from_auth(&self, auth: &[u8]) -> PyResult<Self> {
+        let inner = self.inner.clone().identity_from_auth(auth)
+            .map_err(|e| PyValueError::new_err(
+                format!("Error creating TlsConfig: {:?}", e)
+            ))?;
+        Ok(Self { inner: inner })
+    }
+
     fn with_ca_certificate(&self, ca: Vec<u8>) -> TlsConfig {
         Self {
             inner: self.inner.clone().ca_certificate(ca),

@@ -15,7 +15,6 @@ def tls(nobody_id):
         nobody_id.private_key
     )
 
-
 @pytest.fixture
 def signer(scheduler, tls):
     secret = b'\x00'*32
@@ -51,7 +50,6 @@ def test_register(sclient, signer):
     assert(res.device_key)
     assert(res.auth)
 
-
 def test_recover(sclient, signer):
     sclient.register(signer)
     rec = sclient.recover(signer)
@@ -80,3 +78,13 @@ def test_sign_challenge(signer):
 def test_signer_version(signer):
     import glclient
     assert glclient.__version__ == signer.version()
+
+def test_auth_blob(sclient, signer, tls):
+    """Check that we can contact the node with the auth blob.
+    """
+    reg = sclient.register(signer)
+    res = sclient.schedule()
+    tls = tls.identity_from_auth(reg.auth)
+    node = Node(signer.node_id(), 'regtest', tls, res.grpc_uri)
+    info = node.get_info()
+    assert(info is not None)
