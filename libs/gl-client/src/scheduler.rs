@@ -3,7 +3,7 @@ use crate::tls::{self, TlsConfig};
 
 use crate::{node, pb, signer::Signer, utils};
 use anyhow::Result;
-use bitcoin::Network;
+use lightning_signer::bitcoin::Network;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
@@ -16,7 +16,12 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub async fn with(node_id: Vec<u8>, network: Network, uri: String, tls: &TlsConfig) -> Result<Scheduler> {
+    pub async fn with(
+        node_id: Vec<u8>,
+        network: Network,
+        uri: String,
+        tls: &TlsConfig,
+    ) -> Result<Scheduler> {
         debug!("Connecting to scheduler at {}", uri);
         let channel = Channel::from_shared(uri)?
             .tls_config(tls.inner.clone())?
@@ -48,15 +53,16 @@ impl Scheduler {
             })
             .await?
             .into_inner();
-            
+
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let device_cert = tls::generate_self_signed_device_cert(
             &hex::encode(self.node_id.clone()),
             "default".into(),
-            vec!["localhost".into()]);
+            vec!["localhost".into()],
+        );
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting registration with csr:\n{}", device_csr);
-        
+
         let mut res = self
             .client
             .clone()
@@ -72,7 +78,7 @@ impl Scheduler {
             })
             .await?
             .into_inner();
-        
+
         // This step ensures backwards compatibility with the backend. If we did
         // receive a device key, the backend did not sign the csr and we need to
         // return the response as it is. If the device key is empty, the csr was
@@ -81,24 +87,24 @@ impl Scheduler {
             debug!("Received signed certificate:\n{}", &res.device_cert);
             // We intercept the response and replace the private key with the
             // private key of the device_cert. This private key has been generated
-            // on and has never left the client device. 
+            // on and has never left the client device.
             res.device_key = device_cert.serialize_private_key_pem();
         }
 
         // We ask the signer for a signature of the public key to append the
         // public key to any payload that is sent to a node.
         let public_key = device_cert.get_key_pair().public_key_raw();
-        debug!("Asking singer to sign public key {}", hex::encode(public_key));
+        debug!(
+            "Asking singer to sign public key {}",
+            hex::encode(public_key)
+        );
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
 
         Ok(res)
     }
 
-    pub async fn recover(
-        &self,
-        signer: &Signer,
-    ) -> Result<pb::RecoveryResponse> {
+    pub async fn recover(&self, signer: &Signer) -> Result<pb::RecoveryResponse> {
         let challenge = self
             .client
             .clone()
@@ -114,7 +120,8 @@ impl Scheduler {
         let device_cert = tls::generate_self_signed_device_cert(
             &hex::encode(self.node_id.clone()),
             &name,
-            vec!["localhost".into()]);
+            vec!["localhost".into()],
+        );
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting recovery with csr:\n{}", device_csr);
 
@@ -129,7 +136,7 @@ impl Scheduler {
             })
             .await?
             .into_inner();
-        
+
         // This step ensures backwards compatibility with the backend. If we did
         // receive a device key, the backend did not sign the csr and we need to
         // return the response as it is. If the device key is empty, the csr was
@@ -138,14 +145,17 @@ impl Scheduler {
             debug!("Received signed certificate:\n{}", &res.device_cert);
             // We intercept the response and replace the private key with the
             // private key of the device_cert. This private key has been generated
-            // on and has never left the client device. 
+            // on and has never left the client device.
             res.device_key = device_cert.serialize_private_key_pem();
         }
-        
+
         // We ask the signer for a signature of the public key to append the
         // public key to any payload that is sent to a node.
         let public_key = device_cert.get_key_pair().public_key_raw();
-        debug!("Asking singer to sign public key {}", hex::encode(public_key));
+        debug!(
+            "Asking singer to sign public key {}",
+            hex::encode(public_key)
+        );
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
 
