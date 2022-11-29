@@ -1,3 +1,4 @@
+use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::chain::tracker::ChainTracker;
 use lightning_signer::channel::ChannelId;
 use lightning_signer::channel::ChannelStub;
@@ -101,7 +102,7 @@ impl State {
 
     fn get_node_channels(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
     ) -> Vec<(
         lightning_signer::channel::ChannelId,
         lightning_signer::persist::model::ChannelEntry,
@@ -124,7 +125,7 @@ impl State {
 
     fn new_chain_tracker(
         &mut self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
     ) {
         let key = hex::encode(node_id.serialize());
@@ -280,7 +281,7 @@ impl MemoryPersister {
 impl Persist for MemoryPersister {
     fn new_node(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         config: &NodeConfig,
         state: &NodeState,
     ) {
@@ -297,7 +298,7 @@ impl Persist for MemoryPersister {
 
     fn update_node(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         state: &NodeState,
     ) -> Result<(), ()> {
         let key = hex::encode(node_id.serialize());
@@ -305,14 +306,14 @@ impl Persist for MemoryPersister {
         Ok(())
     }
 
-    fn delete_node(&self, node_id: &bitcoin::secp256k1::PublicKey) {
+    fn delete_node(&self, node_id: &lightning_signer::bitcoin::secp256k1::PublicKey) {
         let key = hex::encode(node_id.serialize());
         self.state.lock().unwrap().delete_node(&key);
     }
 
     fn new_channel(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         stub: &ChannelStub,
     ) -> Result<(), ()> {
         let id = vls_persist::model::NodeChannelId::new(node_id, &stub.id0);
@@ -331,7 +332,7 @@ impl Persist for MemoryPersister {
 
     fn update_channel(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         channel: &lightning_signer::channel::Channel,
     ) -> Result<(), ()> {
         let node_channel_id = vls_persist::model::NodeChannelId::new(node_id, &channel.id0);
@@ -348,7 +349,7 @@ impl Persist for MemoryPersister {
 
     fn get_channel(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
         channel_id: &ChannelId,
     ) -> Result<lightning_signer::persist::model::ChannelEntry, ()> {
         let id = vls_persist::model::NodeChannelId::new(node_id, channel_id);
@@ -358,7 +359,7 @@ impl Persist for MemoryPersister {
 
     fn new_chain_tracker(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
     ) {
         self.state
@@ -369,7 +370,7 @@ impl Persist for MemoryPersister {
 
     fn update_tracker(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
     ) -> Result<(), ()> {
         let key = hex::encode(node_id.serialize());
@@ -384,7 +385,7 @@ impl Persist for MemoryPersister {
 
     fn get_tracker(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
     ) -> Result<ChainTracker<lightning_signer::monitor::ChainMonitor>, ()> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
@@ -398,14 +399,14 @@ impl Persist for MemoryPersister {
 
     fn get_node_channels(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
     ) -> Vec<(ChannelId, lightning_signer::persist::model::ChannelEntry)> {
         self.state.lock().unwrap().get_node_channels(node_id)
     }
 
     fn update_node_allowlist(
         &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
+        node_id: &PublicKey,
         allowlist: Vec<std::string::String>,
     ) -> Result<(), ()> {
         let key = hex::encode(node_id.serialize());
@@ -425,10 +426,7 @@ impl Persist for MemoryPersister {
         Ok(())
     }
 
-    fn get_node_allowlist(
-        &self,
-        node_id: &bitcoin::secp256k1::PublicKey,
-    ) -> Vec<std::string::String> {
+    fn get_node_allowlist(&self, node_id: &PublicKey) -> Vec<std::string::String> {
         let state = self.state.lock().unwrap();
         let key = hex::encode(node_id.serialize());
         let key = format!("{ALLOWLIST_PREFIX}/{key}");
@@ -438,12 +436,7 @@ impl Persist for MemoryPersister {
         allowlist
     }
 
-    fn get_nodes(
-        &self,
-    ) -> Vec<(
-        bitcoin::secp256k1::PublicKey,
-        lightning_signer::persist::model::NodeEntry,
-    )> {
+    fn get_nodes(&self) -> Vec<(PublicKey, lightning_signer::persist::model::NodeEntry)> {
         let state = self.state.lock().unwrap();
         let node_ids: Vec<&str> = state
             .values
@@ -479,7 +472,7 @@ impl Persist for MemoryPersister {
 
             let key: Vec<u8> = hex::decode(node_id).unwrap();
             res.push((
-                bitcoin::secp256k1::PublicKey::from_slice(key.as_slice()).unwrap(),
+                PublicKey::from_slice(key.as_slice()).unwrap(),
                 entry,
             ));
         }

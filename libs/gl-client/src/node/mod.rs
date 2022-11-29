@@ -3,7 +3,7 @@ use crate::pb::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
 use crate::utils;
 use anyhow::{anyhow, Result};
-use bitcoin::Network;
+use lightning_signer::bitcoin::Network;
 use tonic::transport::{Channel, Uri};
 use tower::ServiceBuilder;
 

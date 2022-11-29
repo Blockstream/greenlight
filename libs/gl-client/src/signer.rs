@@ -6,8 +6,8 @@ use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeReque
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
-use bitcoin::Network;
 use bytes::{Buf, Bytes};
+use lightning_signer::bitcoin::Network;
 use lightning_signer::{
     node::NodeServices,
     policy::{filter::PolicyFilter, simple_validator::SimplePolicy},
@@ -261,7 +261,11 @@ impl Signer {
         Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await
     }
 
-    pub async fn run_forever_with_uri(&self, mut shutdown: mpsc::Receiver<()>, scheduler_uri: String) -> Result<()> {
+    pub async fn run_forever_with_uri(
+        &self,
+        mut shutdown: mpsc::Receiver<()>,
+        scheduler_uri: String,
+    ) -> Result<()> {
         debug!(
             "Contacting scheduler at {} to get the node address",
             &scheduler_uri
@@ -427,6 +431,7 @@ mod tests {
                 context: None,
                 raw: msg,
                 signer_state: vec![],
+                requests: Vec::new(),
             })
             .await
             .is_err())
