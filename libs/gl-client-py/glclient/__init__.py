@@ -315,7 +315,12 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def close_channel(self, peer_id, timeout=None, address=None) -> nodepb.CloseChannelResponse:
+    def close_channel(
+            self,
+            peer_id,
+            unilateraltimeout=None,
+            destination=None
+    ) -> nodepb.CloseChannelResponse:
         if len(peer_id) == 66:
             peer_id = unhexlify(peer_id)
 
@@ -327,10 +332,10 @@ class Node(object):
 
         uri = "/greenlight.Node/CloseChannel"
         res = nodepb.CloseChannelResponse
-        req = nodepb.FundChannelRequest(
+        req = nodepb.CloseChannelRequest(
             node_id=peer_id,
-            timeout=timeout,
-            address=address,
+            unilateraltimeout=unilateraltimeout,
+            destination=destination,
         ).SerializeToString()
 
         return res.FromString(

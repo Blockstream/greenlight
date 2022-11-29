@@ -379,7 +379,7 @@ def fundchannel(ctx, nodeid, amount, minconf):
 @click.pass_context
 def close(ctx, peer_id, timeout=None, address=None):
     node = ctx.obj.get_node()
-    res = node.close_channel(peer_id, timeout=timeout, address=address)
+    res = node.close_channel(peer_id, unilateraltimeout=timeout, destination=address)
     pbprint(res)
 
 
