@@ -21,23 +21,13 @@ pub enum Error {
     #[error("this is unsupported: {0}")]
     Unsupported(String),
     #[error("IO error talking to RPC: {0}")]
-    IoError(std::io::Error),
+    IoError(#[from] std::io::Error),
     #[error("error serializing / deserializing: {0}")]
-    Serialization(serde_json::Error),
+    Serialization(#[from] serde_json::Error),
     #[error("unknown error {0}")]
     Other(Box<dyn std::error::Error + Send + Sync>),
 }
 
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error::IoError(e)
-    }
-}
-impl From<serde_json::Error> for Error {
-    fn from(e: serde_json::Error) -> Self {
-        Error::Serialization(e)
-    }
-}
 #[derive(Clone, Debug)]
 pub struct LightningClient {
     sockpath: PathBuf,
