@@ -185,6 +185,7 @@ RUN python3 -m pip install -U pip && \
     pytest-xdist \
     rich \
     pyln-testing \
+    pytest-cov \
     grpcio \
     pytest-xdist \
     maturin
