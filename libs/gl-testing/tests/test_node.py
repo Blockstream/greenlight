@@ -163,3 +163,16 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
 
     assert(len(invs) == 1)
     assert(invs[0]['status'] == 'paid')
+
+
+def test_zeroconf_routehint(node_factory, clients):
+    """Invoices should have routehints including zeroconf channels.
+     """
+    l1 = node_factory.get_node()
+    c = clients.new()
+    c.register(configure=True)
+    gl1 = c.node()
+
+    # Have l1 open a channel to gl1
+    gl1.connect_peer(l1.info['id'], f"127.0.0.1:{l1.port}")
+    # TODO continue

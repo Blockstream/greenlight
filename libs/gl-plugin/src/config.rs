@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Result};
-use log::trace;
+use log::{info, trace};
 use std::net::SocketAddr;
 use tonic::transport;
 
@@ -134,6 +134,9 @@ pub struct Config {
 
     /// The `Nodelet` told us that we're running on this network.
     pub network: Network,
+
+    /// List of LSP NodeIDs so we can give them some special params
+    pub lsps: Vec<Vec<u8>>,
 }
 
 impl Config {
@@ -156,6 +159,22 @@ impl Config {
             .try_into()
             .context("Unknown network in GL_NODE_NETWORK")?;
 
+        let v = std::env::var("GL_LSP_NODEIDS").unwrap_or_default();
+
+        if v.len() == 0 {
+            info!("No LSPs in the GL_LSP_NODEIDS envvar set");
+        }
+
+        let lsps: Vec<Vec<u8>> = v
+            .split(",")
+            .map(|s| -> anyhow::Result<Vec<u8>> {
+                hex::decode(s).context("could not decode hex string")
+            })
+            .filter_map(|v| v.ok())
+            .collect();
+
+        info!("Added node_ids={:?} to LSP allowlist", lsps);
+
         Ok(Config {
             identity,
             hsmd_sock_path: "hsmd.sock".to_string(),
@@ -164,6 +183,7 @@ impl Config {
             towerd_public_grpc_uri,
             clientca,
             network,
+            lsps,
         })
     }
 }

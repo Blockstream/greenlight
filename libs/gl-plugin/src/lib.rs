@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use log::{debug, warn};
+use log::{debug, info, warn};
 use rpc::LightningClient;
 use serde_json::json;
 use std::future::Future;
@@ -29,6 +29,7 @@ pub struct GlPlugin {
     rpc: Arc<Mutex<LightningClient>>,
     stage: Arc<stager::Stage>,
     events: broadcast::Sender<Event>,
+    config: config::Config,
 }
 
 /// A small wrapper around [`cln_plugin::Builder`] that allows us to
@@ -39,7 +40,7 @@ pub struct GlPlugin {
 pub struct Builder {
     inner: cln_plugin::Builder<GlPlugin, tokio::io::Stdin, tokio::io::Stdout>,
     events: broadcast::Sender<Event>,
-    state: GlPlugin,
+    pub state: GlPlugin,
 }
 
 impl Builder {
@@ -111,7 +112,8 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
         config.clone(),
         events.clone(),
         signer_state_store,
-    ).await?;
+    )
+    .await?;
 
     tokio::spawn(async move {
         node_server.run().await.unwrap();
@@ -121,15 +123,67 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
         events: events.clone(),
         rpc,
         stage,
+        config,
     };
 
     let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
         .hook("invoice_payment", on_invoice_payment);
+
+    info!("Hooking into 'openchannel' to allow LSPs to zeroconf");
+    let inner = inner.hook("openchannel", on_openchannel);
+
     Ok(Builder {
         state,
         inner,
         events,
     })
+}
+
+#[derive(serde::Deserialize)]
+struct OpenchannelHookCall {
+    id: String,
+}
+
+async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
+    let call: OpenchannelHookCall =
+        match serde_json::from_value(v.get("openchannel").unwrap().clone()) {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!(
+                    "Error decoding {} into an `openchannel` hook call: {}",
+                    v,
+                    e
+                );
+                return Ok(json!({"result": "continue"}));
+            }
+        };
+
+    let allow = plugin
+        .state()
+        .config
+        .lsps
+        .iter()
+        .any(|lsp| call.id == hex::encode(&lsp));
+
+    if allow {
+        info!(
+            "NodeID {} is in the LSP allowlist, enabling zeroreserve and zeroconf",
+            call.id
+        );
+        Ok(json!({
+            "result": "continue",
+            "reserve": "0msat",
+            "mindepth": 0
+        }))
+    } else {
+        info!(
+            "NodeID {} is not in LSP allowlist, enforcing reserve and confirmations",
+            call.id
+        );
+        Ok(json!({
+            "result": "continue"
+        }))
+    }
 }
 
 /// Notification handler that receives notifications on incoming
