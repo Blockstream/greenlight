@@ -354,6 +354,11 @@ impl Node for PluginNodeServer {
 
                 req.request.signer_state = state.into();
                 req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
+                debug!(
+                    "Sending signer requests with {} requests and {} state entries",
+                    req.request.requests.len(),
+                    req.request.signer_state.len()
+                );
 
                 if let Err(e) = tx.send(Ok(req.request)).await {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
