@@ -126,6 +126,29 @@ impl Signer {
             .as_vec())
     }
 
+    /// Filter out any request that is not signed, such that the
+    /// remainder is the minimal set to reconcile state changes
+    /// against.
+    ///
+    /// Returns an error if a signature failed verification.
+    fn check_request_auth(
+        &self,
+        requests: Vec<crate::pb::PendingRequest>,
+    ) -> Result<Vec<crate::pb::PendingRequest>> {
+        // Filter out requests lacking a required field. They are unverifiable anyway.
+        use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
+        requests
+            .into_iter()
+            .filter(|r| r.pubkey.len() != 0 && r.signature.len() != 0)
+            .map(|r| {
+                let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, &r.pubkey);
+                pk.verify(&r.request, &r.signature)
+                    .map(|_| r)
+                    .map_err(|e| anyhow!("signature verification failed: {}", e))
+            })
+            .collect()
+    }
+
     /// Given the URI of the running node, connect to it and stream
     /// requests from it. The requests are then verified and processed
     /// using the `Hsmd`.
@@ -159,6 +182,11 @@ impl Signer {
             let hex_req = hex::encode(&req.raw);
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
+
+            let _ctxrequests = self.check_request_auth(req.requests.clone())?;
+
+	    // TODO: Decode requests and reconcile them with the changes
+
             match self.process_request(req).await {
                 Ok(response) => {
                     trace!("Sending response {}", hex::encode(&response.raw));
