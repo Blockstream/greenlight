@@ -51,3 +51,11 @@ pub mod utils {
             .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string())
     }
 }
+
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("The signature request does not match any authorized RPC calls")]
+    MissingAuthorization,
+}

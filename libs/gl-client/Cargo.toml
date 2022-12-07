@@ -31,6 +31,7 @@ vls-protocol-signer = { path="../../vls/vls-protocol-signer" }
 vls-protocol = { path="../../vls/vls-protocol" }
 vls-persist = { path="../../vls/vls-persist", features=["memo"] }
 serde_json = "^1.0"
+thiserror = "1"
 
 [build-dependencies]
 tonic-build = "^0.8"
