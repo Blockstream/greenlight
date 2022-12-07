@@ -23,6 +23,9 @@ use tonic::Request;
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 
+mod auth;
+pub mod model;
+
 const VERSION: &str = "v0.11.0.1";
 
 #[derive(Clone)]
@@ -183,9 +186,17 @@ impl Signer {
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
 
-            let _ctxrequests = self.check_request_auth(req.requests.clone())?;
+            let sigreq = vls_protocol::msgs::from_vec(req.raw.clone())?;
+            let ctxrequests: Vec<model::Request> = dbg!(self
+                .check_request_auth(req.requests.clone())?
+                .into_iter()
+                .map(|r| decode_request(dbg!(r)))
+                .collect::<Result<Vec<model::Request>>>()?);
 
-	    // TODO: Decode requests and reconcile them with the changes
+            // TODO: Decode requests and reconcile them with the changes
+            use auth::Authorizer;
+            let auth = auth::DummyAuthorizer {};
+            auth.authorize(sigreq, ctxrequests)?;
 
             match self.process_request(req).await {
                 Ok(response) => {
@@ -477,4 +488,25 @@ mod tests {
             format!("Message exceeds max len of {}", u16::MAX)
         );
     }
+}
+
+fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request> {
+    // Strip the compressions flag (1 byte) and the length prefix (4
+    // bytes big endian) and we're left with just the payload. See
+    // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+    // for technical details.
+    //
+    // Notice that we assume that the compression flag is off.
+    assert_eq!(r.request[0], 0u8);
+    let payload = &r.request[5..];
+
+    Ok(
+        crate::signer::model::cln::decode_request(&r.uri, dbg!(payload))
+            .or_else(|_| {
+                dbg!(crate::signer::model::greenlight::decode_request(
+                    &r.uri, payload
+                ))
+            })
+            .unwrap(),
+    )
 }
