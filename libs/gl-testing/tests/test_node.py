@@ -4,6 +4,8 @@ from pyln.testing.utils import wait_for
 from rich.pretty import pprint
 from glclient import nodepb
 
+import unittest
+
 def test_node_start(scheduler, clients):
     c = clients.new()
     res = c.register(configure=True)
@@ -124,3 +126,43 @@ def test_cln_grpc_interface(clients):
 
     info = client.Getinfo(clnpb.GetinfoRequest())
     print(info)
+
+
+@unittest.skip("Demonstrating issue paying amountless invoices")
+def test_node_invoice_amountless(bitcoind, node_factory, clients):
+    """Test that the request is being mapped correctly.
+    ```dot
+    l1 -> gl1
+    ```
+    """
+    l1 = node_factory.get_node(may_restart=True)
+    l1.set_feerates([1] * 4, wait_for_effect=True)
+    l1.restart()
+    c = clients.new()
+    c.register(configure=True)
+    gl1 = c.node()
+    s = c.signer().run_in_thread()
+
+    # Now open a channel from l2 <- gl1 (this could be easier...)
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+    addr = gl1.new_address().address
+    txid = bitcoind.rpc.sendtoaddress(addr, 1)
+    bitcoind.generate_block(1, wait_for_mempool=[txid])
+    wait_for(lambda: len(gl1.list_funds().outputs) == 1)
+    gl1.fund_channel(node_id=l1.info['id'], amount=nodepb.Amount(satoshi=10**6))
+    bitcoind.generate_block(6, wait_for_mempool=1)
+    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == "CHANNELD_NORMAL")
+
+    # Generate an invoice without amount:
+    inv = l1.rpc.call('invoice', payload={
+        'label': 'test',
+        'amount_msat': 'any',
+        'description': 'desc'
+    })['bolt11']
+    print(inv)
+    print(l1.rpc.decodepay(inv))
+    p = gl1.pay(inv, amount=nodepb.Amount(millisatoshi=31337))
+    invs = l1.rpc.listinvoices()['invoices']
+
+    assert(len(invs) == 1)
+    assert(invs[0]['status'] == 'paid')
