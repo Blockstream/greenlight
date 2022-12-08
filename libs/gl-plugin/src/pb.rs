@@ -388,7 +388,7 @@ impl From<PayRequest> for requests::Pay {
     fn from(p: PayRequest) -> Self {
         requests::Pay {
             bolt11: p.bolt11,
-            amount: None,
+            amount: p.amount.map(|a| a.try_into().unwrap()),
             retry_for: match p.timeout {
                 0 => None,
                 v => Some(v),
