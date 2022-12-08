@@ -128,7 +128,6 @@ def test_cln_grpc_interface(clients):
     print(info)
 
 
-@unittest.skip("Demonstrating issue paying amountless invoices")
 def test_node_invoice_amountless(bitcoind, node_factory, clients):
     """Test that the request is being mapped correctly.
     ```dot
