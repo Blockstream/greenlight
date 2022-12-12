@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 import sys
 from pyln.testing.fixtures import bitcoind, teardown_checks, node_factory, node_cls, test_name, executor, db_provider, test_base_dir, throttler, jsonschemas
+from decimal import Decimal
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -73,7 +74,40 @@ def nobody_id(users_id):
 @pytest.fixture()
 def scheduler(scheduler_id, bitcoind):
     grpc_port = reserve()
-    s = Scheduler(bitcoind=bitcoind, grpc_port=grpc_port, identity=scheduler_id)
+
+    # Use a proxy instead of a direct connection. This allows us to
+    # control feerates for GL nodes, and they will match non-GL nodes
+    # as well.
+    btcproxy = bitcoind.get_proxy()
+
+    # Copied from pyln.testing.utils.NodeFactory.get_node
+    feerates=(15000, 11000, 7500, 3750)
+
+    def mock_estimatesmartfee(r):
+        params = r['params']
+        if params == [2, 'CONSERVATIVE']:
+            feerate = feerates[0] * 4
+        elif params == [6, 'ECONOMICAL']:
+            feerate = feerates[1] * 4
+        elif params == [12, 'ECONOMICAL']:
+            feerate = feerates[2] * 4
+        elif params == [100, 'ECONOMICAL']:
+            feerate = feerates[3] * 4
+        else:
+            warnings.warn("Don't have a feerate set for {}/{}.".format(
+                params[0], params[1],
+            ))
+            feerate = 42
+        return {
+            'id': r['id'],
+            'error': None,
+            'result': {
+                'feerate': Decimal(feerate) / 10**8
+            },
+        }
+    btcproxy.mock_rpc('estimatesmartfee', mock_estimatesmartfee)
+
+    s = Scheduler(bitcoind=btcproxy, grpc_port=grpc_port, identity=scheduler_id)
     logger.debug(f"Scheduler is running at {s.grpc_addr}")
     os.environ.update(
         {
