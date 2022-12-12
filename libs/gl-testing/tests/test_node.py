@@ -134,9 +134,7 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
     l1 -> gl1
     ```
     """
-    l1 = node_factory.get_node(may_restart=True)
-    l1.set_feerates([1] * 4, wait_for_effect=True)
-    l1.restart()
+    l1 = node_factory.get_node()
     c = clients.new()
     c.register(configure=True)
     gl1 = c.node()
