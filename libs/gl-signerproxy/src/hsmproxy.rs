@@ -77,7 +77,6 @@ async fn process_requests(
                     let ctx = HsmRequestContext::from_client_hsmfd_msg(&msg)?;
                     debug!("Got a request for a new client fd. Context: {:?}", ctx);
 
-                    // TODO: Start new handler for the client
                     let (local, remote) = UnixStream::pair()?;
                     let local = NodeConnection {
                         conn: DaemonConnection::new(TokioUnixStream::from_std(local)?),
@@ -87,6 +86,7 @@ async fn process_requests(
                     let msg = Message::new_with_fds(vec![0, 109], &vec![remote]);
 
                     let grpc = server.clone();
+                    // Start new handler for the client
                     start_handler(local, request_counter.clone(), grpc);
                     if let Err(e) = conn.write(msg).await {
                         error!("error writing msg to node_connection: {:?}", e);
