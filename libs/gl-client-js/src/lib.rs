@@ -23,6 +23,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("schedulerRegister", Scheduler::register)?;
     cx.export_function("schedulerRecover", Scheduler::recover)?;
     cx.export_function("schedulerSchedule", Scheduler::schedule)?;
+    cx.export_function("schedulerGetInviteCodes", Scheduler::get_invite_codes)?;
 
     cx.export_function("nodeCall", Node::call)?;
     cx.export_function("nodeCallStreamLog", Node::call_stream_log)?;
