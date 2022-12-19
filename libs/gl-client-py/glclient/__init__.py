@@ -1,7 +1,8 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
-from . import node_pb2 as clnpb
+from . import node_pb2 as clnpb  # type: ignore
 from . import glclient as native
+from .tls import TlsConfig
 from google.protobuf.message import Message as PbMessage
 
 from .greenlight_pb2 import Amount
@@ -12,38 +13,6 @@ import logging
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
 __version__ = "v0.11.0.1"
-
-class TlsConfig(object):
-    def __init__(self) -> None:
-        # We wrap the TlsConfig since some calls cannot yet be routed
-        # through the rust library (streaming calls)
-        self.inner = native.TlsConfig()
-        self.ca: Optional[bytes] = None
-        self.id: Tuple[Optional[bytes], Optional[bytes]] = (None, None)
-
-    def identity(self, cert_pem: Union[str, bytes], key_pem: Union[str, bytes]) -> "TlsConfig":
-        if isinstance(cert_pem, str):
-            cert_pem = cert_pem.encode('ASCII')
-
-        if isinstance(key_pem, str):
-            key_pem = key_pem.encode('ASCII')
-
-        c = TlsConfig()
-        c.inner = self.inner.identity(cert_pem, key_pem)
-        c.ca = self.ca
-        c.id = (cert_pem, key_pem)
-        return c
-
-    def with_ca_certificate(self, ca: Union[str, bytes]) -> "TlsConfig":
-        if isinstance(ca, str):
-            ca = ca.encode('ASCII')
-
-        c = TlsConfig()
-        c.inner = self.inner.with_ca_certificate(ca)
-        c.ca = ca
-        c.id = self.id
-        return c
-
 
 E = TypeVar('E', bound=PbMessage)
 def _convert(cls: Type[E], res: Iterable[SupportsIndex]) -> E:
@@ -251,7 +220,7 @@ class Node(object):
         uri = "/greenlight.Node/Disconnect"
         res = nodepb.DisconnectResponse
         req = nodepb.DisconnectRequest(
-            node_id=node_id,
+            node_id=peer_id,
             force=force,
         ).SerializeToString()
 
