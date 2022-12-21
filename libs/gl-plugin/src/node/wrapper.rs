@@ -1,5 +1,7 @@
+use anyhow::Result;
 use cln_grpc::pb::{self, node_server::Node};
-use tonic::{Request, Response, Status};
+use cln_rpc::ClnRpc;
+use tonic::{Code, Request, Response, Status};
 
 /// `WrappedNodeServer` enables us to quickly add customizations to
 /// the pure passthru of the `cln_grpc::Server`. In particular it
@@ -17,6 +19,10 @@ impl WrappedNodeServer {
         let rpcpath = path.to_path_buf();
         let inner = cln_grpc::Server::new(path.clone()).await?;
         Ok(WrappedNodeServer { inner, rpcpath })
+    }
+
+    async fn rpc(&self) -> anyhow::Result<ClnRpc> {
+        ClnRpc::new(self.rpcpath.clone()).await
     }
 }
 
@@ -136,6 +142,8 @@ impl Node for WrappedNodeServer {
         self.inner.del_invoice(r).await
     }
 
+    /// The invoice implementation in WrappedNodeServer ensures that
+    /// all channels are added as Routehints.
     async fn invoice(
         &self,
         r: Request<pb::InvoiceRequest>,
