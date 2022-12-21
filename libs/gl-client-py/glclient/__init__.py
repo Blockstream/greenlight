@@ -18,7 +18,7 @@ __version__ = "v0.11.0.1"
 
 
 # Switch from legacy to cln API, eventually
-Node = LegacyNode
+Node = ClnNode
 
 E = TypeVar('E', bound=PbMessage)
 def _convert(cls: Type[E], res: Iterable[SupportsIndex]) -> E:

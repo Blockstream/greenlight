@@ -3,6 +3,7 @@ from gltesting.fixtures import *
 from pyln.testing.utils import wait_for
 from rich.pretty import pprint
 from glclient import nodepb
+from glclient import clnpb
 
 import unittest
 
@@ -22,7 +23,7 @@ def test_node_connect(scheduler, clients, bitcoind):
     c = clients.new()
     c.register(configure=True)
     n = c.node()
-    info = n.get_info()
+    info = n.getinfo()
     pprint(info)
 
 
@@ -35,7 +36,12 @@ def test_node_signer(clients, executor):
 
     # Running the `invoice` invocation in a separate thread since
     # it'll block until the signer connects.
-    fi = executor.submit(n.create_invoice, 'test', nodepb.Amount(millisatoshi=42000))
+    fi = executor.submit(
+        n.invoice,
+        clnpb.AmountOrAny(amount=clnpb.Amount(msat=42000)),
+        description='test',
+        label='lbl',
+    )
 
     # Now attach the signer and the above call should return
     h = c.signer().run_in_thread()
@@ -67,11 +73,16 @@ def test_node_network(node_factory, clients, bitcoind):
     bitcoind.generate_block(1, wait_for_mempool=1)
 
     # Now wait for the channel to confirm
-    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 'CHANNELD_NORMAL')
+    normal = clnpb.ListpeersPeersChannels.ListpeersPeersChannelsState.CHANNELD_NORMAL
+    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == normal)
     import time
     time.sleep(5)
 
-    inv = gl1.create_invoice('test', nodepb.Amount(millisatoshi=10000)).bolt11
+    inv = gl1.invoice(
+        label='test',
+        description='test',
+        amount_msat=clnpb.AmountOrAny(amount=clnpb.Amount(msat=10000))
+    ).bolt11
     decoded = l1.rpc.decodepay(inv)
     pprint(decoded)
     l1.rpc.pay(inv)
@@ -88,9 +99,11 @@ def test_node_invoice_preimage(clients):
     preimage = "00"*32
     expected = '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925'
 
-    i = gl1.create_invoice(
+    i = gl1.invoice(
         label='lbl',
-        amount=nodepb.Amount(millisatoshi=21000000),
+        amount_msat=clnpb.AmountOrAny(
+            amount=clnpb.Amount(msat=21000000)
+        ),
         description="desc",
         preimage=preimage,
     )
@@ -142,11 +155,16 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
 
     # Now open a channel from l2 <- gl1 (this could be easier...)
     gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
-    addr = gl1.new_address().address
+    addr = gl1.new_addr().bech32
     txid = bitcoind.rpc.sendtoaddress(addr, 1)
     bitcoind.generate_block(1, wait_for_mempool=[txid])
     wait_for(lambda: len(gl1.list_funds().outputs) == 1)
-    gl1.fund_channel(node_id=l1.info['id'], amount=nodepb.Amount(satoshi=10**6))
+    gl1.fund_channel(
+        id=l1.info['id'],
+        amount=clnpb.AmountOrAll(
+            amount=clnpb.Amount(msat=10**6 * 1000)
+        )
+    )
     bitcoind.generate_block(6, wait_for_mempool=1)
     wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == "CHANNELD_NORMAL")
 
@@ -158,7 +176,7 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
     })['bolt11']
     print(inv)
     print(l1.rpc.decodepay(inv))
-    p = gl1.pay(inv, amount=nodepb.Amount(millisatoshi=31337))
+    p = gl1.pay(inv, amount=clnpb.Amount(msat=31337))
     invs = l1.rpc.listinvoices()['invoices']
 
     assert(len(invs) == 1)
