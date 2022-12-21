@@ -24,6 +24,9 @@ use tokio::{
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{transport::ServerTlsConfig, Code, Request, Response, Status};
+mod wrapper;
+pub use wrapper::WrappedNodeServer;
+
 
 lazy_static! {
     static ref LIMITER: RateLimiter<NotKeyed, InMemoryState, DefaultClock> =
@@ -809,7 +812,7 @@ impl PluginNodeServer {
         let addr = self.grpc_binding.parse().unwrap();
 
         let cln_node = NodeServer::new(
-            cln_grpc::Server::new(&self.rpc_path)
+            WrappedNodeServer::new(&self.rpc_path)
                 .await
                 .context("creating NodeServer instance")?,
         );
