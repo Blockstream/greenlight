@@ -121,6 +121,10 @@ impl Signer {
             dev_bip32_seed: None,
             dev_channel_secrets: None,
             dev_channel_secrets_shaseed: None,
+            // See here for versions:
+            // https://github.com/ElementsProject/lightning/blob/master/common/hsm_version.h
+            hsm_wire_max_version: 1,
+            hsm_wire_min_version: 2,
         };
         Ok(handler
             .handle(vls_protocol::msgs::Message::HsmdInit(query))
@@ -404,7 +408,9 @@ impl Signer {
             ));
         }
 
-        let req = vls_protocol::msgs::SignMessage { message: msg };
+        let req = vls_protocol::msgs::SignMessage {
+            message: vls_protocol::model::Octets(msg),
+        };
         let response = self
             .handler()
             .handle(vls_protocol::msgs::Message::SignMessage(req))

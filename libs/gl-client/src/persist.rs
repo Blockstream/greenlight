@@ -4,7 +4,8 @@ use lightning_signer::channel::ChannelId;
 use lightning_signer::channel::ChannelStub;
 use lightning_signer::node::NodeConfig;
 use lightning_signer::node::NodeState;
-use lightning_signer::persist::Persist;
+use lightning_signer::persist::{Error, Persist};
+use lightning_signer::SendSync;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -27,7 +28,7 @@ impl State {
         key: &str,
         node_entry: vls_persist::model::NodeEntry,
         node_state_entry: vls_persist::model::NodeStateEntry,
-    ) {
+    ) -> Result<(), Error> {
         let node_key = format!("{NODE_PREFIX}/{key}");
         let state_key = format!("{NODE_STATE_PREFIX}/{key}");
         assert!(!self.values.contains_key(&node_key), "inserting node twice");
@@ -42,9 +43,14 @@ impl State {
             state_key,
             (0u64, serde_json::to_value(node_state_entry).unwrap()),
         );
+        Ok(())
     }
 
-    fn update_node(&mut self, key: &str, node_state: vls_persist::model::NodeStateEntry) {
+    fn update_node(
+        &mut self,
+        key: &str,
+        node_state: vls_persist::model::NodeStateEntry,
+    ) -> Result<(), Error> {
         trace!(
             "Update node: {}",
             serde_json::to_string(&node_state).unwrap()
@@ -55,21 +61,23 @@ impl State {
             .get_mut(&key)
             .expect("attempting to update non-existent node");
         *v = (v.0 + 1, serde_json::to_value(node_state).unwrap());
+        Ok(())
     }
 
-    fn delete_node(&mut self, key: &str) {
+    fn delete_node(&mut self, key: &str) -> Result<(), Error> {
         let node_key = format!("{NODE_PREFIX}/{key}");
         let state_key = format!("{NODE_STATE_PREFIX}/{key}");
 
         self.values.remove(&node_key);
         self.values.remove(&state_key);
+        Ok(())
     }
 
     fn insert_channel(
         &mut self,
         key: &str,
         channel_entry: vls_persist::model::ChannelEntry,
-    ) -> Result<(), ()> {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
         assert!(!self.values.contains_key(&key));
         self.values
@@ -81,7 +89,7 @@ impl State {
         &mut self,
         key: &str,
         channel_entry: vls_persist::model::ChannelEntry,
-    ) -> Result<(), ()> {
+    ) -> Result<(), Error> {
         trace!("Updating channel {key}");
         let key = format!("{CHANNEL_PREFIX}/{key}");
         let v = self
@@ -92,7 +100,11 @@ impl State {
         Ok(())
     }
 
-    fn get_channel(&self, key: &str) -> Result<lightning_signer::persist::model::ChannelEntry, ()> {
+    fn get_channel(
+        &self,
+        key: &str,
+    ) -> Result<lightning_signer::persist::model::ChannelEntry, lightning_signer::persist::Error>
+    {
         let key = format!("{CHANNEL_PREFIX}/{key}");
         let value = self.values.get(&key).unwrap();
         let entry: vls_persist::model::ChannelEntry =
@@ -127,7 +139,7 @@ impl State {
         &mut self,
         node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
-    ) {
+    ) -> Result<(), Error> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
         assert!(!self.values.contains_key(&key));
@@ -136,6 +148,7 @@ impl State {
 
         self.values
             .insert(key, (0u64, serde_json::to_value(tracker).unwrap()));
+        Ok(())
     }
 
     pub fn clear(&mut self) {
@@ -265,6 +278,8 @@ pub(crate) struct MemoryPersister {
     state: Arc<Mutex<State>>,
 }
 
+impl SendSync for MemoryPersister {}
+
 impl MemoryPersister {
     pub fn new() -> Self {
         let state = Arc::new(Mutex::new(State {
@@ -284,7 +299,7 @@ impl Persist for MemoryPersister {
         node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         config: &NodeConfig,
         state: &NodeState,
-    ) {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let key = hex::encode(node_id.serialize());
         self.state.lock().unwrap().insert_node(
             &key,
@@ -293,29 +308,31 @@ impl Persist for MemoryPersister {
                 network: config.network.to_string(),
             },
             state.into(),
-        );
+        )
     }
 
     fn update_node(
         &self,
         node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         state: &NodeState,
-    ) -> Result<(), ()> {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let key = hex::encode(node_id.serialize());
-        self.state.lock().unwrap().update_node(&key, state.into());
-        Ok(())
+        self.state.lock().unwrap().update_node(&key, state.into())
     }
 
-    fn delete_node(&self, node_id: &lightning_signer::bitcoin::secp256k1::PublicKey) {
+    fn delete_node(
+        &self,
+        node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
+    ) -> Result<(), lightning_signer::persist::Error> {
         let key = hex::encode(node_id.serialize());
-        self.state.lock().unwrap().delete_node(&key);
+        self.state.lock().unwrap().delete_node(&key)
     }
 
     fn new_channel(
         &self,
         node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         stub: &ChannelStub,
-    ) -> Result<(), ()> {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let id = vls_persist::model::NodeChannelId::new(node_id, &stub.id0);
         let channel_value_satoshis = 0;
         let enforcement_state = lightning_signer::policy::validator::EnforcementState::new(0);
@@ -334,7 +351,7 @@ impl Persist for MemoryPersister {
         &self,
         node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
         channel: &lightning_signer::channel::Channel,
-    ) -> Result<(), ()> {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let node_channel_id = vls_persist::model::NodeChannelId::new(node_id, &channel.id0);
         let id = hex::encode(node_channel_id.0);
         let channel_value_satoshis = channel.setup.channel_value_sat;
@@ -351,7 +368,8 @@ impl Persist for MemoryPersister {
         &self,
         node_id: &PublicKey,
         channel_id: &ChannelId,
-    ) -> Result<lightning_signer::persist::model::ChannelEntry, ()> {
+    ) -> Result<lightning_signer::persist::model::ChannelEntry, lightning_signer::persist::Error>
+    {
         let id = vls_persist::model::NodeChannelId::new(node_id, channel_id);
         let id = hex::encode(id.0);
         self.state.lock().unwrap().get_channel(&id)
@@ -361,18 +379,18 @@ impl Persist for MemoryPersister {
         &self,
         node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
-    ) {
+    ) -> Result<(), lightning_signer::persist::Error> {
         self.state
             .lock()
             .unwrap()
-            .new_chain_tracker(node_id, tracker);
+            .new_chain_tracker(node_id, tracker)
     }
 
     fn update_tracker(
         &self,
         node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
 
@@ -386,7 +404,10 @@ impl Persist for MemoryPersister {
     fn get_tracker(
         &self,
         node_id: &PublicKey,
-    ) -> Result<ChainTracker<lightning_signer::monitor::ChainMonitor>, ()> {
+    ) -> Result<
+        ChainTracker<lightning_signer::monitor::ChainMonitor>,
+        lightning_signer::persist::Error,
+    > {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
 
@@ -400,15 +421,18 @@ impl Persist for MemoryPersister {
     fn get_node_channels(
         &self,
         node_id: &PublicKey,
-    ) -> Vec<(ChannelId, lightning_signer::persist::model::ChannelEntry)> {
-        self.state.lock().unwrap().get_node_channels(node_id)
+    ) -> Result<
+        Vec<(ChannelId, lightning_signer::persist::model::ChannelEntry)>,
+        lightning_signer::persist::Error,
+    > {
+        Ok(self.state.lock().unwrap().get_node_channels(node_id))
     }
 
     fn update_node_allowlist(
         &self,
         node_id: &PublicKey,
         allowlist: Vec<std::string::String>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), lightning_signer::persist::Error> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{ALLOWLIST_PREFIX}/{key}");
 
@@ -426,17 +450,25 @@ impl Persist for MemoryPersister {
         Ok(())
     }
 
-    fn get_node_allowlist(&self, node_id: &PublicKey) -> Vec<std::string::String> {
+    fn get_node_allowlist(
+        &self,
+        node_id: &PublicKey,
+    ) -> Result<Vec<std::string::String>, lightning_signer::persist::Error> {
         let state = self.state.lock().unwrap();
         let key = hex::encode(node_id.serialize());
         let key = format!("{ALLOWLIST_PREFIX}/{key}");
         let allowlist: Vec<String> =
             serde_json::from_value(state.values.get(&key).unwrap().1.clone()).unwrap();
 
-        allowlist
+        Ok(allowlist)
     }
 
-    fn get_nodes(&self) -> Vec<(PublicKey, lightning_signer::persist::model::NodeEntry)> {
+    fn get_nodes(
+        &self,
+    ) -> Result<
+        Vec<(PublicKey, lightning_signer::persist::model::NodeEntry)>,
+        lightning_signer::persist::Error,
+    > {
         let state = self.state.lock().unwrap();
         let node_ids: Vec<&str> = state
             .values
@@ -471,16 +503,13 @@ impl Persist for MemoryPersister {
             };
 
             let key: Vec<u8> = hex::decode(node_id).unwrap();
-            res.push((
-                PublicKey::from_slice(key.as_slice()).unwrap(),
-                entry,
-            ));
+            res.push((PublicKey::from_slice(key.as_slice()).unwrap(), entry));
         }
 
         let nodes = res;
-        nodes
+        Ok(nodes)
     }
-    fn clear_database(&self) {
-        self.state.lock().unwrap().clear();
+    fn clear_database(&self) -> Result<(), lightning_signer::persist::Error> {
+        Ok(self.state.lock().unwrap().clear())
     }
 }
