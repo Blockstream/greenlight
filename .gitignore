@@ -7,3 +7,8 @@ hsm_secret
 .coverage
 libs/Cargo.lock
 *~
+
+# These files are auto generated and may contain sensible data that
+# we do not want to check-in!
+tls/users-nobody-key.pem
+tls/users-nobody.pem
