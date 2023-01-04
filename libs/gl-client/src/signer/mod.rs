@@ -187,11 +187,11 @@ impl Signer {
             trace!("Received request {}", hex_req);
 
             let sigreq = vls_protocol::msgs::from_vec(req.raw.clone())?;
-            let ctxrequests: Vec<model::Request> = dbg!(self
+            let ctxrequests: Vec<model::Request> = self
                 .check_request_auth(req.requests.clone())?
                 .into_iter()
-                .map(|r| decode_request(dbg!(r)))
-                .collect::<Result<Vec<model::Request>>>()?);
+                .map(|r| decode_request(r))
+                .collect::<Result<Vec<model::Request>>>()?;
 
             // TODO: Decode requests and reconcile them with the changes
             use auth::Authorizer;
@@ -500,13 +500,7 @@ fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request> {
     assert_eq!(r.request[0], 0u8);
     let payload = &r.request[5..];
 
-    Ok(
-        crate::signer::model::cln::decode_request(&r.uri, dbg!(payload))
-            .or_else(|_| {
-                dbg!(crate::signer::model::greenlight::decode_request(
-                    &r.uri, payload
-                ))
-            })
-            .unwrap(),
-    )
+    Ok(crate::signer::model::cln::decode_request(&r.uri, payload)
+        .or_else(|_| crate::signer::model::greenlight::decode_request(&r.uri, payload))
+        .unwrap())
 }
