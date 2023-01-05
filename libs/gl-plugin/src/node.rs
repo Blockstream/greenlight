@@ -142,11 +142,15 @@ impl PluginNodeServer {
                 .map(|p| {
                     p.channels
                         .iter()
-                        .filter(|c| c.short_channel_id.is_some() && c.alias.remote.is_some())
+                        .filter(|c| {
+                            c.short_channel_id.is_some()
+                                && c.alias.is_some()
+                                && c.alias.as_ref().unwrap().remote.is_some()
+                        })
                         .map(|c| {
                             (
                                 c.short_channel_id.clone().unwrap(),
-                                c.alias.clone().remote.unwrap(),
+                                c.alias.clone().unwrap().remote.unwrap(),
                             )
                         })
                 })
