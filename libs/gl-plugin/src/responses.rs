@@ -191,7 +191,7 @@ pub struct Channel {
     pub scratch_txid: Option<String>,
     pub owner: Option<String>,
     pub short_channel_id: Option<String>,
-    pub alias: Aliases,
+    pub alias: Option<Aliases>,
     pub direction: Option<u64>,
     pub channel_id: String,
     pub funding_txid: String,

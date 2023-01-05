@@ -30,11 +30,21 @@ impl From<responses::Connect> for ConnectResponse {
     }
 }
 
+impl From<responses::Aliases> for Aliases {
+    fn from(a: responses::Aliases) -> Self {
+        Self {
+            local: a.local.unwrap_or_default(),
+            remote: a.remote.unwrap_or_default(),
+        }
+    }
+}
+
 impl From<&responses::Channel> for Channel {
     fn from(c: &responses::Channel) -> Self {
         Channel {
             state: c.state.to_string(),
             owner: c.owner.clone().unwrap_or_default(),
+            alias: c.alias.clone().map(|c| c.into()),
             short_channel_id: c.short_channel_id.clone().unwrap_or_default(),
             direction: c.direction.unwrap_or_default() as u32,
             channel_id: c.channel_id.clone(),
