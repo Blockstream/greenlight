@@ -119,7 +119,7 @@ impl PluginNodeServer {
             .await?
             .peers
             .into_iter()
-            .filter(|p| p.connected && p.channels.len() > 0)
+            .filter(|p| p.channels.len() > 0)
             .collect::<Vec<Peer>>();
 
         // Now project channels to their state and flatten into a vec
