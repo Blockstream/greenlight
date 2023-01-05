@@ -12,6 +12,7 @@ use governor::{
 use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
 use serde_json::json;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -121,15 +122,36 @@ impl PluginNodeServer {
         // Now project channels to their state and flatten into a vec
         // of short_channel_ids
         let active: Vec<String> = res
-            .into_iter()
+            .iter()
             .map(|p| {
                 p.channels
-                    .into_iter()
+                    .iter()
                     .filter(|c| c.state == "CHANNELD_NORMAL")
-                    .filter_map(|c| c.short_channel_id)
+                    .filter_map(|c| c.clone().short_channel_id)
             })
             .flatten()
             .collect();
+
+        /* Due to a bug in `listincoming` in CLN we get the real
+         * `short_channel_id`, whereas we're supposed to use the
+         * remote alias if the channel is unannounced. This patches
+         * the issue in GL, and should work transparently once we fix
+         * `listincoming`. */
+        let aliases: HashMap<String, String> = HashMap::from_iter(
+            res.iter()
+                .map(|p| {
+                    p.channels
+                        .iter()
+                        .filter(|c| c.short_channel_id.is_some() && c.alias.remote.is_some())
+                        .map(|c| {
+                            (
+                                c.short_channel_id.clone().unwrap(),
+                                c.alias.clone().remote.unwrap(),
+                            )
+                        })
+                })
+                .flatten(),
+        );
 
         // Now we can listincoming, filter with the above active list,
         // and then map to become `pb::Routehint` instances
@@ -142,7 +164,11 @@ impl PluginNodeServer {
             .map(|i| pb::Routehint {
                 hops: vec![pb::RoutehintHop {
                     node_id: hex::decode(i.id).expect("hex-decoding node_id"),
-                    short_channel_id: i.short_channel_id,
+                    short_channel_id: aliases
+                        .get(&i.short_channel_id)
+                        .or(Some(&i.short_channel_id))
+                        .unwrap()
+                        .to_owned(),
                     fee_base: messages::Amount::from_string(&i.fee_base_msat)
                         .expect("parsing fee_base")
                         .msatoshi as u64,
@@ -937,10 +963,10 @@ where
                 let request = hyper::Request::from_parts(parts, body);
                 let res = inner.call(request).await;
 
-		// Defer cleanup into a separate task, otherwise we'd
-		// need `res` to be `Send` which we can't
-		// guarantee. This is needed since adding an await
-		// point splits the state machine at that point.
+                // Defer cleanup into a separate task, otherwise we'd
+                // need `res` to be `Send` which we can't
+                // guarantee. This is needed since adding an await
+                // point splits the state machine at that point.
                 tokio::spawn(async move {
                     reqctx.remove_request(req).await;
                 });
