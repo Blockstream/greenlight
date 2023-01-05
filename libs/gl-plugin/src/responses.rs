@@ -184,12 +184,14 @@ pub struct Htlc {
     pub state: String,
     pub local_trimmed: Option<bool>,
 }
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Channel {
     pub state: String,
     pub scratch_txid: Option<String>,
     pub owner: Option<String>,
     pub short_channel_id: Option<String>,
+    pub alias: Aliases,
     pub direction: Option<u64>,
     pub channel_id: String,
     pub funding_txid: String,
@@ -220,6 +222,12 @@ pub struct Channel {
     pub out_payments_fulfilled: u64,
     pub out_fulfilled_msat: MSat,
     pub htlcs: Vec<Htlc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Aliases {
+    pub local: Option<String>,
+    pub remote: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
