@@ -30,7 +30,7 @@ serde_json = "*"
 thiserror = "*"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
-tokio-util = { version = "0.6", features = ["codec"] }
+tokio-util = { version = "0.7", features = ["codec"] }
 tonic = { version = "^0.5", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 lightning-storage-server = { path = "../../vls/lightning-storage-server" }
