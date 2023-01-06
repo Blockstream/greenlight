@@ -34,6 +34,10 @@ serde_json = "^1.0"
 thiserror = "1"
 cln-grpc = "^0.1"
 
+# Temporarily embargo serde_bolt=0.2.2 which breaks the build. This
+# seems to be more stable than the patching support in `Cargo.toml`
+serde_bolt = "=0.2.1"
+
 [build-dependencies]
 tonic-build = "^0.8"
 serde = { version = "1", features = [ "derive" ] }
