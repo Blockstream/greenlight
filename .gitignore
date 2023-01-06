@@ -12,3 +12,4 @@ libs/Cargo.lock
 # we do not want to check-in!
 tls/users-nobody-key.pem
 tls/users-nobody.pem
+.coverage.*
