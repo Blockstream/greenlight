@@ -397,7 +397,7 @@ checksum = "da4fd51974683d0fd627fcebda69fdc6e56a2a433882f392f847166c85c5d4fb"
 dependencies = [
  "anyhow",
  "bitcoin_hashes 0.10.0",
- "cln-rpc 0.1.1",
+ "cln-rpc",
  "hex",
  "log",
  "prost 0.8.0",
@@ -407,36 +407,20 @@ dependencies = [
 
 [[package]]
 name = "cln-plugin"
-version = "0.1.0"
-source = "git+https://github.com/cdecker/lightning.git?branch=cln-plugin-working#5065dba0e127e7931141a81c8baf19e765715bed"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49be99e6e5ad55d420884b5b2a68aca890bcd1a1540ed6d2892363623a60f538"
 dependencies = [
  "anyhow",
  "bytes 1.3.0",
- "cln-rpc 0.1.0",
- "env_logger 0.9.3",
+ "env_logger 0.10.0",
  "futures",
  "log",
  "serde",
  "serde_json",
  "tokio 1.23.0",
  "tokio-stream",
- "tokio-util 0.6.10",
-]
-
-[[package]]
-name = "cln-rpc"
-version = "0.1.0"
-source = "git+https://github.com/cdecker/lightning.git?branch=cln-plugin-working#5065dba0e127e7931141a81c8baf19e765715bed"
-dependencies = [
- "anyhow",
- "bytes 1.3.0",
- "futures-util",
- "hex",
- "log",
- "serde",
- "serde_json",
- "tokio 1.23.0",
- "tokio-util 0.6.10",
+ "tokio-util 0.7.4",
 ]
 
 [[package]]
@@ -1130,7 +1114,7 @@ dependencies = [
  "clightningrpc",
  "cln-grpc",
  "cln-plugin",
- "cln-rpc 0.1.1",
+ "cln-rpc",
  "env_logger 0.7.1",
  "futures",
  "gl-client",
@@ -1142,16 +1126,16 @@ dependencies = [
  "linemux",
  "log",
  "nix 0.17.0",
- "prost 0.8.0",
+ "prost 0.11.3",
  "serde",
  "serde_json",
  "sled",
  "thiserror",
  "tokio 1.23.0",
  "tokio-stream",
- "tokio-util 0.6.10",
- "tonic 0.5.2",
- "tonic-build 0.5.2",
+ "tokio-util 0.7.4",
+ "tonic 0.8.3",
+ "tonic-build 0.8.4",
  "tower 0.4.13",
 ]
 

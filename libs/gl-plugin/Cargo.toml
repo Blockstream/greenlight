@@ -13,7 +13,7 @@ async-stream = "*"
 bytes = "1"
 clightningrpc = "*"
 cln-grpc = "*"
-cln-plugin = { git = "https://github.com/cdecker/lightning.git", branch = "cln-plugin-working" }
+cln-plugin = "0.1"
 cln-rpc = "*"
 env_logger = "^0.7.0"
 futures = "0.3"
@@ -24,14 +24,14 @@ lazy_static = "^1.4.0"
 linemux = "0.2"
 log = "0.4"
 nix = "0.17.0"
-prost = "0.8"
+prost = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
 thiserror = "*"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tonic = { version = "^0.5", features = ["tls", "transport"] }
+tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 lightning-storage-server = { path = "../../vls/lightning-storage-server" }
 sled = "*"
@@ -39,4 +39,4 @@ hyper = "0.14.23"
 base64 = "0.13.1"
 
 [build-dependencies]
-tonic-build = "^0.5"
+tonic-build = "^0.8"
