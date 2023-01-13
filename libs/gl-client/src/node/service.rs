@@ -73,6 +73,9 @@ impl Service<Request<BoxBody>> for AuthService {
         self.inner.poll_ready(cx).map_err(Into::into)
     }
     fn call(&mut self, request: Request<BoxBody>) -> Self::Future {
+	use base64::Engine;
+        let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
+
         // This is necessary because tonic internally uses `tower::buffer::Buffer`.
         // See https://github.com/tower-rs/tower/issues/547#issuecomment-767629149
         // for details on why this is necessary
@@ -105,10 +108,10 @@ impl Service<Request<BoxBody>> for AuthService {
             // and a total overhead of 199 bytes per request.
             parts
                 .headers
-                .insert("glauthpubkey", base64::encode(&pubkey).parse().unwrap());
+                .insert("glauthpubkey", engine.encode(&pubkey).parse().unwrap());
             parts
                 .headers
-                .insert("glauthsig", base64::encode(sig).parse().unwrap());
+                .insert("glauthsig", engine.encode(sig).parse().unwrap());
 
             let body = crate::node::stasher::StashBody::new(data).into();
             let request = Request::from_parts(parts, body);
