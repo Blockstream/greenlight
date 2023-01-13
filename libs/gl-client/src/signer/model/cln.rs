@@ -14,7 +14,7 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
 	"/cln.Node/AutoCleanInvoice" => Request::AutoCleanInvoice(AutocleaninvoiceRequest::decode(p)?),
 	"/cln.Node/CheckMessage" => Request::CheckMessage(CheckmessageRequest::decode(p)?),
 	"/cln.Node/Close" => Request::Close(CloseRequest::decode(p)?),
-	"/cln.Node/Connect" => Request::Connect(ConnectRequest::decode(p)?),
+	"/cln.Node/ConnectPeer" => Request::Connect(ConnectRequest::decode(p)?),
 	"/cln.Node/CreateInvoice" => Request::CreateInvoice(CreateinvoiceRequest::decode(p)?),
 	"/cln.Node/CreateOnion" => Request::CreateOnion(CreateonionRequest::decode(p)?),
 	"/cln.Node/Datastore" => Request::Datastore(DatastoreRequest::decode(p)?),
