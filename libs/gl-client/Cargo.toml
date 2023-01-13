@@ -8,7 +8,7 @@ permissive = []
 
 [dependencies]
 anyhow = "*"
-base64 = "*"
+base64 = "^0.21"
 bytes = "1.2.1"
 hex = "*"
 http = "0.2"
