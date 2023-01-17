@@ -1,6 +1,7 @@
 use crate::pb::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
 
+use crate::node::GrpcClient;
 use crate::{node, pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
@@ -43,16 +44,24 @@ impl Scheduler {
         Self::with(node_id, network, uri, &tls).await
     }
 
-    pub async fn register(&self, signer: &Signer, invite_code: Option<String>) -> Result<pb::RegistrationResponse> {
+    pub async fn register(
+        &self,
+        signer: &Signer,
+        invite_code: Option<String>,
+    ) -> Result<pb::RegistrationResponse> {
         let code = invite_code.unwrap_or_default();
-        return self.inner_register(signer, code).await
+        return self.inner_register(signer, code).await;
     }
 
     /// We split the register method into one with an invite code and one
     /// without an invite code in order to keep the api stable. We might want to
     /// remove the invite system in the future and so it does not make sense to
     /// change the signature of the register method.
-    async fn inner_register(&self, signer: &Signer, invite_code: String) -> Result<pb::RegistrationResponse> {
+    async fn inner_register(
+        &self,
+        signer: &Signer,
+        invite_code: String,
+    ) -> Result<pb::RegistrationResponse> {
         let challenge = self
             .client
             .clone()
@@ -172,7 +181,10 @@ impl Scheduler {
         Ok(res)
     }
 
-    pub async fn schedule(&self, tls: TlsConfig) -> Result<node::Client> {
+    pub async fn schedule<T>(&self, tls: TlsConfig) -> Result<T>
+    where
+        T: GrpcClient,
+    {
         let sched = self
             .client
             .clone()
