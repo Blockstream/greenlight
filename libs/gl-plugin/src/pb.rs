@@ -392,6 +392,7 @@ impl From<responses::Pay> for Payment {
             },
             bolt11: p.bolt11.unwrap_or("".to_string()),
             created_at: p.created_at,
+	    completed_at: p.completed_at.unwrap_or_default(),
         }
     }
 }
@@ -506,6 +507,7 @@ impl TryFrom<responses::ListPaysPay> for Payment {
             amount_sent: Some(p.amount_sent_msat.try_into()?),
             bolt11: p.bolt11.unwrap_or("".to_string()),
             created_at: p.created_at,
+	    completed_at: p.completed_at.unwrap_or_default(),
         })
     }
 }
@@ -672,6 +674,7 @@ impl From<responses::Keysend> for Payment {
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs_f64(),
+	    completed_at: 0,
         }
     }
 }

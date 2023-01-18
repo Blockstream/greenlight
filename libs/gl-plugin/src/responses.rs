@@ -1,8 +1,7 @@
-/// Various structs representing JSON-RPC responses
-use serde::Deserialize;
 use clightningrpc::common::MSat;
 pub use clightningrpc::responses::*;
-
+/// Various structs representing JSON-RPC responses
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Withdraw {
@@ -61,6 +60,7 @@ pub struct Pay {
     pub destination: String,
     pub payment_hash: String,
     pub created_at: f64,
+    pub completed_at: Option<u64>,
     pub parts: u32,
     pub msatoshi: u64,
     pub msatoshi_sent: u64,
@@ -77,6 +77,7 @@ pub struct ListPaysPay {
     pub destination: String,
     pub payment_hash: String,
     pub created_at: f64,
+    pub completed_at: Option<u64>,
     // parts is missing
     // msatoshi is renamed amount_msat
     pub amount_msat: Option<String>,
