@@ -110,6 +110,8 @@ impl From<&responses::ListFundsOutput> for ListFundsOutput {
             amount: Some(Amount {
                 unit: Some(amount::Unit::Millisatoshi(o.amount_msat.0)),
             }),
+            reserved: o.reserved,
+            reserved_to_block: o.reserved_to_block.unwrap_or_default(),
             output: Some(Outpoint {
                 outnum: o.output as u32,
                 txid: hex::decode(&o.txid).unwrap(),

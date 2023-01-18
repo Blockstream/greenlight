@@ -27,7 +27,6 @@ use tonic::{transport::ServerTlsConfig, Code, Request, Response, Status};
 mod wrapper;
 pub use wrapper::WrappedNodeServer;
 
-
 lazy_static! {
     static ref LIMITER: RateLimiter<NotKeyed, InMemoryState, DefaultClock> =
         RateLimiter::direct(Quota::per_minute(core::num::NonZeroU32::new(300).unwrap()));
@@ -560,7 +559,7 @@ impl Node for PluginNodeServer {
         // TODO Add the spent parameter to the call
         let rpc = self.rpc.lock().await;
 
-        let res: Result<clightningrpc::responses::ListFunds, crate::rpc::Error> =
+        let res: Result<crate::responses::ListFunds, crate::rpc::Error> =
             rpc.call("listfunds", crate::requests::ListFunds {}).await;
 
         match res {

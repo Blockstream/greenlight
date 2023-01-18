@@ -271,6 +271,8 @@ message ListFundsOutput {
 	Amount amount = 2;
 	string address = 4;
 	OutputStatus status = 5;
+	bool reserved = 6;
+	uint32 reserved_to_block = 7;
 }
 
 message ListFundsChannel {
