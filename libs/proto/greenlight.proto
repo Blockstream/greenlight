@@ -437,6 +437,9 @@ message Payment {
 
 	// UTC Unix timestamp of the time the invoice was created.
 	double created_at = 8;
+	// UTC Unix timestamp of the time the payment was completed
+	// (successfully or failed). 0 if not completed yet.
+	uint64 completed_at = 9;
 }
 
 // A payment identifier is a way to reference a unique payment, either
