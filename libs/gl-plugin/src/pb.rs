@@ -392,13 +392,21 @@ impl From<responses::Pay> for Payment {
             },
             bolt11: p.bolt11.unwrap_or("".to_string()),
             created_at: p.created_at,
-	    completed_at: p.completed_at.unwrap_or_default(),
+            completed_at: p.completed_at.unwrap_or_default(),
         }
     }
 }
 
 impl From<PayRequest> for requests::Pay {
     fn from(p: PayRequest) -> Self {
+	// PartialEq papers over the differences between 0.0 and -0.0
+	// in floats.
+        let maxfeepercent = if p.maxfeepercent.eq(&0.0) {
+            None
+        } else {
+            Some(p.maxfeepercent)
+        };
+
         requests::Pay {
             bolt11: p.bolt11,
             amount: p.amount.map(|a| a.try_into().unwrap()),
@@ -406,6 +414,8 @@ impl From<PayRequest> for requests::Pay {
                 0 => None,
                 v => Some(v),
             },
+            maxfee: p.maxfee.map(|a| a.try_into().unwrap()),
+            maxfeepercent,
         }
     }
 }
@@ -507,7 +517,7 @@ impl TryFrom<responses::ListPaysPay> for Payment {
             amount_sent: Some(p.amount_sent_msat.try_into()?),
             bolt11: p.bolt11.unwrap_or("".to_string()),
             created_at: p.created_at,
-	    completed_at: p.completed_at.unwrap_or_default(),
+            completed_at: p.completed_at.unwrap_or_default(),
         })
     }
 }
@@ -674,7 +684,7 @@ impl From<responses::Keysend> for Payment {
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs_f64(),
-	    completed_at: 0,
+            completed_at: 0,
         }
     }
 }

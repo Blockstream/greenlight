@@ -418,6 +418,10 @@ message PayRequest {
 	// Non-zero number of seconds before we should stop retrying
 	// the payment and return an error.
 	uint32 timeout = 3;
+
+	double maxfeepercent = 4;
+
+	Amount maxfee = 5;
 }
 
 enum PayStatus {
