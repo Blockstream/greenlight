@@ -244,3 +244,22 @@ pub struct Peer {
 pub struct ListPeers {
     pub peers: Vec<Peer>,
 }
+
+/// Sub-structure for 'listfunds' output
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListFundsOutput {
+    pub txid: String,
+    pub output: u64,
+    pub amount_msat: MSat,
+    pub address: String,
+    pub status: String,
+    pub reserved: bool,
+    pub reserved_to_block: Option<u32>,
+}
+
+/// 'listfunds' command
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListFunds {
+    pub outputs: Vec<ListFundsOutput>,
+    pub channels: Vec<ListFundsChannel>,
+}
