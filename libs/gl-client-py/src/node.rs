@@ -10,9 +10,7 @@ use tonic::{Code, Status};
 
 #[pyclass]
 pub struct Node {
-    _inner: gl::node::Node,
     client: gl::node::Client,
-    _node_id: Vec<u8>,
     gclient: gl::node::GClient,
 }
 
@@ -26,20 +24,26 @@ impl Node {
         };
 
         let inner = gl::node::Node::new(node_id.clone(), network, tls.inner);
-        let client = exec(inner.clone().connect(grpc_uri.clone())).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
-        })?;
 
-        let gclient = exec(inner.clone().connect(grpc_uri.clone())).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
-        })?;
+        // Connect to both interfaces in parallel to avoid doubling the startup time:
 
-        Ok(Node {
-            _inner: inner,
-            client,
-            _node_id: node_id,
-            gclient,
+	// TODO: Could be massively simplified by using a scoped task
+	// from tokio_scoped to a
+        let (client, gclient) = exec(async {
+            let i = inner.clone();
+            let u = grpc_uri.clone();
+            let h1 = tokio::spawn(async move { i.connect(u).await });
+            let i = inner.clone();
+            let u = grpc_uri.clone();
+            let h2 = tokio::spawn(async move { i.connect(u).await });
+
+            Ok::<(gl::node::Client, gl::node::GClient), anyhow::Error>((h1.await??, h2.await??))
         })
+        .map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
+        })?;
+
+        Ok(Node { client, gclient })
     }
 
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {
