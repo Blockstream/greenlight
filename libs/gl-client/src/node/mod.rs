@@ -1,4 +1,4 @@
-use crate::pb::cln::node_client::NodeClient as ClnClient;
+use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
@@ -15,6 +15,8 @@ use tower::ServiceBuilder;
 pub type Client = NodeClient<service::AuthService>;
 
 pub type GClient = GenericClient<service::AuthService>;
+
+pub type ClnClient = cln_client::NodeClient<service::AuthService>;
 
 pub trait GrpcClient {
     fn new_with_inner(inner: service::AuthService) -> Self;
@@ -45,7 +47,7 @@ impl GrpcClient for GClient {
     }
 }
 
-impl GrpcClient for ClnClient<service::AuthService> {
+impl GrpcClient for ClnClient {
     fn new_with_inner(inner: service::AuthService) -> Self {
         ClnClient::new(inner)
     }
@@ -60,7 +62,7 @@ impl Node {
         }
     }
 
-    pub async fn connect<C>(self, node_uri: String) -> Result<C>
+    pub async fn connect<C>(&self, node_uri: String) -> Result<C>
     where
         C: GrpcClient,
     {
