@@ -8,6 +8,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
+use cln_rpc;
 
 pub mod config;
 pub mod hsm;
@@ -124,12 +125,34 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
     };
 
     let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
-        .hook("invoice_payment", on_invoice_payment);
+        .hook("invoice_payment", on_invoice_payment)
+        .hook("peer_connected", on_peer_connected);
     Ok(Builder {
         state,
         inner,
         events,
     })
+}
+
+/// Notification handler that receives notifications on successful
+/// peer connections, then stores them into the `datastore` for future
+/// reference.
+async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
+    debug!("Got a successful peer connection: {:?}", v);
+    let call = serde_json::from_value::<messages::PeerConnectedCall>(v.clone()).unwrap();
+    let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
+    let req = cln_rpc::model::requests::DatastoreRequest{
+            key: vec!["greenlight".to_string(), "peerlist".to_string(), call.peer.id.clone()],
+            string: Some(serde_json::to_string(&call.peer).unwrap()),
+            hex: None,
+            mode: None,
+            generation: None,
+        };
+    
+    // We ignore the response and continue anyways.
+    let res = rpc.call_typed(req).await;
+    debug!("Got datastore response: {:?}", res);
+    Ok(json!({"result": "continue"}))
 }
 
 /// Notification handler that receives notifications on incoming

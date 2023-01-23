@@ -278,9 +278,50 @@ where
     serializer.serialize_str(&s)
 }
 
+/// PeerConnectedCall is the the message that is returned by the
+/// `peer_connected` hook.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PeerConnectedCall {
+    pub peer: Peer
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Peer {
+    pub id: String,
+    pub direction: Direction,
+    pub addr: String,
+    pub features: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Direction {
+    In,
+    Out
+}
+
+
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_peer_connected_call() {
+        let msg = json!({
+            "peer": {
+                "id": "03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f",
+                "direction": "in",
+                "addr": "34.239.230.56:9735",
+                "features": ""
+            }
+        });
+
+        let call = serde_json::from_str::<PeerConnectedCall>(&msg.to_string()).unwrap();
+        assert_eq!(call.peer.id, "03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f");
+        assert_eq!(call.peer.direction, Direction::In);
+        assert_eq!(call.peer.addr, "34.239.230.56:9735");
+        assert_eq!(call.peer.features, "");
+    }
 
     #[test]
     fn test_htlc_accepted_call() {
