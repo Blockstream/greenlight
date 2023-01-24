@@ -281,6 +281,20 @@ impl Node for PluginNodeServer {
             _ => req.node_id.as_str(),
         };
 
+        // We try to delete the peer that we disconnect from from the datastore.
+        // We don't want to be overly strict on this so we don't throw an error
+        // if this does not work.
+        match cln_rpc::ClnRpc::new(self.rpc_path.clone()).await {
+            Ok(mut rpc) =>{
+                let res = rpc.call_typed(cln_rpc::model::DeldatastoreRequest{
+                    key: vec!["greenlight".to_string(), "peerlist".to_string(), node_id.to_string()],
+                    generation: None,
+                }).await;
+                debug!("Got datastore response: {:?}", res);
+            },
+            Err(e) =>debug!("Could not connect to rpc {:?}", e),
+        };
+
         match rpc.disconnect(node_id, req.force).await {
             Ok(()) => Ok(Response::new(pb::DisconnectResponse {})),
             Err(e) => Err(Status::new(Code::Unknown, e.to_string())),

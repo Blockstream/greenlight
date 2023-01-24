@@ -1,4 +1,5 @@
 use cln_grpc::pb::{self, node_server::Node};
+use log::debug;
 use tonic::{Request, Response, Status};
 
 /// `WrappedNodeServer` enables us to quickly add customizations to
@@ -286,7 +287,22 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::DisconnectRequest>,
     ) -> Result<Response<pb::DisconnectResponse>, Status> {
-        self.inner.disconnect(r).await
+        let inner = r.into_inner();
+        let id = hex::encode(inner.id.clone());
+        debug!("Got a disconnect request for {}, try to delete it from the datastore peerlist.", id);
+       
+        // We try to delete the peer that we disconnect from from the datastore.
+        // We don't want to be overly strict on this so we don't throw an error
+        // if this does not work.
+        let data_res = self.del_datastore(Request::new(pb::DeldatastoreRequest{
+            key: vec!["greenlight".to_string(), "peerlist".to_string(), id.clone()],
+            generation: None,
+        })).await;
+        if let Err(e) = data_res {
+            log::debug!("Could not delete peer {} from datastore: {}", id, e);
+        }
+
+        self.inner.disconnect(Request::new(inner.clone())).await
     }
 
     async fn feerates(
