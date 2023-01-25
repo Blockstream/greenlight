@@ -129,21 +129,6 @@ pub struct Keysend {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct ListIncoming {
-    pub incoming: Vec<IncomingChannel>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct IncomingChannel {
-    pub id: String,
-    pub short_channel_id: String,
-    pub fee_base_msat: String,
-    pub fee_proportional_millionths: u32,
-    pub cltv_expiry_delta: u32,
-    pub incoming_capacity_msat: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct GetChainInfo {
     pub chain: String,
     pub headercount: u32,

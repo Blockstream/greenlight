@@ -181,9 +181,4 @@ impl LightningClient {
 
         Ok(addr)
     }
-
-    pub async fn listincoming(&self) -> Result<crate::responses::ListIncoming, Error> {
-        self.call("listincoming", crate::requests::ListIncoming {})
-            .await
-    }
 }

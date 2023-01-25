@@ -193,6 +193,3 @@ pub struct Keysend {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extratlvs: Option<HashMap<u64, String>>,
 }
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ListIncoming {}
