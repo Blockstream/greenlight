@@ -6,6 +6,9 @@ from glclient import nodepb
 from glclient import node_pb2_grpc as clngrpc
 from glclient import node_pb2 as clnpb
 import grpc
+from glclient import scheduler_pb2 as schedpb
+import time
+
 
 def test_node_network_gl_fund(node_factory, clients, bitcoind):
     """Setup a small network and check that we can send/receive payments.
@@ -126,3 +129,42 @@ def test_peerlist_datastore_remove(node_factory: NodeFactory, clients: Clients):
     # Check that the peer entry is removed
     res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
     assert len(res.datastore) == 0
+
+
+def test_reconnect_peers_on_startup(node_factory: NodeFactory, clients: Clients, scheduler: Scheduler):
+    """Check that the node reconnects to the peers from the datastore
+    peerlist.
+    """
+    l1: LightningNode = node_factory.get_node()
+    c: Client = clients.new()
+    c.register()
+    gl1 = c.node()
+
+    # We need the signer for the handshake
+    s = c.signer().run_in_thread()
+
+    # Setup grpc channel
+    cred = grpc.ssl_channel_credentials(
+        root_certificates=gl1.tls.ca,
+        private_key=gl1.tls.id[1],
+        certificate_chain=gl1.tls.id[0]
+    )
+    grpc_uri = gl1.grpc_uri[8:]  # Strip the `https://` prefix
+    chan = grpc.secure_channel(grpc_uri, cred)
+    client = clngrpc.NodeStub(chan)
+
+    # Connect from the gl node to a peer node.
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+    # Check that the peerlist has expected len.
+    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
+    assert len(res.datastore) == 1
+
+    # Stop node to disconnect from peer.
+    c.schedsvc.nodes[0].process.stop()
+    c.schedsvc.nodes[0].process = None
+
+    # Reschedule node and check that we reconnected to the peer
+    gl1 = c.node()
+    res = gl1.list_peers()
+    assert len(res.peers) == 1
+    assert res.peers[0].connected
