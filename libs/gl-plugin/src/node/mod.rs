@@ -1,10 +1,9 @@
 use crate::config::Config;
-use crate::messages;
 use crate::pb::{self, node_server::Node};
-use crate::rpc::LightningClient;
 use crate::stager;
 use crate::storage::StateStore;
 use anyhow::{Context, Error, Result};
+use cln_rpc::primitives::ShortChannelId;
 use gl_client::persist::State;
 use governor::{
     clock::DefaultClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
@@ -27,7 +26,6 @@ use tonic::{transport::ServerTlsConfig, Code, Request, Response, Status};
 mod wrapper;
 pub use wrapper::WrappedNodeServer;
 
-
 lazy_static! {
     static ref LIMITER: RateLimiter<NotKeyed, InMemoryState, DefaultClock> =
         RateLimiter::direct(Quota::per_minute(core::num::NonZeroU32::new(300).unwrap()));
@@ -44,7 +42,7 @@ lazy_static! {
 pub struct PluginNodeServer {
     pub tls: ServerTlsConfig,
     pub stage: Arc<stager::Stage>,
-    pub rpc: Arc<Mutex<LightningClient>>,
+    pub rpc: Arc<Mutex<crate::rpc::LightningClient>>,
     rpc_path: PathBuf,
     events: tokio::sync::broadcast::Sender<super::Event>,
     signer_state: Arc<Mutex<State>>,
@@ -68,7 +66,9 @@ impl PluginNodeServer {
         rpc_path.push("lightning-rpc");
         info!("Connecting to lightning-rpc at {:?}", rpc_path);
 
-        let rpc = Arc::new(Mutex::new(LightningClient::new(rpc_path.clone())));
+        let rpc = Arc::new(Mutex::new(crate::rpc::LightningClient::new(
+            rpc_path.clone(),
+        )));
 
         // Bridge the RPC_BCAST into the events queue
         let tx = events.clone();
@@ -98,87 +98,100 @@ impl PluginNodeServer {
         })
     }
 
-    pub async fn get_rpc(&self) -> LightningClient {
+    #[deprecated]
+    pub async fn get_rpc(&self) -> crate::rpc::LightningClient {
         let rpc = self.rpc.lock().await;
         let r = rpc.clone();
         drop(rpc);
         r
     }
 
+    /// Acts as a barrier until the RPC has become available. All RPC
+    /// calls will have to wait until the polling succeeds.
+    async fn rpc(&self) -> Result<cln_rpc::ClnRpc, tonic::Status> {
+        cln_rpc::ClnRpc::new(self.rpc_path.as_path())
+            .await
+            .map_err(|e| Status::new(Code::Internal, e.to_string()))
+    }
+
     /// Fetch a list of usable single-hop routehints corresponding to
     /// our active incoming channels.
     async fn get_routehints(&self) -> Result<Vec<pb::Routehint>, Error> {
-        use crate::responses::Peer;
-        let rpc = self.get_rpc().await;
+        use cln_rpc::model::{ListpeersPeersChannelsState as ChannelState, ListpeersRequest};
+        let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.as_path()).await?;
 
         // Get a list of active channels to peers so we can filter out
-        // offline peers or peers with unconfirmed or closing
-        // channels.
-        let res = rpc
-            .listpeers(None)
-            .await?
-            .peers
-            .into_iter()
-            .filter(|p| p.connected && p.channels.len() > 0)
-            .collect::<Vec<Peer>>();
+        // peers with unconfirmed or closing channels.
 
-        // Now project channels to their state and flatten into a vec
-        // of short_channel_ids
-        let active: Vec<String> = res
-            .iter()
+        // TODO(cdecker): Migrate this to `listpeerchannels` once we
+        // no longer have CLN 23.02+ nodes in the system.
+        let res = rpc
+            .call_typed(ListpeersRequest {
+                id: None,
+                level: None,
+            })
+            .await?
+            .peers;
+
+        let channels: Vec<cln_rpc::model::ListpeersPeersChannels> = res
+            .clone()
+            .into_iter()
             .map(|p| {
-                p.channels
-                    .iter()
-                    .filter(|c| c.state == "CHANNELD_NORMAL")
-                    .filter_map(|c| c.clone().short_channel_id)
+                #[allow(deprecated)]
+                p.channels.unwrap_or(vec![])
             })
             .flatten()
             .collect();
 
-        /* Due to a bug in `listincoming` in CLN we get the real
+        // Now project channels to their state and flatten into a vec
+        // of short_channel_ids
+        let active: Vec<ShortChannelId> = channels
+            .iter()
+            .filter(|c| match c.state {
+                ChannelState::CHANNELD_NORMAL => true,
+                _ => false,
+            })
+            .filter_map(|c| c.clone().short_channel_id)
+            .collect();
+
+        /* In `listincoming` in CLN we get the real
          * `short_channel_id`, whereas we're supposed to use the
          * remote alias if the channel is unannounced. This patches
          * the issue in GL, and should work transparently once we fix
          * `listincoming`. */
-        let aliases: HashMap<String, String> = HashMap::from_iter(
-            res.iter()
-                .map(|p| {
-                    p.channels
-                        .iter()
-                        .filter(|c| {
-                            c.short_channel_id.is_some()
-                                && c.alias.is_some()
-                                && c.alias.as_ref().unwrap().remote.is_some()
-                        })
-                        .map(|c| {
-                            (
-                                c.short_channel_id.clone().unwrap(),
-                                c.alias.clone().unwrap().remote.unwrap(),
-                            )
-                        })
+        let aliases: HashMap<ShortChannelId, ShortChannelId> = HashMap::from_iter(
+            channels
+                .into_iter()
+                .filter(|c| {
+                    c.short_channel_id.is_some()
+                        && c.alias.is_some()
+                        && c.alias.as_ref().unwrap().remote.is_some()
                 })
-                .flatten(),
+                .map(|c| {
+                    (
+                        c.short_channel_id.clone().unwrap(),
+                        c.alias.clone().unwrap().remote.unwrap(),
+                    )
+                }),
         );
 
         // Now we can listincoming, filter with the above active list,
         // and then map to become `pb::Routehint` instances
         Ok(rpc
-            .listincoming()
+            .call_typed(cln_rpc::model::ListincomingRequest {})
             .await?
             .incoming
             .into_iter()
             .filter(|i| active.contains(&i.short_channel_id))
             .map(|i| pb::Routehint {
                 hops: vec![pb::RoutehintHop {
-                    node_id: hex::decode(i.id).expect("hex-decoding node_id"),
+                    node_id: i.id.serialize().to_vec(),
                     short_channel_id: aliases
                         .get(&i.short_channel_id)
                         .or(Some(&i.short_channel_id))
                         .unwrap()
-                        .to_owned(),
-                    fee_base: messages::Amount::from_string(&i.fee_base_msat)
-                        .expect("parsing fee_base")
-                        .msatoshi as u64,
+                        .to_string(),
+                    fee_base: i.fee_base_msat.msat(),
                     fee_prop: i.fee_proportional_millionths,
                     cltv_expiry_delta: i.cltv_expiry_delta,
                 }],
