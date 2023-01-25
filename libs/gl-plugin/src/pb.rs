@@ -2,7 +2,7 @@ tonic::include_proto!("greenlight");
 use crate::{messages, requests, responses};
 use anyhow::{anyhow, Context, Result};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use cln_rpc::primitives::ShortChannelId;
+use cln_rpc::primitives::{PublicKey, ShortChannelId};
 use log::warn;
 use std::str::FromStr;
 
@@ -726,6 +726,105 @@ impl From<cln_rpc::model::ConnectResponse> for ConnectResponse {
         Self {
             node_id: hex::encode(v.id.serialize()),
             features: hex::encode(v.features.as_bytes()),
+        }
+    }
+}
+
+impl From<DisconnectRequest> for cln_rpc::model::DisconnectRequest {
+    fn from(v: DisconnectRequest) -> Self {
+        Self {
+            force: Some(v.force),
+            id: PublicKey::from_str(&v.node_id).expect("Could not decode pubkey"),
+        }
+    }
+}
+
+impl From<cln_rpc::model::DisconnectResponse> for DisconnectResponse {
+    fn from(_: cln_rpc::model::DisconnectResponse) -> Self {
+        Self {}
+    }
+}
+
+impl From<ListPeersRequest> for cln_rpc::model::ListpeersRequest {
+    fn from(v: ListPeersRequest) -> Self {
+        Self {
+            id: match v.node_id.as_ref() {
+		"" => None,
+		id =>
+		    Some(PublicKey::from_str(&id).expect("Could not decode pubkley"))
+	    },
+            level: None,
+        }
+    }
+}
+
+impl From<cln_rpc::model::ListpeersResponse> for ListPeersResponse {
+    fn from(v: cln_rpc::model::ListpeersResponse) -> Self {
+        Self {
+            peers: v.peers.into_iter().map(|p| p.into()).collect(),
+        }
+    }
+}
+
+impl From<cln_rpc::model::ListpeersPeers> for Peer {
+    fn from(v: cln_rpc::model::ListpeersPeers) -> Self {
+        Self {
+            addresses: vec![],
+            #[allow(deprecated)]
+            channels: v
+                .channels
+                .unwrap_or_default()
+                .into_iter()
+                .map(|c| c.into())
+                .collect(),
+            connected: v.connected,
+            features: v.features.unwrap_or_default(),
+            id: v.id.serialize().to_vec(),
+        }
+    }
+}
+
+/// Converted from Optional Amounts to the protobuf default-is-unset semantics.
+fn optmsat2str(c: Option<cln_rpc::primitives::Amount>) -> String {
+    c.map(|a| a.to_string()).unwrap_or_default()
+}
+
+impl From<cln_rpc::model::ListpeersPeersChannels> for Channel {
+    fn from(c: cln_rpc::model::ListpeersPeersChannels) -> Self {
+        Channel {
+            state: format!("{:?}", c.state),
+            owner: c.owner.clone().unwrap_or_default(),
+            alias: c.alias.map(|a| a.into()),
+            short_channel_id: c
+                .short_channel_id
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            direction: 0,
+            channel_id: c
+                .channel_id
+                .map(|h| hex::encode(h.to_vec()))
+                .unwrap_or_default(),
+            funding_txid: c.funding_txid.unwrap_or_default(),
+            close_to_addr: c.close_to_addr.clone().unwrap_or_default(),
+            close_to: c.close_to.clone().unwrap_or_default(),
+            private: c.private.unwrap_or_default(),
+            total: optmsat2str(c.total_msat),
+            dust_limit: optmsat2str(c.dust_limit_msat),
+            spendable: optmsat2str(c.spendable_msat),
+            receivable: optmsat2str(c.receivable_msat),
+            their_to_self_delay: c.their_to_self_delay.unwrap_or_default(),
+            our_to_self_delay: c.our_to_self_delay.unwrap_or_default(),
+            status: vec![],
+            htlcs: vec![], // TODO implement
+        }
+    }
+}
+
+impl From<cln_rpc::model::ListpeersPeersChannelsAlias> for Aliases {
+    fn from(v: cln_rpc::model::ListpeersPeersChannelsAlias) -> Self {
+        Self {
+            local: v.local.map(|a| a.to_string()).unwrap_or_default(),
+            remote: v.remote.map(|a| a.to_string()).unwrap_or_default(),
         }
     }
 }

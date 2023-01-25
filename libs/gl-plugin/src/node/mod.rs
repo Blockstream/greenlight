@@ -253,44 +253,26 @@ impl Node for PluginNodeServer {
         r: Request<pb::ListPeersRequest>,
     ) -> Result<Response<pb::ListPeersResponse>, Status> {
         LIMITER.until_ready().await;
-        let req = r.into_inner();
-        let rpc = self.rpc.lock().await;
-
-        let node_id = match req.node_id.as_ref() {
-            "" => None,
-            _ => Some(req.node_id.as_str()),
-        };
-
-        match rpc.listpeers(node_id).await {
-            Ok(s) => match s.try_into() {
-                Ok(s) => Ok(Response::new(s)),
-                Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-            },
-            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-        }
+        let req: cln_rpc::model::ListpeersRequest = r.into_inner().into();
+        self.rpc()
+            .await?
+            .call_typed(req)
+            .await
+            .map_err(|e| Status::new(Code::Unknown, e.to_string()))
+            .map(|r| Response::new(r.into()))
     }
 
     async fn disconnect(
         &self,
         r: Request<pb::DisconnectRequest>,
     ) -> Result<Response<pb::DisconnectResponse>, Status> {
-        let req = r.into_inner();
-        let rpc = self.get_rpc().await;
-
-        let node_id = match req.node_id.as_ref() {
-            "" => {
-                return Err(Status::new(
-                    Code::InvalidArgument,
-                    "Must specify a node ID to disconnect from",
-                ))
-            }
-            _ => req.node_id.as_str(),
-        };
-
-        match rpc.disconnect(node_id, req.force).await {
-            Ok(()) => Ok(Response::new(pb::DisconnectResponse {})),
-            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-        }
+        let req: cln_rpc::model::DisconnectRequest = r.into_inner().into();
+        self.rpc()
+            .await?
+            .call_typed(req)
+            .await
+            .map_err(|e| Status::new(Code::InvalidArgument, e.to_string()))
+            .map(|r| Response::new(r.into()))
     }
 
     async fn stream_log(
@@ -879,9 +861,11 @@ impl PluginNodeServer {
         // it. We need to call `stop` in a task because we might not
         // have completed startup. This can happen if we're stuck
         // waiting on the signer.
-        let rpc = self.get_rpc().await;
+        let mut rpc = self.rpc().await.expect("accessing RPC socket");
         tokio::spawn(async move {
-            rpc.stop().await.expect("calling `stop`");
+            rpc.call(cln_rpc::Request::Stop(cln_rpc::model::StopRequest {}))
+                .await
+                .expect("calling `stop`");
         });
         time::sleep(time::Duration::from_secs(2)).await;
         self.kill().await

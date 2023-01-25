@@ -388,7 +388,7 @@ checksum = "caec91d57288b55b30704be8ba1ff15a933f6e4e8f5be45f3395bd5a8cf7eecd"
 dependencies = [
  "anyhow",
  "bitcoin",
- "cln-rpc",
+ "cln-rpc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "log",
  "prost 0.11.6",
@@ -411,6 +411,22 @@ dependencies = [
  "serde_json",
  "tokio 1.24.1",
  "tokio-stream",
+ "tokio-util 0.7.4",
+]
+
+[[package]]
+name = "cln-rpc"
+version = "0.1.2"
+dependencies = [
+ "anyhow",
+ "bitcoin",
+ "bytes 1.3.0",
+ "futures-util",
+ "hex",
+ "log",
+ "serde",
+ "serde_json",
+ "tokio 1.24.1",
  "tokio-util 0.7.4",
 ]
 
@@ -1105,7 +1121,7 @@ dependencies = [
  "clightningrpc",
  "cln-grpc",
  "cln-plugin",
- "cln-rpc",
+ "cln-rpc 0.1.2",
  "env_logger 0.7.1",
  "futures",
  "gl-client",

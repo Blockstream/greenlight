@@ -14,7 +14,8 @@ bytes = "1"
 clightningrpc = "*"
 cln-grpc = "*"
 cln-plugin = "0.1"
-cln-rpc = "*"
+#cln-rpc = { git = "https://github.com/ElementsProject/lightning.git" }
+cln-rpc = { path = "../../../../lightning/cln-rpc" }
 env_logger = "^0.7.0"
 futures = "0.3"
 gl-client = { version = "0.1.4", path = "../gl-client" }
