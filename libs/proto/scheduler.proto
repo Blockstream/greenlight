@@ -120,6 +120,32 @@ service Scheduler {
 	// with the node id of the client. These invite codes can be used
 	// for further registration of new nodes.
 	rpc ListInviteCodes(ListInviteCodesRequest) returns (ListInviteCodesResponse) {}
+
+	// Exporting a node allows users to take control of their node
+	//
+	// This method initiates the node export on Greenlight,
+	// allowing users to offboard from GL into their own
+	// infrastructure. After calling this method the node will no
+	// longer be schedulable on Greenlight, since it is never safe
+	// to assume there haven't been changes in the node's state
+	// (see CLN Backups documentation for details). `ExportNode`
+	// marks the node as `Exporting`, then generates an encryption
+	// secret which is then used to encrypt a database
+	// backup. This encrypted database backup is then made
+	// accessible through an HTTP server, and a link to it is
+	// returned as a response to `ExportNode`. After the export
+	// completes the node is marked as `Exported`. The encryption
+	// key can then be derived using the signer, using ECDH,
+	// allowing only users with the node secret to decrypt it.
+	//
+	// `ExportNode` is idempotent and may be called multiple
+	// times, without causing the node to be re-exported multiple
+	// times, should the call or the download be interrupted. DO
+	// NOT import the backup multiple times into your
+	// infrastructure, as that can lead to dataloss (old state
+	// being replayed) and loss of funds (see CLN Backups
+	// documentation for more information)
+	rpc ExportNode(ExportNodeRequest) returns (ExportNodeResponse) {}
 };
 
 message ChallengeRequest {
@@ -257,4 +283,13 @@ message ListInviteCodesResponse {
 message InviteCode {
 	string code = 1;
 	bool is_redeemed = 2;
-};	
+};
+
+// Empty message for now, node identity is extracted from the mTLS
+// certificate used to authenticate against the Scheduler.
+message ExportNodeRequest {}
+
+message ExportNodeResponse {
+	// URL where the encrypted backup can be retrieved from.
+	string url = 1;
+}
