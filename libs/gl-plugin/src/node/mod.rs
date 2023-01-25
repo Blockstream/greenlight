@@ -239,16 +239,7 @@ impl Node for PluginNodeServer {
         &self,
         r: Request<pb::ConnectRequest>,
     ) -> Result<Response<pb::ConnectResponse>, Status> {
-        let r = r.into_inner();
-        let req = clightningrpc::requests::Connect {
-            id: &r.node_id,
-            host: match r.addr.as_ref() {
-                "" => None,
-                v => Some(v),
-            },
-        };
-
-        let req: cln_rpc::model::ConnectRequest = r.into();
+        let req: cln_rpc::model::ConnectRequest = r.into_inner().into();
         self.rpc()
             .await?
             .call_typed(req)
