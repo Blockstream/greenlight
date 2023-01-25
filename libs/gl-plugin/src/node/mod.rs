@@ -416,34 +416,69 @@ impl Node for PluginNodeServer {
         });
 
         // Now that we have an hsmd we can actually reconnect to our peers
-        let c2 = self.clone();
+        let rpc_path = self.rpc_path.clone();
         tokio::spawn(async move {
-            let rpc = c2.get_rpc().await;
-            let res = rpc.listpeers(None).await;
-            if res.is_err() {
-                warn!("Could not list peers to reconnect: {:?}", res);
-            }
+            match cln_rpc::ClnRpc::new(rpc_path).await {
+                Ok(mut rpc) => {
+                    let res = rpc.call_typed(cln_rpc::model::ListpeersRequest{
+                        id: None,
+                        level: None,
+                    }).await;
+                    if res.is_err() {
+                        warn!("Could not list peers to reconnect: {:?}", res);
+                    }
+                    
+                    let mut requests: Vec<cln_rpc::model::ConnectRequest> = res.unwrap().peers.iter()
+                        .filter(|&p| p.connected)
+                        .map(|p| cln_rpc::model::ConnectRequest{
+                            id: p.id.to_string(),
+                            host: None,
+                            port: None,
+                        })
+                        .collect();
 
-            for p in res.unwrap().peers.iter() {
-                if p.connected {
-                    debug!("Already connected to {}, not reconnecting", p.id);
-                    continue;
-                }
+                    let res = rpc.call_typed(cln_rpc::model::ListdatastoreRequest{
+                        key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
+                    }).await;
+                    if res.is_err() {
+                        warn!("Could not get peers from datastore: {:?}", res);
+                    }
 
-                trace!("Calling connect: {:?}", &p.id);
-                let res = rpc
-                    .connect(&clightningrpc::requests::Connect {
-                        id: &p.id,
-                        host: None, // TODO Maybe we can have an extra lookup service?
-                    })
-                    .await;
-                trace!("Connect returned: {:?} -> {:?}", &p.id, res);
+                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res.clone().unwrap().datastore.iter()
+                        .map(|x| {
+                            // We need to replace unnecessary escape characters that
+                            // have been added by the datastore, as serde is a bit
+                            // picky on that.
+                            let mut s = x.string.clone().unwrap();
+                            s = s.replace('\\', "");
+                            serde_json::from_str::<messages::Peer>(&s).unwrap()
+                        })
+                        .map(|x| cln_rpc::model::ConnectRequest{
+                            id: x.id,
+                            host: Some(x.addr),
+                            port: None,
+                        })
+                        .collect();
 
-                match res {
-                    Ok(r) => info!("Connection to {} established: {:?}", p.id, r),
-                    Err(e) => warn!("Could not connect to {}: {:?}", p.id, e),
-                }
-            }
+                    // Merge the two peer lists;
+                    requests.append(&mut datastore_requests);
+                    requests.sort_by(|a, b| a.id.cmp(&b.id));
+                    requests.dedup_by(|a, b| a.id.eq(&b.id));
+
+                    for r in requests {
+                        trace!("Calling connect: {:?}", &r.id);
+                        let res = rpc.call_typed(r.clone()).await;
+                        trace!("Connect returned: {:?} -> {:?}", &r.id, res);
+
+                        match res {
+                            Ok(r) => info!("Connection to {} established: {:?}", &r.id, r),
+                            Err(e) => warn!("Could not connect to {}: {:?}", &r.id, e),
+                        }
+                    }
+
+                },
+                Err(e) => warn!("Could not establish rpc connection: {}", e),
+            };
         });
         trace!("Returning stream_hsm_request channel");
         Ok(Response::new(ReceiverStream::new(rx)))
