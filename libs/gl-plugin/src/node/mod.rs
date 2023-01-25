@@ -210,10 +210,11 @@ impl Node for PluginNodeServer {
         _: Request<pb::GetInfoRequest>,
     ) -> Result<Response<pb::GetInfoResponse>, Status> {
         LIMITER.until_ready().await;
-        let rpc = self.get_rpc().await;
+        let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.as_path())
+            .await
+            .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
 
-        let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
-            rpc.call("getinfo", json!({})).await;
+        let res = rpc.call_typed(cln_rpc::model::GetinfoRequest {}).await;
 
         match res {
             Ok(r) => Ok(Response::new(
@@ -247,12 +248,13 @@ impl Node for PluginNodeServer {
             },
         };
 
-        let rpc = self.get_rpc().await;
-
-        match rpc.connect(&req).await {
-            Ok(s) => Ok(Response::new(s.into())),
-            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-        }
+        let req: cln_rpc::model::ConnectRequest = r.into();
+        self.rpc()
+            .await?
+            .call_typed(req)
+            .await
+            .map_err(|e| Status::new(Code::Unknown, e.to_string()))
+            .map(|r| tonic::Response::new(r.into()))
     }
 
     async fn list_peers(

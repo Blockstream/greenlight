@@ -6,15 +6,15 @@ use cln_rpc::primitives::ShortChannelId;
 use log::warn;
 use std::str::FromStr;
 
-impl TryFrom<responses::GetInfo> for GetInfoResponse {
+impl TryFrom<cln_rpc::model::GetinfoResponse> for GetInfoResponse {
     type Error = anyhow::Error;
-    fn try_from(i: responses::GetInfo) -> Result<GetInfoResponse> {
+    fn try_from(i: cln_rpc::model::GetinfoResponse) -> Result<GetInfoResponse> {
         Ok(GetInfoResponse {
             alias: i.alias,
             blockheight: i.blockheight as u32,
             color: hex::decode(i.color)?,
             addresses: vec![],
-            node_id: hex::decode(i.id)?,
+            node_id: i.id.serialize().to_vec(),
             version: i.version,
             num_peers: i.num_peers as u32,
             network: i.network,
@@ -704,6 +704,28 @@ impl From<RoutehintHop> for requests::RoutehintHopDev {
             fee_base_msat: r.fee_base,
             fee_proportional_millionths: r.fee_prop,
             cltv_expiry_delta: r.cltv_expiry_delta as u16,
+        }
+    }
+}
+
+impl From<ConnectRequest> for cln_rpc::model::ConnectRequest {
+    fn from(v: ConnectRequest) -> Self {
+        Self {
+            id: v.node_id,
+            host: match v.addr.as_ref() {
+                "" => None,
+                s => Some(s.to_owned()),
+            },
+            port: None,
+        }
+    }
+}
+
+impl From<cln_rpc::model::ConnectResponse> for ConnectResponse {
+    fn from(v: cln_rpc::model::ConnectResponse) -> Self {
+        Self {
+            node_id: hex::encode(v.id.serialize()),
+            features: hex::encode(v.features.as_bytes()),
         }
     }
 }
