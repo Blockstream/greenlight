@@ -8,6 +8,8 @@ use tonic::{Request, Response, Status};
 /// providing RouteHints for disconnected and zeroconf channels too.
 pub struct WrappedNodeServer {
     inner: cln_grpc::Server,
+    // Temporary `allow` since wrappers will likely use the RPC
+    #[allow(dead_code)]
     rpcpath: std::path::PathBuf,
 }
 
