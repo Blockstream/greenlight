@@ -21,15 +21,17 @@ pub struct Scheduler {
 #[pymethods]
 impl Scheduler {
     #[new]
-    fn new(node_id: Vec<u8>, network: String) -> PyResult<Scheduler> {
-        let network: Network = match network.parse() {
-            Ok(v) => v,
-            Err(_) => return Err(PyValueError::new_err("Error parsing the network")),
-        };
-        debug!("Node ID {}", hex::encode(&node_id));
+    fn new(node_id: Vec<u8>, network: String, tls: crate::tls::TlsConfig) -> PyResult<Scheduler> {
+        let network: Network = network
+            .parse()
+            .map_err(|e| PyValueError::new_err("Error parsing the network"))?;
 
         let id = node_id.clone();
-        let res = exec(async move { gl_client::scheduler::Scheduler::new(id, network).await });
+        let uri = gl_client::utils::scheduler_uri();
+
+        let res = exec(async move {
+            gl_client::scheduler::Scheduler::with(id, network, uri, &tls.inner).await
+        });
 
         let inner = match res {
             Ok(v) => v,
