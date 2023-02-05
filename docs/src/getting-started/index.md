@@ -32,8 +32,8 @@ In this guide we will be using two identities:
    kept locally, and certified by Greenlight to belong to a given
    node.
 
-See the [security](reference/security.md) page for more details about
-how the authentication works.
+See the [security][sec] page for more details about how the
+authentication works.
 
 ## Signer
 
@@ -43,9 +43,8 @@ requests from the node. It is initialized with the secret seed (a 32
 byte secret), the bitcoin network the node runs on, and the identity
 to use when communicating with the node.
 
-See the [security](reference/security.md) page for details on how the
-signer ensures that operations it signs off originate from an
-authenticated app.
+See the [security][sec] page for details on how the signer ensures
+that operations it signs off originate from an authenticated app.
 
 ## Scheduler
 
@@ -61,3 +60,4 @@ mechanism to register new nodes and look up where they are running.
 <!-- Chose a language -->
 
 [cln-github]: https://github.com/ElementsProject/lightning
+[sec]: ../reference/security.md

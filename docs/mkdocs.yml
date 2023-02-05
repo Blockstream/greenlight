@@ -28,10 +28,11 @@ nav:
     - Recover access: getting-started/recover.md
   - Tutorials:
     - Overview: tutorials/index.md
-    - Testing your app: tutorial/testing.md
+    - Testing your app: tutorials/testing.md
     - Self-Hosting: tutorials/self-hosting.md
-    - Standalone signer: tutorial/standalone-signer.md
+    - Standalone signer: tutorials/standalone-signer.md
   - Reference:
     - Overview: reference/index.md
     - Security: reference/security.md
+    - Node RPC Proxy: reference/node-rpc-proxy.md
   - about.md
