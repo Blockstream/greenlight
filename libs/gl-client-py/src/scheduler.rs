@@ -42,9 +42,13 @@ impl Scheduler {
     fn register(&self, signer: &Signer, invite_code: Option<String>) -> PyResult<Vec<u8>> {
         convert(exec(self.inner.register(&signer.inner, invite_code)))
     }
-    
+
     fn recover(&self, signer: &Signer) -> PyResult<Vec<u8>> {
         convert(exec(async move { self.inner.recover(&signer.inner).await }))
+    }
+
+    fn export_node(&self) -> PyResult<Vec<u8>> {
+        convert(exec(async move { self.inner.export_node().await }))
     }
 
     fn get_node_info(&self) -> PyResult<Vec<u8>> {
