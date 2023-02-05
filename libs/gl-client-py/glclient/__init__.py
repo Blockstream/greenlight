@@ -58,8 +58,8 @@ class Scheduler(object):
     def __init__(self, node_id: bytes, network: str, tls: TlsConfig):
         self.node_id = node_id
         self.network = network
-        self.inner = native.Scheduler(node_id, network)
         self.tls = tls
+        self.inner = native.Scheduler(node_id, network, tls.inner)
 
     def get_node_info(self) -> schedpb.NodeInfoResponse:
         return _convert(
@@ -78,6 +78,14 @@ class Scheduler(object):
     def recover(self, signer: Signer) -> schedpb.RecoveryResponse:
         res = self.inner.recover(signer.inner)
         return schedpb.RecoveryResponse.FromString(bytes(res))
+
+    def export_node(self) -> schedpb.ExportNodeResponse:
+        uri = "/scheduler.Scheduler/ExportNode"
+        req = schedpb.ExportNodeRequest().SerializeToString()
+        res = schedpb.ExportNodeResponse
+        return res.FromString(
+            bytes(self.inner.export_node())
+        )
 
     def node(self) -> "Node":
         res = self.schedule()

@@ -149,14 +149,14 @@ class Scheduler(object):
         hex_node_id = challenge.node_id.hex()
         certs.genca(f"/users/{hex_node_id}")
 
-        # Check if the request contains a csr and use it to generate the 
+        # Check if the request contains a csr and use it to generate the
         # certificate. Use the old flow if csr is not present.
         if req.csr is not None:
             device_cert = certs.gencert_from_csr(req.csr)
         else:
             device_cert = certs.gencert(f"/users/{hex_node_id}/device")
         node_cert = certs.gencert(f"/users/{hex_node_id}/node")
-        
+
         directory = self.node_directory / f"node-{num}"
         directory.mkdir(parents=True)
 
@@ -202,8 +202,8 @@ class Scheduler(object):
         assert challenge.scope == schedpb.ChallengeScope.RECOVER
         # TODO Verify that the response matches the challenge.
         hex_node_id = challenge.node_id.hex()
-        
-        # Check if the request contains a csr and use it to generate the 
+
+        # Check if the request contains a csr and use it to generate the
         # certificate. Use the old flow if csr is not present.
         if req.csr is not None:
             device_cert = certs.gencert_from_csr(req.csr, recover=True)
@@ -277,6 +277,9 @@ class Scheduler(object):
             grpc_uri=n.process.grpc_uri,
         )
 
+    def ExportNode(self, req, ctx):
+        raise ValueError("export_node is not currently implemented in gltesting.Scheduler")
+
     def GetNodeInfo(self, req, ctx):
         node = self.get_node(req.node_id)
 
@@ -302,7 +305,7 @@ class Scheduler(object):
         return schedpb.UpgradeResponse(
             old_version="v0.11.0.1",
         )
-    
+
     def ListInviteCodes(self, req, ctx):
         # Mocks the invite code return. The Server might be started
         # with a list of invite codes.
@@ -311,6 +314,6 @@ class Scheduler(object):
             print(f"ADD CODE: {code}")
             res.invite_code_list.extend([schedpb.InviteCode(
                 code=code["code"],
-	            is_redeemed=code["is_redeemed"],
+                    is_redeemed=code["is_redeemed"],
             )])
         return res

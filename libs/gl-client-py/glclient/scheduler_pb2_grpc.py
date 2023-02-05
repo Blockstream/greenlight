@@ -82,6 +82,11 @@ class SchedulerStub(object):
                 request_serializer=scheduler__pb2.ListInviteCodesRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.ListInviteCodesResponse.FromString,
                 )
+        self.ExportNode = channel.unary_unary(
+                '/scheduler.Scheduler/ExportNode',
+                request_serializer=scheduler__pb2.ExportNodeRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.ExportNodeResponse.FromString,
+                )
 
 
 class SchedulerServicer(object):
@@ -234,6 +239,36 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ExportNode(self, request, context):
+        """Exporting a node allows users to take control of their node
+
+        This method initiates the node export on Greenlight,
+        allowing users to offboard from GL into their own
+        infrastructure. After calling this method the node will no
+        longer be schedulable on Greenlight, since it is never safe
+        to assume there haven't been changes in the node's state
+        (see CLN Backups documentation for details). `ExportNode`
+        marks the node as `Exporting`, then generates an encryption
+        secret which is then used to encrypt a database
+        backup. This encrypted database backup is then made
+        accessible through an HTTP server, and a link to it is
+        returned as a response to `ExportNode`. After the export
+        completes the node is marked as `Exported`. The encryption
+        key can then be derived using the signer, using ECDH,
+        allowing only users with the node secret to decrypt it.
+
+        `ExportNode` is idempotent and may be called multiple
+        times, without causing the node to be re-exported multiple
+        times, should the call or the download be interrupted. DO
+        NOT import the backup multiple times into your
+        infrastructure, as that can lead to dataloss (old state
+        being replayed) and loss of funds (see CLN Backups
+        documentation for more information)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -271,6 +306,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.ListInviteCodes,
                     request_deserializer=scheduler__pb2.ListInviteCodesRequest.FromString,
                     response_serializer=scheduler__pb2.ListInviteCodesResponse.SerializeToString,
+            ),
+            'ExportNode': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExportNode,
+                    request_deserializer=scheduler__pb2.ExportNodeRequest.FromString,
+                    response_serializer=scheduler__pb2.ExportNodeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -431,5 +471,22 @@ class Scheduler(object):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ListInviteCodes',
             scheduler__pb2.ListInviteCodesRequest.SerializeToString,
             scheduler__pb2.ListInviteCodesResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ExportNode(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ExportNode',
+            scheduler__pb2.ExportNodeRequest.SerializeToString,
+            scheduler__pb2.ExportNodeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

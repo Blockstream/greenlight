@@ -201,6 +201,15 @@ impl Scheduler {
             .await
     }
 
+    pub async fn export_node(&self) -> Result<pb::ExportNodeResponse> {
+        Ok(self
+            .client
+            .clone()
+            .export_node(pb::ExportNodeRequest {})
+            .await?
+            .into_inner())
+    }
+
     pub async fn get_invite_codes(&self) -> Result<pb::ListInviteCodesResponse> {
         let res = self
             .client
