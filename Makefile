@@ -23,7 +23,7 @@ build-self: ensure-docker
 	pip install coverage
 
 check-self: ensure-docker
-	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing -n=$(shell nproc) --cov=glclient --cov-report=html
+	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing -n=$(shell nproc)
 
 ensure-docker:
 	@if [ "x${GL_DOCKER}" != "x1" ]; then \
