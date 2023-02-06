@@ -165,6 +165,12 @@ def test_reconnect_peers_on_startup(node_factory: NodeFactory, clients: Clients,
 
     # Reschedule node and check that we reconnected to the peer
     gl1 = c.node()
-    res = gl1.list_peers()
-    assert len(res.peers) == 1
-    assert res.peers[0].connected
+
+    def check(gl1):
+        """Little helper to wait for and verify
+        """
+        res = gl1.list_peers()
+        print(res)
+        return len(res.peers) == 1 and res.peers[0].connected
+
+    wait_for(lambda: check(gl1))

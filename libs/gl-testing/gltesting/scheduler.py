@@ -282,7 +282,7 @@ class Scheduler(object):
 
         if req.wait:
             with node.condition:
-                while node.process.proc is None:
+                while node.process is not None and node.process.proc is None:
                     logging.info(f"Signer waiting for node {node.node_id.hex()} to get scheduled")
                     node.condition.wait()
 
