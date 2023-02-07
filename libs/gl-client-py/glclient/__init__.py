@@ -3,11 +3,11 @@ from . import greenlight_pb2 as nodepb
 from . import node_pb2 as clnpb  # type: ignore
 from . import glclient as native
 from .tls import TlsConfig
+from .glclient import backup_decrypt_with_seed
 from google.protobuf.message import Message as PbMessage
-
 from .greenlight_pb2 import Amount
 from binascii import hexlify, unhexlify
-from typing import Optional, List, Union, Tuple, Iterable, SupportsIndex, Type, Any, TypeVar
+from typing import Optional, List, Union, Iterable, SupportsIndex, Type, TypeVar
 import logging
 
 

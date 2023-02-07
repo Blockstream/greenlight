@@ -24,7 +24,7 @@ impl Scheduler {
     fn new(node_id: Vec<u8>, network: String, tls: crate::tls::TlsConfig) -> PyResult<Scheduler> {
         let network: Network = network
             .parse()
-            .map_err(|e| PyValueError::new_err("Error parsing the network"))?;
+            .map_err(|_| PyValueError::new_err("Error parsing the network"))?;
 
         let id = node_id.clone();
         let uri = gl_client::utils::scheduler_uri();

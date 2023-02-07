@@ -1,13 +1,25 @@
 //! Utilities to work with export/backup files.
 use anyhow::{anyhow, Context, Error};
+use bitcoin::secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey};
+use bitcoin::Network;
 use bytes::{Buf, Bytes, BytesMut};
 use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
-use secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey};
 use std::io::Read;
 
 const VERSION: u8 = 0x01;
 /// Version byte, node ID, nonce, tag
 const HEADER_LEN: usize = 1 + 33 + 12 + 16;
+
+pub fn decrypt_with_seed(enc: BytesMut, seed: &SecretKey) -> Result<Bytes, Error> {
+    // Derive the nodeidkey from the seed.
+    use lightning_signer::signer::derive::{key_derive, KeyDerivationStyle};
+
+    let secp = Secp256k1::default();
+    let d = key_derive(KeyDerivationStyle::Native, Network::Bitcoin);
+    let (_, node_secret) = d.node_keys(&seed.secret_bytes(), &secp);
+
+    decrypt(enc, &node_secret)
+}
 
 pub fn decrypt(mut enc: BytesMut, privkey: &SecretKey) -> Result<Bytes, Error> {
     let mut r = enc.clone().reader();
