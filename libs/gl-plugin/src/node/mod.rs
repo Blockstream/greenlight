@@ -7,7 +7,7 @@ use crate::storage::StateStore;
 use anyhow::{Context, Error, Result};
 use gl_client::persist::State;
 use governor::{
-    clock::DefaultClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
+    clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
 use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
@@ -19,7 +19,7 @@ use std::sync::{
     Arc,
 };
 use tokio::{
-    sync::{broadcast, mpsc, Mutex},
+    sync::{broadcast, mpsc, Mutex, OnceCell},
     time,
 };
 use tokio_stream::wrappers::ReceiverStream;
@@ -27,9 +27,10 @@ use tonic::{transport::ServerTlsConfig, Code, Request, Response, Status};
 mod wrapper;
 pub use wrapper::WrappedNodeServer;
 
+static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
+    OnceCell::const_new();
+
 lazy_static! {
-    static ref LIMITER: RateLimiter<NotKeyed, InMemoryState, DefaultClock> =
-        RateLimiter::direct(Quota::per_minute(core::num::NonZeroU32::new(300).unwrap()));
     static ref HSM_ID_COUNT: AtomicUsize = AtomicUsize::new(0);
     static ref RPC_BCAST: broadcast::Sender<super::Event> = broadcast::channel(4).0;
 }
@@ -95,6 +96,18 @@ impl PluginNodeServer {
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
         })
+    }
+
+    // Wait for the limiter to allow a new RPC call
+    pub async fn limit(&self) {
+        let limiter = LIMITER
+            .get_or_init(|| async {
+                let quota = Quota::per_minute(core::num::NonZeroU32::new(300).unwrap());
+                RateLimiter::direct_with_clock(quota, &MonotonicClock::default())
+            })
+            .await;
+
+        limiter.until_ready().await
     }
 
     pub async fn get_rpc(&self) -> LightningClient {
@@ -195,7 +208,7 @@ impl Node for PluginNodeServer {
         &self,
         _: Request<pb::GetInfoRequest>,
     ) -> Result<Response<pb::GetInfoResponse>, Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         let rpc = self.get_rpc().await;
 
         let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
@@ -245,7 +258,7 @@ impl Node for PluginNodeServer {
         &self,
         r: Request<pb::ListPeersRequest>,
     ) -> Result<Response<pb::ListPeersResponse>, Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         let req = r.into_inner();
         let rpc = self.rpc.lock().await;
 
@@ -284,14 +297,20 @@ impl Node for PluginNodeServer {
         // We don't want to be overly strict on this so we don't throw an error
         // if this does not work.
         match cln_rpc::ClnRpc::new(self.rpc_path.clone()).await {
-            Ok(mut rpc) =>{
-                let res = rpc.call_typed(cln_rpc::model::DeldatastoreRequest{
-                    key: vec!["greenlight".to_string(), "peerlist".to_string(), node_id.to_string()],
-                    generation: None,
-                }).await;
+            Ok(mut rpc) => {
+                let res = rpc
+                    .call_typed(cln_rpc::model::DeldatastoreRequest {
+                        key: vec![
+                            "greenlight".to_string(),
+                            "peerlist".to_string(),
+                            node_id.to_string(),
+                        ],
+                        generation: None,
+                    })
+                    .await;
                 debug!("Got datastore response: {:?}", res);
-            },
-            Err(e) =>debug!("Could not connect to rpc {:?}", e),
+            }
+            Err(e) => debug!("Could not connect to rpc {:?}", e),
         };
 
         match rpc.disconnect(node_id, req.force).await {
@@ -419,26 +438,33 @@ impl Node for PluginNodeServer {
         tokio::spawn(async move {
             match cln_rpc::ClnRpc::new(rpc_path).await {
                 Ok(mut rpc) => {
-                    let res = rpc.call_typed(cln_rpc::model::ListpeersRequest{
-                        id: None,
-                        level: None,
-                    }).await;
+                    let res = rpc
+                        .call_typed(cln_rpc::model::ListpeersRequest {
+                            id: None,
+                            level: None,
+                        })
+                        .await;
                     if res.is_err() {
                         warn!("Could not list peers to reconnect: {:?}", res);
                     }
-                    
-                    let mut requests: Vec<cln_rpc::model::ConnectRequest> = res.unwrap().peers.iter()
+
+                    let mut requests: Vec<cln_rpc::model::ConnectRequest> = res
+                        .unwrap()
+                        .peers
+                        .iter()
                         .filter(|&p| p.connected)
-                        .map(|p| cln_rpc::model::ConnectRequest{
+                        .map(|p| cln_rpc::model::ConnectRequest {
                             id: p.id.to_string(),
                             host: None,
                             port: None,
                         })
                         .collect();
 
-                    let res = rpc.call_typed(cln_rpc::model::ListdatastoreRequest{
-                        key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
-                    }).await;
+                    let res = rpc
+                        .call_typed(cln_rpc::model::ListdatastoreRequest {
+                            key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
+                        })
+                        .await;
                     if res.is_err() {
                         warn!("Could not get peers from datastore: {:?}", res);
                     }
@@ -453,7 +479,7 @@ impl Node for PluginNodeServer {
                             s = s.replace('\\', "");
                             serde_json::from_str::<messages::Peer>(&s).unwrap()
                         })
-                        .map(|x| cln_rpc::model::ConnectRequest{
+                        .map(|x| cln_rpc::model::ConnectRequest {
                             id: x.id,
                             host: Some(x.addr),
                             port: None,
@@ -475,8 +501,7 @@ impl Node for PluginNodeServer {
                             Err(e) => warn!("Could not connect to {}: {:?}", &r.id, e),
                         }
                     }
-
-                },
+                }
                 Err(e) => warn!("Could not establish rpc connection: {}", e),
             };
         });
@@ -488,7 +513,7 @@ impl Node for PluginNodeServer {
         &self,
         r: Request<pb::NewAddrRequest>,
     ) -> Result<Response<pb::NewAddrResponse>, Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         let req = r.into_inner();
         let rpc = self.rpc.lock().await;
         match rpc.newaddr(req.address_type()).await {
@@ -556,7 +581,7 @@ impl Node for PluginNodeServer {
         &self,
         _: Request<pb::ListFundsRequest>,
     ) -> Result<Response<pb::ListFundsResponse>, Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         // TODO Add the spent parameter to the call
         let rpc = self.rpc.lock().await;
 
@@ -685,7 +710,7 @@ impl Node for PluginNodeServer {
         &self,
         req: Request<pb::InvoiceRequest>,
     ) -> Result<Response<pb::Invoice>, Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         let req = req.into_inner();
         let rpc = self.get_rpc().await;
 
@@ -764,7 +789,7 @@ impl Node for PluginNodeServer {
         &self,
         req: tonic::Request<pb::ListPaymentsRequest>,
     ) -> Result<tonic::Response<pb::ListPaymentsResponse>, tonic::Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         let rpc = self.rpc.lock().await;
         let req: crate::requests::ListPays = match req.into_inner().try_into() {
             Ok(v) => v,
@@ -792,7 +817,7 @@ impl Node for PluginNodeServer {
         &self,
         req: tonic::Request<pb::ListInvoicesRequest>,
     ) -> Result<tonic::Response<pb::ListInvoicesResponse>, tonic::Status> {
-        LIMITER.until_ready().await;
+        self.limit().await;
         let req = req.into_inner();
         let req: crate::requests::ListInvoices = match req.try_into() {
             Ok(v) => v,
