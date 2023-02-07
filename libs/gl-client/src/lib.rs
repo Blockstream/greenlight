@@ -43,6 +43,9 @@ pub mod persist;
 /// connection to the node.
 pub mod tls;
 
+#[cfg(feature = "export")]
+pub mod export;
+
 /// Tools to interact with a node running on greenlight.
 pub mod utils {
 
