@@ -90,7 +90,7 @@ class Context:
     def __init__(self, network='testnet', start_hsmd=False):
         self.tls = Tls()
         self.load_metadata(self.tls.tls)
-        self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls)
+        self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls.tls)
         self.scheduler.tls = self.tls.tls
         self.node = None
         self.scheduler_chan = None
@@ -508,6 +508,31 @@ def listpays(ctx):
     node = ctx.obj.get_node()
     res = node.list_payments()
     pbprint(res)
+
+
+@scheduler.command()
+@click.pass_context
+def export(ctx):
+    print("""
+    You are about to export your node from greenlight. This will disable the node
+    on greenlight, create an encrypted backup and serve that backup back to you.
+
+    This is intended for users that would like to offboard and run their node on
+    their own infrastructure. Due to the security model of Lightning Nodes, we
+    will not be able to reactivate the node on greenlight. Please configure and
+    test your infrastructure before exporting, to prevent prolonged downtime.
+    """)
+    answer = input("Do you want to continue (y/N)?")
+    if answer.lower() != "y":
+        print("Cancelling the export...")
+        return
+
+    scheduler = ctx.obj.scheduler
+    exp = scheduler.export_node()
+    print(exp)
+    # TODO Download
+    # TODO Decrypt
+    # TODO Print about next steps
 
 
 if __name__ == "__main__":
