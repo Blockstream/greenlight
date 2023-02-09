@@ -443,7 +443,8 @@ impl Node for PluginNodeServer {
                         warn!("Could not get peers from datastore: {:?}", res);
                     }
 
-                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res.clone().unwrap().datastore.iter()
+                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res.clone()
+                    .unwrap_or_else(|_| cln_rpc::model::ListdatastoreResponse{datastore: vec![]}).datastore.iter()
                         .map(|x| {
                             // We need to replace unnecessary escape characters that
                             // have been added by the datastore, as serde is a bit
