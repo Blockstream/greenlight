@@ -16,6 +16,7 @@ type Client = SchedulerClient<Channel>;
 pub struct Scheduler {
     node_id: Vec<u8>,
     inner: gl_client::scheduler::Scheduler,
+    tls: crate::tls::TlsConfig,
 }
 
 #[pymethods]
@@ -29,8 +30,9 @@ impl Scheduler {
         let id = node_id.clone();
         let uri = gl_client::utils::scheduler_uri();
 
+        let ctls = tls.clone();
         let res = exec(async move {
-            gl_client::scheduler::Scheduler::with(id, network, uri, &tls.inner).await
+            gl_client::scheduler::Scheduler::with(id, network, uri, &ctls.inner).await
         });
 
         let inner = match res {
@@ -38,7 +40,11 @@ impl Scheduler {
             Err(_) => return Err(PyValueError::new_err("could not connect to the scheduler")),
         };
 
-        Ok(Scheduler { node_id, inner })
+        Ok(Scheduler {
+            node_id,
+            inner,
+            tls,
+        })
     }
 
     fn register(&self, signer: &Signer, invite_code: Option<String>) -> PyResult<Vec<u8>> {
@@ -113,7 +119,6 @@ impl Scheduler {
 
     async fn connect(&self) -> Result<Client> {
         let uri = gl_client::utils::scheduler_uri();
-        let tls = TlsConfig::new()?;
-        self.connect_with(uri, &tls).await
+        self.connect_with(uri, &self.tls.inner).await
     }
 }
