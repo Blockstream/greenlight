@@ -36,6 +36,7 @@ fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
 
 impl TlsConfig {
     pub fn new() -> Result<Self> {
+	debug!("Configuring TlsConfig with nobody identity");
         // Allow overriding the defaults through the environment variables
         let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
         let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
@@ -43,10 +44,10 @@ impl TlsConfig {
 
         Self::with(nobody_crt, nobody_key, ca_crt)
     }
-    pub fn with<V: AsRef<[u8]>>(nobody_crt: V, nobody_key: V, ca_crt: V) -> Result<Self> {
+    pub fn with<V: AsRef<[u8]>>(crt: V, key: V, ca_crt: V) -> Result<Self> {
         let config = ClientTlsConfig::new()
             .ca_certificate(Certificate::from_pem(ca_crt.as_ref()))
-            .identity(Identity::from_pem(nobody_crt, nobody_key));
+            .identity(Identity::from_pem(crt, key));
 
         Ok(TlsConfig {
             inner: config,
