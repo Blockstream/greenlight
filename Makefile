@@ -38,6 +38,9 @@ docker-shell:
 	docker run \
 	  -ti \
 	  --rm \
+          -e CARGO_TARGET_DIR=/tmp/target\
+          -v /tmp/target:/tmp/target \
+          -v /tmp/gl-cargo-registry:/root/.cargo/registry/\
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting bash
 
