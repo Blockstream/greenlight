@@ -22,7 +22,7 @@ use vls_protocol_signer::handler::Handler;
 mod auth;
 pub mod model;
 
-const VERSION: &str = "v0.11.0.1";
+const VERSION: &str = "v22.11";
 
 #[derive(Clone)]
 pub struct Signer {
@@ -111,6 +111,8 @@ impl Signer {
             dev_bip32_seed: None,
             dev_channel_secrets: None,
             dev_channel_secrets_shaseed: None,
+            hsm_wire_min_version: 1,
+            hsm_wire_max_version: 2,
         };
         Ok(handler
             .handle(vls_protocol::msgs::Message::HsmdInit(query))
@@ -425,7 +427,7 @@ impl Signer {
     }
 
     pub fn version(&self) -> &'static str {
-        "v0.11.0.1"
+        VERSION
     }
 }
 
