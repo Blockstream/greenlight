@@ -54,3 +54,25 @@ docker-check:
 	  --rm \
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting make check
+
+CLN_VERSIONS = \
+	v0.10.1 \
+	v0.10.2 \
+	v0.11.0.1 \
+	v0.11.2gl2 \
+	v0.11.2 \
+	v22.11gl1
+
+CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)
+
+cln-versions/%/usr/local/bin/lightningd: cln-versions/lightningd-%.tar.bz2
+	@echo "Extracting $* from tarball $< into cln-versions/$*/"
+	mkdir -p "cln-versions/$*"
+	tar -xjf $< -C "cln-versions/$*/"
+
+cln-versions/lightningd-%.tar.bz2:
+	mkdir -p cln-versions
+	wget -q "https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-$*.tar.bz2" -O $@
+
+
+cln: ${CLN_TARGETS}
