@@ -11,6 +11,7 @@ ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV RUST_VERSION=1.67.0
 ENV PATH=/root/.cargo/bin:$PATH
+ENV RUST_LOG=debug
 
 RUN apt-get update && apt-get install -qqy \
     python3 \
@@ -22,6 +23,7 @@ RUN apt-get update && apt-get install -qqy \
     git \
     jq \
     libtool \
+    libpq5 \
     libgmp-dev \
     libsqlite3-dev \
     net-tools \
@@ -52,43 +54,11 @@ RUN python3 -m pip install -U \
     maturin \
     mrkd \
     mako
-
-ENV VERSION=v0.10.1
-RUN git clone https://github.com/ElementsProject/lightning.git /repo/cln-$VERSION --branch $VERSION && \
-    cd /repo/cln-$VERSION && \
-    pip install -r requirements.txt && \
-    ./configure --enable-developer --disable-valgrind && \
-    make -j $(nproc) && \
-    make DESTDIR=/opt/cln-$VERSION   install
-
-ENV VERSION=v0.10.2
-RUN git clone https://github.com/ElementsProject/lightning.git /repo/cln-$VERSION --branch $VERSION && \
-    cd /repo/cln-$VERSION && \
-    pip install -r requirements.lock && \
-    ./configure --enable-developer --disable-valgrind && \
-    make -j $(nproc) && \
-    make DESTDIR=/opt/cln-$VERSION   install
-
-ENV VERSION=v0.11.0.1
-RUN git clone https://github.com/ElementsProject/lightning.git /repo/cln-$VERSION --branch $VERSION && \
-    cd /repo/cln-$VERSION && \
-    ./configure --enable-developer --disable-valgrind && \
-    make -j $(nproc) && \
-    make DESTDIR=/opt/cln-$VERSION   install
-
-ENV VERSION=v0.11.2gl2
-RUN git clone https://github.com/cdecker/lightning.git /repo/cln-$VERSION --branch $VERSION && \
-    cd /repo/cln-$VERSION && \
-    ./configure --enable-developer --disable-valgrind && \
-    make -j $(nproc) && \
-    make DESTDIR=/opt/cln-$VERSION   install
-
-# Place a link to the latest version so we can add it to the path in
-# the tester image.
-RUN ln -s /opt/cln-$VERSION /opt/cln-latest
-
 ADD . /repo
-ENV RUST_LOG=debug
+WORKDIR /repo
+
+RUN make -j $(proc) cln
+
 RUN (cd /repo/libs/gl-client && cargo build --release) && \
     (cd /repo/libs/gl-client-py && maturin build --release --strip --compatibility manylinux_2_28) && \
     (cd /repo/libs && cargo build --all --release --bin gl-plugin && cargo build --all --release --bin gl-signerproxy)
@@ -118,6 +88,7 @@ RUN apt-get update && apt-get install -qqy \
     libgmp-dev \
     libsodium23 \
     libsqlite3-dev \
+    libpq5 \
     libtool \
     nodejs \
     npm \
@@ -131,7 +102,7 @@ RUN apt-get update && apt-get install -qqy \
     && rm -rf /var/lib/apt/lists/*
 
 # Enumerate all CLN version we want `gl-testing` to find.
-ENV CLN_PATH=/opt/cln-v0.10.1/usr/local/bin/:/opt/cln-v0.10.2/usr/local/bin/:/opt/cln-v0.11.0.1/usr/local/bin/:/opt/cln-v0.11.2gl2/usr/local/bin/
+ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/
 
 # Shorten poll intervals so tests are faster to run
 ENV DEVELOPER=1
@@ -199,7 +170,7 @@ RUN cd /tmp/ && \
     mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
     rm -rf bitcoin.tar.bz2 /tmp/bitcoin-$BITCOIN_VERSION
 
-COPY --from=builder /opt/ /opt/
+COPY --from=builder /repo/cln-versions/ /opt/cln
 COPY --from=builder /tmp/target /tmp/target
 COPY --from=builder /repo/libs/target/wheels/gl_client_py-* /opt/
 RUN python3 -m pip install /opt/gl_client_py-*
@@ -208,5 +179,5 @@ ADD . /repo
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`
 RUN python3 -m pip install /repo/libs/gl-testing
-
+RUN ln -s /opt/cln/v22.11gl1 /opt/cln-latest
 WORKDIR /repo
