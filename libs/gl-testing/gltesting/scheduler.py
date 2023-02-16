@@ -57,13 +57,18 @@ def enumerate_cln_versions():
     path = os.environ["PATH"].split(":")
     path += os.environ.get("CLN_PATH", "").split(":")
     path = [p for p in path if p != ""]
+
+    logging.debug(f"Looking for CLN versions in {path}")
+
     version_paths = [shutil.which("lightningd", path=p) for p in path]
     version_paths = [p for p in version_paths if p is not None]
 
     versions = {}
     for v in version_paths:
+        logging.debug(f"Detecting version of lightningd at {v}")
         vs = subprocess.check_output([v, "--version"]).strip().decode("ASCII")
         versions[vs] = NodeVersion(path=Path(v).resolve(), name=vs)
+        logging.debug(f"Determined version {vs} for executable {v}")
 
     logging.info(f"Found {len(versions)} versions: {versions}")
     return versions
@@ -242,7 +247,13 @@ class Scheduler(object):
             )
 
         node_version = n.signer_version.get_node_version()
-        node_version = self.versions[node_version]
+        node_version = self.versions.get(node_version, None)
+
+        logging.debug(f"Determined that we need to start {node_version=} for {n.signer_version=}")
+
+        if node_version is None:
+            raise ValueError(f"No node_version found for {n.signer_version=}")
+
         # Otherwise we need to start a new process
         n.process = NodeProcess(
             node_id=req.node_id,
