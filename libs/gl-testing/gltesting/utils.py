@@ -21,6 +21,7 @@ class SignerVersion:
             "v0.10.2": ["v0.10.2"],
             "v0.11.0.1": ["v0.11.0.1", "v0.11.2gl2"],
             "v0.11.2": ["v0.11.0.1", "v0.11.2gl2"],
+            "v22.11": ["v22.11gl1"],
         }
 
         return self.name in compat[nv.name]
@@ -33,6 +34,7 @@ class SignerVersion:
             "v0.10.2": "v0.10.2",
             "v0.11.0.1": "v0.11.2gl2",
             "v0.11.2": "v0.11.2gl2",
+            "v22.11": "v22.11gl1",
         }
         return m[self.name]
 
