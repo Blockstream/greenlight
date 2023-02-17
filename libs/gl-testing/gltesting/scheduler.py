@@ -32,6 +32,7 @@ class Node:
     identity: Identity
     process: Optional[NodeProcess]
     plugin_grpc_uri: Optional[str]
+    startupmsgs: List[schedpb.StartupMessage]
     # Condition we wait on in GetNodeInfo for signers
     condition: Condition
 
@@ -179,6 +180,7 @@ class Scheduler(object):
                 process=None,
                 plugin_grpc_uri=None,
                 condition=Condition(),
+                startupmsgs=req.startupmsgs,
             )
         )
 
