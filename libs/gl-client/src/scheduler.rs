@@ -81,6 +81,12 @@ impl Scheduler {
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting registration with csr:\n{}", device_csr);
 
+        let startupmsgs = signer
+            .get_startup_messages()
+            .into_iter()
+            .map(|m| m.into())
+            .collect();
+
         let mut res = self
             .client
             .clone()
@@ -93,7 +99,8 @@ impl Scheduler {
                 init_msg: signer.get_init(),
                 signature,
                 csr: device_csr.into_bytes(),
-                invite_code: invite_code,
+                invite_code,
+                startupmsgs,
             })
             .await?
             .into_inner();
