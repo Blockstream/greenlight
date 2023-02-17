@@ -2,7 +2,7 @@
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
-use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
+use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
@@ -488,7 +488,8 @@ pub struct StartupMessage {
     response: Vec<u8>,
 }
 
-impl From<StartupMessage> for crate::pb::StartupMessage {
+
+impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
     fn from(r: StartupMessage) -> Self {
         Self {
             request: r.request,

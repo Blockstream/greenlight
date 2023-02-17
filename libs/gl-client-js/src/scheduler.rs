@@ -76,7 +76,7 @@ pub struct InviteCode {
 }
 
 impl InviteCode {
-    fn from_proto(msg: gl_client::pb::InviteCode) -> Self {
+    fn from_proto(msg: gl_client::pb::scheduler::InviteCode) -> Self {
         Self {
             code: msg.code,
             is_redeemed: msg.is_redeemed,
@@ -86,7 +86,7 @@ impl InviteCode {
 
 impl Finalize for InviteCode {}
 
-pub fn convert_invite_codes(msg: gl_client::pb::ListInviteCodesResponse) -> Vec<InviteCode> {
+pub fn convert_invite_codes(msg: gl_client::pb::scheduler::ListInviteCodesResponse) -> Vec<InviteCode> {
     let mut icodes = Vec::with_capacity(msg.invite_code_list.len());
     for c in msg.invite_code_list {
         icodes.push(InviteCode::from_proto(c));

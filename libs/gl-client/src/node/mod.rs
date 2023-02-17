@@ -1,6 +1,6 @@
 use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
-use crate::pb::{scheduler_client::SchedulerClient, ScheduleRequest};
+use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
 use crate::utils;
 use anyhow::{anyhow, Result};
