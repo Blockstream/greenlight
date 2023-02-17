@@ -6,7 +6,7 @@ use crate::pb::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeReque
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
-use bytes::{Buf, Bytes};
+use bytes::{Buf, BufMut, Bytes};
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use std::convert::TryInto;
@@ -99,8 +99,9 @@ impl Signer {
             .0
     }
 
-    fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
-        let query = vls_protocol::msgs::HsmdInit {
+    /// Create an `init` request that we can pass to the signer.
+    fn initreq() -> vls_protocol::msgs::Message {
+        vls_protocol::msgs::Message::HsmdInit(vls_protocol::msgs::HsmdInit {
             key_version: vls_protocol::model::Bip32KeyVersion {
                 pubkey_version: 0,
                 privkey_version: 0,
@@ -113,12 +114,17 @@ impl Signer {
             dev_channel_secrets_shaseed: None,
             hsm_wire_min_version: 1,
             hsm_wire_max_version: 2,
-        };
-        Ok(handler
-            .handle(vls_protocol::msgs::Message::HsmdInit(query))
-            .unwrap()
-            .0
-            .as_vec())
+        })
+    }
+
+    fn bolt12initreq() -> vls_protocol::msgs::Message {
+        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+            info: "bolt12-invoice-base".as_bytes().to_vec(),
+        })
+    }
+
+    fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
+        Ok(handler.handle(Signer::initreq()).unwrap().0.as_vec())
     }
 
     /// Filter out any request that is not signed, such that the
@@ -279,6 +285,45 @@ impl Signer {
         self.init.clone()
     }
 
+    /// Retrieve the messages we know `lightningd` will ask when
+    /// starting. Since we can't be attached during startup, or on
+    /// background sync runs, we need to stash them at the `scheduler`
+    /// so we can start without a signer present.
+    pub fn get_startup_messages(&self) -> Vec<StartupMessage> {
+        let requests = vec![
+            // The classical init message; response will either be 111
+            // or 113 depending on signer proto version.
+            (11, Signer::initreq()),
+            // v22.11 introduced an addiotiona startup message, the
+            // bolt12 key generation
+            (27, Signer::bolt12initreq()),
+        ];
+
+        let serialized: Vec<Vec<u8>> = requests
+            .iter()
+            .map(|m| {
+                let mut b = bytes::BytesMut::new();
+                b.put_u16(m.0);
+                b.put_slice(&serde_bolt::to_vec(&m.1).unwrap());
+
+                b.to_vec()
+            })
+            .collect();
+        let responses: Vec<Vec<u8>> = requests
+            .into_iter()
+            .map(|r| self.handler().handle(r.1).unwrap().0.as_vec())
+            .collect();
+
+        serialized
+            .into_iter()
+            .zip(responses)
+            .map(|r| StartupMessage {
+                request: r.0,
+                response: r.1,
+            })
+            .collect()
+    }
+
     pub fn bip32_ext_key(&self) -> Vec<u8> {
         self.init[35..].to_vec()
     }
@@ -312,6 +357,11 @@ impl Signer {
             .maybe_upgrade(UpgradeRequest {
                 initmsg: self.init.clone(),
                 signer_version: self.version().to_owned(),
+                startupmsgs: self
+                    .get_startup_messages()
+                    .into_iter()
+                    .map(|s| s.into())
+                    .collect(),
             })
             .await
             .context("Error asking scheduler to upgrade")?;
@@ -428,6 +478,22 @@ impl Signer {
 
     pub fn version(&self) -> &'static str {
         VERSION
+    }
+}
+
+/// A `(request, response)`-tuple passed to the scheduler to allow
+/// signerless startups.
+pub struct StartupMessage {
+    request: Vec<u8>,
+    response: Vec<u8>,
+}
+
+impl From<StartupMessage> for crate::pb::StartupMessage {
+    fn from(r: StartupMessage) -> Self {
+        Self {
+            request: r.request,
+            response: r.response,
+        }
     }
 }
 
