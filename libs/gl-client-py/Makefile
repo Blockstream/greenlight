@@ -1,15 +1,24 @@
-REPO_ROOT=$(shell git rev-parse --show-toplevel)
-DIR=${REPO_ROOT}/libs/gl-client-py
+# Execute only from the repo root
 
-PROTOC_OPTS=-I${DIR}/../proto --python_out=${DIR}/glclient --grpc_python_out=${DIR}/glclient --experimental_allow_proto3_optional
+DIR=libs/gl-client-py
+PYPROTOC_OPTS = \
+	-Ilibs/proto \
+	--python_out=libs/gl-client-py/glclient \
+	--grpc_python_out=libs/gl-client-py/glclient \
+	--experimental_allow_proto3_optional
 
-PROTOS= \
+PYPROTOS = \
 	${DIR}/glclient/scheduler_pb2.py \
 	${DIR}/glclient/greenlight_pb2.py \
 	${DIR}/glclient/node_pb2.py \
 	${DIR}/glclient/scheduler_pb2_grpc.py \
 	${DIR}/glclient/greenlight_pb2_grpc.py \
 	${DIR}/glclient/node_pb2_grpc.py
+
+PROTOSRC = \
+	libs/proto/scheduler.proto \
+	libs/proto/greenlight.proto \
+	libs/proto/node.proto
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -19,25 +28,19 @@ ifeq ($(UNAME_S),Darwin)
   OS = macos
 endif
 
-all: ${PROTOS}
+pygrpc: ${PYPROTOS}
 
-${DIR}/glclient/scheduler_pb2.py ${DIR}/glclient/scheduler_pb2_grpc.py: ${DIR}/../proto/scheduler.proto
-	python -m grpc_tools.protoc ${PROTOC_OPTS} scheduler.proto
+${PYPROTOS}: ${PROTOSRC}
+	python -m grpc_tools.protoc ${PYPROTOC_OPTS} scheduler.proto
+	python -m grpc_tools.protoc ${PYPROTOC_OPTS} greenlight.proto
+	python -m grpc_tools.protoc ${PYPROTOC_OPTS} node.proto
 	# Postprocess the import path
 	sed -i 's/import scheduler_pb2 as scheduler__pb2/from . import scheduler_pb2 as scheduler__pb2/g' ${DIR}/glclient/scheduler_pb2_grpc.py
-
-${DIR}/glclient/greenlight_pb2.py glclient/greenlight_pb2_grpc.py: ../proto/greenlight.proto
-	python -m grpc_tools.protoc ${PROTOC_OPTS} greenlight.proto
-	# Postprocess the import path
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${DIR}/glclient/greenlight_pb2_grpc.py
-
-${DIR}/glclient/node_pb2.py glclient/node_pb2_grpc.py: ../proto/node.proto
-	python -m grpc_tools.protoc ${PROTOC_OPTS} node.proto
-	# Postprocess the import path
 	sed -i 's/import node_pb2 as node__pb2/from . import node_pb2 as node__pb2/g' ${DIR}/glclient/node_pb2_grpc.py
 
 check-py:
-	cd ${DIR}/; pytest tests -n $(shell nproc)
+	cd libs/gl-client-py; pytest tests -n $(shell nproc)
 
 clean-py:
 	rm -f ${PROTOS} ${DIR}/build ${DIR}/dist
