@@ -1,4 +1,4 @@
-use crate::pb::scheduler_client::SchedulerClient;
+use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
 
 use crate::node::GrpcClient;
@@ -48,7 +48,7 @@ impl Scheduler {
         &self,
         signer: &Signer,
         invite_code: Option<String>,
-    ) -> Result<pb::RegistrationResponse> {
+    ) -> Result<pb::scheduler::RegistrationResponse> {
         let code = invite_code.unwrap_or_default();
         return self.inner_register(signer, code).await;
     }
@@ -61,12 +61,12 @@ impl Scheduler {
         &self,
         signer: &Signer,
         invite_code: String,
-    ) -> Result<pb::RegistrationResponse> {
+    ) -> Result<pb::scheduler::RegistrationResponse> {
         let challenge = self
             .client
             .clone()
-            .get_challenge(pb::ChallengeRequest {
-                scope: pb::ChallengeScope::Register as i32,
+            .get_challenge(pb::scheduler::ChallengeRequest {
+                scope: pb::scheduler::ChallengeScope::Register as i32,
                 node_id: self.node_id.clone(),
             })
             .await?
@@ -90,7 +90,7 @@ impl Scheduler {
         let mut res = self
             .client
             .clone()
-            .register(pb::RegistrationRequest {
+            .register(pb::scheduler::RegistrationRequest {
                 node_id: self.node_id.clone(),
                 bip32_key: signer.bip32_ext_key(),
                 network: self.network.to_string(),
@@ -130,12 +130,12 @@ impl Scheduler {
         Ok(res)
     }
 
-    pub async fn recover(&self, signer: &Signer) -> Result<pb::RecoveryResponse> {
+    pub async fn recover(&self, signer: &Signer) -> Result<pb::scheduler::RecoveryResponse> {
         let challenge = self
             .client
             .clone()
-            .get_challenge(pb::ChallengeRequest {
-                scope: pb::ChallengeScope::Recover as i32,
+            .get_challenge(pb::scheduler::ChallengeRequest {
+                scope: pb::scheduler::ChallengeScope::Recover as i32,
                 node_id: self.node_id.clone(),
             })
             .await?
@@ -154,7 +154,7 @@ impl Scheduler {
         let mut res = self
             .client
             .clone()
-            .recover(pb::RecoveryRequest {
+            .recover(pb::scheduler::RecoveryRequest {
                 node_id: self.node_id.clone(),
                 challenge: challenge.challenge,
                 signature,
@@ -195,7 +195,7 @@ impl Scheduler {
         let sched = self
             .client
             .clone()
-            .schedule(pb::ScheduleRequest {
+            .schedule(pb::scheduler::ScheduleRequest {
                 node_id: self.node_id.clone(),
             })
             .await?
@@ -208,20 +208,20 @@ impl Scheduler {
             .await
     }
 
-    pub async fn export_node(&self) -> Result<pb::ExportNodeResponse> {
+    pub async fn export_node(&self) -> Result<pb::scheduler::ExportNodeResponse> {
         Ok(self
             .client
             .clone()
-            .export_node(pb::ExportNodeRequest {})
+            .export_node(pb::scheduler::ExportNodeRequest {})
             .await?
             .into_inner())
     }
 
-    pub async fn get_invite_codes(&self) -> Result<pb::ListInviteCodesResponse> {
+    pub async fn get_invite_codes(&self) -> Result<pb::scheduler::ListInviteCodesResponse> {
         let res = self
             .client
             .clone()
-            .list_invite_codes(pb::ListInviteCodesRequest {})
+            .list_invite_codes(pb::scheduler::ListInviteCodesRequest {})
             .await?;
         Ok(res.into_inner())
     }

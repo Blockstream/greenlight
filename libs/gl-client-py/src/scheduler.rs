@@ -1,6 +1,6 @@
 use crate::runtime::exec;
 use crate::Signer;
-use crate::{pb, pb::scheduler_client::SchedulerClient};
+use crate::{pb, pb::scheduler::scheduler_client::SchedulerClient};
 use anyhow::Result;
 use bitcoin::Network;
 use gl_client::tls::TlsConfig;
@@ -54,11 +54,11 @@ impl Scheduler {
     }
 
     fn get_node_info(&self) -> PyResult<Vec<u8>> {
-        let res: Result<pb::NodeInfoResponse> = exec(async move {
+        let res: Result<pb::scheduler::NodeInfoResponse> = exec(async move {
             let mut client = self.connect().await.unwrap();
 
             let info = client
-                .get_node_info(pb::NodeInfoRequest {
+                .get_node_info(pb::scheduler::NodeInfoRequest {
                     node_id: self.node_id.clone(),
                     wait: false,
                 })
@@ -81,7 +81,7 @@ impl Scheduler {
             Ok(self
                 .connect()
                 .await?
-                .schedule(pb::ScheduleRequest {
+                .schedule(pb::scheduler::ScheduleRequest {
                     node_id: self.node_id.clone(),
                 })
                 .await?
