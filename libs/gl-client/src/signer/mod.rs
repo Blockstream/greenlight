@@ -1,8 +1,8 @@
+use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 /// The core signer system. It runs in a dedicated thread or using the
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
-use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Context, Result};
@@ -120,6 +120,12 @@ impl Signer {
     fn bolt12initreq() -> vls_protocol::msgs::Message {
         vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
             info: "bolt12-invoice-base".as_bytes().to_vec(),
+        })
+    }
+
+    fn scbinitreq() -> vls_protocol::msgs::Message {
+        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+            info: "scb secret".as_bytes().to_vec(),
         })
     }
 
@@ -297,6 +303,8 @@ impl Signer {
             // v22.11 introduced an addiotiona startup message, the
             // bolt12 key generation
             (27, Signer::bolt12initreq()),
+            // SCB needs a secret derived too
+            (27, Signer::scbinitreq()),
         ];
 
         let serialized: Vec<Vec<u8>> = requests
@@ -487,7 +495,6 @@ pub struct StartupMessage {
     request: Vec<u8>,
     response: Vec<u8>,
 }
-
 
 impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
     fn from(r: StartupMessage) -> Self {
