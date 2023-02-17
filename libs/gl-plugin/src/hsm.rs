@@ -2,7 +2,7 @@
 //! requests.
 
 use crate::config::NodeInfo;
-use crate::pb::{hsm_server::Hsm, Empty, HsmRequest, HsmResponse};
+use crate::pb::{hsm_server::Hsm, Empty, HsmRequest, HsmResponse, NodeConfig};
 use crate::stager;
 use anyhow::{Context, Result};
 use futures::TryFutureExt;
@@ -19,6 +19,7 @@ pub struct StagingHsmServer {
     stage: Arc<stager::Stage>,
     hsmd_sock_path: PathBuf,
     node_info: NodeInfo,
+    node_config: NodeConfig,
 }
 
 impl StagingHsmServer {
@@ -26,11 +27,13 @@ impl StagingHsmServer {
         hsmd_sock_path: PathBuf,
         stage: Arc<stager::Stage>,
         node_info: NodeInfo,
+        node_config: NodeConfig,
     ) -> StagingHsmServer {
         StagingHsmServer {
             stage,
             hsmd_sock_path,
             node_info,
+            node_config,
         }
     }
 }
