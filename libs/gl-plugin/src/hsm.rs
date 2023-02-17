@@ -36,6 +36,15 @@ impl StagingHsmServer {
             node_config,
         }
     }
+
+    /// We have some canned responses from the signer, this gives us access.
+    fn find_canned_response(&self, msg: &Vec<u8>) -> Option<Vec<u8>> {
+        self.node_config
+            .startupmsgs
+            .iter()
+            .find(|m| &m.request == msg)
+            .map(|m| m.response.clone())
+    }
 }
 
 #[tonic::async_trait]
@@ -44,19 +53,30 @@ impl Hsm for StagingHsmServer {
         let req = request.into_inner();
         trace!("Received request from hsmproxy: {:?}", req);
 
-        if req.get_type() == 11 {
+        // Start by looking in the canned responses and return it if it is known
+        if let Some(response) = self.find_canned_response(&req.raw) {
+            debug!(
+                "Returning canned response={:?} for request={:?}",
+                response, req.raw
+            );
+            return Ok(Response::new(HsmResponse {
+                request_id: req.request_id,
+                raw: response,
+                signer_state: Vec::new(),
+            }));
+        } else if req.get_type() == 11 {
             debug!("Returning stashed init msg: {:?}", self.node_info.initmsg);
             return Ok(Response::new(HsmResponse {
                 request_id: req.request_id,
                 raw: self.node_info.initmsg.clone(),
-		signer_state: Vec::new(), // the signerproxy doesn't care about state
+                signer_state: Vec::new(), // the signerproxy doesn't care about state
             }));
         } else if req.get_type() == 33 {
             debug!("Returning stashed dev-memleak response");
             return Ok(Response::new(HsmResponse {
                 request_id: req.request_id,
                 raw: vec![0, 133, 0],
-		signer_state: Vec::new(), // the signerproxy doesn't care about state
+                signer_state: Vec::new(), // the signerproxy doesn't care about state
             }));
         }
 
