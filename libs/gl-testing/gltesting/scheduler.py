@@ -1,5 +1,6 @@
 from glclient import scheduler_pb2_grpc as schedgrpc
 from glclient import scheduler_pb2 as schedpb
+from glclient import greenlight_pb2 as greenlightpb
 from concurrent.futures import ThreadPoolExecutor
 import grpc
 import logging
@@ -169,6 +170,13 @@ class Scheduler(object):
         vstr = req.signer_proto if req.signer_proto is not None else "v0.10.1"
         sv = SignerVersion(name=vstr)
 
+        # Convert the StartupMessage from scheduler.proto to
+        # greenlight.proto, yeah, it's suboptimal, and we should merge
+        # the two.
+        # TODO Remove this conversion once we merged or shared the implementation
+
+        startupmsgs = [greenlightpb.StartupMessage(request=sm.request, response=sm.response) for sm in req.startupmsgs]
+
         self.nodes.append(
             Node(
                 node_id=req.node_id,
@@ -180,7 +188,7 @@ class Scheduler(object):
                 process=None,
                 plugin_grpc_uri=None,
                 condition=Condition(),
-                startupmsgs=req.startupmsgs,
+                startupmsgs=startupmsgs,
             )
         )
 
@@ -265,7 +273,9 @@ class Scheduler(object):
             identity=n.identity,
             version=node_version,
             bitcoind=self.bitcoind,
+            startupmsgs=n.startupmsgs,
         )
+        n.process.write_node_config(n.network)
         n.process.start()
 
         with n.condition:
