@@ -83,6 +83,7 @@ class NodeProcess(TailableProc):
             '--bitcoin-rpcuser=rpcuser',
             '--bitcoin-rpcpassword=rpcpass',
             f'--bitcoin-rpcconnect=localhost:{self.bitcoind.rpcport}',
+            "--disable-plugin=commando",
             # The following will allow us to support the `stream_log`
             #RPC method after updating to pyln-testing==0.12
             #f'--log-file=log',
