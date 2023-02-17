@@ -12,6 +12,7 @@ from gltesting.utils import NodeVersion, Network
 from pyln.testing.utils import TailableProc, BitcoinD
 from ephemeral_port_reserve import reserve
 import os
+from typing import List
 
 
 target_dir = Path(
@@ -42,8 +43,10 @@ class NodeProcess(TailableProc):
             identity: Identity,
             version: NodeVersion,
             bitcoind: BitcoinD,
+            startupmsgs: List[nodepb.StartupMessage],
     ):
         TailableProc.__init__(self, str(directory), verbose=True)
+        self.logger = logging.getLogger("gltesting.node.Node")
         self.identity = identity
         self.version  = version
         self.proc: Optional[subprocess.Popen] = None
@@ -56,6 +59,7 @@ class NodeProcess(TailableProc):
         self.network = network
         self.bitcoind = bitcoind
         self.prefix = "node"
+        self.startupmsgs = startupmsgs
 
         # Stage the identity so the plugin can pick it up.
         cert_path = self.directory / "certs" / "users" / "1"
@@ -94,6 +98,24 @@ class NodeProcess(TailableProc):
             '--dev-bitcoind-poll=5',
             '--dev-fast-gossip',
         ]
+
+    def write_node_config(self, network: str):
+        """Write the node_config.pb file
+
+        The file is used to pass variables and parameters through to
+        the node, specifically the `gl-plugin`. These values may be
+        binary in nature, and some values are required by the plugin
+        even before `init`, hence why we use protobufs and not the RPC
+        and option passthru.
+
+        """
+        dest = self.directory / network / "node_config.pb"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        self.logger.debug(f"Writing node config to {dest}")
+        with dest.open(mode='wb') as f:
+            f.write(nodepb.NodeConfig(
+                startupmsgs=self.startupmsgs,
+            ).SerializeToString())
 
     def start(self):
         path = os.environ.get('PATH')
