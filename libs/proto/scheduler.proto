@@ -207,6 +207,10 @@ message RegistrationRequest {
 	// registration rate. Therefore we might check that a registration
 	// request has a valid invite code.
 	string invite_code = 10;
+
+        // Messages stashed at the scheduler to allow signerless
+        // startups.
+        repeated StartupMessage startupmsgs = 3;
 };
 
 message RegistrationResponse {
@@ -266,13 +270,27 @@ message UpgradeRequest {
 
 	// The new initmsg matching the above version. Necessary to
 	// schedule the node without a signer present.
-	bytes initmsg = 2;
+        // Deprecated: Replaced by the more generic `startupmsgs`
+	bytes initmsg = 2 [deprecated = true];
+
+        // Messages stashed at the scheduler to allow signerless startups.
+        repeated StartupMessage startupmsgs = 3;
 };
 message UpgradeResponse {
 	// The version of the node before the upgrade request has been
 	// processed.
 	string old_version = 1;
 };
+
+// A message that we know will be requested by `lightningd` at
+// startup, and that we stash a response to on the scheduler. This
+// allows the scheduler to start a node without requiring the signer
+// to connect first. Messages are stored in full, including type
+// prefix, but without the length prefix.
+message StartupMessage {
+  bytes request = 1;
+  bytes response = 2;
+}
 
 message ListInviteCodesRequest {};
 
