@@ -555,3 +555,26 @@ message PendingRequest {
 	bytes signature = 3;
 	bytes pubkey = 4;
 }
+
+
+// The `NodeConfig` is used to pass startup parameters to the
+// node. The `gl-plugin` will look for a file in its directory to load
+// these values from. Please refer to the individual fields to learn
+// what they do.
+message NodeConfig {
+	// In order to start without a signer attached we need to
+	// stash a couple of canned messages that we'd otherwise ask
+	// from the signer. These are just request-response tuples
+	// that we use to match and reply against incoming requests.
+	repeated StartupMessage startupmsgs = 1;
+}
+
+// A message that we know will be requested by `lightningd` at
+// startup, and that we stash a response to on the scheduler. This
+// allows the scheduler to start a node without requiring the signer
+// to connect first. Messages are stored in full, including type
+// prefix, but without the length prefix.
+message StartupMessage {
+  bytes request = 1;
+  bytes response = 2;
+}
