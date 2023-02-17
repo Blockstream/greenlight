@@ -247,6 +247,8 @@ impl Signer {
 
         let msg = vls_protocol::msgs::from_vec(req.raw)?;
 
+        log::trace!("Handling message {:?}", msg);
+
         let response = match req.context {
             Some(HsmRequestContext { dbid: 0, .. }) | None => {
                 // This is the main daemon talking to us.
