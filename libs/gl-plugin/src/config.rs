@@ -134,6 +134,8 @@ pub struct Config {
 
     /// The `Nodelet` told us that we're running on this network.
     pub network: Network,
+
+    pub node_config: NodeConfig,
 }
 
 impl Config {
@@ -156,6 +158,10 @@ impl Config {
             .try_into()
             .context("Unknown network in GL_NODE_NETWORK")?;
 
+        let mut cfg = std::env::current_dir()?;
+        cfg.push("node_config.pb");
+        let node_config = NodeConfig::from_file(cfg.as_path())?;
+
         Ok(Config {
             identity,
             hsmd_sock_path: "hsmd.sock".to_string(),
@@ -164,6 +170,7 @@ impl Config {
             towerd_public_grpc_uri,
             clientca,
             network,
+            node_config,
         })
     }
 }
@@ -190,9 +197,17 @@ impl NodeInfo {
             ));
         }
 
-        Ok(NodeInfo {
-            node_id: node_id,
-            initmsg: initmsg,
-        })
+        Ok(NodeInfo { node_id, initmsg })
+    }
+}
+
+pub use crate::pb::NodeConfig;
+
+impl NodeConfig {
+    pub fn from_file(f: &std::path::Path) -> Result<NodeConfig, anyhow::Error> {
+        log::debug!("Loading node_config from {}", f.display());
+        use prost::Message;
+        let contents = std::fs::read(f)?;
+        NodeConfig::decode(&contents[..]).context("decoding protobuf payload")
     }
 }

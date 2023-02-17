@@ -93,7 +93,7 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
     let (events, _) = tokio::sync::broadcast::channel(16);
     let rpc = Arc::new(Mutex::new(LightningClient::new("lightning-rpc")));
     let stage = Arc::new(stager::Stage::new());
-    let config = config::Config::new().unwrap();
+    let config = config::Config::new().context("loading config")?;
 
     // We run this already at startup, not at configuration because if
     // the signerproxy doesn't find the socket on the FS it'll exit.
@@ -101,6 +101,7 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
         PathBuf::from_str(&config.hsmd_sock_path).context("hsmd_sock_path is not a valid path")?,
         stage.clone(),
         config.node_info.clone(),
+	config.node_config.clone(),
     );
     tokio::spawn(hsm_server.run());
 
