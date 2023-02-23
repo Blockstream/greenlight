@@ -3,7 +3,7 @@ REPO_ROOT=$(shell git rev-parse --show-toplevel)
 include libs/gl-client-py/Makefile
 include libs/gl-client-js/Makefile
 
-.PHONY: ensure-docker build-self check-self docker-image
+.PHONY: ensure-docker build-self check-self docker-image docs
 
 check: check-rs check-py check-js
 
@@ -79,3 +79,9 @@ cln-versions/lightningd-%.tar.bz2:
 
 
 cln: ${CLN_TARGETS}
+
+docs:
+	mkdir -p ${REPO_ROOT}/site/2dijIFEFSh
+	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/2dijIFEFSh --verbose)
+	ghp-import ${REPO_ROOT}/site -n -m "Deploy docs" --push --branch gh-pages --remote origin
+
