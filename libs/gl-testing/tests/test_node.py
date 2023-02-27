@@ -163,3 +163,36 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
 
     assert(len(invs) == 1)
     assert(invs[0]['status'] == 'paid')
+
+
+def test_node_listpays_preimage(clients, node_factory, bitcoind):
+    """Test that GL nodes correctly return incoming payment details.
+    """
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+    l1 = node_factory.get_node()
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+    addr = gl1.new_address().address
+    txid = bitcoind.rpc.sendtoaddress(addr, 1)
+    bitcoind.generate_block(1, wait_for_mempool=[txid])
+    wait_for(lambda: len(gl1.list_funds().outputs) == 1)
+    gl1.fund_channel(node_id=l1.info['id'], amount=nodepb.Amount(satoshi=10**6))
+    bitcoind.generate_block(6, wait_for_mempool=1)
+    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == "CHANNELD_NORMAL")
+
+    preimage = "00"*32
+
+    i = l1.rpc.call("invoice", {
+        'amount_msat': '2100sat',
+        'label': 'lbl',
+        'description': 'desc',
+        'preimage': preimage,
+    })
+
+    gl1.pay(i['bolt11'])
+
+    pay = gl1.listpays()
+    assert len(pay.pays) == 1
+    assert pay.pays[0].preimage.hex() == preimage
