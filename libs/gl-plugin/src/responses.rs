@@ -64,7 +64,7 @@ pub struct Pay {
     pub parts: u32,
     pub msatoshi: u64,
     pub msatoshi_sent: u64,
-    pub payment_preimage: Option<String>,
+    pub preimage: Option<String>,
     pub status: String,
     pub bolt11: Option<String>,
 }
