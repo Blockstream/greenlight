@@ -161,6 +161,15 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
+    def listpays(self) -> clnpb.ListpaysResponse:    
+        uri = "/cln.Node/ListPays"
+        req = clnpb.ListpaysRequest().SerializeToString()
+        res = clnpb.ListpaysResponse
+
+        return res.FromString(
+            bytes(self.inner.call(uri, req))
+        )
+
     def list_payments(self) -> nodepb.ListPaymentsResponse:
         uri = "/greenlight.Node/ListPayments"
         req = nodepb.ListPaymentsRequest().SerializeToString()
