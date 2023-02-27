@@ -268,6 +268,7 @@ dependencies = [
 [[package]]
 name = "bolt-derive"
 version = "0.1.0"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1583,6 +1584,7 @@ dependencies = [
 [[package]]
 name = "lightning-signer-core"
 version = "0.1.0-5"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "anyhow",
  "bitcoin",
@@ -1598,6 +1600,7 @@ dependencies = [
 [[package]]
 name = "lightning-signer-server"
 version = "0.1.0-5"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1612,6 +1615,7 @@ dependencies = [
 [[package]]
 name = "lightning-storage-server"
 version = "0.1.0"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3812,6 +3816,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "vls-persist"
 version = "0.1.0"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "hex",
  "lightning-signer-core",
@@ -3824,6 +3829,7 @@ dependencies = [
 [[package]]
 name = "vls-protocol"
 version = "0.1.0"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "as-any",
  "bolt-derive",
@@ -3836,6 +3842,7 @@ dependencies = [
 [[package]]
 name = "vls-protocol-signer"
 version = "0.1.0"
+source = "git+https://gitlab.com/cdecker/vls.git?branch=cln-v22.11gl1#6be4be78b15a95164583165f1c60630a584f7f8d"
 dependencies = [
  "bit-vec",
  "lightning-signer-core",
