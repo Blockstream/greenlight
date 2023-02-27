@@ -1,6 +1,6 @@
 # Execute only from the repo root
-
-DIR=libs/gl-client-py
+REPO=$(shell git rev-parse --show-toplevel)
+DIR=${REPO}/libs/gl-client-py
 PYPROTOC_OPTS = \
 	-Ilibs/proto \
 	--python_out=libs/gl-client-py/glclient \
@@ -48,8 +48,8 @@ clean-py:
 # Linux builds are performed in a docker container so we link against
 # an oldish glibc, increasing portability.
 build-linux:
-	docker build -t gl-client-py-builder ${DIR}
-	docker run -v ${REPO_ROOT}:/io gl-client-py-builder
+	docker build --network=host -t gl-client-py-builder ${DIR}
+	docker run -v ${REPO}:/io gl-client-py-builder
 
 test: build
 	virtualenv .tmpenv --python=$(which python3) --download --always-copy --clear
