@@ -232,11 +232,7 @@ impl Signer {
             );
 
             state.merge(&diff).unwrap();
-            trace!(
-                "Processing request {} with state {}",
-                hex::encode(&req.raw),
-                serde_json::to_string_pretty(&state.clone()).unwrap()
-            );
+            trace!("Processing request {}", hex::encode(&req.raw),);
             state.clone()
         };
 
@@ -266,11 +262,6 @@ impl Signer {
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
             let state = self.state.lock().unwrap();
-            trace!(
-                "Result {} with state {}",
-                hex::encode(&response.0.as_vec()),
-                serde_json::to_string_pretty(&state.clone()).unwrap()
-            );
             trace!(
                 "Diff to state pre-request: {:?}",
                 prestate.diff(&state).unwrap()
