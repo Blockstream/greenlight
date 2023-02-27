@@ -376,8 +376,9 @@ impl From<responses::Pay> for Payment {
             destination: hex::decode(p.destination).unwrap(),
             payment_hash: hex::decode(p.payment_hash).unwrap(),
             payment_preimage: p
-                .payment_preimage
-                .map_or(vec![], |p| hex::decode(p).unwrap()),
+                .preimage
+                .map(|p| hex::decode(p).unwrap())
+                .unwrap_or_default(),
             amount: Some(Amount {
                 unit: Some(amount::Unit::Millisatoshi(p.msatoshi)),
             }),
