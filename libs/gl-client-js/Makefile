@@ -37,3 +37,5 @@ publish-js:
 
 check-js: libs/gl-client-js/index.node
 	cd libs/gl-client-js; npm run test
+JSARTIFACTS = ${JSDIR}/index.node
+ARTIFACTS += ${JSARTIFACTS}
