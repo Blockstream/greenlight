@@ -1,6 +1,6 @@
 REPO_ROOT=$(shell git rev-parse --show-toplevel)
-
 UNAME_S := $(shell uname -s)
+
 ifeq ($(UNAME_S),Linux)
   OS = linux
 endif
@@ -11,19 +11,13 @@ endif
 ARTIFACTS = \
 	.coverage
 
+.PHONY: ensure-docker build-self check-self docker-image docs wheels
 
+include libs/gl-client/Makefile
 include libs/gl-client-py/Makefile
 include libs/gl-client-js/Makefile
 
-.PHONY: ensure-docker build-self check-self docker-image docs wheels
-
 check: check-rs check-py check-js
-
-check-rs:
-	cd libs; cargo test --all -- --test-threads=1
-
-clean-rs:
-	cd libs; cargo clean
 
 clean: clean-rs
 	rm -rf ${ARTIFACTS}
@@ -97,8 +91,3 @@ docs:
 	mkdir -p ${REPO_ROOT}/site/2dijIFEFSh
 	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/2dijIFEFSh --verbose)
 	ghp-import ${REPO_ROOT}/site -n -m "Deploy docs" --push --branch gh-pages --remote origin
-
-WHEELS = \
-	libs/wheelhouse/gl_client_py-${PYVERSION}-cp39-cp39-manylinux_2_27_x86_64.whl
-
-wheels:
