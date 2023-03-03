@@ -9,7 +9,7 @@ JSRSSRC=$(shell find ${JSDIR} -name '*.rs')
 
 PACKAGE=${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-${ARCH}.tar.gz
 
-.PHONY: package-js upload -bin-js
+.PHONY: build-js-macos-${ARCH} build-js-macos build-js-linux build-js
 .NOTPARALLEL: build-js-macos-arm64 build-js-macos-x86_64 build-js-linux
 
 #${JSDIR}/index.node: ${JSSRC} ${JSRSSRC}
@@ -17,19 +17,16 @@ PACKAGE=${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-${ARCH}.
 #	cd libs/gl-client-js && npm run build
 #	cd ${JSDIR}; mv index.node index-${ARCH}-
 
-build-js-macos-arm64: ${JSSRC} ${JSRSSRC} 
+
+
+build-js-macos-${ARCH}: ${JSSRC} ${JSRSSRC} 
 	cd ${JSDIR} && \
-	TARGET=aarch64-apple-darwin npm run build && \
-	mv index.node index-${VERSION}-arm64-apple-darwin.node
+	TARGET=${RSARCH}-apple-darwin npm run build && \
+	mv index.node index-${VERSION}-${ARCH}-apple-darwin.node
 
-build-js-macos-x86_64: ${JSSRC} ${JSRSSRC} 
-	cd ${JSDIR} && \
-	TARGET=x86_64-apple-darwin npm run build && \
-	mv index.node index-${VERSION}-x86_64-apple-darwin.node
+build-js-macos: build-js-macos-${ARCH}
 
-build-js-macos: build-js-macos-arm64 build-js-macos-x86_64
-
-build-js-linux index-${VERSION}-${ARCH}-unknown-linux-gnu: ${JSSRC} ${JSRSSRC}
+build-js-linux: ${JSSRC} ${JSRSSRC}
 	echo "Building linux"
 	cd ${JSDIR} && \
 	TARGET=${ARCH}-unknown-linux-gnu npm run build && \
@@ -46,15 +43,9 @@ package-js-linux: build-js-linux
 
 package-js-macos: build-js-macos
 	mkdir -p gl-client-js
-	cp ${JSDIR}/index-${VERSION}-x86_64-apple-darwin.node gl-client-js/index.node
+	cp ${JSDIR}/index-${VERSION}-${RSARCH}-apple-darwin.node gl-client-js/index.node
 	mkdir -p ${JSDIR}/build/stage/${VERSION}/
-	tar -cvzf ${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-x86_64.tar.gz gl-client-js
-	rm gl-client-js/index.node && rmdir gl-client-js
-
-	mkdir -p gl-client-js
-	cp ${JSDIR}/index-${VERSION}-arm64-apple-darwin.node gl-client-js/index.node
-	mkdir -p ${JSDIR}/build/stage/${VERSION}/
-	tar -cvzf ${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-arm64.tar.gz gl-client-js
+	tar -cvzf ${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-${ARCH}.tar.gz gl-client-js
 	rm gl-client-js/index.node && rmdir gl-client-js
 
 # Packaging is a bit involved since we manually build the package
@@ -66,7 +57,6 @@ package-js: package-js-${OS}
 
 upload-bin-js: package-js
 	gsutil cp -r ${JSDIR}/build/stage/${VERSION} gs://greenlight-artifacts/npm/gl-client-js
-
 
 # Update the versions to match
 ${JSDIR}/package.json: ${JSDIR}/Cargo.toml
@@ -80,7 +70,7 @@ clean-js:
 publish-js: upload-bin-js
 	cd libs/gl-client-js/ && \
 	npm run artifactregistry-login && \
-	npm publish
+	npm publish || true  # Careful, there is no --skip-existing, so check the outcome here!
 
 
 check-js: ${JSDIR}/index.node
