@@ -12,14 +12,10 @@ crate-type = ["cdylib"]
 gl-client = { path = "../gl-client", features = ["permissive"] }
 tokio = "1"
 log = "*"
-env_logger = "*"
+env_logger = { workspace = true }
 once_cell = "*"
 tonic = "^0.8"
 prost = "0.11"
-anyhow = "*"
+anyhow = { workspace = true }
 bitcoin = "^0"
-
-[dependencies.neon]
-version = "0.9"
-default-features = false
-features = ["napi-4", "channel-api"]
+neon = { version = "0.9", default-features = false, features = ["napi-4", "channel-api"] }

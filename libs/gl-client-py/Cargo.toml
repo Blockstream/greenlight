@@ -8,15 +8,15 @@ name = "glclient"
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "*"
-bytes = "*"
-env_logger = "*"
+anyhow = { workspace = true }
+bytes = "1.4"
+env_logger = { workspace = true }
 gl-client = { path = "../gl-client", features = ["permissive"] }
 hex = "*"
 log = "*"
 once_cell = "*"
 prost = "0.11"
-pyo3 = {version = "0.14.1", features = ["extension-module", "serde"]}
+pyo3 = {version = "0.18", features = ["extension-module", "serde", "abi3-py37"]}
 tokio = { version = "1", features = ["full"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
 bitcoin = "^0"
