@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
-const NOBODY_CRT: &[u8] = include_str!("../../tls/users-nobody.pem").as_bytes();
-const NOBODY_KEY: &[u8] = include_str!("../../tls/users-nobody-key.pem").as_bytes();
+const NOBODY_CRT: &[u8] = include_str!(env!("GL_NOBODY_CRT")).as_bytes();
+const NOBODY_KEY: &[u8] = include_str!(env!("GL_NOBODY_KEY")).as_bytes();
 
 /// In order to allow the clients to talk to the
 /// [`crate::scheduler::Scheduler`] a default certificate and private
