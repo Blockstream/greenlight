@@ -1,9 +1,11 @@
 //! Utilities to work with export/backup files.
 use anyhow::{anyhow, Context, Error};
-use bitcoin::secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey};
-use bitcoin::Network;
 use bytes::{Buf, Bytes, BytesMut};
 use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
+use lightning_signer::bitcoin::{
+    secp256k1::{ecdh::SharedSecret, PublicKey, Secp256k1, SecretKey},
+    Network,
+};
 use std::io::Read;
 
 const VERSION: u8 = 0x01;

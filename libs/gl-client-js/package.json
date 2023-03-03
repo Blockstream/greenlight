@@ -1,25 +1,22 @@
 {
   "name": "@greenlight/gl-client-js",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "",
   "main": "index.js",
   "files": [
     "package.json",
-    "index.node",
     "index.js",
     "proto.js",
-    "Cargo.toml",
-    "libhsmd-sys-rs",
-    "gl-client",
-    "src"
+    "Cargo.toml"
   ],
   "scripts": {
     "build": "cargo-cp-artifact -a cdylib gl_client_js index.node -- cargo build --message-format=json-render-diagnostics --release",
     "install": "node-pre-gyp install --fallback-to-build=false || npm run build",
-    "test": "cargo build && cargo test && jest"
+    "test": "cargo build && cargo test && jest",
+    "artifactregistry-login": "npx google-artifactregistry-auth"
   },
   "binary": {
-    "module_name": "index",
+      "module_name": "index",
     "host": "https://storage.googleapis.com/greenlight-artifacts/npm/gl-client-js/",
     "remote_path": "{version}",
     "package_name": "gl-client-js-{version}-{platform}-{arch}.tar.gz",
@@ -28,12 +25,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "jest": "^27.3.1",
-    "rewire": "^3.0.2"
+    "jest": "^27.5.1",
+    "rewire": "^6.0.0"
   },
   "dependencies": {
-    "@mapbox/node-pre-gyp": "^1.0.7",
-    "cargo-cp-artifact": "^0.1.6",
+    "@mapbox/node-pre-gyp": "^1.0.10",
+    "cargo-cp-artifact": "^0.1.7",
     "protobufjs": "^6.11.2"
   }
 }
