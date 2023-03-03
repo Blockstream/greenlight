@@ -40,12 +40,6 @@ check-py:
 clean-py:
 	rm -f ${PROTOS} ${PYDIR}/build ${PYDIR}/dist
 
-# Linux builds are performed in a docker container so we link against
-# an oldish glibc, increasing portability.
-build-linux:
-	docker build --network=host -t gl-client-py-builder ${PYDIR}
-	docker run -v ${REPO}:/io gl-client-py-builder
-
 test: build
 	virtualenv .tmpenv --python=$(which python3) --download --always-copy --clear
 	.tmpenv/bin/python3 -m pip install -U pip wheel pytest pytest-timeout
@@ -67,7 +61,6 @@ build-py-macos:
 	  --out=${REPO}/wheelhouse
 
 build-py: ${PYDIR}/pyproject.toml build-py-${OS}
-	cd ${PYDIR}/; maturin sdist --out ${PYDIR}/../../wheelhouse
 
 # build-py-linux builds the wheels and sdist package in docker and
 # drops them into ${REPO}/wheelhouse. The docker build is needed to
@@ -80,7 +73,9 @@ ${PYDIR}/pyproject.toml: ${PYDIR}/Cargo.toml
 	cd ${PYDIR}; poetry version ${PYVERSION}
 
 # Pickup the wheels in ${REPO}/wheelhouse and send them to PyPI
-publish-py:
-	ln -s ${REPO}/wheelhouse ${PYDIR}/dist || true
+publish-py: build-py
+	cd tools/glcli; poetry build --no-interaction
 	cd ${PYDIR}; poetry publish --repository gl --skip-existing --no-interaction
-	rm -f ${PYDIR}/dist
+
+
+package-py: build-py
