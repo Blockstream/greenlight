@@ -12,3 +12,7 @@ members = [
   "gl-plugin",
   "gl-signerproxy",
 ]
+
+[workspace.dependencies]
+anyhow = "1"
+env_logger = "0.10"
