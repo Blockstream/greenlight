@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "glcli"
-version = "0.1.4"
+version = "0.1.6"
 description = ""
-authors = ["Christian Decker <decker.christian@gmail.com>"]
+authors = ["Christian Decker <decker@blockstream.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
