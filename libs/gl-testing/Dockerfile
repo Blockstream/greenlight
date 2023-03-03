@@ -75,7 +75,7 @@ ARG BITCOIN_VERSION=0.20.1
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_DIR=/tmp/target/
-ENV RUST_VERSION=1.63.0
+ENV RUST_VERSION=1.67.0
 
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0
