@@ -1,11 +1,18 @@
 REPO_ROOT=$(shell git rev-parse --show-toplevel)
 UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -p)
 
 ifeq ($(UNAME_S),Linux)
   OS = linux
 endif
 ifeq ($(UNAME_S),Darwin)
   OS = macos
+endif
+
+ifeq (${UNAME_M},arm64)
+  RSARCH = "aarch64"
+else
+  RSARCH = ${UNAME_M}
 endif
 
 ARTIFACTS = \
@@ -37,7 +44,6 @@ ensure-docker:
 		echo "We are not running in the gl-testing docker container, refusing to run"; \
 		exit 1; \
 	fi
-
 docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
 	docker build -t gltesting -f libs/gl-testing/Dockerfile .
 
