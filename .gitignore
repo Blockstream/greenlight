@@ -13,3 +13,4 @@ libs/Cargo.lock
 tls/users-nobody-key.pem
 tls/users-nobody.pem
 .coverage.*
+libs/gl-client-js/index-*.node
