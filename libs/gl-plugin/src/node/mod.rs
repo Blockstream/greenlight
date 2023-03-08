@@ -469,8 +469,13 @@ impl Node for PluginNodeServer {
                         warn!("Could not get peers from datastore: {:?}", res);
                     }
 
-                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res.clone()
-                    .unwrap_or_else(|_| cln_rpc::model::ListdatastoreResponse{datastore: vec![]}).datastore.iter()
+                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res
+                        .clone()
+                        .unwrap_or_else(|_| cln_rpc::model::ListdatastoreResponse {
+                            datastore: vec![],
+                        })
+                        .datastore
+                        .iter()
                         .map(|x| {
                             // We need to replace unnecessary escape characters that
                             // have been added by the datastore, as serde is a bit
@@ -791,18 +796,10 @@ impl Node for PluginNodeServer {
     ) -> Result<tonic::Response<pb::ListPaymentsResponse>, tonic::Status> {
         self.limit().await;
         let rpc = self.rpc.lock().await;
-        let req: crate::requests::ListPays = match req.into_inner().try_into() {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::InvalidArgument,
-                    format!(
-                        "Could not convert argument to valid JSON-RPC request: {}",
-                        e
-                    ),
-                ))
-            }
-        };
+        let req: crate::requests::ListPays = req
+            .into_inner()
+            .try_into()
+            .map_err(|e: Error| Status::new(Code::InvalidArgument, e.to_string()))?;
 
         let res: Result<crate::responses::ListPays, crate::rpc::Error> =
             rpc.call("listpays", req).await;
@@ -819,10 +816,9 @@ impl Node for PluginNodeServer {
     ) -> Result<tonic::Response<pb::ListInvoicesResponse>, tonic::Status> {
         self.limit().await;
         let req = req.into_inner();
-        let req: crate::requests::ListInvoices = match req.try_into() {
-            Ok(v) => v,
-            Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
-        };
+        let req: crate::requests::ListInvoices = req
+            .try_into()
+            .map_err(|e: Error| Status::new(Code::InvalidArgument, e.to_string()))?;
         let rpc = self.rpc.lock().await;
         let res: Result<crate::responses::ListInvoices, crate::rpc::Error> =
             rpc.call("listinvoices", req).await;

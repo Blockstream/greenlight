@@ -354,16 +354,19 @@ impl Signer {
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
 
+        #[allow(deprecated)]
+        let req = UpgradeRequest {
+            initmsg: self.init.clone(),
+            signer_version: self.version().to_owned(),
+            startupmsgs: self
+                .get_startup_messages()
+                .into_iter()
+                .map(|s| s.into())
+                .collect(),
+        };
+
         scheduler
-            .maybe_upgrade(UpgradeRequest {
-                initmsg: self.init.clone(),
-                signer_version: self.version().to_owned(),
-                startupmsgs: self
-                    .get_startup_messages()
-                    .into_iter()
-                    .map(|s| s.into())
-                    .collect(),
-            })
+            .maybe_upgrade(req)
             .await
             .context("Error asking scheduler to upgrade")?;
 
