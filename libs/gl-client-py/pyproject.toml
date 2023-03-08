@@ -17,10 +17,12 @@ grpclib = "^0.4.3"
 name = "gl-client-py"
 dependencies = [
   "protobuf>=3",
+  "deprecated>=1.2.13",
 ]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
+deprecated = "^1.2.13"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7"

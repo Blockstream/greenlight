@@ -71,7 +71,9 @@ service Node {
 	// Notice: this does not include any payment that were
 	// received by this node, just the outgoing payments. Incoming
 	// payments can be retrieved using `ListInvoices`
-	rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse) {}
+	rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse) {
+	  option deprecated = true;
+	}
 
 	// Retrieve invoices that were created via CreateInvoice
 	//

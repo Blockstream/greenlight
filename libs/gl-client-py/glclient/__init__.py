@@ -1,15 +1,18 @@
-from . import scheduler_pb2 as schedpb
+import logging
+from binascii import hexlify, unhexlify
+from typing import (Iterable, List, Optional, SupportsIndex, Type, TypeVar,
+                    Union)
+
+from deprecated import deprecated
+from google.protobuf.message import Message as PbMessage
+
+from . import glclient as native
 from . import greenlight_pb2 as nodepb
 from . import node_pb2 as clnpb  # type: ignore
-from . import glclient as native
-from .tls import TlsConfig
+from . import scheduler_pb2 as schedpb
 from .glclient import backup_decrypt_with_seed
-from google.protobuf.message import Message as PbMessage
 from .greenlight_pb2 import Amount
-from binascii import hexlify, unhexlify
-from typing import Optional, List, Union, Iterable, SupportsIndex, Type, TypeVar
-import logging
-
+from .tls import TlsConfig
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
 __version__ = "v22.11"
@@ -170,6 +173,7 @@ class Node(object):
             bytes(self.inner.call(uri, req))
         )
 
+    @deprecated(version="0.1.6", reason="This was replaced with Node.listpays()")
     def list_payments(self) -> nodepb.ListPaymentsResponse:
         uri = "/greenlight.Node/ListPayments"
         req = nodepb.ListPaymentsRequest().SerializeToString()
