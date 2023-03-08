@@ -196,3 +196,8 @@ def test_node_listpays_preimage(clients, node_factory, bitcoind):
     pay = gl1.listpays()
     assert len(pay.pays) == 1
     assert pay.pays[0].preimage.hex() == preimage
+
+    # TODO: Remove as soon as we deprecate `list_payments`
+    pay = gl1.list_payments()
+    assert len(pay.payments) == 1
+    assert pay.payments[0].payment_preimage.hex() == preimage
