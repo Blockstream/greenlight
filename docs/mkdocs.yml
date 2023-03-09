@@ -13,23 +13,28 @@ theme:
   name: material
   palette:
     # Palette toggle for light mode
-    - scheme: default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       toggle:
-        icon: material/brightness-7
+        icon: material/weather-night
         name: Switch to dark mode
 
     # Palette toggle for dark mode
-    - scheme: slate
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       toggle:
-        icon: material/brightness-4
+        icon: material/weather-sunny
         name: Switch to light mode
 
   features:
     - navigation.tabs
+    - content.code.annotate
     - navigation.instant
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.indexes
+    - content.tabs.link
+
 nav:
   - Home:
     - index.md
