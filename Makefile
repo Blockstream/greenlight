@@ -50,10 +50,13 @@ docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
 docker-shell:
 	docker run \
 	  -ti \
+	  --net=host \
 	  --rm \
-          -e CARGO_TARGET_DIR=/tmp/target\
+	  -e TMPDIR=/tmp/gltesting/ \
+	  -v /tmp/gltesting/:/tmp/gltesting \
+          -e CARGO_TARGET_DIR=/tmp/target \
           -v /tmp/target:/tmp/target \
-          -v /tmp/gl-cargo-registry:/root/.cargo/registry/\
+          -v /tmp/gl-cargo-registry:/root/.cargo/registry/ \
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting bash
 
