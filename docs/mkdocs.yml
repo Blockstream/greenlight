@@ -17,6 +17,10 @@ theme:
     accent: indigo
   features:
     - navigation.tabs
+    - navigation.instant
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
 nav:
   - Home:
     - index.md
