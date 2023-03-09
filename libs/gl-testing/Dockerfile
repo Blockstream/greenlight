@@ -12,6 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV RUST_VERSION=1.67.0
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_LOG=debug
+ENV PYTHONPATH=/repo/libs/gl-testing
 
 RUN apt-get update && apt-get install -qqy \
     python3 \

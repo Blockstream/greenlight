@@ -37,7 +37,7 @@ build-self: ensure-docker
 	pip install coverage
 
 check-self: ensure-docker
-	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing -n=$(shell nproc)
+	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing ${PYTEST_OPTS}
 
 ensure-docker:
 	@if [ "x${GL_DOCKER}" != "x1" ]; then \
