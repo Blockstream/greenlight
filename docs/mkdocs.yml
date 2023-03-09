@@ -35,4 +35,5 @@ nav:
     - Overview: reference/index.md
     - Security: reference/security.md
     - Node RPC Proxy: reference/node-rpc-proxy.md
+    - reference/partner-certs.md
   - about.md
