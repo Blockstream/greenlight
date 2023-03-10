@@ -8,7 +8,7 @@ name = "gl-signerproxy"
 path = "src/bin/signerproxy.rs"
 
 [build-dependencies]
-tonic-build = "0.3"
+tonic-build = "0.8"
 
 [dependencies]
 anyhow = { workspace = true }
