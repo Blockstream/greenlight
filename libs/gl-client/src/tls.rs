@@ -105,7 +105,7 @@ pub fn generate_self_signed_device_cert(
 
     // Is a leaf certificate only so it is not allowed to sign child 
     // certificates.
-    params.is_ca = rcgen::IsCa::SelfSignedOnly;
+    params.is_ca = rcgen::IsCa::ExplicitNoCa;
     params.distinguished_name.push(
             rcgen::DnType::CommonName,
             format!("/users/{}/{}", node_id, device)
