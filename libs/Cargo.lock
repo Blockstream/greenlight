@@ -986,7 +986,7 @@ dependencies = [
  "lightning-signer-core",
  "lightning-signer-server",
  "log",
- "pin-project 0.4.30",
+ "pin-project 1.0.12",
  "prost 0.11.8",
  "rcgen",
  "ring",
@@ -1631,9 +1631,9 @@ dependencies = [
 
 [[package]]
 name = "linemux"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51157eba73f3dae3b17ae3ea5b29a8ad0346bdff3881e9a00646b827db066a83"
+checksum = "feb035c7806bd7982a317d8d66815021e91f7ab14a5fbedee22b06f608f11b43"
 dependencies = [
  "futures-util",
  "notify",
@@ -1890,9 +1890,9 @@ checksum = "38bf9645c8b145698bb0b18a4637dcacbc421ea49bef2317e4fd8065a387cf21"
 
 [[package]]
 name = "notify"
-version = "5.0.0-pre.16"
+version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "530f6314d6904508082f4ea424a0275cf62d341e118b313663f266429cb19693"
+checksum = "58ea850aa68a06e48fdb069c0ec44d0d64c8dbffa49bf3b6f7f0a901fdea1ba9"
 dependencies = [
  "bitflags",
  "crossbeam-channel",
@@ -1902,7 +1902,7 @@ dependencies = [
  "libc",
  "mio 0.8.6",
  "walkdir",
- "winapi 0.3.9",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]
