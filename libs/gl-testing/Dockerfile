@@ -13,6 +13,7 @@ ENV RUST_VERSION=1.67.0
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_LOG=debug
 ENV PYTHONPATH=/repo/libs/gl-testing
+ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
 
 RUN apt-get update && apt-get install -qqy \
     python3 \
