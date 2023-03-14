@@ -14,7 +14,7 @@ tonic-build = "0.3"
 anyhow = { workspace = true }
 env_logger = { workspace = true }
 tokio = { version = "0.2", features = ["full"] }
-tonic = { version = "0.3", features = ["tls", "transport"] }
+tonic = { version = "0.8", features = ["tls", "transport"] }
 prost = "0.6"
 log = "*"
 tower = "0.3"
