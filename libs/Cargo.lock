@@ -426,8 +426,7 @@ dependencies = [
 [[package]]
 name = "cln-plugin"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49be99e6e5ad55d420884b5b2a68aca890bcd1a1540ed6d2892363623a60f538"
+source = "git+https://github.com/cdecker/lightning.git?branch=202303-cln-plugin-reentrant#fa960af93dcd7b729b40909895b5aa498b08b2e1"
 dependencies = [
  "anyhow",
  "bytes 1.4.0",

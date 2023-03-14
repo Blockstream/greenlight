@@ -13,7 +13,7 @@ async-stream = "*"
 bytes = "1"
 clightningrpc = "*"
 cln-grpc = "*"
-cln-plugin = "0.1"
+cln-plugin = { git="https://github.com/cdecker/lightning.git", branch="202303-cln-plugin-reentrant"}
 cln-rpc = "*"
 env_logger = "^0.7.0"
 futures = "0.3"
