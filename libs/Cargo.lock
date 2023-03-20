@@ -167,7 +167,7 @@ dependencies = [
  "futures-util",
  "http",
  "http-body 0.4.5",
- "hyper 0.14.24",
+ "hyper 0.14.25",
  "itoa 1.0.5",
  "matchit",
  "memchr",
@@ -1057,7 +1057,7 @@ dependencies = [
  "gl-client",
  "governor",
  "hex",
- "hyper 0.14.24",
+ "hyper 0.14.25",
  "lazy_static",
  "lightning-storage-server",
  "linemux",
@@ -1319,9 +1319,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.14.24"
+version = "0.14.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e011372fa0b68db8350aa7a248930ecc7839bf46d8485577d69f117a75f164c"
+checksum = "cc5e554ff619822309ffd57d8734d77cd5ce6238bc956f037ea06c58238c9899"
 dependencies = [
  "bytes 1.4.0",
  "futures-channel",
@@ -1347,7 +1347,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbb958482e8c7be4bc3cf272a766a2b0bf1a6755e7a6ae777f017a31d11b13b1"
 dependencies = [
- "hyper 0.14.24",
+ "hyper 0.14.25",
  "pin-project-lite 0.2.9",
  "tokio 1.25.0",
  "tokio-io-timeout",
@@ -3329,7 +3329,7 @@ dependencies = [
  "h2 0.3.16",
  "http",
  "http-body 0.4.5",
- "hyper 0.14.24",
+ "hyper 0.14.25",
  "hyper-timeout",
  "percent-encoding",
  "pin-project 1.0.12",
@@ -3362,7 +3362,7 @@ dependencies = [
  "h2 0.3.16",
  "http",
  "http-body 0.4.5",
- "hyper 0.14.24",
+ "hyper 0.14.25",
  "hyper-timeout",
  "percent-encoding",
  "pin-project 1.0.12",
