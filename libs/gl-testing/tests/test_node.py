@@ -4,7 +4,9 @@ from pyln.testing.utils import wait_for
 from rich.pretty import pprint
 from glclient import nodepb
 
+import struct
 import unittest
+
 
 def test_node_start(scheduler, clients):
     c = clients.new()
@@ -196,3 +198,103 @@ def test_node_listpays_preimage(clients, node_factory, bitcoind):
     pay = gl1.listpays()
     assert len(pay.pays) == 1
     assert pay.pays[0].preimage.hex() == preimage
+
+
+def test_lsp_jit_fee(clients, node_factory, bitcoind):
+    """Test that the LSP (our peer) is allowed to alter the amount to
+    deduct its fee.
+
+    The scenario is simple: l1 -> gl1, with l1 being the LSP,
+    forwarding less than it is supposed to according to the onion
+    packet. We explicitly opt-in to this deduction by having a
+    matching invoice stashed with the node. Upon receiving the
+    incoming HTLC the plugin fetches the invoice, checks that indeed
+    the expected `total_msat` is lower than the sender thought, and
+    then we modify the onion payload in order to get `lightningd` to
+    accept it and settle the invoice with it.
+
+    We test multiple parts and overpay slightly to verify that even
+    that works out ok.
+
+    """
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+    l1 = node_factory.get_node()
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+    l1.fundwallet(10**6)
+    wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
+    l1.rpc.fundchannel(c.node_id.hex(), 'all')
+    bitcoind.generate_block(6, wait_for_mempool=1)
+    wait_for(lambda: l1.rpc.listpeers()['peers'][0]['channels'][0]['state'] == 'CHANNELD_NORMAL')
+
+    # Create an invoice for 10k
+    preimage = '00' * 32
+    payment_hash = '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925'
+    p1, p2 = 3000, 7000  # The two parts we're going to use
+    inv = gl1.create_invoice(
+        label='lbl',
+        amount=nodepb.Amount(millisatoshi=p1 + p2),
+        description="desc",
+        preimage=preimage,
+    ).bolt11
+
+    decoded = l1.rpc.decodepay(inv)
+
+    # So we have an invoice for 10k, now send it in two parts:
+    o1 = l1.rpc.createonion(hops=[{
+        "pubkey": c.node_id.hex(),
+        "payload": (
+            "2B" +
+            "0202" + struct.pack("!H", p1).hex() +  # amt_to_forward: 3k
+            "04016e" +  # 110 blocks CLTV
+            "0822" + decoded['payment_secret'] + "2710"  # Payment_secret + total_msat
+        )
+    }], assocdata=payment_hash)
+
+    l1.rpc.call('sendonion', {
+        'onion': o1['onion'],
+        'first_hop': {
+            "id": c.node_id.hex(),
+            "amount_msat": f"{p1}msat",
+            "delay": 21,
+        },
+        'payment_hash': payment_hash,
+        'partid': 1,
+        'groupid': 1,
+        'shared_secrets': o1['shared_secrets'],
+    })
+    o2 = l1.rpc.createonion(hops=[{
+        "pubkey": c.node_id.hex(),
+        "payload": (
+            "2B" +
+            "0202" + struct.pack("!H", p2).hex() +  # amt_to_forward: 7k
+            "04016e" +  # 110 blocks CLTV
+            "0822" + decoded['payment_secret'] + "2710"  # Payment_secret + total_msat
+        )
+    }], assocdata=payment_hash)
+
+    l1.rpc.call('sendonion', {
+        'onion': o2['onion'],
+        'first_hop': {
+            "id": c.node_id.hex(),
+            "amount_msat": f"{p2}msat",
+            "delay": 21,
+        },
+        'payment_hash': payment_hash,
+        'partid': 2,
+        'groupid': 1,
+        'shared_secrets': o1['shared_secrets'],
+    })
+
+    l1.rpc.waitsendpay(
+        payment_hash=payment_hash,
+        partid=1,
+        timeout=10
+    )
+    l1.rpc.waitsendpay(
+        payment_hash=payment_hash,
+        partid=2,
+        timeout=10
+    )
