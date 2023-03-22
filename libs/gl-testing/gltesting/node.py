@@ -98,6 +98,7 @@ class NodeProcess(TailableProc):
             f'--important-plugin={plugin_path}',
             '--dev-bitcoind-poll=5',
             '--dev-fast-gossip',
+            '--offline',
         ]
 
     def write_node_config(self, network: str):

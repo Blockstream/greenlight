@@ -68,13 +68,6 @@ def test_peerlist_datastore_add(node_factory: NodeFactory, clients: Clients):
     res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
     assert l1.info['id'] in res.datastore[0].key
 
-    # Connect from a peer node to the gl node.
-    l2: LightningNode = node_factory.get_node()
-    info = gl1.get_info()
-    l2.rpc.connect(info.id.hex(), "127.0.0.1", info.binding[0].port)
-    # Check that the peer id and address is written to the database
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
-    assert l2.info['id'] in res.datastore[0].key
 
 def test_peerlist_datastore_remove(node_factory: NodeFactory, clients: Clients):
     """Check that peers are removed from the peerlist datastore on the
