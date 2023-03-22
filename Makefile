@@ -52,6 +52,7 @@ docker-shell:
 	  -ti \
 	  --net=host \
 	  --rm \
+          --cap-add=SYS_PTRACE \
 	  -e TMPDIR=/tmp/gltesting/ \
 	  -v /tmp/gltesting/:/tmp/gltesting \
           -e CARGO_TARGET_DIR=/tmp/target \
