@@ -12,6 +12,7 @@ use cln_rpc;
 
 pub mod config;
 pub mod hsm;
+mod lsp;
 pub mod messages;
 pub mod node;
 pub mod pb;
