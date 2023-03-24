@@ -232,10 +232,12 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     # Create an invoice for 10k
     preimage = '00' * 32
     payment_hash = '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925'
+    parts = 2
     p1, p2 = 3000, 7000  # The two parts we're going to use
+    fee = 1000  # Fee leverage on each part
     inv = gl1.create_invoice(
         label='lbl',
-        amount=nodepb.Amount(millisatoshi=p1 + p2),
+        amount=nodepb.Amount(millisatoshi=p1 + p2 - parts * fee),
         description="desc",
         preimage=preimage,
     ).bolt11
@@ -253,18 +255,6 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
         )
     }], assocdata=payment_hash)
 
-    l1.rpc.call('sendonion', {
-        'onion': o1['onion'],
-        'first_hop': {
-            "id": c.node_id.hex(),
-            "amount_msat": f"{p1}msat",
-            "delay": 21,
-        },
-        'payment_hash': payment_hash,
-        'partid': 1,
-        'groupid': 1,
-        'shared_secrets': o1['shared_secrets'],
-    })
     o2 = l1.rpc.createonion(hops=[{
         "pubkey": c.node_id.hex(),
         "payload": (
@@ -276,10 +266,22 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     }], assocdata=payment_hash)
 
     l1.rpc.call('sendonion', {
+        'onion': o1['onion'],
+        'first_hop': {
+            "id": c.node_id.hex(),
+            "amount_msat": f"{p1 - fee}msat",
+            "delay": 21,
+        },
+        'payment_hash': payment_hash,
+        'partid': 1,
+        'groupid': 1,
+        'shared_secrets': o1['shared_secrets'],
+    })
+    l1.rpc.call('sendonion', {
         'onion': o2['onion'],
         'first_hop': {
             "id": c.node_id.hex(),
-            "amount_msat": f"{p2}msat",
+            "amount_msat": f"{p2 - fee}msat",
             "delay": 21,
         },
         'payment_hash': payment_hash,

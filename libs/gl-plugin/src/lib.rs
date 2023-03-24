@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use cln_rpc;
 use log::{debug, warn};
 use rpc::LightningClient;
 use serde_json::json;
@@ -8,7 +9,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
-use cln_rpc;
 
 pub mod config;
 pub mod hsm;
@@ -76,7 +76,7 @@ impl Builder {
     }
 
     pub fn stage(&self) -> Arc<stager::Stage> {
-	self.state.stage.clone()
+        self.state.stage.clone()
     }
 }
 
@@ -102,7 +102,7 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
         PathBuf::from_str(&config.hsmd_sock_path).context("hsmd_sock_path is not a valid path")?,
         stage.clone(),
         config.node_info.clone(),
-	config.node_config.clone(),
+        config.node_config.clone(),
     );
     tokio::spawn(hsm_server.run());
 
@@ -114,7 +114,8 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
         config.clone(),
         events.clone(),
         signer_state_store,
-    ).await?;
+    )
+    .await?;
 
     tokio::spawn(async move {
         node_server.run().await.unwrap();
@@ -127,6 +128,7 @@ pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Re
     };
 
     let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
+        .hook("htlc_accepted", lsp::on_htlc_accepted)
         .hook("invoice_payment", on_invoice_payment)
         .hook("peer_connected", on_peer_connected);
     Ok(Builder {
@@ -143,14 +145,18 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
     debug!("Got a successful peer connection: {:?}", v);
     let call = serde_json::from_value::<messages::PeerConnectedCall>(v.clone()).unwrap();
     let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
-    let req = cln_rpc::model::requests::DatastoreRequest{
-            key: vec!["greenlight".to_string(), "peerlist".to_string(), call.peer.id.clone()],
-            string: Some(serde_json::to_string(&call.peer).unwrap()),
-            hex: None,
-            mode: None,
-            generation: None,
-        };
-    
+    let req = cln_rpc::model::requests::DatastoreRequest {
+        key: vec![
+            "greenlight".to_string(),
+            "peerlist".to_string(),
+            call.peer.id.clone(),
+        ],
+        string: Some(serde_json::to_string(&call.peer).unwrap()),
+        hex: None,
+        mode: None,
+        generation: None,
+    };
+
     // We ignore the response and continue anyways.
     let res = rpc.call_typed(req).await;
     debug!("Got datastore response: {:?}", res);
