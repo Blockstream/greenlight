@@ -54,4 +54,5 @@ nav:
     - Security: reference/security.md
     - Node RPC Proxy: reference/node-rpc-proxy.md
     - reference/partner-certs.md
+    - LSP Integration: reference/lsp.md
   - about.md
