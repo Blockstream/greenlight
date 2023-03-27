@@ -425,7 +425,7 @@ dependencies = [
 [[package]]
 name = "cln-plugin"
 version = "0.1.2"
-source = "git+https://github.com/cdecker/lightning.git?branch=202303-cln-plugin-reentrant#fa960af93dcd7b729b40909895b5aa498b08b2e1"
+source = "git+https://github.com/cdecker/lightning.git?branch=202303-cln-plugin-reentrant#1b14de30a790a8e2a3e75392af148ce2a4e1432e"
 dependencies = [
  "anyhow",
  "bytes 1.4.0",
@@ -2380,7 +2380,7 @@ dependencies = [
  "indoc",
  "libc",
  "memoffset",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
