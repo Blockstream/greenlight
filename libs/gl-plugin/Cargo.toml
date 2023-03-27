@@ -15,7 +15,7 @@ clightningrpc = "*"
 cln-grpc = "*"
 cln-plugin = { git="https://github.com/cdecker/lightning.git", branch="202303-cln-plugin-reentrant"}
 cln-rpc = "*"
-env_logger = "^0.7.0"
+env_logger = "^0.10.0"
 futures = "0.3"
 gl-client = { version = "0.1.4", path = "../gl-client" }
 governor = { version = "0.5", default-features = false, features = ["std"] }
