@@ -248,20 +248,22 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     o1 = l1.rpc.createonion(hops=[{
         "pubkey": c.node_id.hex(),
         "payload": (
-            "2B" +
+            "2E" +
             "0202" + struct.pack("!H", p1).hex() +  # amt_to_forward: 3k
             "04016e" +  # 110 blocks CLTV
-            "0822" + decoded['payment_secret'] + "2710"  # Payment_secret + total_msat
+            "0822" + decoded['payment_secret'] + "2710" +  # Payment_secret + total_msat
+            "FB0142"  # Typ 251 payload 0x42 (testing we don't lose TLVs)
         )
     }], assocdata=payment_hash)
 
     o2 = l1.rpc.createonion(hops=[{
         "pubkey": c.node_id.hex(),
         "payload": (
-            "2B" +
+            "2E" +
             "0202" + struct.pack("!H", p2).hex() +  # amt_to_forward: 7k
             "04016e" +  # 110 blocks CLTV
-            "0822" + decoded['payment_secret'] + "2710"  # Payment_secret + total_msat
+            "0822" + decoded['payment_secret'] + "2710" + # Payment_secret + total_msat
+            "FB0142"  # Typ 251 payload 0x42 (testing we don't lose TLVs)
         )
     }], assocdata=payment_hash)
 
@@ -289,6 +291,10 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
         'groupid': 1,
         'shared_secrets': o1['shared_secrets'],
     })
+
+    # Check that custom payloads are preserved. See the type=251 field
+    # at the end of the onion-construction above.
+    c.find_node().process.wait_for_log(r'Serialized payload: .*fb0142')
 
     l1.rpc.waitsendpay(
         payment_hash=payment_hash,
