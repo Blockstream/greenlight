@@ -103,11 +103,13 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
             total_msat.msat(),
         );
 
+	let payload = tlv::SerializedTlvStream::to_bytes(payload);
+	log::debug!("Serialized payload: {}", hex::encode(&payload));
 
         use tlv::ToBytes;
         HtlcAcceptedResponse {
             result: "continue".to_string(),
-            payload: Some(tlv::SerializedTlvStream::to_bytes(payload)),
+            payload: Some(payload),
         }
     } else {
         log::info!("HTLC amount matches onion payload amount, deferring to lightningd");
