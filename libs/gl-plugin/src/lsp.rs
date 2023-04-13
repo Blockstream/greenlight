@@ -60,7 +60,7 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
 
     let res = if htlc_amt.msat() < onion_amt.msat() {
         log::info!(
-            "Potential JIT LSP payment detected: htlc_amount={}sat < onion_amount={}msat",
+            "Potential JIT LSP payment detected: htlc_amount={}msat < onion_amount={}msat",
             htlc_amt.msat(),
             onion_amt.msat()
         );
