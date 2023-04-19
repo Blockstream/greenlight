@@ -103,8 +103,8 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
             total_msat.msat(),
         );
 
-	let payload = tlv::SerializedTlvStream::to_bytes(payload);
-	log::debug!("Serialized payload: {}", hex::encode(&payload));
+        let payload = tlv::SerializedTlvStream::to_bytes(payload);
+        log::debug!("Serialized payload: {}", hex::encode(&payload));
 
         use tlv::ToBytes;
         HtlcAcceptedResponse {
@@ -263,18 +263,16 @@ pub mod tlv {
         }
 
         fn put_tu64(&mut self, u: TU64) {
-            match u {
-                0..=0xFC => self.put_u8(u as u8),
-                0xFD..=0xFFFF => {
-                    self.put_u16(u as u16);
-                }
-                0x10000..=0xFFFFFFFF => {
-                    self.put_u32(u as u32);
-                }
-                v => {
-                    self.put_u64(v);
-                }
-            }
+            // Fixme: (nepet) We trim leading zero bytes here as they
+            // cause some problems for the cln decoder - for now. Think
+            // about an appropriate solution.
+            let b: Vec<u8> = u
+                .to_be_bytes()
+                .iter()
+                .map(|x| x.clone())
+                .skip_while(|&x| x == 0)
+                .collect();
+            self.put_slice(&b);
         }
     }
 
