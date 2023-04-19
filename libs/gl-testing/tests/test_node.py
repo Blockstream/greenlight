@@ -233,8 +233,8 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     preimage = '00' * 32
     payment_hash = '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925'
     parts = 2
-    p1, p2 = 3000, 7000  # The two parts we're going to use
-    fee = 1000  # Fee leverage on each part
+    p1, p2 = 300000, 700000  # The two parts we're going to use
+    fee = 100000  # Fee leverage on each part
     inv = gl1.create_invoice(
         label='lbl',
         amount=nodepb.Amount(millisatoshi=p1 + p2 - parts * fee),
@@ -244,14 +244,14 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
 
     decoded = l1.rpc.decodepay(inv)
 
-    # So we have an invoice for 10k, now send it in two parts:
+    # So we have an invoice for 100k, now send it in two parts:
     o1 = l1.rpc.createonion(hops=[{
         "pubkey": c.node_id.hex(),
         "payload": (
-            "2E" +
-            "0202" + struct.pack("!H", p1).hex() +  # amt_to_forward: 3k
+            "30" +
+            "0203" + "0493e0" +  # amt_to_forward: 30k
             "04016e" +  # 110 blocks CLTV
-            "0822" + decoded['payment_secret'] + "2710" +  # Payment_secret + total_msat
+            "0823" + decoded['payment_secret'] + "0f4240" +  # Payment_secret + total_msat
             "FB0142"  # Typ 251 payload 0x42 (testing we don't lose TLVs)
         )
     }], assocdata=payment_hash)
@@ -259,10 +259,10 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     o2 = l1.rpc.createonion(hops=[{
         "pubkey": c.node_id.hex(),
         "payload": (
-            "2E" +
-            "0202" + struct.pack("!H", p2).hex() +  # amt_to_forward: 7k
+            "30" +
+            "0203" + "0aae60" +  # amt_to_forward: 70k
             "04016e" +  # 110 blocks CLTV
-            "0822" + decoded['payment_secret'] + "2710" + # Payment_secret + total_msat
+            "0823" + decoded['payment_secret'] + "0f4240" + # Payment_secret + total_msat
             "FB0142"  # Typ 251 payload 0x42 (testing we don't lose TLVs)
         )
     }], assocdata=payment_hash)
