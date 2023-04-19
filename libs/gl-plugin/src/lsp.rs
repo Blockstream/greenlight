@@ -293,7 +293,6 @@ pub mod tlv {
                 b.put_compact_size(e.value.len() as u64);
                 b.put(&e.value[..]);
             }
-            // TODO prepend the length prefix?
             b.to_vec()
         }
     }
