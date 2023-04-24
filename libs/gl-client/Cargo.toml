@@ -40,7 +40,7 @@ chacha20poly1305 = { version = "0.10.1", optional = true }
 # Temporarily embargo serde_bolt=0.2.2 which breaks the build. This
 # seems to be more stable than the patching support in `Cargo.toml`
 serde_bolt = "=0.2.1"
-secp256k1 = { version = "0.26.0", optional = true }
+secp256k1 = { version = "0.27.0", optional = true }
 
 [build-dependencies]
 tonic-build = "^0.8"
