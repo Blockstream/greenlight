@@ -2,7 +2,7 @@ use crate::runtime::exec;
 use crate::Signer;
 use crate::{pb, pb::scheduler::scheduler_client::SchedulerClient};
 use anyhow::Result;
-use bitcoin::Network;
+use gl_client::bitcoin::Network;
 use gl_client::tls::TlsConfig;
 use prost::Message;
 use pyo3::exceptions::PyValueError;

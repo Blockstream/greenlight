@@ -2,7 +2,7 @@ use crate::node::Node;
 use crate::runtime::{convert, exec};
 use crate::tls::TlsConfig;
 use crate::Signer;
-use bitcoin::Network;
+use gl_client::bitcoin::Network;
 use neon::prelude::*;
 use prost::Message;
 

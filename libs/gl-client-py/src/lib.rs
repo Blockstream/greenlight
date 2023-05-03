@@ -1,4 +1,4 @@
-use gl_client::{export::decrypt_with_seed, pb};
+use gl_client::{bitcoin, export::decrypt_with_seed, pb};
 use pyo3::prelude::*;
 
 #[macro_use]

@@ -1,5 +1,5 @@
 use crate::tls::TlsConfig;
-use bitcoin::Network;
+use gl_client::bitcoin::Network;
 use log::warn;
 use pyo3::prelude::*;
 use tokio::sync::mpsc;

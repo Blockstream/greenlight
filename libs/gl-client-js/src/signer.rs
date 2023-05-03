@@ -1,8 +1,8 @@
-use bitcoin::Network;
+use gl_client::bitcoin::Network;
 use log::debug;
+use log::warn;
 use neon::prelude::*;
 use tokio::sync::mpsc;
-use log::warn;
 #[derive(Clone)]
 pub struct Signer {
     pub(crate) inner: gl_client::signer::Signer,
@@ -80,8 +80,8 @@ impl SignerHandle {
     pub(crate) fn shutdown(mut cx: FunctionContext) -> JsResult<JsUndefined> {
         let this = cx.argument::<JsBox<SignerHandle>>(0)?;
         if let Err(e) = this.signal.try_send(()) {
-	    warn!("Failed to send shutdown signal, signer may already be stopped: {e}");
-	}
+            warn!("Failed to send shutdown signal, signer may already be stopped: {e}");
+        }
         Ok(cx.undefined())
     }
 }
