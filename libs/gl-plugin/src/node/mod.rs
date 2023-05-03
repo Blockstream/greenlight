@@ -469,8 +469,13 @@ impl Node for PluginNodeServer {
                         warn!("Could not get peers from datastore: {:?}", res);
                     }
 
-                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res.clone()
-                    .unwrap_or_else(|_| cln_rpc::model::ListdatastoreResponse{datastore: vec![]}).datastore.iter()
+                    let mut datastore_requests: Vec<cln_rpc::model::ConnectRequest> = res
+                        .clone()
+                        .unwrap_or_else(|_| cln_rpc::model::ListdatastoreResponse {
+                            datastore: vec![],
+                        })
+                        .datastore
+                        .iter()
                         .map(|x| {
                             // We need to replace unnecessary escape characters that
                             // have been added by the datastore, as serde is a bit
@@ -892,6 +897,7 @@ impl PluginNodeServer {
         );
 
         let router = tonic::transport::Server::builder()
+            .max_frame_size(4 * 1024 * 1024) // 4MB max request size
             .tcp_keepalive(Some(tokio::time::Duration::from_secs(1)))
             .tls_config(self.tls.clone())?
             .layer(SignatureContextLayer {
