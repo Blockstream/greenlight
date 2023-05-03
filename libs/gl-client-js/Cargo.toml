@@ -17,5 +17,4 @@ once_cell = "*"
 tonic = "^0.8"
 prost = "0.11"
 anyhow = { workspace = true }
-bitcoin = "^0"
 neon = { version = "0.9", default-features = false, features = ["napi-4", "channel-api"] }

@@ -1,6 +1,6 @@
 use crate::runtime::exec;
 use crate::tls::TlsConfig;
-use bitcoin::Network;
+use gl_client::bitcoin::Network;
 use gl_client as gl;
 use gl_client::pb;
 use prost::Message;
