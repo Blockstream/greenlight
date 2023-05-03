@@ -425,7 +425,7 @@ dependencies = [
 [[package]]
 name = "cln-plugin"
 version = "0.1.2"
-source = "git+https://github.com/cdecker/lightning.git?branch=202303-cln-plugin-reentrant#f20f77f66c4e07279a0b1d9d72df5bdd20bbcf9a"
+source = "git+https://github.com/ElementsProject/lightning.git?branch=master#21cc16fb5bfe116bd0430a19c1301ef606c424b9"
 dependencies = [
  "anyhow",
  "bytes 1.4.0",
@@ -1009,7 +1009,6 @@ name = "gl-client-js"
 version = "0.1.6"
 dependencies = [
  "anyhow",
- "bitcoin",
  "env_logger 0.10.0",
  "gl-client",
  "log",
@@ -1025,7 +1024,6 @@ name = "gl-client-py"
 version = "0.1.6"
 dependencies = [
  "anyhow",
- "bitcoin",
  "bytes 1.4.0",
  "env_logger 0.10.0",
  "gl-client",
