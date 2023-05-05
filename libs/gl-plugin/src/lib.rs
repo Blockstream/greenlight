@@ -1,11 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use cln_rpc;
 use log::{debug, warn};
 use rpc::LightningClient;
 use serde_json::json;
 use std::future::Future;
-use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
@@ -90,36 +88,11 @@ impl GlPlugin {
 
 /// Initialize the plugin, but don't start it yet. Allows attaching
 /// additional methods, hooks, and subscriptions.
-pub async fn init(signer_state_store: Box<dyn crate::storage::StateStore>) -> Result<Builder> {
-    let (events, _) = tokio::sync::broadcast::channel(16);
+pub async fn init(
+    stage: Arc<stager::Stage>,
+    events: tokio::sync::broadcast::Sender<Event>,
+) -> Result<Builder> {
     let rpc = Arc::new(Mutex::new(LightningClient::new("lightning-rpc")));
-    let stage = Arc::new(stager::Stage::new());
-    let config = config::Config::new().context("loading config")?;
-
-    // We run this already at startup, not at configuration because if
-    // the signerproxy doesn't find the socket on the FS it'll exit.
-    let hsm_server = hsm::StagingHsmServer::new(
-        PathBuf::from_str(&config.hsmd_sock_path).context("hsmd_sock_path is not a valid path")?,
-        stage.clone(),
-        config.node_info.clone(),
-        config.node_config.clone(),
-    );
-    tokio::spawn(hsm_server.run());
-
-    // We also run the grpc interface for clients already, since we
-    // can wait on the RPC becoming reachable, and this way we don't
-    // need to poll from the client.
-    let node_server = crate::node::PluginNodeServer::new(
-        stage.clone(),
-        config.clone(),
-        events.clone(),
-        signer_state_store,
-    )
-    .await?;
-
-    tokio::spawn(async move {
-        node_server.run().await.unwrap();
-    });
 
     let state = GlPlugin {
         events: events.clone(),
@@ -235,3 +208,5 @@ pub enum Event {
     RpcCall,
     IncomingPayment(pb::IncomingPayment),
 }
+
+pub use cln_grpc as grpc;
