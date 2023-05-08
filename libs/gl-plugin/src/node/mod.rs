@@ -50,7 +50,7 @@ pub struct PluginNodeServer {
     signer_state: Arc<Mutex<State>>,
     grpc_binding: String,
     signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
-    ctx: crate::context::Context,
+    pub ctx: crate::context::Context,
 }
 
 impl PluginNodeServer {
@@ -927,8 +927,6 @@ impl PluginNodeServer {
             .add_service(RpcWaitService::new(cln_node, self.rpc_path.clone()))
             .add_service(crate::pb::node_server::NodeServer::new(self.clone()));
 
-        info!("Starting grpc server on {}", addr);
-
         router
             .serve(addr)
             .await
@@ -962,8 +960,14 @@ impl PluginNodeServer {
 use tower::{Layer, Service};
 
 #[derive(Debug, Clone)]
-struct SignatureContextLayer {
+pub struct SignatureContextLayer {
     ctx: crate::context::Context,
+}
+
+impl SignatureContextLayer {
+    pub fn new(context: crate::context::Context) -> Self {
+        SignatureContextLayer { ctx: context }
+    }
 }
 
 impl<S> Layer<S> for SignatureContextLayer {
@@ -978,7 +982,7 @@ impl<S> Layer<S> for SignatureContextLayer {
 }
 
 #[derive(Debug, Clone)]
-struct SignatureContextService<S> {
+pub struct SignatureContextService<S> {
     inner: S,
     ctx: crate::context::Context,
 }

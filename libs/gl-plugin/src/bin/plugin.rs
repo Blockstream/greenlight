@@ -9,6 +9,7 @@ use gl_plugin::{
 };
 use log::info;
 use std::env;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -39,6 +40,24 @@ async fn start_node_server(
     events: tokio::sync::broadcast::Sender<Event>,
     signer_state_store: Box<dyn StateStore>,
 ) -> Result<(), Error> {
+    let addr: SocketAddr = config
+        .node_grpc_binding
+        .parse()
+        .context("parsing the node_grpc_binding")?;
+
+    let tls = tonic::transport::ServerTlsConfig::new()
+        .identity(config.identity.id.clone())
+        .client_ca_root(config.identity.ca.clone());
+
+    let mut rpc_path = std::env::current_dir().unwrap();
+    rpc_path.push("lightning-rpc");
+
+    info!(
+        "Starting grpc server on addr={} serving rpc={}",
+        addr,
+        rpc_path.display()
+    );
+
     let node_server = PluginNodeServer::new(
         stage.clone(),
         config.clone(),
@@ -47,8 +66,24 @@ async fn start_node_server(
     )
     .await?;
 
+    let cln_node = gl_plugin::grpc::pb::node_server::NodeServer::new(
+        gl_plugin::node::WrappedNodeServer::new(&rpc_path)
+            .await
+            .context("creating cln_grpc::pb::node_server::NodeServer instance")?,
+    );
+    let router = tonic::transport::Server::builder()
+        .tls_config(tls)?
+        .layer(gl_plugin::node::SignatureContextLayer::new(
+            node_server.ctx.clone(),
+        ))
+        .add_service(gl_plugin::node::RpcWaitService::new(cln_node, rpc_path))
+        .add_service(gl_plugin::pb::node_server::NodeServer::new(node_server));
+
     tokio::spawn(async move {
-        node_server.run().await.unwrap();
+        router
+            .serve(addr)
+            .await
+            .context("grpc interface exited with error")
     });
     Ok(())
 }
