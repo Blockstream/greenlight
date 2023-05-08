@@ -12,6 +12,7 @@ use lightning_signer::node::NodeServices;
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::Mutex;
+use serde_bolt::Octets;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
@@ -119,13 +120,13 @@ impl Signer {
 
     fn bolt12initreq() -> vls_protocol::msgs::Message {
         vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: "bolt12-invoice-base".as_bytes().to_vec(),
+            info: Octets("bolt12-invoice-base".as_bytes().to_vec()),
         })
     }
 
     fn scbinitreq() -> vls_protocol::msgs::Message {
         vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: "scb secret".as_bytes().to_vec(),
+            info: Octets("scb secret".as_bytes().to_vec()),
         })
     }
 
@@ -447,7 +448,7 @@ impl Signer {
             ));
         }
 
-        let req = vls_protocol::msgs::SignMessage { message: msg };
+        let req = vls_protocol::msgs::SignMessage { message: Octets(msg) };
         let response = self
             .handler()
             .handle(vls_protocol::msgs::Message::SignMessage(req))

@@ -27,19 +27,16 @@ rcgen = { version = "0.10.0", features = ["pem", "x509-parser"]}
 tempfile = "3.3.0"
 bitcoin = "^0"
 serde = { version = "1", features = [ "derive" ] }
-lightning-signer-core = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1" }
-lightning-signer-server = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1", features = ["persist"] }
-vls-protocol-signer = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1" }
-vls-protocol = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1" }
-vls-persist = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1", features=["memo"] }
+vls-core = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
+vls-persist = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
+vls-protocol-signer = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
+vls-protocol = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
 serde_json = "^1.0"
 thiserror = "1"
 cln-grpc = "^0.1"
 chacha20poly1305 = { version = "0.10.1", optional = true }
 
-# Temporarily embargo serde_bolt=0.2.2 which breaks the build. This
-# seems to be more stable than the patching support in `Cargo.toml`
-serde_bolt = "=0.2.1"
+serde_bolt = "0.2"
 secp256k1 = { version = "0.26.0", optional = true }
 
 [build-dependencies]
