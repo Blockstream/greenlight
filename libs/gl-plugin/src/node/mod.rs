@@ -81,6 +81,27 @@ impl PluginNodeServer {
             }
         });
 
+        let rrpc = rpc.clone();
+        tokio::spawn(async move {
+            debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
+            use tokio::time::{sleep, Duration};
+            let rpc = rrpc.lock().await;
+            loop {
+                let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
+                    rpc.call("getinfo", json!({})).await;
+                match res {
+                    Ok(_) => break,
+                    Err(e) => {
+                        trace!(
+                            "JSON-RPC interface not yet available. Delaying 50ms. {:?}",
+                            e
+                        );
+                        sleep(Duration::from_millis(50)).await;
+                    }
+                }
+            }
+        });
+
         let signer_state = signer_state_store.read().await?;
 
         let ctx = crate::context::Context::new();
@@ -907,27 +928,6 @@ impl PluginNodeServer {
             .add_service(crate::pb::node_server::NodeServer::new(self.clone()));
 
         info!("Starting grpc server on {}", addr);
-
-        let rpc = self.rpc.clone();
-        tokio::spawn(async move {
-            debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
-            use tokio::time::{sleep, Duration};
-            let rpc = rpc.lock().await;
-            loop {
-                let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
-                    rpc.call("getinfo", json!({})).await;
-                match res {
-                    Ok(_) => break,
-                    Err(e) => {
-                        trace!(
-                            "JSON-RPC interface not yet available. Delaying 50ms. {:?}",
-                            e
-                        );
-                        sleep(Duration::from_millis(50)).await;
-                    }
-                }
-            }
-        });
 
         router
             .serve(addr)
