@@ -366,22 +366,22 @@ class Node(object):
     def pay(
             self,
             bolt11: str,
-            amount=None,
-            timeout: int=0,
+            amount_msat: Optional[Amount]=None,
+            retry_for: int=0,
             maxfee: Optional[Amount]=None,
             maxfeepercent: Optional[float]=None
     ) -> nodepb.Payment:
-        uri = "/greenlight.Node/Pay"
-        res = nodepb.Payment
-        req = nodepb.PayRequest(
+        uri = "/cln.Node/Pay"
+        res = clnpb.PayResponse
+        req = clnpb.PayRequest(
             bolt11=bolt11,
-            amount=amount,
-            timeout=timeout,
+            amount_msat=amount_msat,
+            retry_for=retry_for,
             maxfeepercent=maxfeepercent,
             maxfee=maxfee,
         ).SerializeToString()
 
-        return nodepb.Payment.FromString(
+        return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
 

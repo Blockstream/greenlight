@@ -3,6 +3,7 @@ from gltesting.fixtures import *
 from pyln.testing.utils import wait_for
 from rich.pretty import pprint
 from glclient import nodepb
+from glclient import node_pb2 as clnpb
 
 import struct
 import unittest
@@ -115,7 +116,6 @@ def test_cln_grpc_interface(clients):
 
     # Reach into the node configuration
     from glclient import node_pb2_grpc as clngrpc
-    from glclient import node_pb2 as clnpb
     import grpc
     cred = grpc.ssl_channel_credentials(
         root_certificates=gl1.tls.ca,
@@ -160,7 +160,10 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
     })['bolt11']
     print(inv)
     print(l1.rpc.decodepay(inv))
-    p = gl1.pay(inv, amount=nodepb.Amount(millisatoshi=31337))
+    p = gl1.pay(
+        inv,
+        clnpb.Amount(msat=31337)
+    )
     invs = l1.rpc.listinvoices()['invoices']
 
     assert(len(invs) == 1)
