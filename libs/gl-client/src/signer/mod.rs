@@ -17,6 +17,7 @@ use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
 use tonic::Request;
+use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, NegativeApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 
@@ -96,6 +97,13 @@ impl Signer {
 
     fn handler(&self) -> handler::RootHandler {
         handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone(), self.secret)
+            .build()
+            .0
+    }
+
+    fn handler_with_approver(&self, approver: Arc<dyn Approve>) -> handler::RootHandler {
+        handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone(), self.secret)
+            .approver(approver)
             .build()
             .0
     }
@@ -191,7 +199,6 @@ impl Signer {
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
 
-            let sigreq = vls_protocol::msgs::from_vec(req.raw.clone())?;
             let ctxrequests: Vec<model::Request> = self
                 .check_request_auth(req.requests.clone())?
                 .into_iter()
@@ -201,9 +208,10 @@ impl Signer {
             // TODO: Decode requests and reconcile them with the changes
             use auth::Authorizer;
             let auth = auth::DummyAuthorizer {};
-            auth.authorize(sigreq, ctxrequests)?;
+            let approvals = auth.authorize(ctxrequests)?;
+            // TODO: apply approval to approver / handler
 
-            match self.process_request(req).await {
+            match self.process_request(req, approvals).await {
                 Ok(response) => {
                     trace!("Sending response {}", hex::encode(&response.raw));
                     client
@@ -221,7 +229,7 @@ impl Signer {
         }
     }
 
-    async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse> {
+    async fn process_request(&self, req: HsmRequest, approvals: Vec<Approval>) -> Result<HsmResponse> {
         let mut b = Bytes::from(req.raw.clone());
         let diff: crate::persist::State = req.signer_state.into();
         let prestate = {
@@ -246,19 +254,25 @@ impl Signer {
 
         log::trace!("Handling message {:?}", msg);
 
-        let response = match req.context {
+        let approver =
+            Arc::new(MemoApprover::new(NegativeApprover()));
+        approver.approve(approvals);
+        let root_handler = self.handler_with_approver(approver);
+
+        let handler: Box<dyn Handler> = match req.context {
             Some(HsmRequestContext { dbid: 0, .. }) | None => {
                 // This is the main daemon talking to us.
-                self.handler().handle(msg)
+                Box::new(root_handler)
             }
             Some(c) => {
                 let pk: [u8; 33] = c.node_id.try_into().unwrap();
                 let pk = vls_protocol::model::PubKey(pk);
-                let h = self.handler().for_new_client(1 as u64, pk, c.dbid);
-                h.handle(msg)
+                Box::new(root_handler.for_new_client(1 as u64, pk, c.dbid))
             }
-        }
-        .map_err(|e| anyhow!("processing request: {e:?}"))?;
+        };
+
+        let response = handler.handle(msg)
+            .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
@@ -526,12 +540,14 @@ mod tests {
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
             .process_request(HsmRequest {
-                request_id: 0,
-                context: None,
-                raw: msg,
-                signer_state: vec![],
-                requests: Vec::new(),
-            })
+                            request_id: 0,
+                            context: None,
+                            raw: msg,
+                            signer_state: vec![],
+                            requests: Vec::new(),
+                        },
+                             vec![],
+            )
             .await
             .is_err())
     }

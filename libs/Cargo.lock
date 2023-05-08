@@ -296,7 +296,7 @@ dependencies = [
 [[package]]
 name = "bolt-derive"
 version = "0.1.0"
-source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=main#e13c8cd994b310f598c0b2902741d89ad5472382"
+source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=2023-05-memo-approve#a1800748546bd2ada73fb49aefefa6a7025e4fbd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1025,7 +1025,7 @@ dependencies = [
  "http",
  "http-body 0.4.5",
  "log",
- "pin-project 1.0.12",
+ "pin-project 0.4.30",
  "prost 0.11.8",
  "rcgen",
  "ring",
@@ -1083,7 +1083,7 @@ name = "gl-plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-stream 0.3.4",
+ "async-stream 0.2.1",
  "base64 0.13.1",
  "bytes 1.4.0",
  "clightningrpc",
@@ -3811,7 +3811,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "vls-core"
 version = "0.2.1"
-source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=main#e13c8cd994b310f598c0b2902741d89ad5472382"
+source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=2023-05-memo-approve#a1800748546bd2ada73fb49aefefa6a7025e4fbd"
 dependencies = [
  "anyhow",
  "backtrace",
@@ -3835,7 +3835,7 @@ dependencies = [
 [[package]]
 name = "vls-persist"
 version = "0.2.0"
-source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=main#e13c8cd994b310f598c0b2902741d89ad5472382"
+source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=2023-05-memo-approve#a1800748546bd2ada73fb49aefefa6a7025e4fbd"
 dependencies = [
  "hex",
  "log",
@@ -3848,7 +3848,7 @@ dependencies = [
 [[package]]
 name = "vls-protocol"
 version = "0.2.0"
-source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=main#e13c8cd994b310f598c0b2902741d89ad5472382"
+source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=2023-05-memo-approve#a1800748546bd2ada73fb49aefefa6a7025e4fbd"
 dependencies = [
  "as-any",
  "bolt-derive",
@@ -3862,7 +3862,7 @@ dependencies = [
 [[package]]
 name = "vls-protocol-signer"
 version = "0.2.0"
-source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=main#e13c8cd994b310f598c0b2902741d89ad5472382"
+source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer?branch=2023-05-memo-approve#a1800748546bd2ada73fb49aefefa6a7025e4fbd"
 dependencies = [
  "bit-vec",
  "log",

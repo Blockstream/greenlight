@@ -27,10 +27,10 @@ rcgen = { version = "0.10.0", features = ["pem", "x509-parser"]}
 tempfile = "3.3.0"
 bitcoin = "^0"
 serde = { version = "1", features = [ "derive" ] }
-vls-core = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
-vls-persist = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
-vls-protocol-signer = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
-vls-protocol = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="main" }
+vls-core = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="2023-05-memo-approve" }
+vls-persist = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="2023-05-memo-approve" }
+vls-protocol-signer = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="2023-05-memo-approve" }
+vls-protocol = { git="https://gitlab.com/lightning-signer/validating-lightning-signer", branch="2023-05-memo-approve" }
 serde_json = "^1.0"
 thiserror = "1"
 cln-grpc = "^0.1"
