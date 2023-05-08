@@ -5,6 +5,7 @@ use lightning_signer::channel::ChannelStub;
 use lightning_signer::node::NodeConfig;
 use lightning_signer::node::NodeState;
 use lightning_signer::persist::{Error, Persist};
+use lightning_signer::policy::validator::ValidatorFactory;
 use lightning_signer::SendSync;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -406,7 +407,8 @@ impl Persist for MemoryPersister {
 
     fn get_tracker(
         &self,
-        node_id: &PublicKey,
+        node_id: PublicKey,
+        validator_factory: Arc<dyn ValidatorFactory>,
     ) -> Result<ChainTracker<lightning_signer::monitor::ChainMonitor>, Error> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
@@ -415,7 +417,7 @@ impl Persist for MemoryPersister {
         let v: vls_persist::model::ChainTrackerEntry =
             serde_json::from_value(state.values.get(&key).unwrap().1.clone()).unwrap();
 
-        Ok(v.into())
+        Ok(v.into_tracker(node_id, validator_factory))
     }
 
     fn get_node_channels(
@@ -479,13 +481,14 @@ impl Persist for MemoryPersister {
             let node_state: vls_persist::model::NodeStateEntry =
                 serde_json::from_value(state.values.get(&state_key).unwrap().1.clone()).unwrap();
 
-            let state = lightning_signer::node::NodeState {
+            let state = NodeState {
                 invoices: Default::default(),
                 issued_invoices: Default::default(),
                 payments: Default::default(),
                 excess_amount: 0,
                 log_prefix: "".to_string(),
                 velocity_control: node_state.velocity_control.into(),
+                fee_velocity_control: node_state.fee_velocity_control.into(),
             };
             let entry = lightning_signer::persist::model::NodeEntry {
                 key_derivation_style: node.key_derivation_style,
