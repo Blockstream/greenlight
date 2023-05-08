@@ -425,6 +425,55 @@ class Node(object):
                 break
             yield nodepb.IncomingPayment.FromString(bytes(n))
 
+    def datastore(
+            self,
+            key,
+            string=None,
+            hex=None,
+            mode=None,
+            generation=None
+    ):
+        uri = "/cln.Node/Datastore"
+        req = clnpb.DatastoreRequest(
+            key=key,
+            string=string,
+            hex=hex,
+            mode=mode,
+            generation=generation
+        ).SerializeToString()
+        res = clnpb.DatastoreResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
+    def del_datastore(
+            self,
+            key,
+            generation=None
+    ):
+        uri = "/cln.Node/DelDatastore"
+        req = clnpb.DeldatastoreRequest(
+            key=key,
+            generation=generation
+        ).SerializeToString()
+        res = clnpb.DeldatastoreResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
+    def list_datastore(
+            self,
+            key=None
+    ):
+        uri = "/cln.Node/ListDatastore"
+        req = clnpb.ListdatastoreRequest(
+            key=key
+        ).SerializeToString()
+        res = clnpb.ListdatastoreResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
 
 def normalize_node_id(node_id, string=False):
     if len(node_id) == 66:
