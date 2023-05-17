@@ -536,6 +536,15 @@ impl TryFrom<String> for Amount {
     }
 }
 
+impl TryFrom<crate::responses::MSat> for Amount {
+    type Error = anyhow::Error;
+    fn try_from(s: crate::responses::MSat) -> Result<Amount, Self::Error> {
+        Ok(Amount {
+            unit: Some(amount::Unit::Millisatoshi(s.0)),
+        })
+    }
+}
+
 impl TryFrom<String> for InvoiceStatus {
     type Error = anyhow::Error;
 
