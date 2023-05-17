@@ -597,7 +597,7 @@ impl TryFrom<ListInvoicesRequest> for requests::ListInvoices {
 impl From<&responses::ListInvoiceInvoice> for Invoice {
     fn from(i: &responses::ListInvoiceInvoice) -> Invoice {
         let status: InvoiceStatus = i.status.clone().try_into().unwrap();
-        let amount: Amount = if i.amount == None {
+        let amount: Amount = if i.amount.is_none() {
             Amount {
                 unit: Some(crate::pb::amount::Unit::Any(true)),
             }
@@ -674,6 +674,19 @@ impl TryFrom<KeysendRequest> for requests::Keysend {
 impl From<responses::Keysend> for Payment {
     fn from(r: responses::Keysend) -> Payment {
         use std::time::SystemTime;
+
+        let amount_msat = r.msatoshi.unwrap_or_else(|| {
+            r.amount_msat
+                .expect("neither amount_msat nor msatoshi is set in keysend response")
+                .0
+        });
+
+        let amount_sent_msat = r.msatoshi_sent.unwrap_or_else(|| {
+            r.amount_sent_msat
+                .expect("neither amount_sent_msat nor msatoshi_sent is set in keysend response")
+                .0
+        });
+
         Payment {
             destination: hex::decode(r.destination).unwrap(),
             payment_hash: hex::decode(r.payment_hash).unwrap(),
@@ -685,10 +698,10 @@ impl From<responses::Keysend> for Payment {
                 o => panic!("Unmapped pay status: {}", o),
             },
             amount: Some(Amount {
-                unit: Some(amount::Unit::Millisatoshi(r.msatoshi)),
+                unit: Some(amount::Unit::Millisatoshi(amount_msat)),
             }),
             amount_sent: Some(Amount {
-                unit: Some(amount::Unit::Millisatoshi(r.msatoshi_sent)),
+                unit: Some(amount::Unit::Millisatoshi(amount_sent_msat)),
             }),
             bolt11: "".to_string(),
             created_at: SystemTime::now()
