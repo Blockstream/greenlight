@@ -51,7 +51,7 @@ impl StagingHsmServer {
 impl Hsm for StagingHsmServer {
     async fn request(&self, request: Request<HsmRequest>) -> Result<Response<HsmResponse>, Status> {
         let req = request.into_inner();
-        trace!("Received request from hsmproxy: {:?}", req);
+        debug!("Received request from hsmproxy: {:?}", req);
 
         // Start by looking in the canned responses and return it if it is known
         if let Some(response) = self.find_canned_response(&req.raw) {

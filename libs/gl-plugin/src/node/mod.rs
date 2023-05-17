@@ -92,7 +92,7 @@ impl PluginNodeServer {
                 match res {
                     Ok(_) => break,
                     Err(e) => {
-                        trace!(
+                        warn!(
                             "JSON-RPC interface not yet available. Delaying 50ms. {:?}",
                             e
                         );
