@@ -84,7 +84,6 @@ pub struct GetInfo {
     pub num_inactive_channels: u64,
     pub version: String,
     pub blockheight: u32,
-    pub fees_collected_msat: clightningrpc::common::MSat,
     pub network: String,
     #[serde(rename = "lightning-dir")]
     pub ligthning_dir: String,
@@ -134,8 +133,8 @@ pub struct ListPaysPay {
     pub completed_at: Option<u64>,
     // parts is missing
     // msatoshi is renamed amount_msat
-    pub amount_msat: Option<String>,
-    pub amount_sent_msat: String,
+    pub amount_msat: Option<MSat>,
+    pub amount_sent_msat: MSat,
     pub payment_preimage: Option<String>,
     pub status: String,
 }
@@ -153,10 +152,10 @@ pub struct ListInvoiceInvoice {
     pub payment_preimage: Option<String>,
 
     #[serde(rename = "amount_msat")]
-    pub amount: Option<String>,
+    pub amount: Option<MSat>,
 
     #[serde(rename = "amount_received_msat")]
-    pub received: Option<String>,
+    pub received: Option<MSat>,
 
     #[serde(rename = "paid_at")]
     pub payment_time: Option<u32>,
@@ -179,8 +178,10 @@ pub struct Keysend {
     pub status: String,
     pub payment_preimage: Option<String>,
     pub payment_hash: String,
-    pub msatoshi: u64,
-    pub msatoshi_sent: u64,
+    pub msatoshi: Option<u64>,
+    pub msatoshi_sent: Option<u64>,
+    pub amount_sent_msat: Option<MSat>,
+    pub amount_msat: Option<MSat>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -310,6 +311,17 @@ pub struct ListFundsOutput {
     pub status: String,
     pub reserved: bool,
     pub reserved_to_block: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListFundsChannel {
+    pub peer_id: String,
+    pub connected: bool,
+    pub short_channel_id: Option<String>,
+    pub our_amount_msat: MSat,
+    pub amount_msat: MSat,
+    pub funding_txid: String,
+    pub funding_output: u64,
 }
 
 /// 'listfunds' command
