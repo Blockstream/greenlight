@@ -1,7 +1,60 @@
-use clightningrpc::common::MSat;
+//! Various structs representing JSON-RPC responses
 pub use clightningrpc::responses::*;
-/// Various structs representing JSON-RPC responses
-use serde::Deserialize;
+
+use serde::{de, Deserialize, Deserializer};
+use std::str::FromStr;
+
+/// A simple wrapper that generalizes bare amounts and amounts with
+/// the `msat` suffix.
+#[derive(Clone, Copy, Debug)]
+pub struct MSat(pub u64);
+
+struct MSatVisitor;
+impl<'d> de::Visitor<'d> for MSatVisitor {
+    type Value = MSat;
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if !s.ends_with("msat") {
+            return Err(E::custom("missing msat suffix"));
+        }
+
+        let numpart = s
+            .get(0..(s.len() - 4))
+            .ok_or_else(|| E::custom("missing msat suffix"))?;
+
+        let res = u64::from_str(numpart).map_err(|_| E::custom("not a number"))?;
+        Ok(MSat(res))
+    }
+
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(MSat(v as u64))
+    }
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a bare integer or a string ending with \"msat\"")
+    }
+}
+
+impl<'d> Deserialize<'d> for MSat {
+    fn deserialize<D>(deserializer: D) -> Result<MSat, D::Error>
+    where
+        D: Deserializer<'d>,
+    {
+        deserializer.deserialize_any(MSatVisitor)
+    }
+}
+
+impl std::fmt::Display for MSat {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}msat", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Withdraw {
@@ -264,4 +317,38 @@ pub struct ListFundsOutput {
 pub struct ListFunds {
     pub outputs: Vec<ListFundsOutput>,
     pub channels: Vec<ListFundsChannel>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_msat_parsing() {
+        #[derive(Deserialize)]
+        struct V {
+            value: MSat,
+        }
+
+        struct T {
+            input: &'static str,
+            output: u64,
+        }
+
+        let tests: Vec<T> = vec![
+            T {
+                input: "{\"value\": \"1234msat\"}",
+                output: 1234,
+            },
+            T {
+                input: "{\"value\": 100000000000}",
+                output: 100000000000,
+            },
+        ];
+
+        for t in tests {
+            let v: V = serde_json::from_str(t.input).unwrap();
+            assert_eq!(v.value.0, t.output);
+        }
+    }
 }
