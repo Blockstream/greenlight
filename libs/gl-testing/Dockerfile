@@ -104,7 +104,7 @@ RUN apt-get update && apt-get install -qqy \
     && rm -rf /var/lib/apt/lists/*
 
 # Enumerate all CLN version we want `gl-testing` to find.
-ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/
+ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/
 
 # Shorten poll intervals so tests are faster to run
 ENV DEVELOPER=1
@@ -181,5 +181,5 @@ ADD . /repo
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`
 RUN python3 -m pip install /repo/libs/gl-testing
-RUN ln -s /opt/cln/v22.11gl1 /opt/cln-latest
+RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
 WORKDIR /repo

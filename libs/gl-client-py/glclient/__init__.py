@@ -12,7 +12,7 @@ import logging
 
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
-__version__ = "v22.11"
+__version__ = "v23.05"
 
 E = TypeVar('E', bound=PbMessage)
 def _convert(cls: Type[E], res: Iterable[SupportsIndex]) -> E:
