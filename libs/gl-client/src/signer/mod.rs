@@ -17,14 +17,14 @@ use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
 use tonic::Request;
-use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, NegativeApprover};
+use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 
 mod auth;
 pub mod model;
 
-const VERSION: &str = "v22.11";
+const VERSION: &str = "v23.05";
 
 #[derive(Clone)]
 pub struct Signer {
@@ -265,7 +265,7 @@ impl Signer {
         log::trace!("Handling message {:?}", msg);
 
         let approver =
-            Arc::new(MemoApprover::new(NegativeApprover()));
+            Arc::new(MemoApprover::new(PositiveApprover()));
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver);
 
@@ -535,7 +535,7 @@ mod tests {
             TlsConfig::new().unwrap(),
         )
         .unwrap();
-        assert_eq!(signer.init.len(), 177);
+        assert_eq!(signer.init.len(), 146);
     }
 
     #[tokio::test]

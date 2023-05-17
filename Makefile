@@ -81,7 +81,8 @@ CLN_VERSIONS = \
 	v0.11.0.1 \
 	v0.11.2gl2 \
 	v0.11.2 \
-	v22.11gl1
+	v22.11gl1 \
+	v23.05gl1
 
 CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)
 
