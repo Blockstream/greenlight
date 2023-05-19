@@ -511,6 +511,12 @@ def listpays(ctx):
     pbprint(res)
 
 
+@cli.command()
+def version():
+    import glclient
+    print(glclient.__version__)
+
+
 @scheduler.command()
 @click.pass_context
 def export(ctx):
