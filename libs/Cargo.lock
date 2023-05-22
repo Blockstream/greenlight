@@ -436,7 +436,7 @@ dependencies = [
  "serde_json",
  "tokio 1.26.0",
  "tokio-stream",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
 ]
 
 [[package]]
@@ -454,7 +454,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio 1.26.0",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
 ]
 
 [[package]]
@@ -1066,7 +1066,7 @@ dependencies = [
  "thiserror",
  "tokio 1.26.0",
  "tokio-stream",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
  "tonic 0.8.3",
  "tonic-build 0.8.4",
  "tower 0.4.13",
@@ -1139,7 +1139,7 @@ dependencies = [
  "indexmap",
  "slab",
  "tokio 1.26.0",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
  "tracing",
 ]
 
@@ -2378,7 +2378,7 @@ dependencies = [
  "indoc",
  "libc",
  "memoffset",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
@@ -3183,7 +3183,7 @@ dependencies = [
  "postgres-types",
  "socket2 0.4.9",
  "tokio 1.26.0",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
 ]
 
 [[package]]
@@ -3261,9 +3261,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5427d89453009325de0d8f342c9490009f76e999cb7672d77e46267448f7e6b2"
+checksum = "806fe8c2c87eccc8b3267cbae29ed3ab2d0bd37fca70ab622e46aaa9375ddb7d"
 dependencies = [
  "bytes 1.4.0",
  "futures-core",
@@ -3362,7 +3362,7 @@ dependencies = [
  "tokio 1.26.0",
  "tokio-rustls 0.23.4",
  "tokio-stream",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
  "tower 0.4.13",
  "tower-layer",
  "tower-service",
@@ -3439,7 +3439,7 @@ dependencies = [
  "rand 0.8.5",
  "slab",
  "tokio 1.26.0",
- "tokio-util 0.7.7",
+ "tokio-util 0.7.8",
  "tower-layer",
  "tower-service",
  "tracing",
