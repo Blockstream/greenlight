@@ -411,7 +411,7 @@ def invoice(ctx, label, amount=None, description=None):
 @click.option("--timeout", required=False, type=int)
 def pay(ctx, invoice, amount=None, timeout=0):
     node = ctx.obj.get_node()
-    res = node.pay(bolt11=invoice, amount=amount, timeout=timeout)
+    res = node.pay(bolt11=invoice, amount_msat=amount, retry_for=timeout)
     pbprint(res)
 
 
