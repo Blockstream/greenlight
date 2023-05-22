@@ -15,7 +15,7 @@ anyhow = { workspace = true }
 env_logger = { workspace = true }
 tokio = { version = "0.2", features = ["full"] }
 tonic = { version = "0.3", features = ["tls", "transport"] }
-prost = "0.6"
+prost = "0.11"
 log = "*"
 tower = "0.3"
 which = "4.0.2"
