@@ -425,7 +425,7 @@ dependencies = [
 [[package]]
 name = "cln-plugin"
 version = "0.1.2"
-source = "git+https://github.com/ElementsProject/lightning.git?branch=master#ea23122880ba125a7f14049cd274c5ef2069140a"
+source = "git+https://github.com/ElementsProject/lightning.git?branch=master#f7602ea335851e210f6ea66cd06bd0d798fd38f8"
 dependencies = [
  "anyhow",
  "bytes 1.4.0",
