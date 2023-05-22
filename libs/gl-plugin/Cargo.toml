@@ -35,7 +35,7 @@ tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 lightning-storage-server = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1" }
 sled = "*"
-hyper = "0.14.23"
+hyper = "0.14.26"
 base64 = "0.13.1"
 
 [build-dependencies]
