@@ -6,6 +6,7 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.details
   - pymdownx.striphtml:
       strip_comments: true
       strip_js_on_attributes: false
@@ -48,11 +49,9 @@ nav:
     - Overview: tutorials/index.md
     - Testing your app: tutorials/testing.md
     - Self-Hosting: tutorials/self-hosting.md
-    - Standalone signer: tutorials/standalone-signer.md
   - Reference:
     - Overview: reference/index.md
     - Security: reference/security.md
-    - Node RPC Proxy: reference/node-rpc-proxy.md
     - reference/partner-certs.md
     - LSP Integration: reference/lsp.md
   - about.md

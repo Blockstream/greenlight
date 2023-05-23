@@ -49,23 +49,28 @@ local-only signer.
 If you have any clients configured you'll likely want to run the
 `gl-plugin` rather than the stock `grpc-plugin`, as the former
 implements a superset of the latter. In addition clients will still be
-able to reach the node through the node URL through the [GL reverse
-proxy][node-rpc-proxy]. In the next sections we provide step-by-step
+able to reach the node through the node URL through the GL reverse
+proxy. In the next sections we provide step-by-step
 instructions to restore the node's database, and then setup the
 different variants. You will have to decide which one best suites your
 needs :wink:
 
 ### Restoring the database
 
-<!-- TODO -->
+??? Todo
+	Describe how to decrypt the backup and restore it into a new
+	postgres database
 
 ### Remote Signer Setup
 
-<!-- TODO -->
+??? Todo
+	Describe how to adjust the `lightningd` service to use the 
+	`signerproxy` instead of the built-in `hsmd` subdaemon.
 
 ### Local Signer Setups
 
-<!-- TODO -->
+??? Todo
+	Should just work out of the box.
 
 ### Minimal Setup
 
