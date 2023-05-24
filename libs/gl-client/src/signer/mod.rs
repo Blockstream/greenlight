@@ -151,10 +151,10 @@ impl Signer {
                 let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, &r.pubkey);
                 let mut data = r.request.clone();
 
-		// If we have a timestamp associated we must add it to
-		// the payload being checked. Same thing happens on
-		// the client too.
-		if r.timestamp != 0 {
+                // If we have a timestamp associated we must add it to
+                // the payload being checked. Same thing happens on
+                // the client too.
+                if r.timestamp != 0 {
                     data.put_u64(r.timestamp);
                 }
 
