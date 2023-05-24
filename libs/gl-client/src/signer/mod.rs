@@ -149,7 +149,16 @@ impl Signer {
             .filter(|r| r.pubkey.len() != 0 && r.signature.len() != 0)
             .map(|r| {
                 let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, &r.pubkey);
-                pk.verify(&r.request, &r.signature)
+                let mut data = r.request.clone();
+
+		// If we have a timestamp associated we must add it to
+		// the payload being checked. Same thing happens on
+		// the client too.
+		if r.timestamp != 0 {
+                    data.put_u64(r.timestamp);
+                }
+
+                pk.verify(&data, &r.signature)
                     .map(|_| r)
                     .map_err(|e| anyhow!("signature verification failed: {}", e))
             })

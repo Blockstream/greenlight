@@ -73,7 +73,7 @@ impl Service<Request<BoxBody>> for AuthService {
         self.inner.poll_ready(cx).map_err(Into::into)
     }
     fn call(&mut self, request: Request<BoxBody>) -> Self::Future {
-	use base64::Engine;
+        use base64::Engine;
         let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
 
         // This is necessary because tonic internally uses `tower::buffer::Buffer`.
@@ -89,13 +89,31 @@ impl Service<Request<BoxBody>> for AuthService {
         .unwrap();
 
         Box::pin(async move {
+            use bytes::BufMut;
+            use std::convert::TryInto;
             use tonic::codegen::Body;
+
+            // Returns UTC on all platforms, no need to handle
+            // timezones.
+            let time = std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)?
+                .as_millis();
+
             let (mut parts, mut body) = request.into_parts();
 
             let data = body.data().await.unwrap().unwrap();
+
+            // Copy used to create the signature (payload + associated data)
+            let mut buf = data.to_vec();
+
+            // Associated data that is covered by the signature
+            let mut ts = vec![];
+            ts.put_u64(time.try_into()?);
+            buf.put_u64(time.try_into()?);
+
             let rng = rand::SystemRandom::new();
             let pubkey = keypair.public_key().as_ref();
-            let sig = keypair.sign(&rng, &data).unwrap();
+            let sig = keypair.sign(&rng, &buf).unwrap();
 
             // We use base64 encoding simply because it is
             // slightly more compact and we already have it as
@@ -112,6 +130,10 @@ impl Service<Request<BoxBody>> for AuthService {
             parts
                 .headers
                 .insert("glauthsig", engine.encode(sig).parse().unwrap());
+
+            parts
+                .headers
+                .insert("glts", engine.encode(ts).parse().unwrap());
 
             let body = crate::node::stasher::StashBody::new(data).into();
             let request = Request::from_parts(parts, body);
