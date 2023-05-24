@@ -1,3 +1,5 @@
+use crate::LightningClient;
+use anyhow::Error;
 use cln_grpc::pb::{self, node_server::Node};
 use log::debug;
 use tonic::{Request, Response, Status};
@@ -27,6 +29,68 @@ impl WrappedNodeServer {
 // already...
 #[tonic::async_trait]
 impl Node for WrappedNodeServer {
+    async fn invoice(
+        &self,
+        req: Request<pb::InvoiceRequest>,
+    ) -> Result<Response<pb::InvoiceResponse>, Status> {
+        let req = req.into_inner();
+
+        use crate::rpc::LightningClient;
+        let mut rpc = LightningClient::new(self.rpcpath.clone());
+
+        // First we get the incoming channels so we can force them to
+        // be added to the invoice. This is best effort and will be
+        // left out if the call fails, reverting to the default
+        // behavior.
+        let hints: Option<Vec<Vec<pb::RouteHop>>> = self
+            .get_routehints(&mut rpc)
+            .await
+            .map(
+                // Map Result to Result
+                |v| {
+                    v.into_iter()
+                        .map(
+                            // map each vector element
+                            |rh| rh.hops,
+                        )
+                        .collect()
+                },
+            )
+            .ok();
+
+        let mut pbreq: crate::requests::Invoice = match req.clone().try_into() {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(Status::new(
+                    tonic::Code::Internal,
+                    format!(
+                        "could not convert protobuf request into JSON-RPC request: {:?}",
+                        e.to_string()
+                    ),
+                ))
+            }
+        };
+        pbreq.dev_routes = hints.map(|v| {
+            v.into_iter()
+                .map(|e| e.into_iter().map(|ee| ee.into()).collect())
+                .collect()
+        });
+
+        let res: Result<crate::responses::Invoice, crate::rpc::Error> =
+            rpc.call("invoice", pbreq).await;
+
+        let res: Result<cln_grpc::pb::InvoiceResponse, tonic::Status> = res
+            .map(|r| cln_grpc::pb::InvoiceResponse::from(r))
+            .map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Internal,
+                    format!("converting invoice response to grpc: {}", e),
+                )
+            });
+
+        res.map(|r| Response::new(r))
+    }
+
     async fn getinfo(
         &self,
         r: Request<pb::GetinfoRequest>,
@@ -138,13 +202,6 @@ impl Node for WrappedNodeServer {
         r: Request<pb::DelinvoiceRequest>,
     ) -> Result<Response<pb::DelinvoiceResponse>, Status> {
         self.inner.del_invoice(r).await
-    }
-
-    async fn invoice(
-        &self,
-        r: Request<pb::InvoiceRequest>,
-    ) -> Result<Response<pb::InvoiceResponse>, Status> {
-        self.inner.invoice(r).await
     }
 
     async fn list_datastore(
@@ -290,15 +347,20 @@ impl Node for WrappedNodeServer {
     ) -> Result<Response<pb::DisconnectResponse>, Status> {
         let inner = r.into_inner();
         let id = hex::encode(inner.id.clone());
-        debug!("Got a disconnect request for {}, try to delete it from the datastore peerlist.", id);
-       
+        debug!(
+            "Got a disconnect request for {}, try to delete it from the datastore peerlist.",
+            id
+        );
+
         // We try to delete the peer that we disconnect from from the datastore.
         // We don't want to be overly strict on this so we don't throw an error
         // if this does not work.
-        let data_res = self.del_datastore(Request::new(pb::DeldatastoreRequest{
-            key: vec!["greenlight".to_string(), "peerlist".to_string(), id.clone()],
-            generation: None,
-        })).await;
+        let data_res = self
+            .del_datastore(Request::new(pb::DeldatastoreRequest {
+                key: vec!["greenlight".to_string(), "peerlist".to_string(), id.clone()],
+                generation: None,
+            }))
+            .await;
         if let Err(e) = data_res {
             log::debug!("Could not delete peer {} from datastore: {}", id, e);
         }
@@ -367,5 +429,89 @@ impl Node for WrappedNodeServer {
         r: Request<pb::StopRequest>,
     ) -> Result<Response<pb::StopResponse>, Status> {
         self.inner.stop(r).await
+    }
+}
+
+impl WrappedNodeServer {
+    async fn get_routehints(&self, rpc: &mut LightningClient) -> Result<Vec<pb::Routehint>, Error> {
+        use crate::responses::Peer;
+
+        // Get a list of active channels to peers so we can filter out
+        // offline peers or peers with unconfirmed or closing
+        // channels.
+        let res = rpc
+            .listpeers(None)
+            .await?
+            .peers
+            .into_iter()
+            .filter(|p| p.channels.len() > 0)
+            .collect::<Vec<Peer>>();
+
+        // Now project channels to their state and flatten into a vec
+        // of short_channel_ids
+        let active: Vec<String> = res
+            .iter()
+            .map(|p| {
+                p.channels
+                    .iter()
+                    .filter(|c| c.state == "CHANNELD_NORMAL")
+                    .filter_map(|c| c.clone().short_channel_id)
+            })
+            .flatten()
+            .collect();
+
+        /* Due to a bug in `listincoming` in CLN we get the real
+         * `short_channel_id`, whereas we're supposed to use the
+         * remote alias if the channel is unannounced. This patches
+         * the issue in GL, and should work transparently once we fix
+         * `listincoming`. */
+        use std::collections::HashMap;
+        let aliases: HashMap<String, String> = HashMap::from_iter(
+            res.iter()
+                .map(|p| {
+                    p.channels
+                        .iter()
+                        .filter(|c| {
+                            c.short_channel_id.is_some()
+                                && c.alias.is_some()
+                                && c.alias.as_ref().unwrap().remote.is_some()
+                        })
+                        .map(|c| {
+                            (
+                                c.short_channel_id.clone().unwrap(),
+                                c.alias.clone().unwrap().remote.unwrap(),
+                            )
+                        })
+                })
+                .flatten(),
+        );
+
+        // Now we can listincoming, filter with the above active list,
+        // and then map to become `pb::Routehint` instances
+        Ok(rpc
+            .listincoming()
+            .await?
+            .incoming
+            .into_iter()
+            .filter(|i| active.contains(&i.short_channel_id))
+            .map(|i| {
+                let base: Option<cln_rpc::primitives::Amount> =
+                    i.fee_base_msat.as_str().try_into().ok();
+
+                pb::Routehint {
+                    hops: vec![pb::RouteHop {
+                        id: hex::decode(i.id).expect("hex-decoding node_id"),
+                        short_channel_id: aliases
+                            .get(&i.short_channel_id)
+                            .or(Some(&i.short_channel_id))
+                            .unwrap()
+                            .to_owned(),
+                        feebase: base.map(|b| b.into()),
+                        feeprop: i.fee_proportional_millionths,
+                        expirydelta: i.cltv_expiry_delta,
+                    }],
+                }
+            })
+            .collect())
     }
 }

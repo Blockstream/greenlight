@@ -53,6 +53,7 @@ pub struct Invoice {
     pub expiry_time: u32,
     pub bolt11: String,
     pub payment_hash: String,
+    pub payment_secret: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
