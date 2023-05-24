@@ -554,6 +554,7 @@ message PendingRequest {
 	string uri = 2;
 	bytes signature = 3;
 	bytes pubkey = 4;
+        uint64 timestamp = 5;
 }
 
 
