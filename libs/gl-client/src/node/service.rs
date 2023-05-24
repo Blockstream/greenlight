@@ -137,7 +137,7 @@ impl Service<Request<BoxBody>> for AuthService {
 
             let body = crate::node::stasher::StashBody::new(data).into();
             let request = Request::from_parts(parts, body);
-            trace!("Sending request {:?}", request);
+            debug!("Sending request {:?}", request);
             let response = inner.call(request).await?;
             Ok(response)
         })
