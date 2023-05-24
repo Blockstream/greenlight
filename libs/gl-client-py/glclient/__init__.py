@@ -333,6 +333,39 @@ class Node(object):
         )
 
 
+    def invoice(
+            self,
+            amount_msat: clnpb.AmountOrAny,
+            label: str,
+            description: str,
+            expiry: Optional[int]=None,
+            fallbacks: Optional[List[str]]=None,
+            preimage: Optional[bytes]=None,
+            exposeprivatechannels: Optional[bool]=None,
+            cltv: Optional[int]=None,
+            deschashonly: Optional[bool]=None
+    ) -> clnpb.InvoiceResponse:
+        if preimage and len(preimage) != 32:
+            raise ValueError("Preimage must be 32 bytes in length")
+        
+        uri = "/cln.Node/Invoice"
+        res = clnpb.InvoiceResponse
+        req = clnpb.InvoiceRequest(
+            amount_msat=amount_msat,
+            label=label,
+            description=description,
+            preimage=preimage,
+            expiry=expiry,
+            fallbacks=fallbacks,
+            exposeprivatechannels=exposeprivatechannels,
+            cltv=cltv,
+            deschashonly=deschashonly,
+        ).SerializeToString()
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+    
     def create_invoice(
             self,
             label: str,
