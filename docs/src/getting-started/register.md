@@ -11,6 +11,10 @@ derive the seed secret from a [BIP 39][bip39] seed phrase, so the user
 can back it up on a physical piece of paper, steel plate, or whatever
 creative way of storing it they can think of.
 
+!!! note
+	The following code-snippets build on each other. By copying each snippet
+	after the other you should get a working example.
+
 === "Rust"
 	
 	Install the `bip39` and `rand` crates required for secure randomness and conversion of mnemonics. Add the following lines to your Cargo.toml
@@ -66,6 +70,12 @@ phrase and then convert it into a seed secret we can use:
 
 === "Javascript"
 	<!-- TODO -->
+	
+Remember to store the seed somewhere (file on disk, registry, etc)
+because without it, you will not have access to the node, and any
+funds on the node will be lost forever! We mean it when we say _you're
+the only one with access to the seed_!
+
 
 Next we instantiate an mTLS identity we will use to authenticate with
 Greenlight. Since we haven't registered our node with the service yet,
@@ -99,7 +109,8 @@ register the node we will get a valid certificate to authenticate.
 
 Finally, we can create the `Signer` which processes incoming signature
 requests, and is used when registering a node to prove ownership of
-the private key. The last thing to decide is which network we want the node to run on. You can chose between the following networks:
+the private key. The last thing to decide is which network we want the
+node to run on. You can chose between the following networks:
 
  - `testnet`
  - `bitcoin`
@@ -111,11 +122,16 @@ We'll pick `bitcoin`, because ... reckless 😉
 	use gl_client::signer::Signer;
 	use bitcoin::Network;
 	
-    signer = Signer::new(secret, Network::Bitcoin, tls)
+    signer = Signer::new(secret, Network::Bitcoin, tls);
 	```
 
 === "Python"
-	<!-- TODO -->
+	```python
+	from glclient import Signer
+	
+	signer = Signer(seed, network="bitcoin", tls=tls)
+	```
+	
 === "Javascript"
 	<!-- TODO -->
 
@@ -134,18 +150,49 @@ exclusively by the _Signer_ we need to first instantiate that:
 
 === "Python"
 	```python
-	from glclient import TlsConfig, Signer, Scheduler
+	from glclient import Scheduler
 	
-	# Create an mTLS identity using the default `nobody` identity, allowing us
-	# to talk to the Scheduler
-	tls = TlsConfig()
+	scheduler = Scheduler(
+	    node_id=signer.node_id(),
+		network="bitcoin",
+		tls=tls,
+	)
 	
-	# The seed secret used for the identity. You most likely want 
-    secret = b'\x00'*32
+	# Passing in the signer is required because the client needs to prove
+	# ownership of the `node_id`
+	res = scheduler.register(signer, invite_code=invite_code)
 	```
 
-TODO:
- - Store secret on fs
- - Add code to load from fs
- - what to do with the result
-   - Store cert and key on disk
+The result of `register` contains the credentials that can be used
+going forward to talk to the scheduler and the node itself. Please
+make sure to store them somewhere safe, since anyone with these
+credentials can access your node.
+
+=== "Rust"
+	```
+	let tls = TlsConfig().identity(res.device_cert, res.device_key);
+	
+	// Use the configured `tls` instance when creating `Scheduler` and `Signer`
+	// instance going forward
+	signer = Signer(seed, Network::Bitcoin, tls);
+	scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, tls).await?;
+	```
+
+=== "Python"
+	```python
+	tls = TlsConfig().with_identity(res.device_cert, res.device_key)
+	
+	# Use the configured `tls` instance when creating `Scheduler` and `Signer`
+	# instance going forward
+	signer = Signer(seed, network="bitcoin", tls=tls)
+	node = Scheduler(node_id=signer.node_id(), network="bitcoin", tls=tls).node()
+	```
+
+If you get an error about a certificate verification failure when
+talking to the node, you most likely are using an unconfigured
+`TlsConfig` that doesn't have access to the node. See
+[Security][security] for details on how authentication and
+authorization work under the hood.
+
+
+[security]: ../reference/security.md
