@@ -141,7 +141,7 @@ impl Signer {
     fn check_request_auth(
         &self,
         requests: Vec<crate::pb::PendingRequest>,
-    ) -> Result<Vec<crate::pb::PendingRequest>> {
+    ) -> Vec<Result<crate::pb::PendingRequest>> {
         // Filter out requests lacking a required field. They are unverifiable anyway.
         use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
         requests
@@ -192,8 +192,9 @@ impl Signer {
 
             let sigreq = vls_protocol::msgs::from_vec(req.raw.clone())?;
             let ctxrequests: Vec<model::Request> = self
-                .check_request_auth(req.requests.clone())?
+                .check_request_auth(req.requests.clone())
                 .into_iter()
+                .filter_map(|r| r.ok())
                 .map(|r| decode_request(r))
                 .collect::<Result<Vec<model::Request>>>()?;
 
