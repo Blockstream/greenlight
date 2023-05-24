@@ -2,6 +2,7 @@ tonic::include_proto!("greenlight");
 use crate::{messages, requests, responses};
 use anyhow::{anyhow, Context, Result};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use cln_grpc::pb::RouteHop;
 use cln_rpc::primitives::ShortChannelId;
 use log::warn;
 use std::str::FromStr;
@@ -400,8 +401,8 @@ impl From<responses::Pay> for Payment {
 
 impl From<PayRequest> for requests::Pay {
     fn from(p: PayRequest) -> Self {
-	// PartialEq papers over the differences between 0.0 and -0.0
-	// in floats.
+        // PartialEq papers over the differences between 0.0 and -0.0
+        // in floats.
         let maxfeepercent = if p.maxfeepercent.eq(&0.0) {
             None
         } else {
@@ -720,6 +721,64 @@ impl From<RoutehintHop> for requests::RoutehintHopDev {
             fee_base_msat: r.fee_base,
             fee_proportional_millionths: r.fee_prop,
             cltv_expiry_delta: r.cltv_expiry_delta as u16,
+        }
+    }
+}
+
+impl From<RouteHop> for requests::RoutehintHopDev {
+    fn from(r: RouteHop) -> requests::RoutehintHopDev {
+        requests::RoutehintHopDev {
+            id: hex::encode(r.id),
+            short_channel_id: r.short_channel_id,
+            fee_base_msat: r.feebase.map(|f| f.msat).unwrap(),
+            fee_proportional_millionths: r.feeprop,
+            cltv_expiry_delta: r.expirydelta as u16,
+        }
+    }
+}
+
+impl From<cln_grpc::pb::InvoiceRequest> for requests::Invoice {
+    fn from(ir: cln_grpc::pb::InvoiceRequest) -> Self {
+        Self {
+            amount: ir
+                .amount_msat
+                .map(|a| a.into())
+                .unwrap_or(requests::Amount::Any),
+            description: ir.description,
+            dev_routes: None,
+            label: ir.label,
+            exposeprivatechannels: None,
+            preimage: ir.preimage.map(|p| hex::encode(p)),
+        }
+    }
+}
+
+impl From<responses::Invoice> for cln_grpc::pb::InvoiceResponse {
+    fn from(i: responses::Invoice) -> Self {
+        cln_grpc::pb::InvoiceResponse {
+            bolt11: i.bolt11,
+            expires_at: i.expiry_time as u64,
+            payment_hash: hex::decode(i.payment_hash).unwrap(),
+            payment_secret: i
+                .payment_secret
+                .map(|s| hex::decode(s).unwrap())
+                .unwrap_or_default(),
+            warning_capacity: None,
+            warning_mpp: None,
+            warning_deadends: None,
+            warning_offline: None,
+            warning_private_unused: None,
+        }
+    }
+}
+impl From<cln_grpc::pb::AmountOrAny> for requests::Amount {
+    fn from(a: cln_grpc::pb::AmountOrAny) -> Self {
+        match a.value {
+            Some(cln_grpc::pb::amount_or_any::Value::Any(_)) => requests::Amount::Any,
+            Some(cln_grpc::pb::amount_or_any::Value::Amount(a)) => {
+                requests::Amount::Millisatoshi(a.msat)
+            }
+            None => panic!(),
         }
     }
 }
