@@ -1033,6 +1033,14 @@ where
                 .map(|s| base64::decode(s).ok())
                 .flatten();
 
+            use bytes::Buf;
+            let timestamp: Option<u64> = parts
+                .headers
+                .get("glts")
+                .map(|s| base64::decode(s).ok())
+                .flatten()
+                .map(|s| s.as_slice().get_u64());
+
             if let (Some(pk), Some(sig)) = (pubkey, sig) {
                 // Now that we know we'll be adding this to the
                 // context we can start buffering the request.
@@ -1043,7 +1051,8 @@ where
                     hex::encode(&pk),
                     hex::encode(&sig)
                 );
-                let req = crate::context::Request::new(uri.to_string(), data.clone(), pk, sig);
+                let req =
+                    crate::context::Request::new(uri.to_string(), data.clone(), pk, sig, timestamp);
 
                 reqctx.add_request(req.clone()).await;
 

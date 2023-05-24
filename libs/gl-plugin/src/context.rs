@@ -28,14 +28,24 @@ pub struct Request {
 
     // The URI that the request asked for
     uri: String,
+
+    // Timestamp in millis
+    timestamp: Option<u64>,
 }
 
 impl Request {
-    pub fn new(uri: String, payload: bytes::Bytes, pubkey: Vec<u8>, signature: Vec<u8>) -> Self {
+    pub fn new(
+        uri: String,
+        payload: bytes::Bytes,
+        pubkey: Vec<u8>,
+        signature: Vec<u8>,
+        timestamp: Option<u64>,
+    ) -> Self {
         Request {
             uri,
             payload,
             signature,
+            timestamp,
             pubkey,
         }
     }
@@ -48,6 +58,7 @@ impl From<Request> for crate::pb::PendingRequest {
             signature: r.signature,
             request: r.payload.to_vec(),
             uri: r.uri,
+	    timestamp: r.timestamp.unwrap_or_default(),
         }
     }
 }
