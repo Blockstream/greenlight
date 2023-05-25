@@ -38,6 +38,7 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::ListpeersRequest>,
     ) -> Result<Response<pb::ListpeersResponse>, Status> {
+	panic!("IN WRAPPER");
         self.list_peers(r).await
     }
 

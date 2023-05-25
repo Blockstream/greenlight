@@ -54,4 +54,6 @@ nav:
     - Security: reference/security.md
     - reference/partner-certs.md
     - LSP Integration: reference/lsp.md
-  - about.md
+  - About:
+    - About: about/index.md
+    - Changelog: about/changelog.md
