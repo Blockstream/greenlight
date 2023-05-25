@@ -97,7 +97,9 @@ cln-versions/lightningd-%.tar.bz2:
 
 cln: ${CLN_TARGETS}
 
+DOCSECRET="2dijIFEFSh/"
 docs:
 	mkdir -p ${REPO_ROOT}/site/2dijIFEFSh
-	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/2dijIFEFSh --verbose)
+	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/${DOCSECRET} --verbose)
+	pdoc -o site/${DOCSECRET}py glclient
 	ghp-import ${REPO_ROOT}/site -n -m "Deploy docs" --push --branch gh-pages --remote origin
