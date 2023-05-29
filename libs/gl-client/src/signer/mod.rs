@@ -139,6 +139,11 @@ impl Signer {
             info: Octets("scb secret".as_bytes().to_vec()),
         })
     }
+    fn commandoinitreq() -> vls_protocol::msgs::Message {
+        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+            info: Octets("commando".as_bytes().to_vec()),
+        })
+    }
 
     fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
         Ok(handler.handle(Signer::initreq()).unwrap().0.as_vec())
@@ -325,6 +330,8 @@ impl Signer {
             (27, Signer::bolt12initreq()),
             // SCB needs a secret derived too
             (27, Signer::scbinitreq()),
+	    // Commando needs a secret for its runes
+            (27, Signer::commandoinitreq()),
         ];
 
         let serialized: Vec<Vec<u8>> = requests
