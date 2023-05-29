@@ -136,6 +136,8 @@ impl Service<Request<BoxBody>> for AuthService {
                 .headers
                 .insert("glts", engine.encode(ts).parse().unwrap());
 
+            trace!("Payload size: {} (timestamp {})", data.len(), time);
+
             let body = crate::node::stasher::StashBody::new(data).into();
             let request = Request::from_parts(parts, body);
             debug!("Sending request {:?}", request);
