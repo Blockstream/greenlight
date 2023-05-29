@@ -71,17 +71,19 @@ phrase and then convert it into a seed secret we can use:
 === "Javascript"
 	<!-- TODO -->
 	
-Remember to store the seed somewhere (file on disk, registry, etc)
-because without it, you will not have access to the node, and any
-funds on the node will be lost forever! We mean it when we say _you're
-the only one with access to the seed_!
+!!! important 
+	Remember to store the seed somewhere (file on disk, registry, etc)
+	because without it, you will not have access to the node, and any
+	funds on the node will be lost forever! We mean it when we say _you're
+	the only one with access to the seed_!
 
 
 Next we instantiate an mTLS identity we will use to authenticate with
 Greenlight. Since we haven't registered our node with the service yet,
-we will use a dummy key, that allows us to talk to the _Scheduler_ but
-will not allow us to talk to any other service. No worries, once we
-register the node we will get a valid certificate to authenticate.
+we will use a [dummy key][auth], that allows us to talk to the 
+[`Scheduler`][scheduler] but will not allow us to talk to any other service.
+No worries, once we register the node we will get a valid certificate 
+to authenticate.
 
 === "Rust"
 	```rust
@@ -107,7 +109,7 @@ register the node we will get a valid certificate to authenticate.
 	var tls = new glclient.TlsConfig();
 	```
 
-Finally, we can create the `Signer` which processes incoming signature
+Finally, we can create the [`Signer`][signer] which processes incoming signature
 requests, and is used when registering a node to prove ownership of
 the private key. The last thing to decide is which network we want the
 node to run on. You can chose between the following networks:
@@ -140,13 +142,14 @@ We'll pick `bitcoin`, because ... reckless 😉
 
 ## Registering a new node
 
-Registering a node with the _Scheduler_ creates the node metadata on
+Registering a node with the [`Scheduler`][scheduler] creates the node metadata on
 the Greenlight service, including the node's identity and the public
 key, and ensures everything is setup to start the node. 
 
 In order to register a node, the client needs to prove it has access
 to the corresponding private key. Since the private key is managed
-exclusively by the _Signer_ we need to first instantiate that:
+exclusively by the [`Signer`][signer] we need to pass the [`Signer`][signer]
+to the [`Scheduler`][scheduler]:
 
 === "Rust"
 	```rust
@@ -177,9 +180,11 @@ exclusively by the _Signer_ we need to first instantiate that:
 	```
 
 The result of `register` contains the credentials that can be used
-going forward to talk to the scheduler and the node itself. Please
-make sure to store them somewhere safe, since anyone with these
-credentials can access your node.
+going forward to talk to the scheduler and the node itself. 
+
+!!! important 
+	Please make sure to store them somewhere safe, since anyone with 
+	these credentials can access your node.
 
 !!! Info
 	While we are spinning up and gradually extending our services
@@ -218,3 +223,6 @@ authorization work under the hood.
 [security]: ../reference/security.md
 [partner-cert]: ../reference/partner-certs.md
 [invite-tokens]: https://docs.google.com/forms/d/e/1FAIpQLSf_YaUJt8lKIDwS893Uk2mBiW6BUcoQkvO_g8EFZc9XqQfkqw/viewform
+[signer]: ./index.md#signer
+[scheduler]: ./index.md#scheduler
+[auth]: ./index.md#authentication
