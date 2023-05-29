@@ -19,7 +19,10 @@ const CODEC: VecCodec = VecCodec {};
 const DECODER: VecDecoder = VecDecoder {};
 const ENCODER: VecEncoder = VecEncoder {};
 
-/// A GRPC client that can call and return pre-encoded messages.
+/// A GRPC client that can call and return pre-encoded messages. Used
+/// by the language bindings to keep the interface between languages
+/// small: the client language is used to encode the protobuf
+/// payloads, and on the Rust side we just expose the `call` method.
 #[derive(Debug, Clone)]
 pub struct GenericClient<T> {
     inner: tonic::client::Grpc<T>,

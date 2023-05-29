@@ -406,6 +406,12 @@ impl Signer {
             debug!("Calling scheduler.get_node_info");
             let get_node = scheduler.get_node_info(NodeInfoRequest {
                 node_id: self.id.clone(),
+
+		// This `wait` parameter means that the scheduler will
+		// not automatically schedule the node. Rather we are
+		// telling the scheduler we want to be told as soon as
+		// the node is being scheduled so we can re-attach to
+		// that.
                 wait: true,
             });
             tokio::select! {
@@ -451,6 +457,7 @@ impl Signer {
         Ok(())
     }
 
+    // TODO See comment on `sign_device_key`.
     pub fn sign_challenge(&self, challenge: Vec<u8>) -> Result<Vec<u8>> {
         if challenge.len() != 32 {
             return Err(anyhow!("challenge is not 32 bytes long"));
@@ -461,6 +468,10 @@ impl Signer {
     /// Signs the devices public key. This signature is meant to be appended
     /// to any payload signed by the device so that the signer can verify that
     /// it knows the device.
+    ///
+    // TODO Use a lower-level API that bypasses the LN message
+    // prefix. This will allow us to re-expose the sign-message API to
+    // node users.
     pub fn sign_device_key(&self, key: &[u8]) -> Result<Vec<u8>> {
         if key.len() != 65 {
             return Err(anyhow!("key is not 65 bytes long"));
@@ -517,6 +528,26 @@ impl Signer {
     }
 }
 
+/// Used to decode incoming requests into their corresponding protobuf
+/// message. This is used by the E2E verification to verify that
+/// incoming requests match up with the user intent. User intent here
+/// refers to there being a user-signed command that matches the
+/// effects we are being asked to sign off.
+fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request> {
+    // Strip the compressions flag (1 byte) and the length prefix (4
+    // bytes big endian) and we're left with just the payload. See
+    // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+    // for technical details.
+    //
+    // Notice that we assume that the compression flag is off.
+    assert_eq!(r.request[0], 0u8);
+    let payload = &r.request[5..];
+
+    Ok(crate::signer::model::cln::decode_request(&r.uri, payload)
+        .or_else(|_| crate::signer::model::greenlight::decode_request(&r.uri, payload))
+        .unwrap())
+}
+
 /// A `(request, response)`-tuple passed to the scheduler to allow
 /// signerless startups.
 pub struct StartupMessage {
@@ -548,6 +579,11 @@ mod tests {
         assert_eq!(signer.init.len(), 146);
     }
 
+    /// We should not sign messages that we get from the node, since
+    /// we're using the sign_message RPC message to create TLS
+    /// certificate attestations. We can remove this limitation once
+    /// we switch over to a salted hash when signing those
+    /// attestations.
     #[tokio::test]
     async fn test_sign_message_rejection() {
         let signer = Signer::new(
@@ -584,19 +620,4 @@ mod tests {
             format!("Message exceeds max len of {}", u16::MAX)
         );
     }
-}
-
-fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request> {
-    // Strip the compressions flag (1 byte) and the length prefix (4
-    // bytes big endian) and we're left with just the payload. See
-    // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
-    // for technical details.
-    //
-    // Notice that we assume that the compression flag is off.
-    assert_eq!(r.request[0], 0u8);
-    let payload = &r.request[5..];
-
-    Ok(crate::signer::model::cln::decode_request(&r.uri, payload)
-        .or_else(|_| crate::signer::model::greenlight::decode_request(&r.uri, payload))
-        .unwrap())
 }

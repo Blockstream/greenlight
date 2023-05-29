@@ -12,6 +12,8 @@ type Client = SchedulerClient<Channel>;
 
 #[derive(Clone)]
 pub struct Scheduler {
+    /// Our local `node_id` used when talking to the scheduler to
+    /// identify us.
     node_id: Vec<u8>,
     client: Client,
     network: Network,
