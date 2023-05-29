@@ -181,8 +181,7 @@ going forward to talk to the scheduler and the node itself. Please
 make sure to store them somewhere safe, since anyone with these
 credentials can access your node.
 
-!!! Note
-
+!!! Info
 	While we are spinning up and gradually extending our services
 	you will need a [partner certificate][partner-cert] or an invite code
 	in order to register a new node on the Greenlight service. Head over
