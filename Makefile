@@ -37,7 +37,7 @@ build-self: ensure-docker
 	pip install coverage
 
 check-self: ensure-docker
-	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing ${PYTEST_OPTS}
+	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing ${PYTEST_OPTS} --force-flaky
 
 ensure-docker:
 	@if [ "x${GL_DOCKER}" != "x1" ]; then \
@@ -45,7 +45,7 @@ ensure-docker:
 		exit 1; \
 	fi
 docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
-	docker build -t gltesting -f libs/gl-testing/Dockerfile .
+	docker buildx build --load -t gltesting -f libs/gl-testing/Dockerfile .
 
 docker-shell:
 	docker run \

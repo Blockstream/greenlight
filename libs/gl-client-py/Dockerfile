@@ -64,4 +64,5 @@ RUN python3 -m pip install -U pip tomli && \
 WORKDIR /io/
 CMD bash -c "cd /io/libs/gl-client-py && \
     cargo build --release && \
-    maturin build --release --out=/io/wheelhouse --compatibility=2_27"
+    maturin build --release --out=/io/wheelhouse --compatibility=2_27 && \
+    maturin publish --skip-existing --no-interaction"

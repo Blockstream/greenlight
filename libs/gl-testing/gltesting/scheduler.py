@@ -1,3 +1,5 @@
+from gltesting.utils import NodeVersion, SignerVersion, Network
+from gltesting.node import NodeProcess
 from glclient import scheduler_pb2_grpc as schedgrpc
 from glclient import scheduler_pb2 as schedpb
 from glclient import greenlight_pb2 as greenlightpb
@@ -13,8 +15,6 @@ import os
 import subprocess
 import shutil
 from typing import Optional
-from gltesting.utils import NodeVersion, SignerVersion, Network
-from gltesting.node import NodeProcess
 from pyln.testing.utils import BitcoinD
 from threading import Condition
 from pyln.client import LightningRpc

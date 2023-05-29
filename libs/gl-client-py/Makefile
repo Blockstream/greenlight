@@ -66,7 +66,7 @@ build-py: ${PYDIR}/pyproject.toml build-py-${OS}
 # drops them into ${REPO}/wheelhouse. The docker build is needed to
 # get an old(-ish) glibc, maximizing compatibility.
 build-py-linux:
-	sudo docker build -t gl-client-py-builder ${PYDIR}
+	sudo docker buildx build --load -t gl-client-py-builder ${PYDIR}
 	sudo docker run -ti -v ${REPO}:/io gl-client-py-builder
 
 ${PYDIR}/pyproject.toml: ${PYDIR}/Cargo.toml
@@ -75,7 +75,7 @@ ${PYDIR}/pyproject.toml: ${PYDIR}/Cargo.toml
 # Pickup the wheels in ${REPO}/wheelhouse and send them to PyPI
 publish-py: build-py
 	cd tools/glcli; poetry build --no-interaction
-	cd ${PYDIR}; poetry publish --repository gl --skip-existing --no-interaction
+	cd ${PYDIR}; poetry publish --repository gl --skip-existing
 
 
 package-py: build-py
