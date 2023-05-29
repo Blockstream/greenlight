@@ -1104,7 +1104,7 @@ dependencies = [
 
 [[package]]
 name = "gl-client-py"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "bytes 1.4.0",
