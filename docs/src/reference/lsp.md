@@ -1,7 +1,7 @@
 # Lightning Service Provider integration
 
-Greenlight includes a client for the JIT LSP protocol. In particular
-the `gl-plugin` implements support for LSP JIT fees.  These are fees
+Greenlight nodes support the JIT LSP protocol. In particular
+the `gl-plugin` implements support for LSP JIT fees. These are fees
 leveraged as payment for a channel being opened, by forwarding a
 reduced amount, i.e., holding back a non-LN native fee. This is
 implemented on the LSP by intercepting and modifying the payload for
@@ -17,9 +17,6 @@ present (payment_hash) and the sender values in the onion not matching
 the invoice. Hence the LSP needs to store a reduced invoice a the
 recipient node, but give out the original invoice to the prospective
 sender.
-
-## Overview
-!!! todo 
 
 ## Caveats
 
