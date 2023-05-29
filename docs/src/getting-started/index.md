@@ -48,7 +48,7 @@ that operations it signs off originate from an authenticated app.
 
 ## Scheduler
 
-Node in Greenlight are scheduled on-demand when a client needs to talk
+Nodes in Greenlight are scheduled on-demand when a client needs to talk
 to it. The Scheduler tracks which nodes are running where, and starts
 them if they aren't running yet. You can think of it as just a
 mechanism to register new nodes and look up where they are running.
