@@ -7,6 +7,7 @@ use lightning_signer::node::NodeState;
 use lightning_signer::persist::{Error, Persist};
 use lightning_signer::policy::validator::ValidatorFactory;
 use lightning_signer::SendSync;
+use log::{trace, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;

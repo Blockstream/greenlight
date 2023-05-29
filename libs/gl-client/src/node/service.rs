@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use http::{Request, Response};
+use log::{debug, trace};
 use rustls_pemfile as pemfile;
 use std::future::Future;
 use std::pin::Pin;

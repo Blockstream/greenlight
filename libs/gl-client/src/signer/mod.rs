@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context, Result};
 use bytes::{Buf, BufMut, Bytes};
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
+use log::{debug, info, trace, warn};
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -80,6 +81,7 @@ impl Signer {
         let handler =
             handler::RootHandlerBuilder::new(network, 0 as u64, services.clone(), sec).build();
 
+        #[allow(deprecated)]
         let init = Signer::initmsg(&handler.0)?;
         let id = init[2..35].to_vec();
 
@@ -379,6 +381,7 @@ impl Signer {
             .await?;
         let mut scheduler = SchedulerClient::new(channel);
 
+        #[allow(deprecated)]
         scheduler
             .maybe_upgrade(UpgradeRequest {
                 initmsg: self.init.clone(),

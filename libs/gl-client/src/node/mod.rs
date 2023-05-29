@@ -5,6 +5,7 @@ use crate::tls::TlsConfig;
 use crate::utils;
 use anyhow::{anyhow, Result};
 use lightning_signer::bitcoin::Network;
+use log::{debug, info, trace};
 use tonic::transport::{Channel, Uri};
 use tower::ServiceBuilder;
 

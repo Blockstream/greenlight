@@ -5,6 +5,7 @@ use crate::node::GrpcClient;
 use crate::{node, pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
+use log::debug;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
