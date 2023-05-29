@@ -19,7 +19,6 @@ recipient node, but give out the original invoice to the prospective
 sender.
 
 ## Overview
-
 !!! todo 
 
 ## Caveats
