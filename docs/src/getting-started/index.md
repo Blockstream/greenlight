@@ -48,16 +48,23 @@ that operations it signs off originate from an authenticated app.
 
 ## Scheduler
 
-Nodes in Greenlight are scheduled on-demand when a client needs to talk
+Greenlight nodes are scheduled on-demand when a client needs to talk
 to it. The Scheduler tracks which nodes are running where, and starts
 them if they aren't running yet. You can think of it as just a
 mechanism to register new nodes and look up where they are running.
 
- - _Seed Secret_
- - _Signer_
- - _Scheduler_
+## Invite Tokens
+
+As we gradually spin up and extend our services during the early phase
+of the project, our resources are limited. You will need a 
+[partner certificate][partner-cert] or an invite code to register a 
+node at the Greenlight service. You can request an invite code via our
+[invite-form][invite-tokens]. Please note that invite codes are 
+limited.
 
 <!-- Chose a language -->
 
 [cln-github]: https://github.com/ElementsProject/lightning
 [sec]: ../reference/security.md
+[partner-cert]: ../reference/partner-certs.md
+[invite-tokens]: https://docs.google.com/forms/d/e/1FAIpQLSf_YaUJt8lKIDwS893Uk2mBiW6BUcoQkvO_g8EFZc9XqQfkqw/viewform
