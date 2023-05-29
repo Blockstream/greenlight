@@ -2,11 +2,6 @@
 //! and sign off on signature requests.
 //!
 
-extern crate anyhow;
-
-#[macro_use]
-extern crate log;
-
 /// Interact with a node running on greenlight.
 ///
 /// The node must be scheduled using [`crate::scheduler::Scheduler`]:

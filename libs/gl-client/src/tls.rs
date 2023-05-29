@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use log::debug;
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
@@ -36,7 +37,7 @@ fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
 
 impl TlsConfig {
     pub fn new() -> Result<Self> {
-	debug!("Configuring TlsConfig with nobody identity");
+        debug!("Configuring TlsConfig with nobody identity");
         // Allow overriding the defaults through the environment variables
         let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
         let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
@@ -98,17 +99,16 @@ pub fn generate_self_signed_device_cert(
     node_id: &str,
     device: &str,
     subject_alt_names: Vec<String>,
-    ) -> rcgen::Certificate {
-    
+) -> rcgen::Certificate {
     // Configure the certificate.
     let mut params = cert_params_from_template(subject_alt_names);
 
-    // Is a leaf certificate only so it is not allowed to sign child 
+    // Is a leaf certificate only so it is not allowed to sign child
     // certificates.
     params.is_ca = rcgen::IsCa::ExplicitNoCa;
     params.distinguished_name.push(
-            rcgen::DnType::CommonName,
-            format!("/users/{}/{}", node_id, device)
+        rcgen::DnType::CommonName,
+        format!("/users/{}/{}", node_id, device),
     );
 
     rcgen::Certificate::from_params(params).unwrap()
@@ -120,41 +120,40 @@ fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::Certifica
     params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
 
     // Certificate can be used to issue unlimited sub certificates for devices.
-    params.distinguished_name.push(
-        rcgen::DnType::CountryName,
-        "US"
-    );
-    params.distinguished_name.push(
-        rcgen::DnType::LocalityName,
-        "SAN FRANCISCO"
-    );
-    params.distinguished_name.push(
-        rcgen::DnType::OrganizationName,
-        "Blockstream"
-    );
-    params.distinguished_name.push(
-        rcgen::DnType::StateOrProvinceName,
-        "CALIFORNIA"
-    );
+    params
+        .distinguished_name
+        .push(rcgen::DnType::CountryName, "US");
+    params
+        .distinguished_name
+        .push(rcgen::DnType::LocalityName, "SAN FRANCISCO");
+    params
+        .distinguished_name
+        .push(rcgen::DnType::OrganizationName, "Blockstream");
+    params
+        .distinguished_name
+        .push(rcgen::DnType::StateOrProvinceName, "CALIFORNIA");
     params.distinguished_name.push(
         rcgen::DnType::OrganizationalUnitName,
-        "CertificateAuthority"
+        "CertificateAuthority",
     );
 
-    return params
-} 
+    return params;
+}
 
 #[cfg(test)]
-pub mod tests{
+pub mod tests {
     use super::*;
 
     #[test]
     fn test_generate_self_signed_device_cert() {
-        let device_cert = generate_self_signed_device_cert(
-            "mynodeid",
-            "device",
-            vec!["localhost".into()]);
-        assert!(device_cert.serialize_pem().unwrap().starts_with("-----BEGIN CERTIFICATE-----"));
-        assert!(device_cert.serialize_private_key_pem().starts_with("-----BEGIN PRIVATE KEY-----"));
+        let device_cert =
+            generate_self_signed_device_cert("mynodeid", "device", vec!["localhost".into()]);
+        assert!(device_cert
+            .serialize_pem()
+            .unwrap()
+            .starts_with("-----BEGIN CERTIFICATE-----"));
+        assert!(device_cert
+            .serialize_private_key_pem()
+            .starts_with("-----BEGIN PRIVATE KEY-----"));
     }
 }
