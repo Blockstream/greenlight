@@ -1,0 +1,52 @@
+name: Build and deploy docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**.md"
+      - "docs/mkdocs.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Github repo
+        uses: actions/checkout@v3
+      - name: Set up Python and Poetry
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      
+      # Setting up Poetry.
+      # The config `virtualenvs.in-project true` will ensure that the
+      # venv is built in the repo so that we can cache it.
+      - name: Set up Poetry
+        run: |
+          python -m pip install poetry==1.2
+          poetry config virtualenvs.in-project true
+      
+      # Cache the venv
+      - name: Cache Poetry venv
+        uses: actions/cache@v3
+        with:
+          path: ./docs/.venv
+          key: venv-${{ hashFiles('docs/poetry.lock') }}
+        
+      - name: Install dependencies
+        run: |
+          cd docs
+          poetry install
+
+      - name: Build docs
+        env:
+          DOCSECRET: "2dijIFEFSh"
+          DOCSBRANCH: "gh-pages"
+          DOCSREMOTE: "origin"
+        run: |
+          mkdir -p ./site/${DOCSECRET}
+          cd docs
+          poetry run mkdocs build --strict --clean --site-dir=../site/${DOCSECRET}/ --verbose
+          poetry run ghp-import ../site -n -m "docs: Deploy [skip ci]" --push --branch ${DOCSBRANCH} --remote ${DOCSREMOTE}
