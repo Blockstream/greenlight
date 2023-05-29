@@ -79,8 +79,6 @@ warning: Using default NOBODY cert.
 warning: Set "GL_CUSTOM_NOBODY_KEY" and "GL_CUSTOM_NOBODY_CERT" to use a custom cert.
 ```
 
-In case you 
-
 ## When (not) to use the partner certificate
 
 In order to retain the protection aspect of the partner certificates
