@@ -105,11 +105,66 @@ impl Node for WrappedNodeServer {
         self.list_peers(r).await
     }
 
+    async fn list_peer_channels(
+        &self,
+        r: Request<pb::ListpeerchannelsRequest>,
+    ) -> Result<Response<pb::ListpeerchannelsResponse>, Status> {
+        self.list_peer_channels(r).await
+    }
+
+    async fn list_closed_channels(
+        &self,
+        r: Request<pb::ListclosedchannelsRequest>,
+    ) -> Result<Response<pb::ListclosedchannelsResponse>, Status> {
+        self.list_closed_channels(r).await
+    }
+
     async fn list_funds(
         &self,
         r: Request<pb::ListfundsRequest>,
     ) -> Result<Response<pb::ListfundsResponse>, Status> {
         self.inner.list_funds(r).await
+    }
+
+    async fn decode_pay(
+        &self,
+        r: Request<pb::DecodepayRequest>,
+    ) -> Result<Response<pb::DecodepayResponse>, Status> {
+        self.inner.decode_pay(r).await
+    }
+
+    async fn decode(
+        &self,
+        r: Request<pb::DecodeRequest>,
+    ) -> Result<Response<pb::DecodeResponse>, Status> {
+        self.inner.decode(r).await
+    }
+
+    async fn sign_invoice(
+        &self,
+        r: Request<pb::SigninvoiceRequest>,
+    ) -> Result<Response<pb::SigninvoiceResponse>, Status> {
+        self.inner.sign_invoice(r).await
+    }
+    async fn pre_approve_keysend(
+        &self,
+        r: Request<pb::PreapprovekeysendRequest>,
+    ) -> Result<Response<pb::PreapprovekeysendResponse>, Status> {
+        self.inner.pre_approve_keysend(r).await
+    }
+
+    async fn pre_approve_invoice(
+        &self,
+        r: Request<pb::PreapproveinvoiceRequest>,
+    ) -> Result<Response<pb::PreapproveinvoiceResponse>, Status> {
+        self.inner.pre_approve_invoice(r).await
+    }
+
+    async fn send_custom_msg(
+        &self,
+        r: Request<pb::SendcustommsgRequest>,
+    ) -> Result<Response<pb::SendcustommsgResponse>, Status> {
+        self.inner.send_custom_msg(r).await
     }
 
     async fn send_pay(
