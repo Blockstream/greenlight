@@ -12,9 +12,10 @@ anyhow = "*"
 async-stream = "*"
 bytes = "1"
 clightningrpc = "*"
-cln-grpc = "0.1.3"
+#cln-grpc = "0.1.3"
+cln-grpc = {git = "https://github.com/cdecker/lightning.git", branch = "20230530-fix-getinfo-address-opt"}
+cln-rpc = {git = "https://github.com/cdecker/lightning.git", branch = "20230530-fix-getinfo-address-opt"}
 cln-plugin = "0.1.4"
-cln-rpc = "0.1.3"
 env_logger = "^0.7.0"
 futures = "0.3"
 gl-client = { version = "0.1.4", path = "../gl-client" }
