@@ -37,18 +37,6 @@ impl Authorizer for GreenlightAuthorizer {
                     Some(Approval::Invoice(Invoice::from_str(&req.bolt11)
                         .expect("")))
                 }
-                Request::GlKeysend(_req) => {
-                    // TODO missing payment hash
-                    // Some(Approval::KeySend(req.payment_hash, req.amount))
-                    unimplemented!("keysend")
-                }
-                Request::GlWithdraw(_req) => {
-                    // TODO missing tx (it's in the response rather than the request)
-                    // - record the destination and amount?
-                    // if we use destination and amount, we have to prevent replay attacks
-                    // Some(Approval::Onchain(req.tx))
-                    unimplemented!("withdraw")
-                }
                 _ => None,
             }
         }).collect();
