@@ -62,7 +62,4 @@ RUN python3 -m pip install -U pip tomli && \
     python3 -m pip install maturin mako mrkd cffi
 
 WORKDIR /io/
-CMD bash -c "cd /io/libs/gl-client-py && \
-    cargo build --release && \
-    maturin build --release --out=/io/wheelhouse --compatibility=2_27 && \
-    maturin publish --skip-existing --no-interaction"
+CMD bash -c "cd /io/libs/gl-client-py && maturin publish --skip-existing"
