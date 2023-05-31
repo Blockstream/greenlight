@@ -181,5 +181,12 @@ ADD . /repo
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`
 RUN python3 -m pip install /repo/libs/gl-testing
+
+# Hack: importing the proto files twice isn't a good idea, and
+# pyln-testing currently does.
+RUN sed -i \
+    's/from pyln.testing import grpc/#from pyln.testing import grpc/g' \
+    /tmp/venv/lib/python3.8/site-packages/pyln/testing/utils.py
+
 RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
 WORKDIR /repo
