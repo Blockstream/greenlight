@@ -98,6 +98,8 @@ RUN apt-get update && apt-get install -qqy \
     python3 \
     python3-pip \
     python3-venv \
+    nodejs \
+    npm \
     socat \
     unzip \
     wget \
@@ -181,6 +183,9 @@ ADD . /repo
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`
 RUN python3 -m pip install /repo/libs/gl-testing
+
+# Required to build and test the JS bindings
+RUN npm install -g cargo-cp-artifact
 
 # Hack: importing the proto files twice isn't a good idea, and
 # pyln-testing currently does.
