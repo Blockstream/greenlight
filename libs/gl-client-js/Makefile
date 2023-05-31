@@ -7,17 +7,10 @@ JSVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.package
 JSSRC=${JSDIR}/index.js ${JSDIR}/index.test.js
 JSRSSRC=$(shell find ${JSDIR} -name '*.rs')
 
-PACKAGE=${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-${ARCH}.tar.gz
+PACKAGE=${JSDIR}/build/stage/${VERSION}/gl-client-${VERSION}-${PLAT}-${ARCH}.tar.gz
 
 .PHONY: build-js-macos-${ARCH} build-js-macos build-js-linux build-js
 .NOTPARALLEL: build-js-macos-arm64 build-js-macos-x86_64 build-js-linux
-
-#${JSDIR}/index.node: ${JSSRC} ${JSRSSRC}
-#	cd libs/gl-client-js && npm install jest cargo-cp-artifact @mapbox/node-pre-gyp rewire
-#	cd libs/gl-client-js && npm run build
-#	cd ${JSDIR}; mv index.node index-${ARCH}-
-
-
 
 build-js-macos-${ARCH}: ${JSSRC} ${JSRSSRC} 
 	cd ${JSDIR} && \
@@ -26,11 +19,26 @@ build-js-macos-${ARCH}: ${JSSRC} ${JSRSSRC}
 
 build-js-macos: build-js-macos-${ARCH}
 
-build-js-linux: ${JSSRC} ${JSRSSRC}
+# We build the binary in an old(-ish) ubuntu so we don't rely on new
+# `glibc`
+docker-build-js-linux: ${JSSRC} ${JSRSSRC}
 	echo "Building linux"
-	cd ${JSDIR} && \
+	cd libs/gl-client-js && \
 	TARGET=${ARCH}-unknown-linux-gnu npm run build && \
 	mv index.node index-${VERSION}-${ARCH}-unknown-linux-gnu.node
+
+# Build the docker container and then run the inner target in it.
+build-js-linux: ${JSSRC} ${JSRSSRC}
+	sudo docker buildx build \
+	  --build-arg DOCKER_USER=$(shell whoami) \
+          --load \
+	  -t gl-client-js-builder \
+	  ${JSDIR}
+
+	sudo docker run -ti \
+          -v ${REPO}/..:/io \
+	  gl-client-js-builder \
+	  bash -c "(cd public; make docker-build-js-linux)"
 
 build-js: build-js-${OS}
 
@@ -43,9 +51,9 @@ package-js-linux: build-js-linux
 
 package-js-macos: build-js-macos
 	mkdir -p gl-client-js
-	cp ${JSDIR}/index-${VERSION}-${RSARCH}-apple-darwin.node gl-client-js/index.node
+	cp ${JSDIR}/index-${VERSION}-${ARCH}-apple-darwin.node gl-client-js/index.node
 	mkdir -p ${JSDIR}/build/stage/${VERSION}/
-	tar -cvzf ${JSDIR}/build/stage/${VERSION}/gl-client-js-${VERSION}-${PLAT}-${ARCH}.tar.gz gl-client-js
+	tar -cvzf ${PACKAGE} gl-client-js
 	rm gl-client-js/index.node && rmdir gl-client-js
 
 # Packaging is a bit involved since we manually build the package
@@ -53,7 +61,6 @@ package-js-macos: build-js-macos
 # distribution. But this level of access allows us to customize
 # exactly what we ship.
 package-js: package-js-${OS}
-	mkdir -p gl-client-js
 
 upload-bin-js: package-js
 	gsutil cp -r ${JSDIR}/build/stage/${VERSION} gs://greenlight-artifacts/npm/gl-client-js
@@ -69,9 +76,7 @@ clean-js:
 
 publish-js: upload-bin-js
 	cd libs/gl-client-js/ && \
-	npm run artifactregistry-login && \
 	npm publish || true  # Careful, there is no --skip-existing, so check the outcome here!
-
 
 check-js: ${JSDIR}/index.node
 	cd ${JSDIR}; npm install && npm run test
