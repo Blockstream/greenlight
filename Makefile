@@ -37,7 +37,12 @@ build-self: ensure-docker
 	pip install coverage
 
 check-self: ensure-docker
-	PYTHONPATH=/repo/libs/gl-testing pytest -vvv /repo/libs/gl-testing ${PYTEST_OPTS} --force-flaky
+	PYTHONPATH=/repo/libs/gl-testing \
+	pytest -vvv \
+	  /repo/libs/gl-testing \
+	  --force-flaky \
+	  -n 4 \
+	  ${PYTEST_OPTS}
 
 ensure-docker:
 	@if [ "x${GL_DOCKER}" != "x1" ]; then \

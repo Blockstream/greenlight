@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gl-client-py"
+name = "gl-client"
 version = "0.1.7"
 description = ""
 authors = ["Christian Decker <decker@blockstream.com>"]
@@ -21,7 +21,7 @@ default = false
 secondary = true
 
 [project]
-name = "gl-client-py"
+name = "gl-client"
 dependencies = [
   "protobuf>=3",
 ]
