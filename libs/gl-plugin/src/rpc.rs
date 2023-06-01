@@ -108,6 +108,21 @@ impl LightningClient {
             .map_err(|e| Error::RpcError(e))
     }
 
+    /// Show information about this node.
+    pub async fn getinfo(&self) -> Result<crate::responses::GetInfo, Error> {
+        self.call("getinfo", json!({})).await
+    }
+
+    pub async fn stop(&self) -> Result<(), Error> {
+        match self.call::<Value, ()>("stop", json!({})).await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                debug!("Ignoring error on `stop` call: {}", e);
+                Ok(())
+            }
+        }
+    }
+
     pub async fn connect<'a>(
         &self,
         req: &requests::Connect<'a>,
