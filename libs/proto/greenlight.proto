@@ -12,29 +12,44 @@ package greenlight;
 // `Scheduler.Recover()`. In particular the anonymous mTLS keypair is
 // rejected by the node.
 //
+// Deprecated methods are being replaced by the standardized and
+// automatically managed cln-grpc protocol you can find in
+// `node.proto`
 service Node {
 	// Retrieve general information about the node.
-	rpc GetInfo(GetInfoRequest) returns (GetInfoResponse) {}
+	rpc GetInfo(GetInfoRequest) returns (GetInfoResponse) {
+	  option deprecated = true;
+	}
 
 	// The stop is a RPC command to shut off the c-lightning node
-	rpc Stop(StopRequest) returns (StopResponse) {}
+	rpc Stop(StopRequest) returns (StopResponse) {
+	  option deprecated = true;
+	}
 
 	// Connect to a node in the network. (`Connect` alone clashes
 	// with tonic internals).
-	rpc ConnectPeer(ConnectRequest) returns (ConnectResponse) {}
+	rpc ConnectPeer(ConnectRequest) returns (ConnectResponse) {
+	  option deprecated = true;
+	}
 
-	rpc ListPeers(ListPeersRequest) returns (ListPeersResponse) {}
+	rpc ListPeers(ListPeersRequest) returns (ListPeersResponse) {
+	  option deprecated = true;
+	}
 
 	// The disconnect RPC command closes an existing connection to
 	// a peer, identified by node_id, in the Lightning Network, as long
 	// as it doesn't have an active channel. If force is set then
 	// it will disconnect even with an active channel.
-	rpc Disconnect(DisconnectRequest) returns (DisconnectResponse) {}
+	rpc Disconnect(DisconnectRequest) returns (DisconnectResponse) {
+	  option deprecated = true;
+	}
 
 	// The newaddr RPC command generates a new address which can
 	// subsequently be used to fund channels managed by the
 	// c-lightning node.
-	rpc NewAddr(NewAddrRequest) returns (NewAddrResponse) {}
+	rpc NewAddr(NewAddrRequest) returns (NewAddrResponse) {
+	  option deprecated = true;
+	}
 
 	// Retrieve a list of funds managed by this node.
 	//
@@ -46,21 +61,35 @@ service Node {
 	//
 	// The on-chain funds correspond to outputs that the wallet
 	// can spend.
-	rpc ListFunds(ListFundsRequest) returns (ListFundsResponse) {}
+	rpc ListFunds(ListFundsRequest) returns (ListFundsResponse) {
+	  option deprecated = true;
+	}
 
-	rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {}
+	rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+	  option deprecated = true;
+	}
 
-	rpc FundChannel(FundChannelRequest) returns (FundChannelResponse) {}
+	rpc FundChannel(FundChannelRequest) returns (FundChannelResponse) {
+	  option deprecated = true;
+	}
 
-	rpc CloseChannel(CloseChannelRequest) returns (CloseChannelResponse) {}
+	rpc CloseChannel(CloseChannelRequest) returns (CloseChannelResponse) {
+	  option deprecated = true;
+	}
 
         // Create a new invoice to receive an incoming payment.
-	rpc CreateInvoice(InvoiceRequest) returns (Invoice) {}
+	rpc CreateInvoice(InvoiceRequest) returns (Invoice) {
+	  option deprecated = true;
+	}
 
-	rpc Pay(PayRequest) returns (Payment) {}
+	rpc Pay(PayRequest) returns (Payment) {
+	  option deprecated = true;
+	}
 
 	// Send a spontaneous payment, optionally with some extra information.
-	rpc Keysend(KeysendRequest) returns (Payment) {}
+	rpc Keysend(KeysendRequest) returns (Payment) {
+	  option deprecated = true;
+	}
 
 	// Retrieve a list of payment performed by this node.
 	//
