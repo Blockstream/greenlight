@@ -18,7 +18,7 @@ import threading
 import time
 
 
-logger = logging.getLogger("glapi.cli")
+logger = logging.getLogger("glcli")
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stderr)
 handler.setLevel(logging.DEBUG)
