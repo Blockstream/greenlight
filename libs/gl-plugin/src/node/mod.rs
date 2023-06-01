@@ -948,9 +948,12 @@ impl PluginNodeServer {
         // it. We need to call `stop` in a task because we might not
         // have completed startup. This can happen if we're stuck
         // waiting on the signer.
-        let rpc = self.get_rpc().await;
+        let rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await.unwrap();
+
         tokio::spawn(async move {
-            rpc.stop().await.expect("calling `stop`");
+            rpc.stop(cln_rpc::model::requests::StopRequest {})
+                .await
+                .expect("calling `stop`");
         });
         time::sleep(time::Duration::from_secs(2)).await;
         self.kill().await
