@@ -18,7 +18,7 @@
       "module_name": "index",
     "host": "https://storage.googleapis.com/greenlight-artifacts/npm/gl-client-js/",
     "remote_path": "{version}",
-    "package_name": "gl-client-js-{version}-{platform}-{arch}.tar.gz",
+    "package_name": "gl-client-{version}-{platform}-{arch}.tar.gz",
     "module_path": "."
   },
   "author": "",

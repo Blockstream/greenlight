@@ -176,8 +176,8 @@ RUN cd /tmp/ && \
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
 COPY --from=builder /tmp/target /tmp/target
-COPY --from=builder /repo/libs/target/wheels/gl_client_py-* /opt/
-RUN python3 -m pip install /opt/gl_client_py-*
+COPY --from=builder /repo/libs/target/wheels/gl_client* /opt/
+RUN python3 -m pip install /opt/gl_client*
 ADD . /repo
 
 # Install `gl-testing`. When integrators use this image they'll mount

@@ -3,7 +3,7 @@ ARCH=$(shell node -e "console.log(process.arch)")
 PLAT=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 JSDIR=${REPO}/libs/gl-client-js
 VERSION=$(shell jq '.version' ${JSDIR}/package.json -r)
-JSVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "gl-client-js") | .version')
+JSVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "gl-client") | .version')
 JSSRC=${JSDIR}/index.js ${JSDIR}/index.test.js
 JSRSSRC=$(shell find ${JSDIR} -name '*.rs')
 
@@ -43,18 +43,18 @@ build-js-linux: ${JSSRC} ${JSRSSRC}
 build-js: build-js-${OS}
 
 package-js-linux: build-js-linux
-	mkdir -p gl-client-js
-	cp ${JSDIR}/index-${VERSION}-${ARCH}-unknown-linux-gnu.node gl-client-js/index.node
+	mkdir -p gl-client
+	cp ${JSDIR}/index-${VERSION}-${ARCH}-unknown-linux-gnu.node gl-client/index.node
 	mkdir -p ${JSDIR}/build/stage/${VERSION}/
-	tar -cvzf ${PACKAGE} gl-client-js
-	rm gl-client-js/index.node && rmdir gl-client-js
+	tar -cvzf ${PACKAGE} gl-client
+	rm gl-client/index.node && rmdir gl-client
 
 package-js-macos: build-js-macos
-	mkdir -p gl-client-js
-	cp ${JSDIR}/index-${VERSION}-${ARCH}-apple-darwin.node gl-client-js/index.node
+	mkdir -p gl-client
+	cp ${JSDIR}/index-${VERSION}-${ARCH}-apple-darwin.node gl-client/index.node
 	mkdir -p ${JSDIR}/build/stage/${VERSION}/
-	tar -cvzf ${PACKAGE} gl-client-js
-	rm gl-client-js/index.node && rmdir gl-client-js
+	tar -cvzf ${PACKAGE} gl-client
+	rm gl-client/index.node && rmdir gl-client
 
 # Packaging is a bit involved since we manually build the package
 # structure and then package it into a platform specific
