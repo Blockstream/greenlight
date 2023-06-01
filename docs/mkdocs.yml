@@ -1,5 +1,7 @@
 site_name: Greenlight Documentation
 docs_dir: src
+extra_css:
+  - stylesheets/extra.css
 plugins:
 markdown_extensions:
   - admonition
@@ -17,6 +19,7 @@ markdown_extensions:
 theme:
   name: material
   palette:
+    primary: custom
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
