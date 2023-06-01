@@ -5,7 +5,7 @@ use crate::rpc::LightningClient;
 use crate::stager;
 use crate::storage::StateStore;
 use anyhow::{Context, Error, Result};
-use bytes::{BufMut, Bytes};
+use bytes::BufMut;
 use gl_client::persist::State;
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
@@ -14,6 +14,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
 use serde_json::json;
 use std::collections::HashMap;
+use std::fmt;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -985,8 +986,8 @@ impl<S> Layer<S> for SignatureContextLayer {
     }
 }
 
-// const MAX_MESSAGE_SIZE: usize = 4194304;
-const MAX_MESSAGE_SIZE: usize = 32768;
+// Is the maximum message size we allow to buffer up on requests.
+const MAX_MESSAGE_SIZE: usize = 4000000;
 
 #[derive(Debug, Clone)]
 pub struct SignatureContextService<S> {
@@ -1001,16 +1002,17 @@ where
         + Send
         + 'static,
     S::Future: Send + 'static,
+    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
 {
     type Response = S::Response;
-    type Error = S::Error;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
     type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(
         &mut self,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+        self.inner.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, request: hyper::Request<hyper::Body>) -> Self::Future {
@@ -1051,19 +1053,23 @@ where
             if let (Some(pk), Some(sig)) = (pubkey, sig) {
                 // Now that we know we'll be adding this to the
                 // context we can start buffering the request.
-                let mut buf = Vec::with_capacity(0);
+                let mut buf = Vec::new();
                 while let Some(chunk) = body.data().await {
                     let chunk = chunk.unwrap();
                     // We check on the MAX_MESSAGE_SIZE to avoid an unlimited sized
                     // message buffer
                     if buf.len() + chunk.len() > MAX_MESSAGE_SIZE {
-                        debug!("Message exceeds size limit");
-                        panic!("Message exceeds size limit");
+                        debug!("Message {} exceeds size limit", uri.path().to_string());
+                        return Ok(tonic::Status::new(
+                            tonic::Code::InvalidArgument,
+                            format!("payload too large"),
+                        )
+                        .to_http());
                     }
                     buf.put(chunk);
                 }
 
-                debug!(
+                trace!(
                     "Got a request for {} with pubkey={}, sig={} and body size={:?}",
                     uri,
                     hex::encode(&pk),
@@ -1091,12 +1097,12 @@ where
                 tokio::spawn(async move {
                     reqctx.remove_request(req).await;
                 });
-                res
+                res.map_err(Into::into)
             } else {
                 // No point in buffering the request, we're not going
                 // to add it to the `HsmRequestContext`
                 let request = hyper::Request::from_parts(parts, body);
-                inner.call(request).await
+                inner.call(request).await.map_err(Into::into)
             }
         })
     }
