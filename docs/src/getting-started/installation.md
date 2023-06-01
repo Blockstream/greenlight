@@ -19,39 +19,31 @@ common ones:
 	[dependencies]
 	gl-client = { git = "ssh://git@github.com/Blockstream/greenlight" }
 	```
-	
+
 	or by using `cargo add`:
-	
+
 	```bash
 	cargo add --git https://github.com/Blockstream/greenlight.git
 	```
-	
+
 	Note: the rust library currently relies on `git` dependencies, which
 	crates.io does not allow. The `gl-client` library on crates.io is a
 	placeholder until our dependencies stabilize.
-	
-	
+
+
 === "Python"
 	The `gl-client` package is available on the public PyPI:
-	
-    ```sh
+
+	```sh
 	pip install -U gl-client
 	```
-	
-	If you also want the `glcli` package to interact with your node from
-	the command line you can just install that too:
-	
-	```sh
-	pip install -U glcli
-	```
-	
-	If you use a different dependency management system please see its 
+
+	If you use a different dependency management system please see its
 	documentation about how to specify `gl-client` as a dependency.
 
 === "Javascript"
 	The JS library is available on the public npmjs.org repository:
-	
+
 	```sh
 	npm install gl-client
 	```
-
