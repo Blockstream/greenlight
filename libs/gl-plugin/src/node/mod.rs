@@ -5,6 +5,7 @@ use crate::rpc::LightningClient;
 use crate::stager;
 use crate::storage::StateStore;
 use anyhow::{Context, Error, Result};
+use bytes::{BufMut, Bytes};
 use gl_client::persist::State;
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
@@ -984,6 +985,9 @@ impl<S> Layer<S> for SignatureContextLayer {
     }
 }
 
+// const MAX_MESSAGE_SIZE: usize = 4194304;
+const MAX_MESSAGE_SIZE: usize = 32768;
+
 #[derive(Debug, Clone)]
 pub struct SignatureContextService<S> {
     inner: S,
@@ -1047,19 +1051,36 @@ where
             if let (Some(pk), Some(sig)) = (pubkey, sig) {
                 // Now that we know we'll be adding this to the
                 // context we can start buffering the request.
-                let data = body.data().await.unwrap().unwrap();
-                trace!(
-                    "Got a request for {} with pubkey={} and sig={}",
+                let mut buf = Vec::with_capacity(0);
+                while let Some(chunk) = body.data().await {
+                    let chunk = chunk.unwrap();
+                    // We check on the MAX_MESSAGE_SIZE to avoid an unlimited sized
+                    // message buffer
+                    if buf.len() + chunk.len() > MAX_MESSAGE_SIZE {
+                        debug!("Message exceeds size limit");
+                        panic!("Message exceeds size limit");
+                    }
+                    buf.put(chunk);
+                }
+
+                debug!(
+                    "Got a request for {} with pubkey={}, sig={} and body size={:?}",
                     uri,
                     hex::encode(&pk),
-                    hex::encode(&sig)
+                    hex::encode(&sig),
+                    &buf.len(),
                 );
-                let req =
-                    crate::context::Request::new(uri.to_string(), data.clone(), pk, sig, timestamp);
+                let req = crate::context::Request::new(
+                    uri.to_string(),
+                    <bytes::Bytes>::from(buf.clone()),
+                    pk,
+                    sig,
+                    timestamp,
+                );
 
                 reqctx.add_request(req.clone()).await;
 
-                let body: hyper::Body = data.into();
+                let body: hyper::Body = buf.into();
                 let request = hyper::Request::from_parts(parts, body);
                 let res = inner.call(request).await;
 
