@@ -951,7 +951,7 @@ impl PluginNodeServer {
         let rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await.unwrap();
 
         tokio::spawn(async move {
-            rpc.stop(cln_rpc::model::requests::StopRequest {})
+            rpc.call_typed(cln_rpc::model::requests::StopRequest {})
                 .await
                 .expect("calling `stop`");
         });
