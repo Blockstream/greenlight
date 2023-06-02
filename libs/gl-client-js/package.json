@@ -12,7 +12,7 @@
   "scripts": {
     "build": "cargo-cp-artifact -a cdylib gl_client_js index.node -- cargo build --message-format=json-render-diagnostics --release",
     "install": "node-pre-gyp install --fallback-to-build=false || npm run build",
-    "test": "cargo build && cargo test && jest"
+    "test": "cargo test --release && jest"
   },
   "binary": {
       "module_name": "index",
