@@ -97,7 +97,7 @@ jobs:
           pip3 install -U pip pytest
         run: |
           pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
+          python3 -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
