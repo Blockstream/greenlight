@@ -23,7 +23,6 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
-    - run: ls -lhaR /opt/hostedtoolcache/protoc/v23.2/x64/bin
     
     - uses: Swatinem/rust-cache@v2
 
