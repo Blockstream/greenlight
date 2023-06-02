@@ -22,7 +22,7 @@ jobs:
         architecture: x64
 
     - name: Install protoc
-      run: apt-get install -y protobuf-compiler
+      run: sudo apt-get install -y protobuf-compiler
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
