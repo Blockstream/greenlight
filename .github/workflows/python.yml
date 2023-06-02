@@ -39,7 +39,7 @@ jobs:
     - name: Install built wheel
       if: matrix.target == 'x86_64'
       run: |
-        pip install gl-client --no-index --find-links libs/gl-client-py/dist --force-reinstall
+        pip install libs/gl-client-py/dist/gl-client*.whl --force-reinstall
         python -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
 
     - name: Upload wheels
