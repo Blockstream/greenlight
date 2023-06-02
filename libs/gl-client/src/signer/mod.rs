@@ -218,7 +218,7 @@ impl Signer {
                 .check_request_auth(req.requests.clone())
                 .into_iter()
                 .filter_map(|r| r.ok())
-                .map(|r| decode_request(r))
+                .map(decode_request)
                 .collect::<Result<Vec<model::Request>>>()?;
 
             // TODO: Decode requests and reconcile them with the changes
