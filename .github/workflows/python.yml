@@ -18,11 +18,15 @@ jobs:
       with:
         python-version: 3.9
         architecture: x64
+
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
-    - name: Find protoc
-      run: |
-        find / -name protoc
+
+    - name: Which protoc
+      run: which protoc
+      env:
+        PATH: $PATH:/opt/hostedtoolcache/
+
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
@@ -30,7 +34,9 @@ jobs:
         manylinux: auto
         args: --release --out dist
         working-directory: libs/gl-client-py
-
+        env:
+          PATH: $PATH:/opt/hostedtoolcache/
+  
     - name: Install built wheel
       if: matrix.target == 'x86_64'
       run: |
