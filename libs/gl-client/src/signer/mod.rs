@@ -506,7 +506,7 @@ impl Signer {
 
         let sig = self
             .handler()
-            .handle(vls_protocol::msgs::from_vec(msg.clone())?)
+            .handle(vls_protocol::msgs::from_vec(msg)?)
             .map_err(|_| anyhow!("Sign invoice failed"))?;
         Ok(sig.0.as_vec()[2..67].to_vec())
     }
