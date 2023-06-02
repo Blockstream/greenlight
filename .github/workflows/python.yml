@@ -21,12 +21,7 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
-
-    - run: echo "/opt/hostedtoolcache/" >> $GITHUB_PATH
-
-    - name: Which protoc
-      run: protoc --help
-
+      
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
@@ -34,6 +29,8 @@ jobs:
         manylinux: auto
         args: --release --out dist
         working-directory: libs/gl-client-py
+      env:
+        PROTOC: /opt/hostedtoolcache/protoc
   
     - name: Install built wheel
       if: matrix.target == 'x86_64'
