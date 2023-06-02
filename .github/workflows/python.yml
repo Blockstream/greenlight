@@ -24,6 +24,9 @@ jobs:
     - name: Install protoc
       run: sudo apt-get install -y protobuf-compiler
 
+    - run: find / -name protoc
+    - run: sudo ln -s /opt/hostedtoolcache/protoc /usr/local/bin/protoc
+
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
