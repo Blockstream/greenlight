@@ -23,7 +23,7 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
-    - run: ls -lhaR /opt/hostedtoolcache/protoc/v23.2/x64
+    - run: ls -lhaR /opt/hostedtoolcache/protoc/v23.2/x64/bin
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
@@ -32,6 +32,7 @@ jobs:
         manylinux: auto
         args: --release --out dist
         working-directory: libs/gl-client-py
+        docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
       env:
         PROTOC: /opt/hostedtoolcache/protoc
   
