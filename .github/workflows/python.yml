@@ -156,6 +156,11 @@ jobs:
         architecture: ${{ matrix.target }}
     - uses: dtolnay/rust-toolchain@nightly
 
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
