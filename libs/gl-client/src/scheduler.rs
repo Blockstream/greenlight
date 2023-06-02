@@ -78,7 +78,7 @@ impl Scheduler {
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let device_cert = tls::generate_self_signed_device_cert(
             &hex::encode(self.node_id.clone()),
-            "default".into(),
+            "default",
             vec!["localhost".into()],
         );
         let device_csr = device_cert.serialize_request_pem()?;
