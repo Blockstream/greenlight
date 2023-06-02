@@ -259,9 +259,9 @@ impl State {
     }
 }
 
-impl Into<Vec<crate::pb::SignerStateEntry>> for State {
-    fn into(self) -> Vec<crate::pb::SignerStateEntry> {
-        self.values
+impl From<State> for Vec<crate::pb::SignerStateEntry> {
+    fn from(s: State) -> Vec<crate::pb::SignerStateEntry> {
+        s.values
             .iter()
             .map(|(k, v)| crate::pb::SignerStateEntry {
                 key: k.to_owned(),
