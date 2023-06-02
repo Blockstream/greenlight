@@ -1,5 +1,5 @@
-const NOBODY_CRT: &'static str = "../../tls/users-nobody.pem";
-const NOBODY_KEY: &'static str = "../../tls/users-nobody-key.pem";
+const NOBODY_CRT: &str = "../../tls/users-nobody.pem";
+const NOBODY_KEY: &str = "../../tls/users-nobody-key.pem";
 
 use std::env::var;
 
