@@ -18,7 +18,8 @@ jobs:
       with:
         python-version: 3.9
         architecture: x64
-
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
