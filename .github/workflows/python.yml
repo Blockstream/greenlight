@@ -21,7 +21,6 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
     - name: Find protoc
-      uses: ubuntu:latest
       run: |
         find / -name protoc
     - name: Build wheels
