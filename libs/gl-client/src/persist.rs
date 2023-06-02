@@ -248,7 +248,7 @@ impl State {
             .map(|(key, (ver, val))| (key, self.values.get(key), (ver, val)))
             .map(|(key, old, new)| StateChange {
                 key: key.clone(),
-                old: old.map(|o| o.clone()),
+                old: old.cloned(),
                 new: (*new.0, new.1.clone()),
             })
             .filter(|c| match (&c.old, &c.new) {
