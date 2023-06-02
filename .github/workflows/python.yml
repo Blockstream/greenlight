@@ -35,7 +35,7 @@ jobs:
         args: --release --out dist
         working-directory: libs/gl-client-py
       env:
-        PATH: "$PATH:/opt/hostedtoolcache/"
+        PATH: $PATH:/opt/hostedtoolcache/
   
     - name: Install built wheel
       if: matrix.target == 'x86_64'
