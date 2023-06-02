@@ -137,7 +137,7 @@ fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::Certifica
         "CertificateAuthority",
     );
 
-    return params;
+    params
 }
 
 #[cfg(test)]
