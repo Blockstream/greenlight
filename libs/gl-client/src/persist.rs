@@ -131,7 +131,7 @@ impl State {
             .filter(|(k, _)| k.starts_with(&prefix))
             .map(|(k, v)| {
                 let key = k.split('/').last().unwrap();
-                let key = vls_persist::model::NodeChannelId(hex::decode(&key).unwrap());
+                let key = vls_persist::model::NodeChannelId(hex::decode(key).unwrap());
 
                 let value: vls_persist::model::ChannelEntry =
                     serde_json::from_value(v.1.clone()).unwrap();

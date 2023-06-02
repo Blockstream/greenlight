@@ -50,7 +50,7 @@ pub fn decrypt(mut enc: BytesMut, privkey: &SecretKey) -> Result<Bytes, Error> {
     let ephkey = PublicKey::from_slice(&ephkey).context("loading ephemeral key")?;
     let node_id = privkey.public_key(&secp);
 
-    let shared_secret = SharedSecret::new(&ephkey, &privkey);
+    let shared_secret = SharedSecret::new(&ephkey, privkey);
     enc.advance(HEADER_LEN);
 
     let cipher = ChaCha20Poly1305::new(&shared_secret.secret_bytes().into());

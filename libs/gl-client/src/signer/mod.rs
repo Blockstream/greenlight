@@ -369,7 +369,7 @@ impl Signer {
     /// directly and start streaming and processing requests.
     pub async fn run_forever(&self, shutdown: mpsc::Receiver<()>) -> Result<()> {
         let scheduler_uri = crate::utils::scheduler_uri();
-        Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await
+        Self::run_forever_with_uri(self, shutdown, scheduler_uri).await
     }
 
     pub async fn run_forever_with_uri(

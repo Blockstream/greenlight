@@ -127,7 +127,7 @@ impl Service<Request<BoxBody>> for AuthService {
             // and a total overhead of 199 bytes per request.
             parts
                 .headers
-                .insert("glauthpubkey", engine.encode(&pubkey).parse().unwrap());
+                .insert("glauthpubkey", engine.encode(pubkey).parse().unwrap());
             parts
                 .headers
                 .insert("glauthsig", engine.encode(sig).parse().unwrap());
