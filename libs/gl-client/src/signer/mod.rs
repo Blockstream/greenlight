@@ -10,10 +10,10 @@ use bytes::{Buf, BufMut, Bytes};
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use log::{debug, info, trace, warn};
+use serde_bolt::Octets;
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::Mutex;
-use serde_bolt::Octets;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Channel, Uri};
@@ -78,8 +78,7 @@ impl Signer {
             clock,
         };
 
-        let handler =
-            handler::RootHandlerBuilder::new(network, 0 as u64, services.clone(), sec).build();
+        let handler = handler::RootHandlerBuilder::new(network, 0, services.clone(), sec).build();
 
         #[allow(deprecated)]
         let init = Signer::initmsg(&handler.0)?;
@@ -98,13 +97,13 @@ impl Signer {
     }
 
     fn handler(&self) -> handler::RootHandler {
-        handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone(), self.secret)
+        handler::RootHandlerBuilder::new(self.network, 0, self.services.clone(), self.secret)
             .build()
             .0
     }
 
     fn handler_with_approver(&self, approver: Arc<dyn Approve>) -> handler::RootHandler {
-        handler::RootHandlerBuilder::new(self.network, 0 as u64, self.services.clone(), self.secret)
+        handler::RootHandlerBuilder::new(self.network, 0, self.services.clone(), self.secret)
             .approver(approver)
             .build()
             .0
@@ -246,7 +245,11 @@ impl Signer {
         }
     }
 
-    async fn process_request(&self, req: HsmRequest, approvals: Vec<Approval>) -> Result<HsmResponse> {
+    async fn process_request(
+        &self,
+        req: HsmRequest,
+        approvals: Vec<Approval>,
+    ) -> Result<HsmResponse> {
         let mut b = Bytes::from(req.raw.clone());
         let diff: crate::persist::State = req.signer_state.into();
         let prestate = {
@@ -271,8 +274,7 @@ impl Signer {
 
         log::trace!("Handling message {:?}", msg);
 
-        let approver =
-            Arc::new(MemoApprover::new(PositiveApprover()));
+        let approver = Arc::new(MemoApprover::new(PositiveApprover()));
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver);
 
@@ -284,11 +286,12 @@ impl Signer {
             Some(c) => {
                 let pk: [u8; 33] = c.node_id.try_into().unwrap();
                 let pk = vls_protocol::model::PubKey(pk);
-                Box::new(root_handler.for_new_client(1 as u64, pk, c.dbid))
+                Box::new(root_handler.for_new_client(1, pk, c.dbid))
             }
         };
 
-        let response = handler.handle(msg)
+        let response = handler
+            .handle(msg)
             .map_err(|e| anyhow!("processing request: {e:?}"))?;
 
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
@@ -330,7 +333,7 @@ impl Signer {
             (27, Signer::bolt12initreq()),
             // SCB needs a secret derived too
             (27, Signer::scbinitreq()),
-	    // Commando needs a secret for its runes
+            // Commando needs a secret for its runes
             (27, Signer::commandoinitreq()),
         ];
 
@@ -407,11 +410,11 @@ impl Signer {
             let get_node = scheduler.get_node_info(NodeInfoRequest {
                 node_id: self.id.clone(),
 
-		// This `wait` parameter means that the scheduler will
-		// not automatically schedule the node. Rather we are
-		// telling the scheduler we want to be told as soon as
-		// the node is being scheduled so we can re-attach to
-		// that.
+                // This `wait` parameter means that the scheduler will
+                // not automatically schedule the node. Rather we are
+                // telling the scheduler we want to be told as soon as
+                // the node is being scheduled so we can re-attach to
+                // that.
                 wait: true,
             });
             tokio::select! {
@@ -493,7 +496,9 @@ impl Signer {
             ));
         }
 
-        let req = vls_protocol::msgs::SignMessage { message: Octets(msg) };
+        let req = vls_protocol::msgs::SignMessage {
+            message: Octets(msg),
+        };
         let response = self
             .handler()
             .handle(vls_protocol::msgs::Message::SignMessage(req))
@@ -570,12 +575,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_init() {
-        let signer = Signer::new(
-            vec![0 as u8; 32],
-            Network::Bitcoin,
-            TlsConfig::new().unwrap(),
-        )
-        .unwrap();
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
         assert_eq!(signer.init.len(), 146);
     }
 
@@ -586,23 +587,20 @@ mod tests {
     /// attestations.
     #[tokio::test]
     async fn test_sign_message_rejection() {
-        let signer = Signer::new(
-            vec![0 as u8; 32],
-            Network::Bitcoin,
-            TlsConfig::new().unwrap(),
-        )
-        .unwrap();
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
-            .process_request(HsmRequest {
-                            request_id: 0,
-                            context: None,
-                            raw: msg,
-                            signer_state: vec![],
-                            requests: Vec::new(),
-                        },
-                             vec![],
+            .process_request(
+                HsmRequest {
+                    request_id: 0,
+                    context: None,
+                    raw: msg,
+                    signer_state: vec![],
+                    requests: Vec::new(),
+                },
+                vec![],
             )
             .await
             .is_err())
