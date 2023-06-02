@@ -12,7 +12,7 @@ jobs:
       matrix:
         target: 
           - x86_64
-#          - i686]
+          - i686]
     steps:
     - uses: actions/checkout@v3
 
