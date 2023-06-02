@@ -94,3 +94,43 @@ jobs:
       with:
         name: wheels
         path: libs/gl-client-py/dist/
+
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+        architecture: x64
+    - uses: dtolnay/rust-toolchain@nightly
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
+    - name: Build wheels - x86_64
+      uses: PyO3/maturin-action@v1
+      with:
+        target: x86_64
+        working-directory: libs/gl-client-py
+        args: --release --out dist --sdist
+        docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
+#    - name: Install built wheel - x86_64
+#      run: |
+#        pip install rjmespath --no-index --find-links dist --force-reinstall
+#        pip install pytest
+#        cd tests && pytest
+    - name: Build wheels - universal2
+      uses: PyO3/maturin-action@v1
+      with:
+        target: universal2-apple-darwin
+        working-directory: libs/gl-client-py
+        args: --release --out dist
+        docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
+#    - name: Install built wheel - universal2
+#      run: |
+#        pip install rjmespath --no-index --find-links dist --force-reinstall
+#        cd tests && pytest
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+      name: wheels
+      path: libs/gl-client-py/dist/
