@@ -68,6 +68,7 @@ jobs:
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
+        working-directory: libs/gl-client-py
         rust-toolchain: nightly
         target: ${{ matrix.target }}
         manylinux: auto
