@@ -21,8 +21,8 @@ jobs:
         python-version: 3.9
         architecture: x64
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v2
+    - name: Install protoc
+      run: apt-get install -y protobuf-compiler
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
