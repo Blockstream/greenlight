@@ -192,6 +192,12 @@ impl Display for StateChange {
     }
 }
 
+impl Default for State {
+    fn default() -> Self {
+        State::new()
+    }
+}
+
 impl State {
     pub fn new() -> Self {
         State {
