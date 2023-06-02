@@ -115,9 +115,9 @@ jobs:
         architecture: x64
     - uses: dtolnay/rust-toolchain@nightly
     - name: Install Protoc
+      uses: arduino/setup-protoc@v2
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-    uses: arduino/setup-protoc@v2
     - name: Build wheels - x86_64
       uses: PyO3/maturin-action@v1
       with:
@@ -155,11 +155,14 @@ jobs:
         python-version: 3.9
         architecture: ${{ matrix.target }}
     - uses: dtolnay/rust-toolchain@nightly
+
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
+        working-directory: libs\\gl-client-py
         args: --release --out dist
+
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
