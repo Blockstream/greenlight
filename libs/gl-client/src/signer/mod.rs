@@ -337,27 +337,18 @@ impl Signer {
             (27, Signer::commandoinitreq()),
         ];
 
-        let serialized: Vec<Vec<u8>> = requests
-            .iter()
+        requests
+            .into_iter()
             .map(|m| {
                 let mut b = bytes::BytesMut::new();
                 b.put_u16(m.0);
                 b.put_slice(&serde_bolt::to_vec(&m.1).unwrap());
 
-                b.to_vec()
-            })
-            .collect();
-        let responses: Vec<Vec<u8>> = requests
-            .into_iter()
-            .map(|r| self.handler().handle(r.1).unwrap().0.as_vec())
-            .collect();
-
-        serialized
-            .into_iter()
-            .zip(responses)
-            .map(|r| StartupMessage {
-                request: r.0,
-                response: r.1,
+                let r = self.handler().handle(m.1).unwrap().0.as_vec();
+                StartupMessage {
+                    request: b.to_vec(),
+                    response: r,
+                }
             })
             .collect()
     }
