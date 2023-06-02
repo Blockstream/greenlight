@@ -10,7 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64, i686]
+        target: 
+          - x86_64
+#          - i686]
     steps:
     - uses: actions/checkout@v3
 
@@ -21,7 +23,7 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
-      
+
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
