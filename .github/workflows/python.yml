@@ -23,6 +23,8 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     
     - uses: Swatinem/rust-cache@v2
 
@@ -69,6 +71,8 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
@@ -111,7 +115,9 @@ jobs:
         architecture: x64
     - uses: dtolnay/rust-toolchain@nightly
     - name: Install Protoc
-      uses: arduino/setup-protoc@v2
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    uses: arduino/setup-protoc@v2
     - name: Build wheels - x86_64
       uses: PyO3/maturin-action@v1
       with:
