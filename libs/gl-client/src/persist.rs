@@ -219,13 +219,13 @@ impl State {
                     res.push((key.to_owned(), None, *newver));
                     self.values.insert(key.clone(), (*newver, newval.clone()));
                 }
-                Some(v) => {
-                    if v.0 == *newver {
-                        continue;
-                    } else if v.0 > *newver {
+                Some(v) => match newver.cmp(&v.0) {
+                    std::cmp::Ordering::Less => {
                         warn!("Ignoring outdated state version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, newval, v.1);
                         continue;
-                    } else {
+                    }
+                    std::cmp::Ordering::Equal => continue,
+                    std::cmp::Ordering::Greater => {
                         trace!(
                             "Updating key {}: version={} => version={}",
                             key,
@@ -235,7 +235,7 @@ impl State {
                         res.push((key.to_owned(), Some(v.0), *newver));
                         *v = (*newver, newval.clone());
                     }
-                }
+                },
             }
         }
         Ok(res)
