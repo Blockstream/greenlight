@@ -23,7 +23,7 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
-    - run: ldd /opt/hostedtoolcache/protoc
+    - run: ls -lha /opt/hostedtoolcache/
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
