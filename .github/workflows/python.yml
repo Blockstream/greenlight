@@ -24,6 +24,7 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
       with:
+        version: "23.2"  # Fixed since we mount the path below
         repo-token: ${{ secrets.GITHUB_TOKEN }}
     
     - uses: Swatinem/rust-cache@v2
@@ -72,6 +73,7 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
       with:
+        version: "23.2"  # Fixed since we mount the path below
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build wheels
@@ -117,6 +119,7 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
       with:
+        version: "23.2"
         repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Build wheels - x86_64
       uses: PyO3/maturin-action@v1
