@@ -1,0 +1,174 @@
+name: Javascript
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - TARGET: armv7-unknown-linux-gnueabi
+            ARCH: arm
+            PLATFORM: linux
+          - TARGET: x86_64-unknown-linux-gnu
+            ARCH: x86
+            PLATFORM: linux
+          - TARGET: i686-unknown-linux-gnu
+            ARCH: ia32
+            PLATFORM: linux
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
+      with:
+        version: "23.2"  # Fixed since we mount the path below
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Setup nodejs
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+    - name: Use npm v8
+      # https://github.com/npm/cli/issues/4552
+      run: npm -g i npm@~8.3
+
+    - name: Install npm deps
+      run: npm install -g jest @mapbox/node-pre-gyp cargo-cp-artifact protobufjs rewire
+      
+    - name: Build
+      run: |
+        cd libs/gl-client-js/
+        
+        export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_LINKER=/usr/bin/arm-linux-gnueabi-gcc
+        export CARGO_TARGET=${{ matrix.TARGET }}
+        npm run build
+      
+    - name: Bundle
+      run: |
+        sudo apt-get install -y jq
+
+        export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
+        export PACKAGE=gl-client-${VERSION}-${{ matrix.PLATFORM }}-${{ matrix.ARCH }}.tar.gz
+        
+        mkdir -p gl-client/
+        cp libs/gl-client-js/index.node gl-client/
+        tar -cvzf ${PACKAGE} gl-client
+        echo Built package ${PACKAGE}
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: gl-client-*.tar.gz
+
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+        - x86_64
+        - aarch64
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: dtolnay/rust-toolchain@nightly
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
+      with:
+        version: "23.2"
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Use npm v8
+      # https://github.com/npm/cli/issues/4552
+      run: npm -g i npm@~8.3
+
+    - name: Install npm deps
+      run: npm install -g jest @mapbox/node-pre-gyp cargo-cp-artifact protobufjs rewire
+      
+    - name: Build
+      run: |
+        cd libs/gl-client-js/
+        
+        export CARGO_TARGET=${{ matrix.TARGET }}
+        npm run build
+
+    - name: Bundle
+      run: |
+        brew install jq
+
+        export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
+        export PACKAGE=gl-client-${VERSION}-darwin-${{ matrix.target }}.tar.gz
+        
+        mkdir -p gl-client/
+        cp libs/gl-client-js/index.node gl-client/
+        tar -cvzf ${PACKAGE} gl-client
+        echo Built package ${PACKAGE}
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: gl-client-*.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+        - TARGET: x86_64-pc-windows-gnu
+          ARCH: x64
+        - TARGET: i686-pc-windows-gnu
+          ARCH: x86
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: dtolnay/rust-toolchain@nightly
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
+      with:
+        version: "23.2"
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Use npm v8
+      # https://github.com/npm/cli/issues/4552
+      run: npm -g i npm@~8.3
+
+    - name: Install npm deps
+      run: npm install -g jest @mapbox/node-pre-gyp cargo-cp-artifact protobufjs rewire
+      
+    - name: Build
+      run: |
+        cd libs\gl-client-js
+        
+        set CARGO_TARGET=${{ matrix.TARGET }}
+        npm run build
+
+# OMG, Windows shell scripting is horrible!
+#    - name: Bundle
+#      run: |
+#        sudo apt-get install -y jq
+#
+#        set VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
+#        export PACKAGE=gl-client-${VERSION}-darwin-${{ matrix.ARCH }}.tar.gz
+#        
+#        mkdir -p gl-client/
+#        cp libs/gl-client-js/index.node gl-client/
+#        tar -cvzf ${PACKAGE} gl-client
+#        echo Built package ${PACKAGE}
+#        ls -lhaR .
+#
+#    - name: Upload binaries
+#     uses: actions/upload-artifact@v3
+#      with:
+#        name: binaries
+#        path: gl-client-*.tar.gz
