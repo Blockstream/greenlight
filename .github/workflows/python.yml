@@ -92,8 +92,9 @@ jobs:
           apt-get install -y --no-install-recommends python3 python3-pip
           pip3 install -U pip pytest
         run: |
-          pip3 install rjmespath --no-index --find-links dist/ --force-reinstall
-          cd tests && pytest
+          pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
+          python -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
+
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
@@ -118,11 +119,7 @@ jobs:
         working-directory: libs/gl-client-py
         args: --release --out dist --sdist
         docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
-#    - name: Install built wheel - x86_64
-#      run: |
-#        pip install rjmespath --no-index --find-links dist --force-reinstall
-#        pip install pytest
-#        cd tests && pytest
+
     - name: Build wheels - universal2
       uses: PyO3/maturin-action@v1
       with:
@@ -130,10 +127,7 @@ jobs:
         working-directory: libs/gl-client-py
         args: --release --out dist
         docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
-#    - name: Install built wheel - universal2
-#      run: |
-#        pip install rjmespath --no-index --find-links dist --force-reinstall
-#        cd tests && pytest
+
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
@@ -145,7 +139,9 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        target: [x64, x86]
+        target: 
+          - x64
+          - x86
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -160,6 +156,6 @@ jobs:
         args: --release --out dist
     - name: Upload wheels
       uses: actions/upload-artifact@v3
-        with:
-          name: wheels
-          path:  libs\\gl-client-py\\dist
+      with:
+        name: wheels
+        path:  libs\\gl-client-py\\dist
