@@ -161,7 +161,7 @@ impl Signer {
         use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
         requests
             .into_iter()
-            .filter(|r| r.pubkey.len() != 0 && r.signature.len() != 0)
+            .filter(|r| !r.pubkey.is_empty() && !r.signature.is_empty())
             .map(|r| {
                 let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, &r.pubkey);
                 let mut data = r.request.clone();
