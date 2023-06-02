@@ -34,7 +34,7 @@ vls-protocol = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1
 vls-persist = { git="https://gitlab.com/cdecker/vls.git", branch="cln-v22.11gl1", features=["memo"] }
 serde_json = "^1.0"
 thiserror = "1"
-cln-grpc = "^0.1"
+cln-grpc = { git = "https://github.com/ElementsProject/lightning.git", branch = "master"}
 chacha20poly1305 = { version = "0.10.1", optional = true }
 
 # Temporarily embargo serde_bolt=0.2.2 which breaks the build. This
