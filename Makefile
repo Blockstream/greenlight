@@ -33,7 +33,7 @@ build-self: ensure-docker
 	(cd libs; cargo build --all)
 	(cd libs/gl-client-py && \
 	maturin build --strip && \
-	pip install --force-reinstall /tmp/target/wheels/gl_client_py*.whl)
+	pip install --force-reinstall /tmp/target/wheels/gl_client*.whl)
 	pip install coverage
 
 check-self: ensure-docker
