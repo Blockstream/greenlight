@@ -4,10 +4,6 @@ This repository contains everything to get you started with
 Blockstream Greenlight, your self-sovereign Lightning node in the
 cloud.
 
-> 🚧 While this repository is currently set to private it'll be set to
-> public once we open up to the wider public, so please don't share
-> internals that aren't supposed to be public. 🚧
-
 greenlight exposes a number of services over grpc allowing
 applications to integrate, and users to manage and control their node
 running on our infrastructure. The [protocol buffers files][protos]
@@ -53,6 +49,7 @@ repository. These allow developers to hit a running start, without
 having to bother with compiling the binary extensions.
 
 ```bash
+pip install -U gl-client
 pip install --extra-index-url=https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/simple/ -U glcli
 ```
 
