@@ -13,6 +13,7 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - TARGET: armv7-unknown-linux-gnueabi
@@ -72,6 +73,7 @@ jobs:
   macos:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         target:
         - x86_64
@@ -122,6 +124,7 @@ jobs:
   windows:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
         - TARGET: x86_64-pc-windows-gnu
