@@ -1,5 +1,7 @@
 site_name: Greenlight Documentation
 docs_dir: src
+repo_url: https://github.com/Blockstream/greenlight
+edit_uri: tree/main/docs/src
 plugins:
 markdown_extensions:
   - admonition
