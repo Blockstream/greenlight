@@ -39,7 +39,27 @@ impl Scheduler {
         _ = cx
             .argument::<JsString>(2)
             .map(|ic_arg| invite_code = Some(ic_arg.value(&mut cx)));
-        jsconvert(exec(this.inner.register(&signer.inner, invite_code)), cx)
+
+        let call = this.inner.register(&signer.inner, invite_code);
+        let res = exec(call).map_err(|e| crate::error::Error::Call {
+            meth: "register".to_owned(),
+            err: e.to_string(),
+        });
+
+        let res = match res {
+            Ok(v) => v,
+            Err(e) => return cx.throw_error(e.to_string()),
+        };
+
+        let buf = convert(res);
+        let buf = match buf {
+            Ok(v) => v,
+            Err(e) => return cx.throw_error(e.to_string()),
+        };
+
+        let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
+        cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
+        Ok(jsbuf)
     }
 
     pub(crate) fn recover(mut cx: FunctionContext) -> JsResult<JsBuffer> {
@@ -50,7 +70,8 @@ impl Scheduler {
 
     pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsBox<Node>> {
         let this = cx.argument::<JsBox<Scheduler>>(0)?;
-        let tls = cx.argument::<JsBox<TlsConfig>>(1)?;
+
+        let tls = dbg!(cx.argument::<JsBox<TlsConfig>>(1))?;
 
         match exec(this.inner.schedule(tls.inner.clone())) {
             Ok(client) => Ok(cx.boxed(Node::new(client))),
@@ -86,7 +107,9 @@ impl InviteCode {
 
 impl Finalize for InviteCode {}
 
-pub fn convert_invite_codes(msg: gl_client::pb::scheduler::ListInviteCodesResponse) -> Vec<InviteCode> {
+pub fn convert_invite_codes(
+    msg: gl_client::pb::scheduler::ListInviteCodesResponse,
+) -> Vec<InviteCode> {
     let mut icodes = Vec::with_capacity(msg.invite_code_list.len());
     for c in msg.invite_code_list {
         icodes.push(InviteCode::from_proto(c));
@@ -101,12 +124,13 @@ where
 {
     let r = match r {
         Ok(v) => v,
-        Err(e) => cx.throw_error(format!("{}", e))?,
+        Err(e) => return cx.throw_error(format!("{}", e)),
     };
 
-    let buf = match convert(r) {
+    let buf = convert(r);
+    let buf = match buf {
         Ok(v) => v,
-        Err(e) => cx.throw_error(format!("{}", e))?,
+        Err(e) => return cx.throw_error(e.to_string()),
     };
 
     let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;

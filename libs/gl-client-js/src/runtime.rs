@@ -1,5 +1,5 @@
+use crate::error::Error;
 use ::tokio::runtime::{Builder, Runtime};
-use anyhow::Result;
 use once_cell::sync::OnceCell;
 use prost::Message;
 use std::future::Future;
@@ -22,12 +22,13 @@ where
     get_runtime().block_on(f)
 }
 
-pub fn convert<T>(r: T) -> Result<Vec<u8>>
+pub fn convert<T>(r: T) -> Result<Vec<u8>, Error>
 where
     T: Message,
 {
     let res = r;
     let mut buf = Vec::with_capacity(res.encoded_len());
-    res.encode(&mut buf)?;
+    res.encode(&mut buf)
+        .map_err(|e| Error::Convert(e.to_string()))?;
     Ok(buf)
 }
