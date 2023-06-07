@@ -14,7 +14,6 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
 use serde_json::json;
 use std::collections::HashMap;
-use std::fmt;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
