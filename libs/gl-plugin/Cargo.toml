@@ -13,7 +13,7 @@ async-stream = "*"
 bytes = "1"
 clightningrpc = "*"
 #cln-grpc = "0.1.3"
-cln-grpc = {git = "https://github.com/cdecker/lightning.git", branch = "20230530-fix-getinfo-address-opt"}
+cln-grpc = {git = "https://github.com/cdecker/lightning.git", branch = "20230530-fix-getinfo-address-opt", features = ["server"] }
 cln-rpc = {git = "https://github.com/cdecker/lightning.git", branch = "20230530-fix-getinfo-address-opt"}
 cln-plugin = "0.1.4"
 env_logger = "^0.7.0"
