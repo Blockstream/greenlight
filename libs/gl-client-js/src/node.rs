@@ -1,5 +1,7 @@
-use crate::runtime::{convert, exec};
-use anyhow::{anyhow, Result};
+use crate::{
+    error::Error,
+    runtime::{convert, exec},
+};
 use gl_client::{node::Client, pb};
 use neon::prelude::*;
 use prost::Message;
@@ -14,7 +16,7 @@ impl Node {
         Node { client }
     }
 
-    async fn dispatch(&self, method: &str, req: &[u8]) -> Result<Vec<u8>> {
+    async fn dispatch(&self, method: &str, req: &[u8]) -> Result<Vec<u8>, crate::error::Error> {
         let mut client = self.client.clone();
         match method {
             "get_info" => convert(
@@ -96,10 +98,7 @@ impl Node {
                     .await?
                     .into_inner(),
             ),
-            o => Err(anyhow!(
-                "method \"{}\" is unknown to the glclient library",
-                o
-            )),
+            o => Err(Error::NoSuchMethod(o.to_owned())),
         }
     }
 
@@ -115,7 +114,7 @@ impl Node {
                 cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&res));
                 Ok(jsbuf)
             }
-            Err(e) => cx.throw_error(format!("error calling {}: {}", method, e))?,
+            Err(e) => return cx.throw_error(format!("error calling {}: {}", method, e))?,
         }
     }
 
@@ -124,7 +123,7 @@ impl Node {
         let req = pb::StreamLogRequest {};
         let stream = match exec(this.client.clone().stream_log(req)).map(|x| x.into_inner()) {
             Ok(s) => s,
-            Err(e) => cx.throw_error(format!("error calling stream_log: {}", e))?,
+            Err(e) => return cx.throw_error(format!("error calling stream_log: {}", e)),
         };
 
         Ok(cx.boxed(LogStream {
