@@ -54,10 +54,6 @@ jobs:
         version: "23.2"  # Fixed since we mount the path below
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: "libs"
-
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
@@ -110,9 +106,6 @@ jobs:
         python-version: 3.9
         architecture: x64
     - uses: dtolnay/rust-toolchain@nightly
-    - uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: "libs"
         
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
@@ -164,10 +157,6 @@ jobs:
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: "libs"
-        
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
