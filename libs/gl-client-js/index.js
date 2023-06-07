@@ -411,7 +411,9 @@ class TlsConfig {
     }
 
     identity(cert, key) {
-	return tlsConfigIdentity(this.inner, cert, key)
+	let tls = new TlsConfig();
+	tls.inner = tlsConfigIdentity(this.inner, cert, key);
+	return tls;
     }
 }
 
