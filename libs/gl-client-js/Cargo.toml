@@ -18,3 +18,4 @@ tonic = "^0.8"
 prost = "0.11"
 anyhow = { workspace = true }
 neon = { version = "0.9", default-features = false, features = ["napi-4", "channel-api"] }
+thiserror = "1.0.40"

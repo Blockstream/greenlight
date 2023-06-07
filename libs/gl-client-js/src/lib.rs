@@ -9,6 +9,7 @@ use signer::{Signer, SignerHandle};
 mod tls;
 use tls::TlsConfig;
 mod runtime;
+mod error;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
