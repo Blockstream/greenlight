@@ -107,4 +107,4 @@ docs:
 	mkdir -p ${REPO_ROOT}/site/
 	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/ --verbose)
 	pdoc -o site/py glclient
-	ghp-import ${REPO_ROOT}/site -n -m "Deploy docs" --push --branch gh-pages --remote origin
+	ghp-import ${REPO_ROOT}/site -n -m "Deploy docs [skip ci]" --push --branch gh-pages --remote origin
