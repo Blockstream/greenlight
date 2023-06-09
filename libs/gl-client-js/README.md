@@ -33,6 +33,8 @@ The following examples show how the API can be used to talk to greenlight:
 const glclient = require('gl-client');
 const buffer = require("buffer");
 
+let invite = "..." // You'll need an invite from GL to create a new node
+
 // The scheduler accepts connections with identity /users/nobody for `register` and `recover`
 let tls = new glclient.TlsConfig();
 
@@ -46,7 +48,7 @@ let signer = new glclient.Signer(
 let node_id = signer.node_id();
 let sched = new glclient.Scheduler(node_id, "regtest");
 
-let response = sched.register(signer);
+let response = sched.register(signer, invite);
 console.log(response);
 ```
 
