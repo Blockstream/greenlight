@@ -1,4 +1,5 @@
 site_name: Greenlight Documentation
+site_url: https://blockstream.github.io/greenlight/
 docs_dir: src
 repo_url: https://github.com/Blockstream/greenlight
 edit_uri: tree/main/docs/src

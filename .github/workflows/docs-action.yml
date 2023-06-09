@@ -21,30 +21,49 @@ jobs:
         with:
           python-version: 3.9
 
-      # Setting up Poetry.
-      # The config `virtualenvs.in-project true` will ensure that the
-      # venv is built in the repo so that we can cache it.
-      - name: Set up Poetry
+      - name: Setup venv
         run: |
-          python -m pip install poetry==1.2
+          python3 -m venv .venv
 
-      # Cache the venv
-      - name: Cache Poetry venv
-        uses: actions/cache@v3
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - name: Set up dependencies
+        run: |
+          .venv/bin/pip install -U poetry pip
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq make
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
         with:
-          path: ./docs/.venv
-          key: venv-${{ hashFiles('docs/poetry.lock') }}
+          version: "23.2"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: |
-          cd docs
-          poetry install
-        env:
-          POETRY_VIRTUALENVS_IN_PROJECT: 1
+          .venv/bin/pip install \
+            grpcio \
+            grpcio-tools \
+            "protobuf==3.20.3" \
+            mkdocs \
+            pdoc \
+            mkdocs-material \
+            mkdocs-redirects \
+            pymdown-extensions \
+            ghp-import \
+            pdoc \
+            cairosvg \
+            pillow \
+            gl-client typing_extensions
+
+      - name: Build and install gl-client-py
+        run: |
+          .venv/bin/pip install ./libs/gl-client-py
 
       - name: Build docs
         env:
           DOCSBRANCH: "gh-pages"
           DOCSREMOTE: "origin"
-          PATH: "$PATH:$(pwd)/docs/.venv/bin"
-        run: make docs
+        run: |
+          rm libs/gl-client-py/glclient/*.pyi
+          PATH=$(pwd)/.venv/bin:$PATH make docs

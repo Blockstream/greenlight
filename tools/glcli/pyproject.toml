@@ -12,9 +12,6 @@ grpcio = "^1.46.1"
 protobuf = "^3.20.1"
 gl-client = "^0.1"
 
-[tool.poetry.dev-dependencies]
-gl-client = { path = "../../libs/gl-client-py/", develop = true }
-
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
