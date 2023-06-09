@@ -60,6 +60,7 @@ jobs:
         run: |
           .venv/bin/pip install ./libs/gl-client-py
 
+
       - name: Build docs
         env:
           DOCSBRANCH: "gh-pages"
