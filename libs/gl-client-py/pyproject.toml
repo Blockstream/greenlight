@@ -10,25 +10,13 @@ packages = [
 ]
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
-grpcio = "^1.51.3"
-grpcio-tools = "^1.51.3"
-keyrings-google-artifactregistry-auth = "^1.1.2"
 gltesting = { path = "../gl-testing/", develop = true }
-
-[[tool.poetry.source]]
-name = "gl"
-url = "https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/"
-default = false
-secondary = true
-
-[project]
-name = "gl-client"
-dependencies = [
-  "protobuf>=3",
-]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
+grpcio = "^1"
+grpcio-tools = "^1"
+protobuf = ">=3"
 
 [build-system]
 requires = ["maturin>=0.11,<0.12"]

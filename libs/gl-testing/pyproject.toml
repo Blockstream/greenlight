@@ -24,7 +24,6 @@ pytest-cov = "^3.0.0"
 rich = "^12.5.1"
 pyln-testing = "^23.05"
 protobuf = ">=3"
-grpcio = "^1"
 flaky = "^3"
 
 [tool.poetry.dev-dependencies]
