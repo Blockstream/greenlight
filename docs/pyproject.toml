@@ -5,12 +5,14 @@ description = ""
 authors = ["Christian Decker <cdecker@blockstream.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.7,<4"
 mkdocs-material = "^8.4.1"
 mkdocs-redirects = "^1.1.0"
 pymdown-extensions = "^9.5"
 ghp-import = "2.1.0"
 pdoc = "^13.1.1"
+cairosvg = "^2.7.0"
+pillow = "^9.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
