@@ -216,11 +216,12 @@ def scheduler():
 @click.pass_context
 def register(ctx, network, invite):
     # Reinitialize the signer with the right network, so register will pick that up
-    signer = Signer(Tls())
+    signer = Signer(ctx.obj.tls, network=network)
     node_id = ctx.obj.node_id
     hex_node_id = hexlify(node_id).decode("ASCII")
     logger.debug(f"Registering new node with node_id={hex_node_id} for {network}")
-    scheduler = ctx.obj.scheduler
+    # Reinitialize the Scheduler with the passed network for register.
+    scheduler = Scheduler(node_id, network=network, tls=ctx.obj.scheduler.tls)
     res = scheduler.register(signer.inner, invite_code=invite)
 
     with open("device-key.pem", "w") as f:
