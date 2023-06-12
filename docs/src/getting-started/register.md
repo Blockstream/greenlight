@@ -58,12 +58,12 @@ phrase and then convert it into a seed secret we can use:
 	import bip39
 	import secrets  # Make sure to use cryptographically sound randomness
 	
-	rand = secres.randbits(256)  # 32 bytes of randomness
+	rand = secrets.randbits(256).to_bytes(32, 'big')  # 32 bytes of randomness
 	phrase = bip39.encode_bytes(rand)
 	
 	# Prompt user to safely store the phrase
 	
-	seed = bip32.phrase_to_seed(phrase)[:32]  # Only need 32 bytes
+	seed = bip39.phrase_to_seed(phrase)[:32]  # Only need 32 bytes
 	
 	# Store the seed on the filesystem, or secure configuration system
 	```
@@ -205,7 +205,7 @@ going forward to talk to the scheduler and the node itself.
 
 === "Python"
 	```python
-	tls = TlsConfig().with_identity(res.device_cert, res.device_key)
+	tls = TlsConfig().identity(res.device_cert, res.device_key)
 	
 	# Use the configured `tls` instance when creating `Scheduler` and `Signer`
 	# instance going forward
