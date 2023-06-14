@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Github repo
         uses: actions/checkout@v3
 
-      - name: Set up Python and Poetry
+      - name: Set up Python Virtualenv
         uses: actions/setup-python@v4
         with:
           python-version: 3.9
@@ -29,7 +29,7 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          .venv/bin/pip install -U poetry pip
+          .venv/bin/pip install -U maturin pip
           sudo apt-get update -qq
           sudo apt-get install -y -qq make
 
@@ -54,11 +54,11 @@ jobs:
             pdoc \
             cairosvg \
             pillow \
-            gl-client typing_extensions
+            typing_extensions
 
       - name: Build and install gl-client-py
         run: |
-          .venv/bin/pip install ./libs/gl-client-py
+          (cd libs/gl-client-py; ../../.venv/bin/maturin develop)
 
 
       - name: Build docs
