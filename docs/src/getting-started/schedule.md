@@ -40,7 +40,7 @@ Greenlight infrastructure:
 	cert, key = b'...', b'...'
 	node_id = bytes.fromhex("02058e8b6c2ad363ec59aa136429256d745164c2bdc87f98f0a68690ec2c5c9b0b")
 	network = "testnet"
-	tls = TlsConfig.with_identity(cert, key)
+	tls = TlsConfig.identity(cert, key)
 	
 	scheduler = Scheduler(node_id, network, tls)
 	node = scheduler.node()
@@ -118,7 +118,7 @@ in the last chapter, instantiate the signer with it and then start it.
 	seed = ... # Load from wherever you stored it
 	cert, key = ... // Load the cert and key you got from the `register` call
 	
-	tls = TlsConfig().with_identity(res.device_cert, res.device_key)
+	tls = TlsConfig().identity(res.device_cert, res.device_key)
 	signer = Signer::new(secret, Network::Bitcoin, tls)
 	signer.run_in_thread()
 	```
