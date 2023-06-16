@@ -314,7 +314,7 @@ class Scheduler(object):
 
         return schedpb.NodeInfoResponse(
             node_id=req.node_id,
-            grpc_uri=node.process.grpc_uri
+            grpc_uri=node.process.grpc_uri if node.process else None,
         )
 
     def MaybeUpgrade(self, req, ctx):
