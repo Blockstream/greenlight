@@ -1,3 +1,11 @@
+[project]
+name = "gl-client"
+
+dependencies = [
+    "protobuf>=3",
+    "grpcio==1.51.3",
+]
+
 [tool.poetry]
 name = "gl-client"
 version = "0.1.8"
@@ -8,14 +16,15 @@ license = "MIT"
 packages = [
     { include = "glclient" },
 ]
+
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
 gltesting = { path = "../gl-testing/", develop = true }
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
-grpcio = "^1"
-grpcio-tools = "^1"
+grpcio = "^1.51"
+grpcio-tools = "^1.51"
 protobuf = ">=3"
 
 [build-system]
