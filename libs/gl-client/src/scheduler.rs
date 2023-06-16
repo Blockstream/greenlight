@@ -65,6 +65,7 @@ impl Scheduler {
         signer: &Signer,
         invite_code: String,
     ) -> Result<pb::scheduler::RegistrationResponse> {
+        log::debug!("Retrieving challenge for registration");
         let challenge = self
             .client
             .clone()
@@ -74,6 +75,8 @@ impl Scheduler {
             })
             .await?
             .into_inner();
+
+        log::trace!("Got a challenge: {}", hex::encode(&challenge.challenge));
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let device_cert = tls::generate_self_signed_device_cert(
