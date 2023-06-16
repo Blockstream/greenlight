@@ -40,7 +40,7 @@ Greenlight infrastructure:
 	cert, key = b'...', b'...'
 	node_id = bytes.fromhex("02058e8b6c2ad363ec59aa136429256d745164c2bdc87f98f0a68690ec2c5c9b0b")
 	network = "testnet"
-	tls = TlsConfig.with_identity(cert, key)
+	tls = TlsConfig().identity(cert, key)
 	
 	scheduler = Scheduler(node_id, network, tls)
 	node = scheduler.node()
@@ -56,7 +56,7 @@ Once we have an instance of the `Node` we can start interacting with it via the 
 	```
 === "Python"
 	```python
-	info = node.get_into()
+	info = node.get_info()
 	peers = node.list_peers()
 	```
 	
