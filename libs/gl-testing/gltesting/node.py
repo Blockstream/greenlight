@@ -1,3 +1,4 @@
+import psutil
 from pathlib import Path
 from gltesting.identity import Identity
 from gltesting.utils import NodeVersion
@@ -146,6 +147,18 @@ class NodeProcess(TailableProc):
 
         TailableProc.start(self)
         self.wait_for_log("Server started with public key")
+
+    def stop(self):
+        """Explicitly stop all children of the nodelet.
+        """
+        children = psutil.Process(self.proc.pid).children()
+        TailableProc.stop(self)
+
+        for p in children:
+            try:
+                p.send_signal(9)
+            except psutil.NoSuchProcess:
+                pass
 
     def restart(self):
         self.stop()
