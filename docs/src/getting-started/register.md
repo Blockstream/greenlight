@@ -22,7 +22,7 @@ creative way of storing it they can think of.
 	```toml
 	[dependencies]
 	rand = "*"
-	bip39 = "*"
+	bip39 = { version = "*", features=["rand_core"] }
 	```
 
 === "Python"
@@ -45,11 +45,11 @@ phrase and then convert it into a seed secret we can use:
 	let m = Mnemonic::generate_in_with(&mut rng, Language::English, 24).unwrap();
 	let phrase = m.word_iter().fold("".to_string(), |c, n| c + " " + n);
 	
-	# Prompt user to safely store the phrase
+	// Prompt user to safely store the phrase
 	
-	seed = m.to_seed("")[0..32]  # Only need the first 32 bytes
+	let seed = m.to_seed("")[0..32];  // Only need the first 32 bytes
 
-	# Store the seed on the filesystem, or secure configuration system
+	// Store the seed on the filesystem, or secure configuration system
 	```
 
 === "Python"
@@ -123,8 +123,7 @@ We'll pick `bitcoin`, because ... reckless 😉
 	```rust
 	use gl_client::signer::Signer;
 	use lightning_signer::bitcoin::Network;
-	
-    signer = Signer::new(secret, Network::Bitcoin, tls);
+	signer = Signer::new(secret, Network::Bitcoin, tls);
 	```
 
 === "Python"
