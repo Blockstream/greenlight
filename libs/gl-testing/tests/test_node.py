@@ -3,7 +3,7 @@ from gltesting.fixtures import *
 from pyln.testing.utils import wait_for
 from rich.pretty import pprint
 from glclient import nodepb
-from glclient import node_pb2 as clnpb
+from pyln import grpc as clnpb
 from flaky import flaky
 
 import struct
@@ -85,6 +85,8 @@ def test_node_network(node_factory, clients, bitcoind):
     pprint(decoded)
     l1.rpc.pay(inv)
 
+    print(c.list_closed_channels())
+
 
 def test_node_invoice_preimage(clients):
     """Test that we can create an invoice with a specific preimage
@@ -121,7 +123,7 @@ def test_cln_grpc_interface(clients):
     gl1 = c.node()
 
     # Reach into the node configuration
-    from glclient import node_pb2_grpc as clngrpc
+    from pyln import grpc as clngrpc
     import grpc
     cred = grpc.ssl_channel_credentials(
         root_certificates=gl1.tls.ca,

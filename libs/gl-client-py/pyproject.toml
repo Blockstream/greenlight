@@ -19,11 +19,11 @@ packages = [
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
-gltesting = { path = "../gl-testing/", develop = true }
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
 grpcio = "1.51.3"
+pyln-grpc-proto = "^0.1"
 
 # Yes, this is pinned to an older version. 1.53 and 1.54 appear to
 # have an issue with TLS (TSI corruption).

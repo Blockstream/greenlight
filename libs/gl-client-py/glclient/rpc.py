@@ -3,8 +3,7 @@
 from .tls import TlsConfig
 from . import glclient as native
 import logging
-from .node_pb2 import *  # noqa: F401,F403
-from . import node_pb2 as clnpb
+from pyln import grpc as clnpb
 
 
 class Node(object):
@@ -108,6 +107,19 @@ class Node(object):
             destination=destination
         ).SerializeToString()
         res = clnpb.ListchannelsResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
+    def list_closed_channels(
+            self,
+            id=None,
+    ):
+        uri = "/cln.Node/ListClosedChannels"
+        req = clnpb.ListchannelsRequest(
+            id=id,
+        ).SerializeToString()
+        res = clnpb.ListclosedchannelsResponse
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )

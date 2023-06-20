@@ -3,8 +3,8 @@ from gltesting.fixtures import *
 from pyln.testing.utils import wait_for, NodeFactory, LightningNode
 from rich.pretty import pprint
 from glclient import nodepb
-from glclient import node_pb2_grpc as clngrpc
-from glclient import node_pb2 as clnpb
+from pyln import grpc as clngrpc
+from pyln import grpc as clnpb
 import grpc
 from glclient import scheduler_pb2 as schedpb
 import time
