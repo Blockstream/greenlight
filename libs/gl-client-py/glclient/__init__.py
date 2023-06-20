@@ -1,6 +1,6 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
-from . import node_pb2 as clnpb  # type: ignore
+from pyln import grpc as clnpb  # type: ignore
 from . import glclient as native
 from .tls import TlsConfig
 from .glclient import backup_decrypt_with_seed
@@ -341,7 +341,6 @@ class Node(object):
             expiry: Optional[int]=None,
             fallbacks: Optional[List[str]]=None,
             preimage: Optional[bytes]=None,
-            exposeprivatechannels: Optional[bool]=None,
             cltv: Optional[int]=None,
             deschashonly: Optional[bool]=None
     ) -> clnpb.InvoiceResponse:
@@ -357,7 +356,6 @@ class Node(object):
             preimage=preimage,
             expiry=expiry,
             fallbacks=fallbacks,
-            exposeprivatechannels=exposeprivatechannels,
             cltv=cltv,
             deschashonly=deschashonly,
         ).SerializeToString()

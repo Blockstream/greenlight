@@ -322,6 +322,14 @@ def listpeers(ctx):
 
 
 @cli.command()
+@click.pass_context
+def listclosedchannels(ctx):
+    node = ctx.obj.get_node()
+    res = node.list_closed_channels()
+    pbprint(res)
+
+
+@cli.command()
 @click.argument("node_id")
 @click.pass_context
 def disconnect(ctx, node_id):

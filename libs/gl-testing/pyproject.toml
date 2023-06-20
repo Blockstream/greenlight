@@ -23,6 +23,7 @@ pytest = "^7.1.2"
 pytest-cov = "^3.0.0"
 rich = "^12.5.1"
 pyln-testing = "^23.05"
+pyln-grpc-proto = "^0.1"
 protobuf = ">=3"
 flaky = "^3"
 
