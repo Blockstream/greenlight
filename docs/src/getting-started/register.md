@@ -22,7 +22,7 @@ creative way of storing it they can think of.
 	```toml
 	[dependencies]
 	rand = "*"
-	bip39 = "*"
+	bip39 = { version = "*", features=["rand_core"] }
 	```
 
 === "Python"
@@ -45,11 +45,13 @@ phrase and then convert it into a seed secret we can use:
 	let m = Mnemonic::generate_in_with(&mut rng, Language::English, 24).unwrap();
 	let phrase = m.word_iter().fold("".to_string(), |c, n| c + " " + n);
 	
-	# Prompt user to safely store the phrase
+	// Prompt user to safely store the phrase
 	
-	seed = m.to_seed("")[0..32]  # Only need the first 32 bytes
+	let seed = m.to_seed("")[0..32];  // Only need the first 32 bytes
 
-	# Store the seed on the filesystem, or secure configuration system
+	let secret = seed[0..32].to_vec();
+
+	// Store the seed on the filesystem, or secure configuration system
 	```
 
 === "Python"
@@ -122,9 +124,8 @@ We'll pick `bitcoin`, because ... reckless 😉
 === "Rust"
 	```rust
 	use gl_client::signer::Signer;
-	use lightning_signer::bitcoin::Network;
-	
-    signer = Signer::new(secret, Network::Bitcoin, tls);
+	use gl_client::bitcoin::Network;
+	let signer = Signer::new(secret, Network::Bitcoin, tls).unwrap();
 	```
 
 === "Python"
@@ -153,14 +154,14 @@ to the [`Scheduler`][scheduler]:
 
 === "Rust"
 	```rust
-	use gl_client::Scheduler;
-	use lightning_signer::bitcoin::Network;
+	use gl_client::scheduler::Scheduler;
+	use gl_client::bitcoin::Network;
 
-	scheduler = Scheduler::new(signer.node_id(), Network::Bitcoin);
+	let scheduler = Scheduler::new(signer.node_id(), Network::Bitcoin).await.unwrap();
 
 	// Passing in the signer is required because the client needs to prove
 	// ownership of the `node_id`
-	scheduler.register(signer, Some(invite_code))
+	scheduler.register(&signer, Some(invite_code)).await.unwrap();
 
 	```
 
@@ -195,12 +196,12 @@ going forward to talk to the scheduler and the node itself.
 
 === "Rust"
 	```
-	let tls = TlsConfig().identity(res.device_cert, res.device_key);
+	let tls = TlsConfig::new().unwrap().identity(res.device_cert, res.device_key);
 	
 	// Use the configured `tls` instance when creating `Scheduler` and `Signer`
 	// instance going forward
-	signer = Signer(seed, Network::Bitcoin, tls);
-	scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, tls).await?;
+	let signer = Signer(seed, Network::Bitcoin, tls);
+	let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, "uri", &tls).await?;
 	```
 
 === "Python"
