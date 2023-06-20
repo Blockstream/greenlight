@@ -30,8 +30,10 @@ Greenlight infrastructure:
 	let node_id = hex::decode("02058e8b6c2ad363ec59aa136429256d745164c2bdc87f98f0a68690ec2c5c9b0b")?;
 	let network = "testnet";
 	
+	let tls = TlsConfig::new().unwrap().identity(device_cert, device_key);
+
 	let scheduler = gl_client::scheduler::Scheduler(node_id, network)?;
-	let node: gl_client::node::ClnClient = scheduler.schedule()?;
+	let node: gl_client::node::ClnClient = scheduler.schedule(tls).await?;
 	```
 
 === "Python"
@@ -102,7 +104,7 @@ in the last chapter, instantiate the signer with it and then start it.
 	let (cert, key) = ... // Load the cert and key you got from the `register` call
 	
 	// The signer task will run until we send a shutdown signal on this channel
-	let (tx, mut rx) = tokio::mpsc::channel(1);
+	let (tx, mut rx) = tokio::sync::mpsc::channel(1);
 	
 	let tls = TlsConfig().identity(cert, key);
 	signer = Signer(seed, Network::Bitcoin, tls);
