@@ -223,6 +223,7 @@ impl PluginNodeServer {
 
 #[tonic::async_trait]
 impl Node for PluginNodeServer {
+    type StreamCustommsgStream = ReceiverStream<Result<pb::Custommsg, Status>>;
     type StreamHsmRequestsStream = ReceiverStream<Result<pb::HsmRequest, Status>>;
     type StreamLogStream = ReceiverStream<Result<pb::LogEntry, Status>>;
 
@@ -339,6 +340,13 @@ impl Node for PluginNodeServer {
             Ok(()) => Ok(Response::new(pb::DisconnectResponse {})),
             Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
         }
+    }
+
+    async fn stream_custommsg(
+        &self,
+        _: Request<pb::StreamCustommsgRequest>,
+    ) -> Result<Response<Self::StreamCustommsgStream>, Status> {
+        todo!()
     }
 
     async fn stream_log(
