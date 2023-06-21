@@ -7,7 +7,6 @@ from glclient import greenlight_pb2_grpc as nodegrpc
 from glclient import greenlight_pb2 as nodepb
 import logging
 import grpc
-from concurrent.futures import ThreadPoolExecutor
 import subprocess
 from gltesting.utils import NodeVersion, Network
 from pyln.testing.utils import TailableProc, BitcoinD
@@ -85,10 +84,6 @@ class NodeProcess(TailableProc):
             '--bitcoin-rpcpassword=rpcpass',
             f'--bitcoin-rpcconnect=localhost:{self.bitcoind.rpcport}',
             "--disable-plugin=commando",
-            # The following will allow us to support the `stream_log`
-            #RPC method after updating to pyln-testing==0.12
-            #f'--log-file=log',
-            #f'--log-file=-',
             '--rescan=1',
             "--log-timestamps=false",
             "--cltv-final=6",
@@ -148,6 +143,9 @@ class NodeProcess(TailableProc):
         TailableProc.start(self)
         self.wait_for_log("Server started with public key")
 
+        from threading import Thread
+        Thread(target=self.taillog, daemon=True).start()
+
     def stop(self):
         """Explicitly stop all children of the nodelet.
         """
@@ -163,3 +161,37 @@ class NodeProcess(TailableProc):
     def restart(self):
         self.stop()
         self.start()
+
+    def taillog(self):
+        """GL redirects stdout and stderr to files for later tailing.
+        """
+
+        import time
+        import select
+        filename = self.directory / "log"
+        f = subprocess.Popen(
+            ['tail','-F',filename],\
+            stdout=subprocess.PIPE,stderr=subprocess.PIPE
+        )
+        p = select.poll()
+        p.register(f.stdout)
+
+        f2 = subprocess.Popen(
+            ['tail','-F',self.directory / "errlog"],\
+            stdout=subprocess.PIPE,stderr=subprocess.PIPE
+        )
+        p2 = select.poll()
+        p2.register(f2.stdout)
+
+        while True:
+            if p.poll(1):
+                line = f.stdout.readline()
+                self.logger.debug(f"stdout {line}")
+            elif p2.poll(1):
+                line = f2.stdout.readline()
+                self.logger.debug(f"stderr {line}")
+            else:
+                time.sleep(1)
+
+            if line == '':
+                break
