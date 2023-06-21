@@ -21,7 +21,7 @@ still run against the production environment. On one hand this is
 likely not as fast as you're used to for local tests, and it actually
 allocates resources on the service that someone will have to pay for.
 
-Clearly it'd be better if we had a mock implementation of Greenluight
+Clearly it'd be better if we had a mock implementation of Greenlight
 that you can run locally, and that can be torn down in order to free
 the resources. This is pretty much what `gl-testing` is for. It
 consists of a mock python implementation of the `Scheduler`, on top of
