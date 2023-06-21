@@ -124,6 +124,12 @@ service Node {
 	// resource-constrained devices.
 	rpc StreamLog(StreamLogRequest) returns (stream LogEntry) {}
 
+	// Listen for incoming `custommsg` messages from peers.
+	//
+	// The messages are forwarded as they come in, and will not be
+	// replayed if the stream is interrupted.
+	rpc StreamCustommsg(StreamCustommsgRequest) returns (stream Custommsg) {}
+
 	//////////////////////////////// HSM Messages ////////////////////////
 	//
 	// The following messages are related to communicating HSM
@@ -607,4 +613,11 @@ message NodeConfig {
 message StartupMessage {
   bytes request = 1;
   bytes response = 2;
+}
+
+message StreamCustommsgRequest {}
+
+message Custommsg {
+  bytes peer_id = 1;
+  bytes payload = 2;
 }

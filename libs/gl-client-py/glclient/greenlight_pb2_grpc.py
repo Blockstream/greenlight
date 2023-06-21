@@ -17,6 +17,9 @@ class NodeStub(object):
     `Scheduler.Recover()`. In particular the anonymous mTLS keypair is
     rejected by the node.
 
+    Deprecated methods are being replaced by the standardized and
+    automatically managed cln-grpc protocol you can find in
+    `node.proto`
     """
 
     def __init__(self, channel):
@@ -110,6 +113,11 @@ class NodeStub(object):
                 request_serializer=greenlight__pb2.StreamLogRequest.SerializeToString,
                 response_deserializer=greenlight__pb2.LogEntry.FromString,
                 )
+        self.StreamCustommsg = channel.unary_stream(
+                '/greenlight.Node/StreamCustommsg',
+                request_serializer=greenlight__pb2.StreamCustommsgRequest.SerializeToString,
+                response_deserializer=greenlight__pb2.Custommsg.FromString,
+                )
         self.StreamHsmRequests = channel.unary_stream(
                 '/greenlight.Node/StreamHsmRequests',
                 request_serializer=greenlight__pb2.Empty.SerializeToString,
@@ -134,6 +142,9 @@ class NodeServicer(object):
     `Scheduler.Recover()`. In particular the anonymous mTLS keypair is
     rejected by the node.
 
+    Deprecated methods are being replaced by the standardized and
+    automatically managed cln-grpc protocol you can find in
+    `node.proto`
     """
 
     def GetInfo(self, request, context):
@@ -286,6 +297,16 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StreamCustommsg(self, request, context):
+        """Listen for incoming `custommsg` messages from peers.
+
+        The messages are forwarded as they come in, and will not be
+        replayed if the stream is interrupted.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def StreamHsmRequests(self, request, context):
         """////////////////////////////// HSM Messages ////////////////////////
 
@@ -396,6 +417,11 @@ def add_NodeServicer_to_server(servicer, server):
                     request_deserializer=greenlight__pb2.StreamLogRequest.FromString,
                     response_serializer=greenlight__pb2.LogEntry.SerializeToString,
             ),
+            'StreamCustommsg': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamCustommsg,
+                    request_deserializer=greenlight__pb2.StreamCustommsgRequest.FromString,
+                    response_serializer=greenlight__pb2.Custommsg.SerializeToString,
+            ),
             'StreamHsmRequests': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamHsmRequests,
                     request_deserializer=greenlight__pb2.Empty.FromString,
@@ -425,6 +451,9 @@ class Node(object):
     `Scheduler.Recover()`. In particular the anonymous mTLS keypair is
     rejected by the node.
 
+    Deprecated methods are being replaced by the standardized and
+    automatically managed cln-grpc protocol you can find in
+    `node.proto`
     """
 
     @staticmethod
@@ -713,6 +742,23 @@ class Node(object):
         return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamLog',
             greenlight__pb2.StreamLogRequest.SerializeToString,
             greenlight__pb2.LogEntry.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def StreamCustommsg(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamCustommsg',
+            greenlight__pb2.StreamCustommsgRequest.SerializeToString,
+            greenlight__pb2.Custommsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
