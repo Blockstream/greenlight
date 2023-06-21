@@ -102,21 +102,21 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::ListpeersRequest>,
     ) -> Result<Response<pb::ListpeersResponse>, Status> {
-        self.list_peers(r).await
+        self.inner.list_peers(r).await
     }
 
     async fn list_peer_channels(
         &self,
         r: Request<pb::ListpeerchannelsRequest>,
     ) -> Result<Response<pb::ListpeerchannelsResponse>, Status> {
-        self.list_peer_channels(r).await
+        self.inner.list_peer_channels(r).await
     }
 
     async fn list_closed_channels(
         &self,
         r: Request<pb::ListclosedchannelsRequest>,
     ) -> Result<Response<pb::ListclosedchannelsResponse>, Status> {
-        self.list_closed_channels(r).await
+        self.inner.list_closed_channels(r).await
     }
 
     async fn list_funds(
@@ -178,7 +178,7 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::ListchannelsRequest>,
     ) -> Result<Response<pb::ListchannelsResponse>, Status> {
-        self.list_channels(r).await
+        self.inner.list_channels(r).await
     }
 
     async fn add_gossip(
