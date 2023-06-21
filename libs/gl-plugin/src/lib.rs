@@ -103,12 +103,19 @@ pub async fn init(
     let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
         .hook("htlc_accepted", lsp::on_htlc_accepted)
         .hook("invoice_payment", on_invoice_payment)
-        .hook("peer_connected", on_peer_connected);
+        .hook("peer_connected", on_peer_connected)
+        .hook("custommsg", on_custommsg);
     Ok(Builder {
         state,
         inner,
         events,
     })
+}
+
+async fn on_custommsg(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
+    let call: messages::Custommsg = serde_json::from_value(v).unwrap();
+    debug!("Received a custommsg {:?}", &call);
+    Ok(json!({"result": "continue"}))
 }
 
 /// Notification handler that receives notifications on successful
