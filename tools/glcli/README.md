@@ -28,7 +28,7 @@ the [`gl-client-py` documentation][glpy-doc] for details on prebuilt
 binaries and how to compile on platforms that don't have a prebuilt
 version yet.
 
-[glpy-doc]: ../rust/gl-client-py/
+[glpy-doc]: ../../libs/gl-client-py/
 
 
 
