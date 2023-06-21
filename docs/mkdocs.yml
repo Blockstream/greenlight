@@ -68,4 +68,5 @@ nav:
     - LSP Integration: reference/lsp.md
   - About:
     - About: about/index.md
+    - Frequently Asked Questions: about/faq.md
     - Changelog: about/changelog.md
