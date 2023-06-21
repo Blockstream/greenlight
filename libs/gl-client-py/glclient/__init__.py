@@ -161,6 +161,15 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
+    def list_closed_channels(self) -> clnpb.ListclosedchannelsResponse:
+        uri = "/cln.Node/ListClosedChannels"
+        req = clnpb.ListclosedchannelsRequest().SerializeToString()
+        res = clnpb.ListclosedchannelsResponse
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
     def listpays(self) -> clnpb.ListpaysResponse:    
         uri = "/cln.Node/ListPays"
         req = clnpb.ListpaysRequest().SerializeToString()
