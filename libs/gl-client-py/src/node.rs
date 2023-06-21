@@ -1,7 +1,7 @@
 use crate::runtime::exec;
 use crate::tls::TlsConfig;
-use gl_client::bitcoin::Network;
 use gl_client as gl;
+use gl_client::bitcoin::Network;
 use gl_client::pb;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
@@ -27,8 +27,8 @@ impl Node {
 
         // Connect to both interfaces in parallel to avoid doubling the startup time:
 
-	// TODO: Could be massively simplified by using a scoped task
-	// from tokio_scoped to a
+        // TODO: Could be massively simplified by using a scoped task
+        // from tokio_scoped to a
         let (client, gclient) = exec(async {
             let i = inner.clone();
             let u = grpc_uri.clone();
@@ -69,6 +69,14 @@ impl Node {
             .map_err(error_starting_stream)?;
         Ok(IncomingStream { inner: stream })
     }
+
+    fn stream_custommsg(&self, args: &[u8]) -> PyResult<CustommsgStream> {
+        let req = pb::StreamCustommsgRequest::decode(args).map_err(error_decoding_request)?;
+        let stream = exec(self.client.clone().stream_custommsg(req))
+            .map(|x| x.into_inner())
+            .map_err(error_starting_stream)?;
+        Ok(CustommsgStream { inner: stream })
+    }
 }
 
 fn error_decoding_request<D: core::fmt::Display>(e: D) -> PyErr {
@@ -102,6 +110,18 @@ struct IncomingStream {
 
 #[pymethods]
 impl IncomingStream {
+    fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
+        convert_stream_entry(exec(async { self.inner.message().await }))
+    }
+}
+
+#[pyclass]
+struct CustommsgStream {
+    inner: tonic::codec::Streaming<pb::Custommsg>,
+}
+
+#[pymethods]
+impl CustommsgStream {
     fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
         convert_stream_entry(exec(async { self.inner.message().await }))
     }

@@ -465,6 +465,14 @@ class Node(object):
                 break
             yield nodepb.IncomingPayment.FromString(bytes(n))
 
+    def stream_custommsg(self):
+        stream = self.inner.stream_custommsg(b"")
+        while True:
+            n = stream.next()
+            if n is None:
+                break
+            yield nodepb.Custommsg.FromString(bytes(n))
+
     def datastore(
             self,
             key,
