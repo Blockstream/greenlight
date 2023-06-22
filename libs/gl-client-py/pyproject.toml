@@ -4,6 +4,7 @@ name = "gl-client"
 dependencies = [
     "protobuf>=3",
     "grpcio==1.51.3",
+    "pyln-grpc-proto>=0.1",
 ]
 
 [tool.poetry]
