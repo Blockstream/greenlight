@@ -115,6 +115,17 @@ pub async fn init(
 async fn on_custommsg(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
     let call: messages::Custommsg = serde_json::from_value(v).unwrap();
     debug!("Received a custommsg {:?}", &call);
+
+    let msg = pb::Custommsg {
+        peer_id: hex::decode(call.peer_id).unwrap(),
+        payload: hex::decode(call.payload).unwrap(),
+    };
+
+    // Custommsg delivery is best effort, so don't use the Result<>.
+    if let Err(e) = plugin.state().events.clone().send(Event::CustomMsg(msg)) {
+        log::debug!("Error sending custommsg to listeners: {}", e);
+    }
+
     Ok(json!({"result": "continue"}))
 }
 
@@ -214,6 +225,7 @@ pub enum Event {
     Stop(Arc<stager::Stage>),
     RpcCall,
     IncomingPayment(pb::IncomingPayment),
+    CustomMsg(pb::Custommsg),
 }
 
 pub use cln_grpc as grpc;
