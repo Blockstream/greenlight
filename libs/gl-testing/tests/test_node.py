@@ -317,3 +317,30 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
         partid=2,
         timeout=10
     )
+
+
+def test_custommsg(clients, node_factory, bitcoind, executor):
+    """Connect a GL node and a CLN node and have them talk.
+    """
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+    l1 = node_factory.get_node()
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+
+    # Part 1: CLN -> GL
+    m = gl1.stream_custommsg()
+    f = executor.submit(next, m)
+
+    # Give the executor time to actually register itself with the
+    # notification
+    import time
+    time.sleep(1)
+    l1.rpc.sendcustommsg(node_id=c.node_id.hex(), msg="FFFFDEADBEEF")
+
+    res = f.result(1)
+    assert res.payload == b'\xff\xff\xde\xad\xbe\xef'
+    assert res.peer_id.hex() == l1.info['id']
+
+    # Part 2: GL -> CLN
