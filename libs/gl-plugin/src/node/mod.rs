@@ -1,9 +1,9 @@
 use crate::config::Config;
-use crate::messages;
 use crate::pb::{self, node_server::Node};
 use crate::rpc::LightningClient;
 use crate::stager;
 use crate::storage::StateStore;
+use crate::{messages, Event};
 use anyhow::{Context, Error, Result};
 use bytes::BufMut;
 use gl_client::persist::State;
@@ -346,7 +346,25 @@ impl Node for PluginNodeServer {
         &self,
         _: Request<pb::StreamCustommsgRequest>,
     ) -> Result<Response<Self::StreamCustommsgStream>, Status> {
-        todo!()
+        log::debug!("Added a new listener for custommsg");
+        let (tx, rx) = mpsc::channel(1);
+        let mut stream = self.events.subscribe();
+        // TODO: We can do better by returning the broadcast receiver
+        // directly. Well really we should be filtering the events by
+        // type, so maybe a `.map()` on the stream can work?
+        tokio::spawn(async move {
+            while let Ok(msg) = stream.recv().await {
+                if let Event::CustomMsg(m) = msg {
+                    log::trace!("Forwarding custommsg {:?} to listener", m);
+                    if let Err(e) = tx.send(Ok(m)).await {
+			log::warn!("Unable to send custmmsg to listener: {:?}", e);
+			break;
+		    }
+                }
+            }
+	    panic!("stream.recv loop exited...");
+        });
+        return Ok(Response::new(ReceiverStream::new(rx)));
     }
 
     async fn stream_log(
