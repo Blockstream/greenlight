@@ -170,7 +170,7 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def listpays(self) -> clnpb.ListpaysResponse:    
+    def listpays(self) -> clnpb.ListpaysResponse:
         uri = "/cln.Node/ListPays"
         req = clnpb.ListpaysRequest().SerializeToString()
         res = clnpb.ListpaysResponse
@@ -355,7 +355,7 @@ class Node(object):
     ) -> clnpb.InvoiceResponse:
         if preimage and len(preimage) != 32:
             raise ValueError("Preimage must be 32 bytes in length")
-        
+
         uri = "/cln.Node/Invoice"
         res = clnpb.InvoiceResponse
         req = clnpb.InvoiceRequest(
@@ -372,7 +372,7 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
-    
+
     def create_invoice(
             self,
             label: str,
@@ -472,6 +472,18 @@ class Node(object):
             if n is None:
                 break
             yield nodepb.Custommsg.FromString(bytes(n))
+
+    def send_custommsg(self, node_id: str, msg: bytes) -> clnpb.SendcustommsgResponse:
+        uri = "/cln.Node/SendCustomMsg"
+        res = clnpb.SendcustommsgResponse
+        req = clnpb.SendcustommsgRequest(
+            node_id=normalize_node_id(node_id),
+            msg=msg,
+        ).SerializeToString()
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
 
     def datastore(
             self,

@@ -344,3 +344,9 @@ def test_custommsg(clients, node_factory, bitcoind, executor):
     assert res.peer_id.hex() == l1.info['id']
 
     # Part 2: GL -> CLN
+    gl1.send_custommsg(bytes.fromhex(l1.info['id']), b"\xff\xffhello")
+
+    l1.daemon.wait_for_logs([
+        r'connectd: peer_in INVALID 65535',
+        r'Calling custommsg hook of plugin chanbackup',
+    ])
