@@ -169,6 +169,24 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
+    
+    def list_channels(
+            self,
+            short_channel_id: str = None,
+            source: bytes = None,
+            destination: bytes = None 
+    ) -> clnpb.ListchannelsResponse:
+        uri = "/cln.Node/ListChannels"
+        req = clnpb.ListchannelsRequest(
+            short_channel_id=short_channel_id,
+            source=source,
+            destination=destination
+        ).SerializeToString()
+        res = clnpb.ListchannelsResponse
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
 
     def listpays(self) -> clnpb.ListpaysResponse:
         uri = "/cln.Node/ListPays"
@@ -340,7 +358,6 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
-
 
     def invoice(
             self,
