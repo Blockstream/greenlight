@@ -9,7 +9,7 @@
 FROM ubuntu:20.04 as builder
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
-ENV RUST_VERSION=1.67.0
+ENV RUST_VERSION=1.70.0
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_LOG=debug
 ENV PYTHONPATH=/repo/libs/gl-testing
