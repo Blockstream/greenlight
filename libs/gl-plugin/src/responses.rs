@@ -135,7 +135,10 @@ pub struct ListPaysPay {
     // msatoshi is renamed amount_msat
     pub amount_msat: Option<MSat>,
     pub amount_sent_msat: MSat,
+
+    #[serde(rename = "preimage")]
     pub payment_preimage: Option<String>,
+
     pub status: String,
 }
 
