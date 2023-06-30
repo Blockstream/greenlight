@@ -65,9 +65,14 @@ ensure-docker:
 		echo "We are not running in the gl-testing docker container, refusing to run"; \
 		exit 1; \
 	fi
-
+	
 docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
-	docker buildx build --load -t gltesting -f libs/gl-testing/Dockerfile .
+	docker buildx build \
+	  --load \
+	  --build-arg DOCKER_USER=$(shell whoami) \
+	  -t gltesting \
+	  -f libs/gl-testing/Dockerfile \
+	  .
 
 docker-shell:
 	docker run \
