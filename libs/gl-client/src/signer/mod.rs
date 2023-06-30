@@ -233,7 +233,8 @@ impl Signer {
                 .into_iter()
                 .filter_map(|r| r.ok())
                 .map(|r| decode_request(r))
-                .collect::<Result<Vec<model::Request>>>()?;
+                .filter_map(|r| r.ok())
+                .collect::<Vec<model::Request>>();
 
             // TODO: Decode requests and reconcile them with the changes
             use auth::Authorizer;
