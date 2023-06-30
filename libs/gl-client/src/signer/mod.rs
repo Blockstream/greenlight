@@ -233,7 +233,13 @@ impl Signer {
                 .into_iter()
                 .filter_map(|r| r.ok())
                 .map(|r| decode_request(r))
-                .filter_map(|r| r.ok())
+                .filter_map(|r| match r {
+                    Ok(r) => Some(r),
+                    Err(e) => {
+                        log::error!("Unable to decode request in context: {}", e);
+                        None
+                    }
+                })
                 .collect::<Vec<model::Request>>();
 
             // TODO: Decode requests and reconcile them with the changes
