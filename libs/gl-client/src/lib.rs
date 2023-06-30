@@ -16,6 +16,8 @@ pub mod node;
 /// [`node::Node`] to create a correctly configured client.
 pub mod pb;
 
+use std::time::Duration;
+
 /// Register, recover and schedule your nodes on greenlight.
 pub mod scheduler;
 
@@ -50,7 +52,8 @@ pub mod utils {
     }
 }
 
-use std::time::Duration;
+/// Functionality to integrate greenlight with a Lightning Service Provider
+pub mod lsps;
 
 use thiserror::Error;
 
