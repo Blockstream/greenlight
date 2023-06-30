@@ -74,10 +74,13 @@ RUN mkdir -p /tmp/target/debug && \
 
 FROM ubuntu:20.04 as tester
 ARG BITCOIN_VERSION=0.20.1
+ARG DOCKER_USER=default_user
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_DIR=/tmp/target/
 ENV RUST_VERSION=1.70.0
+
+RUN adduser $DOCKER_USER
 
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0
@@ -146,6 +149,7 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1
 RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
     chmod a+x /usr/bin/cfssljson
 
+
 # Run in a venv, so we don't get warnings about root being special.
 RUN python3 -m venv /tmp/venv
 ENV PATH=/tmp/venv/bin:$PATH
@@ -177,7 +181,11 @@ RUN cd /tmp/ && \
     mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
     rm -rf bitcoin.tar.bz2 /tmp/bitcoin-$BITCOIN_VERSION
 
+
 COPY --from=builder /repo/cln-versions/ /opt/cln
+RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
+
+USER $DOCKER_USER
 COPY --from=builder /tmp/target /tmp/target
 ADD . /repo
 RUN (cd /repo/libs/gl-client-py; maturin develop)
@@ -194,5 +202,4 @@ RUN sed -i \
     's/from pyln.testing import grpc/#from pyln.testing import grpc/g' \
     /tmp/venv/lib/python3.8/site-packages/pyln/testing/utils.py
 
-RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
 WORKDIR /repo
