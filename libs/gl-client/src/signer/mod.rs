@@ -565,8 +565,7 @@ fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request> {
     let payload = &r.request[5..];
 
     Ok(crate::signer::model::cln::decode_request(&r.uri, payload)
-        .or_else(|_| crate::signer::model::greenlight::decode_request(&r.uri, payload))
-        .unwrap())
+        .or_else(|_| crate::signer::model::greenlight::decode_request(&r.uri, payload))?)
 }
 
 /// A `(request, response)`-tuple passed to the scheduler to allow
