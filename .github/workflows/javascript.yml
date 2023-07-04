@@ -82,7 +82,9 @@ jobs:
       matrix:
         include:
           - TARGET: x86_64
+            ARCH: x86_64
           - TARGET: aarch64
+            ARCH: arm64
     steps:
     - uses: actions/checkout@v3
 
@@ -113,7 +115,7 @@ jobs:
         brew install jq
 
         export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
-        export PACKAGE=gl-client-${VERSION}-darwin-${{ matrix.target }}.tar.gz
+        export PACKAGE=gl-client-${VERSION}-darwin-${{ matrix.ARCH }}.tar.gz
         
         mkdir -p gl-client/
         cp libs/gl-client-js/index.node gl-client/
@@ -157,9 +159,9 @@ jobs:
     - name: Build
       run: |
         cd libs\gl-client-js
-        dir
         set CARGO_TARGET=${{ matrix.TARGET }}
         npm run build
+        dir
     - name: Upload binaries
       uses: actions/upload-artifact@v3
       with:
