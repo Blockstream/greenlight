@@ -47,26 +47,20 @@ jobs:
 
     - name: Install npm deps
       run: npm install -g jest @mapbox/node-pre-gyp cargo-cp-artifact protobufjs rewire
-      
+
     - name: Build
       run: |
         cd libs/gl-client-js/
-        
+
         export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_LINKER=/usr/bin/arm-linux-gnueabi-gcc
         export CARGO_TARGET=${{ matrix.TARGET }}
         npm run build
-      
+
     - name: Bundle
       run: |
-        sudo apt-get install -y jq
-
-        export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
-        export PACKAGE=gl-client-${VERSION}-${{ matrix.PLATFORM }}-${{ matrix.ARCH }}.tar.gz
-        
-        mkdir -p gl-client/
+        mkdir gl-client
         cp libs/gl-client-js/index.node gl-client/
-        tar -cvzf ${PACKAGE} gl-client
-        echo Built package ${PACKAGE}
+        python libs/gl-client-js/helper.py ${{ matrix.ARCH }}
 
     - name: Upload binaries
       uses: actions/upload-artifact@v3
@@ -102,25 +96,20 @@ jobs:
 
     - name: Install npm deps
       run: npm install -g jest @mapbox/node-pre-gyp cargo-cp-artifact protobufjs rewire
-      
+
     - name: Build
       run: |
         cd libs/gl-client-js/
-        
+
         export CARGO_TARGET=${{ matrix.TARGET }}
         npm run build
 
     - name: Bundle
       run: |
-        brew install jq
-
-        export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
-        export PACKAGE=gl-client-${VERSION}-darwin-${{ matrix.ARCH }}.tar.gz
-        
-        mkdir -p gl-client/
+        brew install python@3.8
+        mkdir gl-client
         cp libs/gl-client-js/index.node gl-client/
-        tar -cvzf ${PACKAGE} gl-client
-        echo Built package ${PACKAGE}
+        python3 libs/gl-client-js/helper.py ${{ matrix.ARCH }}
 
     - name: Upload binaries
       uses: actions/upload-artifact@v3
@@ -137,7 +126,7 @@ jobs:
         - TARGET: x86_64-pc-windows-gnu
           ARCH: x64
         - TARGET: i686-pc-windows-gnu
-          ARCH: x86
+          ARCH: ia32
     steps:
     - uses: actions/checkout@v3
 
@@ -155,13 +144,18 @@ jobs:
 
     - name: Install npm deps
       run: npm install -g jest @mapbox/node-pre-gyp cargo-cp-artifact protobufjs rewire
-      
+
     - name: Build
       run: |
         cd libs\gl-client-js
         set CARGO_TARGET=${{ matrix.TARGET }}
         npm run build
-        dir
+    - name: Bundle
+      run: |
+        mkdir gl-client
+        cp libs/gl-client-js/index.node gl-client/
+        python libs/gl-client-js/helper.py ${{ matrix.ARCH }}
+
     - name: Upload binaries
       uses: actions/upload-artifact@v3
       with:
