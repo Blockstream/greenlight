@@ -55,9 +55,10 @@ jobs:
     - name: Bundle
       run: |
         sudo apt-get install -y jq
+        ARCH=$(node -e "console.log(process.arch)")
 
         export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
-        export PACKAGE=gl-client-${VERSION}-${{ matrix.PLATFORM }}-${{ matrix.ARCH }}.tar.gz
+        export PACKAGE=gl-client-${VERSION}-${{ matrix.PLATFORM }}-${ARCH}.tar.gz
         
         mkdir -p gl-client/
         cp libs/gl-client-js/index.node gl-client/
