@@ -63,6 +63,7 @@ nav:
     - Self-Hosting: tutorials/self-hosting.md
   - Reference:
     - Overview: reference/index.md
+    - Client Libraries: reference/client-libraries.md
     - Security: reference/security.md
     - reference/partner-certs.md
     - LSP Integration: reference/lsp.md
