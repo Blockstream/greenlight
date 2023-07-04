@@ -25,7 +25,7 @@ jobs:
             ARCH: arm
             PLATFORM: linux
           - TARGET: x86_64-unknown-linux-gnu
-            ARCH: x86
+            ARCH: x64
             PLATFORM: linux
           - TARGET: i686-unknown-linux-gnu
             ARCH: ia32
@@ -59,10 +59,9 @@ jobs:
     - name: Bundle
       run: |
         sudo apt-get install -y jq
-        ARCH=$(node -e "console.log(process.arch)")
 
         export VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
-        export PACKAGE=gl-client-${VERSION}-${{ matrix.PLATFORM }}-${ARCH}.tar.gz
+        export PACKAGE=gl-client-${VERSION}-${{ matrix.PLATFORM }}-${{ matrix.ARCH }}.tar.gz
         
         mkdir -p gl-client/
         cp libs/gl-client-js/index.node gl-client/
@@ -81,9 +80,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-        - x86_64
-        - aarch64
+        include:
+          - TARGET: x86_64
+          - TARGET: aarch64
     steps:
     - uses: actions/checkout@v3
 
@@ -158,26 +157,11 @@ jobs:
     - name: Build
       run: |
         cd libs\gl-client-js
-        
+        dir
         set CARGO_TARGET=${{ matrix.TARGET }}
         npm run build
-
-# OMG, Windows shell scripting is horrible!
-#    - name: Bundle
-#      run: |
-#        sudo apt-get install -y jq
-#
-#        set VERSION=$(jq '.version' libs/gl-client-js/package.json -r)
-#        export PACKAGE=gl-client-${VERSION}-darwin-${{ matrix.ARCH }}.tar.gz
-#        
-#        mkdir -p gl-client/
-#        cp libs/gl-client-js/index.node gl-client/
-#        tar -cvzf ${PACKAGE} gl-client
-#        echo Built package ${PACKAGE}
-#        ls -lhaR .
-#
-#    - name: Upload binaries
-#     uses: actions/upload-artifact@v3
-#      with:
-#        name: binaries
-#        path: gl-client-*.tar.gz
+    - name: Upload binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: gl-client-*.tar.gz
