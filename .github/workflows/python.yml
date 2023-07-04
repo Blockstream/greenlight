@@ -70,7 +70,7 @@ jobs:
       if: matrix.target != 'ppc64' && matrix.target != 'x86_64' && matrix.target != 'i686'
       with:
         arch: ${{ matrix.target }}
-        distro: ubuntu20.04
+        distro: ubuntu22.04
         githubToken: ${{ github.token }}
         install: |
           apt-get update
