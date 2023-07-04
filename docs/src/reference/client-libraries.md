@@ -16,15 +16,16 @@ sophisticated build process, it should just work out of the box.
 
 Currently our CI builds prebuilt bindings for Javascript and Python for the following platform and architecture combinations:
 
-| OS                 | Architecture   |
-|--------------------|----------------|
-| MacOS              | x86_64 (intel) |
-| MacOS              | arm64 (m1/m2)  |
-| Windows            | x86            |
-| Window             | x64            |
-| Linux (glibc 2.24) | x86_64-gnu     |
-| Linux              | i686-gnu       |
-| Linux              | armv7-gnueabi  |
+| OS      | Architecture   |
+|---------|----------------|
+| MacOS   | x86_64 (intel) |
+| MacOS   | arm64 (m1/m2)  |
+| Windows | x86            |
+| Window  | x64            |
+| Linux   | x86_64-gnu     |
+| Linux   | i686-gnu       |
+| Linux   | armv7-gnueabi  |
+| Linux   | aarch64        |
 
 Should your platform and architecture not be in the list above, don't
 worry, you can still build them from the source by checking out the
