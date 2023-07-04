@@ -9,7 +9,7 @@ dependencies = [
 
 [tool.poetry]
 name = "gl-client"
-version = "0.1.8"
+version = "0.1.9"
 description = ""
 authors = ["Christian Decker <decker@blockstream.com>"]
 license = "MIT"

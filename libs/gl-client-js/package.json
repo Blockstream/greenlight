@@ -1,6 +1,6 @@
 {
   "name": "gl-client",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Greenlight is non-custodial lightning-as-a-service. Your users hold their keys, while we take care of everything else. These are the JS client bindings.",
   "main": "index.js",
   "files": [
