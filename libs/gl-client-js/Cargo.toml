@@ -1,6 +1,6 @@
 [package]
 name = "gl-client-js"
-version = "0.1.9"
+version = "0.1.10"
 license = "MIT"
 edition = "2018"
 
