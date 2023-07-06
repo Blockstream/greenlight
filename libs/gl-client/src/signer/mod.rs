@@ -5,11 +5,13 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
-use anyhow::anyhow;
-use bytes::BufMut;
+use anyhow::{anyhow, Context};
+use bytes::{Buf, BufMut, Bytes};
+use futhark::{Restriction, Rune};
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
+use lightning_signer::util::crypto_utils;
 use log::{debug, info, trace, warn};
 use serde_bolt::Octets;
 use std::convert::TryInto;
@@ -28,10 +30,12 @@ pub mod model;
 
 const VERSION: &str = "v23.05";
 const GITHASH: &str = env!("GIT_HASH");
+const RUNE_VERSION: &str = "gl0";
 
 #[derive(Clone)]
 pub struct Signer {
     secret: [u8; 32],
+    master_rune: Rune,
     services: NodeServices,
     tls: TlsConfig,
     id: Vec<u8>,
@@ -115,9 +119,15 @@ impl Signer {
         let init = Signer::initmsg(&handler.0)?;
         let id = init[2..35].to_vec();
 
+        // Init master rune. We create the rune seed from the nodes
+        // seed by deriving a hardened key tagged with "rune secret".
+        let rune_secret = crypto_utils::hkdf_sha256(&sec, "rune secret".as_bytes(), &[]);
+        let mr = Rune::new_master_rune(&rune_secret, vec![], None, Some(RUNE_VERSION.to_string()))?;
+
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             secret: sec,
+            master_rune: mr,
             services,
             tls,
             id,
@@ -608,6 +618,39 @@ impl Signer {
     pub fn version(&self) -> &'static str {
         VERSION
     }
+
+    /// Create a base64 encoded rune from the master rune of this signer. The
+    /// method enforces a restriction that contains an alternative with a
+    /// `pubkey` field and an equal condition set, e.g. `pubkey=02ea2d....`.
+    /// This is enforced to ensure that a developer does not hand out
+    /// unrestricted runes by accident.
+    pub fn create_rune(
+        &self,
+        unique_id: &str,
+        res: Vec<Restriction>,
+    ) -> Result<String, anyhow::Error> {
+        if unique_id.is_empty() {
+            return Err(anyhow!("Missing unique device id"));
+        }
+
+        // Check that at least one restriction has a `pubkey` field set.
+        let has_pubkey_field = res.iter().any(|r| {
+            r.alternatives.iter().any(|a| {
+                a.get_field() == *"pubkey" && a.get_condition() == futhark::Condition::Equal
+            })
+        });
+        if !has_pubkey_field {
+            return Err(anyhow!("Missing a restriction on the pubkey"));
+        }
+
+        let rune = Rune::new(
+            self.master_rune.authcode(),
+            res,
+            Some(unique_id.to_string()),
+            Some(RUNE_VERSION.to_string()),
+        )?;
+        Ok(rune.to_base64())
+    }
 }
 
 /// Used to decode incoming requests into their corresponding protobuf
@@ -648,6 +691,7 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futhark::Alternative;
 
     #[tokio::test]
     async fn test_init() {
@@ -724,5 +768,46 @@ mod tests {
             signer.sign_message(msg.to_vec()).unwrap_err().to_string(),
             format!("Message exceeds max len of {}", u16::MAX)
         );
+    }
+
+    #[test]
+    fn test_rune_expects_pubkey() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+
+        let alt = Alternative::new(
+            "pubkey".to_string(),
+            futhark::Condition::Equal,
+            "33aabb".to_string(),
+            false,
+        )
+        .unwrap();
+        let wrong_alt = Alternative::new(
+            "pubkey".to_string(),
+            futhark::Condition::BeginsWith,
+            "hello".to_string(),
+            false,
+        )
+        .unwrap();
+
+        // Check empty restrictions.
+        assert!(signer.create_rune("my_id", vec![]).is_err());
+
+        // Check wrong restriction.
+        let res = Restriction::new(vec![wrong_alt.clone()]).unwrap();
+        assert!(signer.create_rune("my_id", vec![res]).is_err());
+
+        // Check good restriction.
+        let res = Restriction::new(vec![alt.clone()]).unwrap();
+        assert!(signer.create_rune("my_id", vec![res]).is_ok());
+
+        // Check at least one alternative in one restriction.
+        let res = Restriction::new(vec![wrong_alt.clone()]).unwrap();
+        let sec_res = Restriction::new(vec![wrong_alt, alt.clone()]).unwrap();
+        assert!(signer.create_rune("my_id", vec![res, sec_res]).is_ok());
+
+        // Check missing device id.
+        let res = Restriction::new(vec![alt]).unwrap();
+        assert!(signer.create_rune("", vec![res]).is_err());
     }
 }
