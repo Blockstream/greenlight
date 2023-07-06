@@ -675,6 +675,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crypto"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf1e6e5492f8f0830c37f301f6349e0dac8b2466e4fe89eef90e9eef906cd046"
+dependencies = [
+ "crypto-common",
+]
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1017,6 +1026,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 
 [[package]]
+name = "futhark"
+version = "0.1.0"
+source = "git+https://github.com/nepet/futhark.git?branch=main#fb6128a37e14dbff34664ad213c2dd592e9b1e40"
+dependencies = [
+ "anyhow",
+ "base64 0.21.5",
+ "crypto",
+ "env_logger 0.10.1",
+ "hex",
+ "indexmap 2.1.0",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1170,6 +1194,7 @@ dependencies = [
  "bytes 1.5.0",
  "chacha20poly1305",
  "cln-grpc",
+ "futhark",
  "futures",
  "hex",
  "http",

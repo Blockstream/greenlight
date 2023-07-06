@@ -1,8 +1,7 @@
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
 
-use crate::node::GrpcClient;
-use crate::{node, pb, signer::Signer, utils};
+use crate::{pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
