@@ -106,7 +106,7 @@ service Node {
 	//
 	// The query can optionally be restricted to only return a
 	// single invoice matching the given criteria.
-        rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse) {}
+	rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse) {}
 
 	// Stream incoming payments
 	//
@@ -589,7 +589,7 @@ message PendingRequest {
 	string uri = 2;
 	bytes signature = 3;
 	bytes pubkey = 4;
-        uint64 timestamp = 5;
+	uint64 timestamp = 5;
 }
 
 
