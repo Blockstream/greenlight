@@ -1090,24 +1090,26 @@ where
             let pubkey = parts
                 .headers
                 .get("glauthpubkey")
-                .map(|k| general_purpose::STANDARD_NO_PAD.decode(k).ok())
-                .flatten();
+                .and_then(|k| general_purpose::STANDARD_NO_PAD.decode(k).ok());
 
             let sig = parts
                 .headers
                 .get("glauthsig")
-                .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
-                .flatten();
+                .and_then(|k| general_purpose::STANDARD_NO_PAD.decode(k).ok());
 
             use bytes::Buf;
             let timestamp: Option<u64> = parts
                 .headers
                 .get("glts")
-                .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
-                .flatten()
+                .and_then(|k| general_purpose::STANDARD_NO_PAD.decode(k).ok())
                 .map(|s| s.as_slice().get_u64());
 
-            if let (Some(pk), Some(sig)) = (pubkey, sig) {
+            let rune = parts
+                .headers
+                .get("glrune")
+                .and_then(|k| general_purpose::URL_SAFE.decode(k).ok());
+
+            if let (Some(pk), Some(sig), Some(rune)) = (pubkey, sig, rune) {
                 // Now that we know we'll be adding this to the
                 // context we can start buffering the request.
                 let mut buf = Vec::new();
@@ -1127,10 +1129,11 @@ where
                 }
 
                 trace!(
-                    "Got a request for {} with pubkey={}, sig={} and body size={:?}",
+                    "Got a request for {} with pubkey={}, sig={}, rune={} and body size={:?}",
                     uri,
                     hex::encode(&pk),
                     hex::encode(&sig),
+                    hex::encode(&rune),
                     &buf.len(),
                 );
                 let req = crate::context::Request::new(
@@ -1139,6 +1142,7 @@ where
                     pk,
                     sig,
                     timestamp,
+                    rune,
                 );
 
                 reqctx.add_request(req.clone()).await;
