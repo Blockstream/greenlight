@@ -5,6 +5,7 @@ use crate::stager;
 use crate::storage::StateStore;
 use crate::{messages, Event};
 use anyhow::{Context, Error, Result};
+use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
 use cln_rpc::model::ConnectRequest;
 use gl_client::persist::State;
@@ -1089,20 +1090,20 @@ where
             let pubkey = parts
                 .headers
                 .get("glauthpubkey")
-                .map(|k| base64::decode(k).ok())
+                .map(|k| general_purpose::STANDARD_NO_PAD.decode(k).ok())
                 .flatten();
 
             let sig = parts
                 .headers
                 .get("glauthsig")
-                .map(|s| base64::decode(s).ok())
+                .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
                 .flatten();
 
             use bytes::Buf;
             let timestamp: Option<u64> = parts
                 .headers
                 .get("glts")
-                .map(|s| base64::decode(s).ok())
+                .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
                 .flatten()
                 .map(|s| s.as_slice().get_u64());
 
