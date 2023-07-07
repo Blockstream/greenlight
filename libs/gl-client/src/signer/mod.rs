@@ -235,6 +235,7 @@ impl Signer {
                 if r.timestamp != 0 {
                     data.put_u64(r.timestamp);
                 }
+                data.put(&r.rune[..]);
 
                 pk.verify(&data, &r.signature)
                     .map(|_| r)
@@ -645,9 +646,14 @@ impl Signer {
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
     pub async fn node(&self) -> Result<Client, anyhow::Error> {
-        node::Node::new(self.node_id(), self.network, self.tls.clone())
-            .schedule()
-            .await
+        node::Node::new(
+            self.node_id(),
+            self.network,
+            self.tls.clone(),
+            self.master_rune.to_base64(),
+        )
+        .schedule()
+        .await
     }
 
     pub fn version(&self) -> &'static str {
