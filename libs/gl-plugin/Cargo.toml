@@ -36,7 +36,7 @@ tower = { version = "0.4" }
 lightning-storage-server = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230620" }
 sled = "*"
 hyper = "0.14.23"
-base64 = "0.13.1"
+base64 = "0.21.2"
 
 [build-dependencies]
 tonic-build = "^0.8"
