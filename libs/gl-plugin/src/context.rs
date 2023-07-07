@@ -65,6 +65,7 @@ impl From<Request> for crate::pb::PendingRequest {
             request: r.payload.to_vec(),
             uri: r.uri,
             timestamp: r.timestamp.unwrap_or_default(),
+            rune: r.rune,
         }
     }
 }
