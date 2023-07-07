@@ -22,6 +22,9 @@ pub struct Request {
     // payload.
     signature: Vec<u8>,
 
+    // The callers rune that is used to authorize the request.
+    rune: Vec<u8>,
+
     // The serialized grpc call, transferred as serialized String to
     // avoid breaking the signature.
     payload: bytes::Bytes,
@@ -40,6 +43,7 @@ impl Request {
         pubkey: Vec<u8>,
         signature: Vec<u8>,
         timestamp: Option<u64>,
+        rune: Vec<u8>,
     ) -> Self {
         Request {
             uri,
@@ -47,6 +51,7 @@ impl Request {
             signature,
             timestamp,
             pubkey,
+            rune,
         }
     }
 }
@@ -58,7 +63,7 @@ impl From<Request> for crate::pb::PendingRequest {
             signature: r.signature,
             request: r.payload.to_vec(),
             uri: r.uri,
-	    timestamp: r.timestamp.unwrap_or_default(),
+            timestamp: r.timestamp.unwrap_or_default(),
         }
     }
 }
