@@ -36,6 +36,7 @@ pub struct Node {
     node_id: Vec<u8>,
     network: Network,
     tls: TlsConfig,
+    rune: String,
 }
 
 impl GrpcClient for Client {
@@ -57,11 +58,12 @@ impl GrpcClient for ClnClient {
 }
 
 impl Node {
-    pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig) -> Node {
+    pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig, rune: String) -> Node {
         Node {
             node_id,
             network,
             tls,
+            rune,
         }
     }
 
@@ -92,7 +94,7 @@ impl Node {
         };
 
         let layer = match tls.private_key {
-            Some(k) => service::AuthLayer::new(k)?,
+            Some(k) => service::AuthLayer::new(k, self.rune.clone())?,
             None => {
                 return Err(anyhow!(
                     "Cannot connect a node::Client without first configuring its identity"

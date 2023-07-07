@@ -590,6 +590,7 @@ message PendingRequest {
 	bytes signature = 3;
 	bytes pubkey = 4;
 	uint64 timestamp = 5;
+	bytes rune = 6;
 }
 
 
