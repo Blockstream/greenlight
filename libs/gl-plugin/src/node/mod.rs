@@ -57,168 +57,182 @@ pub struct PluginNodeServer {
 
 impl PluginNodeServer {
     pub async fn new(
-	stage: Arc<stager::Stage>,
-	config: Config,
-	events: tokio::sync::broadcast::Sender<super::Event>,
-	signer_state_store: Box<dyn StateStore>,
+        stage: Arc<stager::Stage>,
+        config: Config,
+        events: tokio::sync::broadcast::Sender<super::Event>,
+        signer_state_store: Box<dyn StateStore>,
     ) -> Result<Self, Error> {
-	let tls = ServerTlsConfig::new()
-	    .identity(config.identity.id)
-	    .client_ca_root(config.identity.ca);
+        let tls = ServerTlsConfig::new()
+            .identity(config.identity.id)
+            .client_ca_root(config.identity.ca);
 
-	let mut rpc_path = std::env::current_dir().unwrap();
-	rpc_path.push("lightning-rpc");
-	info!("Connecting to lightning-rpc at {:?}", rpc_path);
+        let mut rpc_path = std::env::current_dir().unwrap();
+        rpc_path.push("lightning-rpc");
+        info!("Connecting to lightning-rpc at {:?}", rpc_path);
 
-	let rpc = Arc::new(Mutex::new(LightningClient::new(rpc_path.clone())));
+        let rpc = Arc::new(Mutex::new(LightningClient::new(rpc_path.clone())));
 
-	// Bridge the RPC_BCAST into the events queue
-	let tx = events.clone();
-	tokio::spawn(async move {
-	    let mut rx = RPC_BCAST.subscribe();
-	    loop {
-		if let Ok(e) = rx.recv().await {
-		    let _ = tx.send(e);
-		}
-	    }
-	});
+        // Bridge the RPC_BCAST into the events queue
+        let tx = events.clone();
+        tokio::spawn(async move {
+            let mut rx = RPC_BCAST.subscribe();
+            loop {
+                if let Ok(e) = rx.recv().await {
+                    let _ = tx.send(e);
+                }
+            }
+        });
+
+
+        let signer_state = signer_state_store.read().await?;
+
+        let ctx = crate::context::Context::new();
 
 	let rrpc = rpc.clone();
-	tokio::spawn(async move {
-	    debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
-	    use tokio::time::{sleep, Duration};
+
+        let s = PluginNodeServer {
+            ctx,
+            tls,
+            rpc,
+            stage,
+            events,
+            rpc_path,
+            signer_state: Arc::new(Mutex::new(signer_state)),
+            signer_state_store: Arc::new(Mutex::new(signer_state_store)),
+            grpc_binding: config.node_grpc_binding,
+        };
+
+        let c = s.clone();
+        tokio::spawn(async move {
+            debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
+            use tokio::time::{sleep, Duration};
+
+	    // Move the lock into the closure so we can release it later.
 	    let rpc = rrpc.lock().await;
-	    loop {
-		let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
-		    rpc.call("getinfo", json!({})).await;
-		match res {
-		    Ok(_) => break,
-		    Err(e) => {
-			warn!(
-			    "JSON-RPC interface not yet available. Delaying 50ms. {:?}",
-			    e
-			);
-			sleep(Duration::from_millis(50)).await;
-		    }
-		}
-	    }
-	});
+            loop {
+                let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
+                    rpc.call("getinfo", json!({})).await;
+                match res {
+                    Ok(_) => break,
+                    Err(e) => {
+                        warn!(
+                            "JSON-RPC interface not yet available. Delaying 50ms. {:?}",
+                            e
+                        );
+                        sleep(Duration::from_millis(50)).await;
+                    }
+                }
+            }
+            drop(rpc);
 
-	let signer_state = signer_state_store.read().await?;
+	    // Now piggyback the reconnection on top of the RPC
+	    // reachability test
+            if let Err(e) = c.reconnect_peers().await {
+                log::warn!("Could not reconnect to peers: {:?}", e);
+            }
+        });
 
-	let ctx = crate::context::Context::new();
-
-	Ok(PluginNodeServer {
-	    ctx,
-	    tls,
-	    rpc,
-	    stage,
-	    events,
-	    rpc_path,
-	    signer_state: Arc::new(Mutex::new(signer_state)),
-	    signer_state_store: Arc::new(Mutex::new(signer_state_store)),
-	    grpc_binding: config.node_grpc_binding,
-	})
+        Ok(s)
     }
 
     // Wait for the limiter to allow a new RPC call
     pub async fn limit(&self) {
-	let limiter = LIMITER
-	    .get_or_init(|| async {
-		let quota = Quota::per_minute(core::num::NonZeroU32::new(300).unwrap());
-		RateLimiter::direct_with_clock(quota, &MonotonicClock::default())
-	    })
-	    .await;
+        let limiter = LIMITER
+            .get_or_init(|| async {
+                let quota = Quota::per_minute(core::num::NonZeroU32::new(300).unwrap());
+                RateLimiter::direct_with_clock(quota, &MonotonicClock::default())
+            })
+            .await;
 
-	limiter.until_ready().await
+        limiter.until_ready().await
     }
 
     pub async fn get_rpc(&self) -> LightningClient {
-	let rpc = self.rpc.lock().await;
-	let r = rpc.clone();
-	drop(rpc);
-	r
+        let rpc = self.rpc.lock().await;
+        let r = rpc.clone();
+        drop(rpc);
+        r
     }
 
     /// Fetch a list of usable single-hop routehints corresponding to
     /// our active incoming channels.
     async fn get_routehints(&self) -> Result<Vec<pb::Routehint>, Error> {
-	use crate::responses::Peer;
-	let rpc = self.get_rpc().await;
+        use crate::responses::Peer;
+        let rpc = self.get_rpc().await;
 
-	// Get a list of active channels to peers so we can filter out
-	// offline peers or peers with unconfirmed or closing
-	// channels.
-	let res = rpc
-	    .listpeers(None)
-	    .await?
-	    .peers
-	    .into_iter()
-	    .filter(|p| p.channels.len() > 0)
-	    .collect::<Vec<Peer>>();
+        // Get a list of active channels to peers so we can filter out
+        // offline peers or peers with unconfirmed or closing
+        // channels.
+        let res = rpc
+            .listpeers(None)
+            .await?
+            .peers
+            .into_iter()
+            .filter(|p| p.channels.len() > 0)
+            .collect::<Vec<Peer>>();
 
-	// Now project channels to their state and flatten into a vec
-	// of short_channel_ids
-	let active: Vec<String> = res
-	    .iter()
-	    .map(|p| {
-		p.channels
-		    .iter()
-		    .filter(|c| c.state == "CHANNELD_NORMAL")
-		    .filter_map(|c| c.clone().short_channel_id)
-	    })
-	    .flatten()
-	    .collect();
+        // Now project channels to their state and flatten into a vec
+        // of short_channel_ids
+        let active: Vec<String> = res
+            .iter()
+            .map(|p| {
+                p.channels
+                    .iter()
+                    .filter(|c| c.state == "CHANNELD_NORMAL")
+                    .filter_map(|c| c.clone().short_channel_id)
+            })
+            .flatten()
+            .collect();
 
-	/* Due to a bug in `listincoming` in CLN we get the real
-	 * `short_channel_id`, whereas we're supposed to use the
-	 * remote alias if the channel is unannounced. This patches
-	 * the issue in GL, and should work transparently once we fix
-	 * `listincoming`. */
-	let aliases: HashMap<String, String> = HashMap::from_iter(
-	    res.iter()
-		.map(|p| {
-		    p.channels
-			.iter()
-			.filter(|c| {
-			    c.short_channel_id.is_some()
-				&& c.alias.is_some()
-				&& c.alias.as_ref().unwrap().remote.is_some()
-			})
-			.map(|c| {
-			    (
-				c.short_channel_id.clone().unwrap(),
-				c.alias.clone().unwrap().remote.unwrap(),
-			    )
-			})
-		})
-		.flatten(),
-	);
+        /* Due to a bug in `listincoming` in CLN we get the real
+         * `short_channel_id`, whereas we're supposed to use the
+         * remote alias if the channel is unannounced. This patches
+         * the issue in GL, and should work transparently once we fix
+         * `listincoming`. */
+        let aliases: HashMap<String, String> = HashMap::from_iter(
+            res.iter()
+                .map(|p| {
+                    p.channels
+                        .iter()
+                        .filter(|c| {
+                            c.short_channel_id.is_some()
+                                && c.alias.is_some()
+                                && c.alias.as_ref().unwrap().remote.is_some()
+                        })
+                        .map(|c| {
+                            (
+                                c.short_channel_id.clone().unwrap(),
+                                c.alias.clone().unwrap().remote.unwrap(),
+                            )
+                        })
+                })
+                .flatten(),
+        );
 
-	// Now we can listincoming, filter with the above active list,
-	// and then map to become `pb::Routehint` instances
-	Ok(rpc
-	    .listincoming()
-	    .await?
-	    .incoming
-	    .into_iter()
-	    .filter(|i| active.contains(&i.short_channel_id))
-	    .map(|i| pb::Routehint {
-		hops: vec![pb::RoutehintHop {
-		    node_id: hex::decode(i.id).expect("hex-decoding node_id"),
-		    short_channel_id: aliases
-			.get(&i.short_channel_id)
-			.or(Some(&i.short_channel_id))
-			.unwrap()
-			.to_owned(),
-		    fee_base: messages::Amount::from_string(&i.fee_base_msat)
-			.expect("parsing fee_base")
-			.msatoshi as u64,
-		    fee_prop: i.fee_proportional_millionths,
-		    cltv_expiry_delta: i.cltv_expiry_delta,
-		}],
-	    })
-	    .collect())
+        // Now we can listincoming, filter with the above active list,
+        // and then map to become `pb::Routehint` instances
+        Ok(rpc
+            .listincoming()
+            .await?
+            .incoming
+            .into_iter()
+            .filter(|i| active.contains(&i.short_channel_id))
+            .map(|i| pb::Routehint {
+                hops: vec![pb::RoutehintHop {
+                    node_id: hex::decode(i.id).expect("hex-decoding node_id"),
+                    short_channel_id: aliases
+                        .get(&i.short_channel_id)
+                        .or(Some(&i.short_channel_id))
+                        .unwrap()
+                        .to_owned(),
+                    fee_base: messages::Amount::from_string(&i.fee_base_msat)
+                        .expect("parsing fee_base")
+                        .msatoshi as u64,
+                    fee_prop: i.fee_proportional_millionths,
+                    cltv_expiry_delta: i.cltv_expiry_delta,
+                }],
+            })
+            .collect())
     }
 }
 
@@ -229,635 +243,635 @@ impl Node for PluginNodeServer {
     type StreamLogStream = ReceiverStream<Result<pb::LogEntry, Status>>;
 
     async fn get_info(
-	&self,
-	_: Request<pb::GetInfoRequest>,
+        &self,
+        _: Request<pb::GetInfoRequest>,
     ) -> Result<Response<pb::GetInfoResponse>, Status> {
-	self.limit().await;
-	let rpc = self.get_rpc().await;
+        self.limit().await;
+        let rpc = self.get_rpc().await;
 
-	let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
-	    rpc.call("getinfo", json!({})).await;
+        let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
+            rpc.call("getinfo", json!({})).await;
 
-	match res {
-	    Ok(r) => Ok(Response::new(
-		r.try_into()
-		    .expect("conversion to pb::GetInfoResponse failed"),
-	    )),
-	    Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-	}
+        match res {
+            Ok(r) => Ok(Response::new(
+                r.try_into()
+                    .expect("conversion to pb::GetInfoResponse failed"),
+            )),
+            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+        }
     }
 
     async fn stop(
-	&self,
-	_: Request<pb::StopRequest>,
+        &self,
+        _: Request<pb::StopRequest>,
     ) -> Result<Response<pb::StopResponse>, Status> {
-	self.events
-	    .send(super::Event::Stop(self.stage.clone()))
-	    .unwrap();
-	self.terminate().await
+        self.events
+            .send(super::Event::Stop(self.stage.clone()))
+            .unwrap();
+        self.terminate().await
     }
 
     async fn connect_peer(
-	&self,
-	r: Request<pb::ConnectRequest>,
+        &self,
+        r: Request<pb::ConnectRequest>,
     ) -> Result<Response<pb::ConnectResponse>, Status> {
-	let r = r.into_inner();
-	let req = clightningrpc::requests::Connect {
-	    id: &r.node_id,
-	    host: match r.addr.as_ref() {
-		"" => None,
-		v => Some(v),
-	    },
-	};
+        let r = r.into_inner();
+        let req = clightningrpc::requests::Connect {
+            id: &r.node_id,
+            host: match r.addr.as_ref() {
+                "" => None,
+                v => Some(v),
+            },
+        };
 
-	let rpc = self.get_rpc().await;
+        let rpc = self.get_rpc().await;
 
-	match rpc.connect(&req).await {
-	    Ok(s) => Ok(Response::new(s.into())),
-	    Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-	}
+        match rpc.connect(&req).await {
+            Ok(s) => Ok(Response::new(s.into())),
+            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+        }
     }
 
     async fn list_peers(
-	&self,
-	r: Request<pb::ListPeersRequest>,
+        &self,
+        r: Request<pb::ListPeersRequest>,
     ) -> Result<Response<pb::ListPeersResponse>, Status> {
-	self.limit().await;
-	let req = r.into_inner();
-	let rpc = self.rpc.lock().await;
+        self.limit().await;
+        let req = r.into_inner();
+        let rpc = self.rpc.lock().await;
 
-	let node_id = match req.node_id.as_ref() {
-	    "" => None,
-	    _ => Some(req.node_id.as_str()),
-	};
+        let node_id = match req.node_id.as_ref() {
+            "" => None,
+            _ => Some(req.node_id.as_str()),
+        };
 
-	match rpc.listpeers(node_id).await {
-	    Ok(s) => match s.try_into() {
-		Ok(s) => Ok(Response::new(s)),
-		Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-	    },
-	    Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-	}
+        match rpc.listpeers(node_id).await {
+            Ok(s) => match s.try_into() {
+                Ok(s) => Ok(Response::new(s)),
+                Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+            },
+            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+        }
     }
 
     async fn disconnect(
-	&self,
-	r: Request<pb::DisconnectRequest>,
+        &self,
+        r: Request<pb::DisconnectRequest>,
     ) -> Result<Response<pb::DisconnectResponse>, Status> {
-	let req = r.into_inner();
-	let rpc = self.get_rpc().await;
+        let req = r.into_inner();
+        let rpc = self.get_rpc().await;
 
-	let node_id = match req.node_id.as_ref() {
-	    "" => {
-		return Err(Status::new(
-		    Code::InvalidArgument,
-		    "Must specify a node ID to disconnect from",
-		))
-	    }
-	    _ => req.node_id.as_str(),
-	};
+        let node_id = match req.node_id.as_ref() {
+            "" => {
+                return Err(Status::new(
+                    Code::InvalidArgument,
+                    "Must specify a node ID to disconnect from",
+                ))
+            }
+            _ => req.node_id.as_str(),
+        };
 
-	// We try to delete the peer that we disconnect from from the datastore.
-	// We don't want to be overly strict on this so we don't throw an error
-	// if this does not work.
-	match cln_rpc::ClnRpc::new(self.rpc_path.clone()).await {
-	    Ok(mut rpc) => {
-		let res = rpc
-		    .call_typed(cln_rpc::model::DeldatastoreRequest {
-			key: vec![
-			    "greenlight".to_string(),
-			    "peerlist".to_string(),
-			    node_id.to_string(),
-			],
-			generation: None,
-		    })
-		    .await;
-		debug!("Got datastore response: {:?}", res);
-	    }
-	    Err(e) => debug!("Could not connect to rpc {:?}", e),
-	};
+        // We try to delete the peer that we disconnect from from the datastore.
+        // We don't want to be overly strict on this so we don't throw an error
+        // if this does not work.
+        match cln_rpc::ClnRpc::new(self.rpc_path.clone()).await {
+            Ok(mut rpc) => {
+                let res = rpc
+                    .call_typed(cln_rpc::model::DeldatastoreRequest {
+                        key: vec![
+                            "greenlight".to_string(),
+                            "peerlist".to_string(),
+                            node_id.to_string(),
+                        ],
+                        generation: None,
+                    })
+                    .await;
+                debug!("Got datastore response: {:?}", res);
+            }
+            Err(e) => debug!("Could not connect to rpc {:?}", e),
+        };
 
-	match rpc.disconnect(node_id, req.force).await {
-	    Ok(()) => Ok(Response::new(pb::DisconnectResponse {})),
-	    Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
-	}
+        match rpc.disconnect(node_id, req.force).await {
+            Ok(()) => Ok(Response::new(pb::DisconnectResponse {})),
+            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+        }
     }
 
     async fn stream_custommsg(
-	&self,
-	_: Request<pb::StreamCustommsgRequest>,
+        &self,
+        _: Request<pb::StreamCustommsgRequest>,
     ) -> Result<Response<Self::StreamCustommsgStream>, Status> {
-	log::debug!("Added a new listener for custommsg");
-	let (tx, rx) = mpsc::channel(1);
-	let mut stream = self.events.subscribe();
-	// TODO: We can do better by returning the broadcast receiver
-	// directly. Well really we should be filtering the events by
-	// type, so maybe a `.map()` on the stream can work?
-	tokio::spawn(async move {
-	    while let Ok(msg) = stream.recv().await {
-		if let Event::CustomMsg(m) = msg {
-		    log::trace!("Forwarding custommsg {:?} to listener", m);
-		    if let Err(e) = tx.send(Ok(m)).await {
-			log::warn!("Unable to send custmmsg to listener: {:?}", e);
-			break;
-		    }
-		}
-	    }
-	    panic!("stream.recv loop exited...");
-	});
-	return Ok(Response::new(ReceiverStream::new(rx)));
+        log::debug!("Added a new listener for custommsg");
+        let (tx, rx) = mpsc::channel(1);
+        let mut stream = self.events.subscribe();
+        // TODO: We can do better by returning the broadcast receiver
+        // directly. Well really we should be filtering the events by
+        // type, so maybe a `.map()` on the stream can work?
+        tokio::spawn(async move {
+            while let Ok(msg) = stream.recv().await {
+                if let Event::CustomMsg(m) = msg {
+                    log::trace!("Forwarding custommsg {:?} to listener", m);
+                    if let Err(e) = tx.send(Ok(m)).await {
+                        log::warn!("Unable to send custmmsg to listener: {:?}", e);
+                        break;
+                    }
+                }
+            }
+            panic!("stream.recv loop exited...");
+        });
+        return Ok(Response::new(ReceiverStream::new(rx)));
     }
 
     async fn stream_log(
-	&self,
-	_: Request<pb::StreamLogRequest>,
+        &self,
+        _: Request<pb::StreamLogRequest>,
     ) -> Result<Response<Self::StreamLogStream>, Status> {
-	match async {
-	    let (tx, rx) = mpsc::channel(1);
-	    let mut lines = linemux::MuxedLines::new()?;
-	    lines.add_file("/tmp/log").await?;
+        match async {
+            let (tx, rx) = mpsc::channel(1);
+            let mut lines = linemux::MuxedLines::new()?;
+            lines.add_file("/tmp/log").await?;
 
-	    // TODO: Yes, this may produce duplicate lines, when new
-	    // log entries are produced while we're streaming the
-	    // backlog out, but do we care?
-	    use tokio::io::{AsyncBufReadExt, BufReader};
-	    let file = tokio::fs::File::open("/tmp/log").await?;
-	    let mut file = BufReader::new(file).lines();
+            // TODO: Yes, this may produce duplicate lines, when new
+            // log entries are produced while we're streaming the
+            // backlog out, but do we care?
+            use tokio::io::{AsyncBufReadExt, BufReader};
+            let file = tokio::fs::File::open("/tmp/log").await?;
+            let mut file = BufReader::new(file).lines();
 
-	    tokio::spawn(async move {
-		match async {
-		    while let Some(line) = file.next_line().await? {
-			tx.send(Ok(pb::LogEntry {
-			    line: line.trim().to_owned(),
-			}))
-			.await?
-		    }
+            tokio::spawn(async move {
+                match async {
+                    while let Some(line) = file.next_line().await? {
+                        tx.send(Ok(pb::LogEntry {
+                            line: line.trim().to_owned(),
+                        }))
+                        .await?
+                    }
 
-		    while let Ok(Some(line)) = lines.next_line().await {
-			tx.send(Ok(pb::LogEntry {
-			    line: line.line().trim().to_string(),
-			}))
-			.await?;
-		    }
-		    Ok(())
-		}
-		.await as Result<(), anyhow::Error>
-		{
-		    Ok(()) => {}
-		    Err(e) => {
-			warn!("error streaming logs to client: {}", e);
-		    }
-		}
-	    });
-	    Ok(ReceiverStream::new(rx))
-	}
-	.await as Result<Self::StreamLogStream, anyhow::Error>
-	{
-	    Ok(v) => Ok(Response::new(v)),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+                    while let Ok(Some(line)) = lines.next_line().await {
+                        tx.send(Ok(pb::LogEntry {
+                            line: line.line().trim().to_string(),
+                        }))
+                        .await?;
+                    }
+                    Ok(())
+                }
+                .await as Result<(), anyhow::Error>
+                {
+                    Ok(()) => {}
+                    Err(e) => {
+                        warn!("error streaming logs to client: {}", e);
+                    }
+                }
+            });
+            Ok(ReceiverStream::new(rx))
+        }
+        .await as Result<Self::StreamLogStream, anyhow::Error>
+        {
+            Ok(v) => Ok(Response::new(v)),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn stream_hsm_requests(
-	&self,
-	_request: Request<pb::Empty>,
+        &self,
+        _request: Request<pb::Empty>,
     ) -> Result<Response<Self::StreamHsmRequestsStream>, Status> {
-	let hsm_id = HSM_ID_COUNT.fetch_add(1, Ordering::SeqCst);
+        let hsm_id = HSM_ID_COUNT.fetch_add(1, Ordering::SeqCst);
 
-	info!(
-	    "New signer with hsm_id={} attached, streaming requests",
-	    hsm_id
-	);
+        info!(
+            "New signer with hsm_id={} attached, streaming requests",
+            hsm_id
+        );
 
-	let (tx, rx) = mpsc::channel(10);
-	let mut stream = self.stage.mystream().await;
-	let signer_state = self.signer_state.clone();
-	let ctx = self.ctx.clone();
+        let (tx, rx) = mpsc::channel(10);
+        let mut stream = self.stage.mystream().await;
+        let signer_state = self.signer_state.clone();
+        let ctx = self.ctx.clone();
 
-	tokio::spawn(async move {
-	    trace!("hsmd hsm_id={} request processor started", hsm_id);
-	    loop {
-		let mut req = match stream.next().await {
-		    Err(e) => {
-			error!(
-			    "Could not get next request from stage: {:?} for hsm_id={}",
-			    e, hsm_id
-			);
-			break;
-		    }
-		    Ok(r) => r,
-		};
-		trace!(
-		    "Sending request={} to hsm_id={}",
-		    req.request.request_id,
-		    hsm_id
-		);
+        tokio::spawn(async move {
+            trace!("hsmd hsm_id={} request processor started", hsm_id);
+            loop {
+                let mut req = match stream.next().await {
+                    Err(e) => {
+                        error!(
+                            "Could not get next request from stage: {:?} for hsm_id={}",
+                            e, hsm_id
+                        );
+                        break;
+                    }
+                    Ok(r) => r,
+                };
+                trace!(
+                    "Sending request={} to hsm_id={}",
+                    req.request.request_id,
+                    hsm_id
+                );
 
-		let state = signer_state.lock().await.clone();
-		let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
+                let state = signer_state.lock().await.clone();
+                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
 
-		// TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
-		let state: Vec<pb::SignerStateEntry> = state
-		    .into_iter()
-		    .map(|s| pb::SignerStateEntry {
-			key: s.key,
-			version: s.version,
-			value: s.value,
-		    })
-		    .collect();
+                // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
+                let state: Vec<pb::SignerStateEntry> = state
+                    .into_iter()
+                    .map(|s| pb::SignerStateEntry {
+                        key: s.key,
+                        version: s.version,
+                        value: s.value,
+                    })
+                    .collect();
 
-		req.request.signer_state = state.into();
-		req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
-		debug!(
-		    "Sending signer requests with {} requests and {} state entries",
-		    req.request.requests.len(),
-		    req.request.signer_state.len()
-		);
+                req.request.signer_state = state.into();
+                req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
+                debug!(
+                    "Sending signer requests with {} requests and {} state entries",
+                    req.request.requests.len(),
+                    req.request.signer_state.len()
+                );
 
-		if let Err(e) = tx.send(Ok(req.request)).await {
-		    warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
-		    break;
-		}
-	    }
-	    info!("Signer hsm_id={} exited", hsm_id);
-	});
+                if let Err(e) = tx.send(Ok(req.request)).await {
+                    warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
+                    break;
+                }
+            }
+            info!("Signer hsm_id={} exited", hsm_id);
+        });
 
-	let c = self.clone();
-	tokio::spawn(async move {
-	    if let Err(e) = c.reconnect_peers().await {
-		log::warn!("Could not reconnect peers: {:?}", e);
-	    }
-	});
+        let c = self.clone();
+        tokio::spawn(async move {
+            if let Err(e) = c.reconnect_peers().await {
+                log::warn!("Could not reconnect peers: {:?}", e);
+            }
+        });
 
-	trace!("Returning stream_hsm_request channel");
-	Ok(Response::new(ReceiverStream::new(rx)))
+        trace!("Returning stream_hsm_request channel");
+        Ok(Response::new(ReceiverStream::new(rx)))
     }
 
     async fn new_addr(
-	&self,
-	r: Request<pb::NewAddrRequest>,
+        &self,
+        r: Request<pb::NewAddrRequest>,
     ) -> Result<Response<pb::NewAddrResponse>, Status> {
-	self.limit().await;
-	let req = r.into_inner();
-	let rpc = self.rpc.lock().await;
-	match rpc.newaddr(req.address_type()).await {
-	    Ok(a) => Ok(Response::new(pb::NewAddrResponse {
-		address_type: req.address_type,
-		address: a,
-	    })),
-	    Err(e) => Err(Status::new(
-		Code::Internal,
-		format!("could not generate a new address: {}", e.to_string()),
-	    )),
-	}
+        self.limit().await;
+        let req = r.into_inner();
+        let rpc = self.rpc.lock().await;
+        match rpc.newaddr(req.address_type()).await {
+            Ok(a) => Ok(Response::new(pb::NewAddrResponse {
+                address_type: req.address_type,
+                address: a,
+            })),
+            Err(e) => Err(Status::new(
+                Code::Internal,
+                format!("could not generate a new address: {}", e.to_string()),
+            )),
+        }
     }
 
     async fn respond_hsm_request(
-	&self,
-	request: Request<pb::HsmResponse>,
+        &self,
+        request: Request<pb::HsmResponse>,
     ) -> Result<Response<pb::Empty>, Status> {
-	let req = request.into_inner();
-	// Create a state from the key-value-version tuples. Need to
-	// convert here, since `pb` is duplicated in the two different
-	// crates.
-	let signer_state: Vec<gl_client::pb::SignerStateEntry> = req
-	    .signer_state
-	    .iter()
-	    .map(|i| gl_client::pb::SignerStateEntry {
-		key: i.key.to_owned(),
-		value: i.value.to_owned(),
-		version: i.version,
-	    })
-	    .collect();
-	let new_state: gl_client::persist::State = signer_state.into();
+        let req = request.into_inner();
+        // Create a state from the key-value-version tuples. Need to
+        // convert here, since `pb` is duplicated in the two different
+        // crates.
+        let signer_state: Vec<gl_client::pb::SignerStateEntry> = req
+            .signer_state
+            .iter()
+            .map(|i| gl_client::pb::SignerStateEntry {
+                key: i.key.to_owned(),
+                value: i.value.to_owned(),
+                version: i.version,
+            })
+            .collect();
+        let new_state: gl_client::persist::State = signer_state.into();
 
-	{
-	    // Apply state changes to the in-memory state
-	    let mut state = self.signer_state.lock().await;
-	    state.merge(&new_state).map_err(|e| {
-		Status::new(
-		    Code::Internal,
-		    format!("Error updating internal state: {e}"),
-		)
-	    })?;
+        {
+            // Apply state changes to the in-memory state
+            let mut state = self.signer_state.lock().await;
+            state.merge(&new_state).map_err(|e| {
+                Status::new(
+                    Code::Internal,
+                    format!("Error updating internal state: {e}"),
+                )
+            })?;
 
-	    // Send changes to the signer_state_store for persistence
-	    self.signer_state_store
-		.lock()
-		.await
-		.write(state.clone())
-		.await
-		.map_err(|e| {
-		    Status::new(
-			Code::Internal,
-			format!("error persisting state changes: {}", e),
-		    )
-		})?;
-	}
+            // Send changes to the signer_state_store for persistence
+            self.signer_state_store
+                .lock()
+                .await
+                .write(state.clone())
+                .await
+                .map_err(|e| {
+                    Status::new(
+                        Code::Internal,
+                        format!("error persisting state changes: {}", e),
+                    )
+                })?;
+        }
 
-	if let Err(e) = self.stage.respond(req).await {
-	    warn!("Suppressing error: {:?}", e);
-	}
-	Ok(Response::new(pb::Empty::default()))
+        if let Err(e) = self.stage.respond(req).await {
+            warn!("Suppressing error: {:?}", e);
+        }
+        Ok(Response::new(pb::Empty::default()))
     }
 
     async fn list_funds(
-	&self,
-	_: Request<pb::ListFundsRequest>,
+        &self,
+        _: Request<pb::ListFundsRequest>,
     ) -> Result<Response<pb::ListFundsResponse>, Status> {
-	self.limit().await;
-	// TODO Add the spent parameter to the call
-	let rpc = self.rpc.lock().await;
+        self.limit().await;
+        // TODO Add the spent parameter to the call
+        let rpc = self.rpc.lock().await;
 
-	let res: Result<crate::responses::ListFunds, crate::rpc::Error> =
-	    rpc.call("listfunds", crate::requests::ListFunds {}).await;
+        let res: Result<crate::responses::ListFunds, crate::rpc::Error> =
+            rpc.call("listfunds", crate::requests::ListFunds {}).await;
 
-	match res {
-	    Ok(f) => Ok(Response::new(f.into())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match res {
+            Ok(f) => Ok(Response::new(f.into())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn withdraw(
-	&self,
-	r: Request<pb::WithdrawRequest>,
+        &self,
+        r: Request<pb::WithdrawRequest>,
     ) -> Result<Response<pb::WithdrawResponse>, Status> {
-	let req = r.into_inner();
-	let rpc = self.get_rpc().await;
+        let req = r.into_inner();
+        let rpc = self.get_rpc().await;
 
-	// protobufs create really dumb nested things, so unwrap them here.
-	let amt: crate::requests::Amount = match req.amount {
-	    None => return Err(Status::new(Code::InvalidArgument, "amount must be set")),
-	    Some(a) => match a.try_into() {
-		Ok(crate::requests::Amount::Any) => {
-		    return Err(Status::new(
-			Code::InvalidArgument,
-			"withdraw requires a valid amount, not 'any'",
-		    ))
-		}
-		Ok(a) => a,
-		Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
-	    },
-	};
+        // protobufs create really dumb nested things, so unwrap them here.
+        let amt: crate::requests::Amount = match req.amount {
+            None => return Err(Status::new(Code::InvalidArgument, "amount must be set")),
+            Some(a) => match a.try_into() {
+                Ok(crate::requests::Amount::Any) => {
+                    return Err(Status::new(
+                        Code::InvalidArgument,
+                        "withdraw requires a valid amount, not 'any'",
+                    ))
+                }
+                Ok(a) => a,
+                Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
+            },
+        };
 
-	let feerate: Option<crate::requests::Feerate> = match req.feerate {
-	    None => None,
-	    Some(v) => match v.try_into() {
-		Ok(v) => Some(v),
-		Err(e) => {
-		    return Err(Status::new(
-			Code::InvalidArgument,
-			format!("Error parsing request: {}", e),
-		    ))
-		}
-	    },
-	};
+        let feerate: Option<crate::requests::Feerate> = match req.feerate {
+            None => None,
+            Some(v) => match v.try_into() {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    return Err(Status::new(
+                        Code::InvalidArgument,
+                        format!("Error parsing request: {}", e),
+                    ))
+                }
+            },
+        };
 
-	let utxos: Result<Vec<crate::requests::Outpoint>, Error> =
-	    req.utxos.into_iter().map(|o| o.try_into()).collect();
+        let utxos: Result<Vec<crate::requests::Outpoint>, Error> =
+            req.utxos.into_iter().map(|o| o.try_into()).collect();
 
-	let utxos = match utxos {
-	    Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
-	    Ok(u) => u,
-	};
+        let utxos = match utxos {
+            Err(e) => return Err(Status::new(Code::Internal, e.to_string())),
+            Ok(u) => u,
+        };
 
-	let req = crate::requests::Withdraw {
-	    destination: req.destination,
-	    amount: amt,
-	    minconf: match req.minconf {
-		None => None,
-		Some(a) => Some(a.blocks),
-	    },
-	    utxos: match utxos.len() {
-		0 => None,
-		_ => Some(utxos),
-	    },
-	    feerate: feerate,
-	};
+        let req = crate::requests::Withdraw {
+            destination: req.destination,
+            amount: amt,
+            minconf: match req.minconf {
+                None => None,
+                Some(a) => Some(a.blocks),
+            },
+            utxos: match utxos.len() {
+                0 => None,
+                _ => Some(utxos),
+            },
+            feerate: feerate,
+        };
 
-	let res: Result<crate::responses::Withdraw, crate::rpc::Error> =
-	    rpc.call("withdraw", req).await;
+        let res: Result<crate::responses::Withdraw, crate::rpc::Error> =
+            rpc.call("withdraw", req).await;
 
-	match res {
-	    Ok(w) => Ok(Response::new(w.into())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match res {
+            Ok(w) => Ok(Response::new(w.into())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn fund_channel(
-	&self,
-	req: Request<pb::FundChannelRequest>,
+        &self,
+        req: Request<pb::FundChannelRequest>,
     ) -> Result<Response<pb::FundChannelResponse>, Status> {
-	let rpc = self.get_rpc().await;
+        let rpc = self.get_rpc().await;
 
-	let r: crate::requests::FundChannel = match req.into_inner().try_into() {
-	    Ok(v) => v,
-	    Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
-	};
+        let r: crate::requests::FundChannel = match req.into_inner().try_into() {
+            Ok(v) => v,
+            Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
+        };
 
-	let response: Result<crate::responses::FundChannel, crate::rpc::Error> =
-	    rpc.call("fundchannel", r).await;
+        let response: Result<crate::responses::FundChannel, crate::rpc::Error> =
+            rpc.call("fundchannel", r).await;
 
-	match response {
-	    Ok(v) => Ok(Response::new(v.into())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match response {
+            Ok(v) => Ok(Response::new(v.into())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn close_channel(
-	&self,
-	req: Request<pb::CloseChannelRequest>,
+        &self,
+        req: Request<pb::CloseChannelRequest>,
     ) -> Result<Response<pb::CloseChannelResponse>, Status> {
-	use crate::{requests, responses};
-	let req = req.into_inner();
-	let r = self.get_rpc().await;
+        use crate::{requests, responses};
+        let req = req.into_inner();
+        let r = self.get_rpc().await;
 
-	let req: requests::CloseChannel = req.into();
-	let res: Result<responses::CloseChannel, crate::rpc::Error> = r.call("close", req).await;
+        let req: requests::CloseChannel = req.into();
+        let res: Result<responses::CloseChannel, crate::rpc::Error> = r.call("close", req).await;
 
-	match res {
-	    // Conversion may fail, so handle that case here.
-	    Ok(v) => Ok(Response::new(match v.try_into() {
-		Ok(v) => v,
-		Err(e) => {
-		    return Err(Status::new(
-			Code::Internal,
-			format!("error converting response: {}", e.to_string()),
-		    ))
-		}
-	    })),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match res {
+            // Conversion may fail, so handle that case here.
+            Ok(v) => Ok(Response::new(match v.try_into() {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(Status::new(
+                        Code::Internal,
+                        format!("error converting response: {}", e.to_string()),
+                    ))
+                }
+            })),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn create_invoice(
-	&self,
-	req: Request<pb::InvoiceRequest>,
+        &self,
+        req: Request<pb::InvoiceRequest>,
     ) -> Result<Response<pb::Invoice>, Status> {
-	self.limit().await;
-	let req = req.into_inner();
-	let rpc = self.get_rpc().await;
+        self.limit().await;
+        let req = req.into_inner();
+        let rpc = self.get_rpc().await;
 
-	// First we get the incoming channels so we can force them to
-	// be added to the invoice. This is best effort and will be
-	// left out if the call fails, reverting to the default
-	// behavior.
-	let hints: Option<Vec<Vec<pb::RoutehintHop>>> = self
-	    .get_routehints()
-	    .await
-	    .map(
-		// Map Result to Result
-		|v| {
-		    v.into_iter()
-			.map(
-			    // map each vector element
-			    |rh| rh.hops,
-			)
-			.collect()
-		},
-	    )
-	    .ok();
+        // First we get the incoming channels so we can force them to
+        // be added to the invoice. This is best effort and will be
+        // left out if the call fails, reverting to the default
+        // behavior.
+        let hints: Option<Vec<Vec<pb::RoutehintHop>>> = self
+            .get_routehints()
+            .await
+            .map(
+                // Map Result to Result
+                |v| {
+                    v.into_iter()
+                        .map(
+                            // map each vector element
+                            |rh| rh.hops,
+                        )
+                        .collect()
+                },
+            )
+            .ok();
 
-	let mut pbreq: crate::requests::Invoice = match req.clone().try_into() {
-	    Ok(v) => v,
-	    Err(e) => {
-		return Err(Status::new(
-		    Code::Internal,
-		    format!(
-			"could not convert protobuf request into JSON-RPC request: {:?}",
-			e.to_string()
-		    ),
-		))
-	    }
-	};
-	pbreq.dev_routes = hints.map(|v| {
-	    v.into_iter()
-		.map(|e| e.into_iter().map(|ee| ee.into()).collect())
-		.collect()
-	});
+        let mut pbreq: crate::requests::Invoice = match req.clone().try_into() {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(Status::new(
+                    Code::Internal,
+                    format!(
+                        "could not convert protobuf request into JSON-RPC request: {:?}",
+                        e.to_string()
+                    ),
+                ))
+            }
+        };
+        pbreq.dev_routes = hints.map(|v| {
+            v.into_iter()
+                .map(|e| e.into_iter().map(|ee| ee.into()).collect())
+                .collect()
+        });
 
-	let res: Result<crate::responses::Invoice, crate::rpc::Error> =
-	    rpc.call("invoice", pbreq).await;
+        let res: Result<crate::responses::Invoice, crate::rpc::Error> =
+            rpc.call("invoice", pbreq).await;
 
-	match res {
-	    Ok(v) => {
-		// Ok, we got the invoice created, now backfill some
-		// of the information that is not returned by the
-		// c-lightning RPC
-		let mut res: pb::Invoice = v.into();
-		res.label = req.label;
-		res.description = req.description;
-		res.amount = req.amount;
+        match res {
+            Ok(v) => {
+                // Ok, we got the invoice created, now backfill some
+                // of the information that is not returned by the
+                // c-lightning RPC
+                let mut res: pb::Invoice = v.into();
+                res.label = req.label;
+                res.description = req.description;
+                res.amount = req.amount;
 
-		Ok(Response::new(res))
-	    }
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+                Ok(Response::new(res))
+            }
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn pay(&self, req: Request<pb::PayRequest>) -> Result<Response<pb::Payment>, Status> {
-	let rpc = self.get_rpc().await;
-	let req = req.into_inner();
-	let req: crate::requests::Pay = req.into();
+        let rpc = self.get_rpc().await;
+        let req = req.into_inner();
+        let req: crate::requests::Pay = req.into();
 
-	let res: Result<crate::responses::Pay, crate::rpc::Error> = rpc.call("pay", req).await;
+        let res: Result<crate::responses::Pay, crate::rpc::Error> = rpc.call("pay", req).await;
 
-	match res {
-	    // Conversion may fail, so handle that case here.
-	    Ok(v) => Ok(Response::new(v.into())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match res {
+            // Conversion may fail, so handle that case here.
+            Ok(v) => Ok(Response::new(v.into())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn list_payments(
-	&self,
-	req: tonic::Request<pb::ListPaymentsRequest>,
+        &self,
+        req: tonic::Request<pb::ListPaymentsRequest>,
     ) -> Result<tonic::Response<pb::ListPaymentsResponse>, tonic::Status> {
-	self.limit().await;
-	let rpc = self.rpc.lock().await;
-	let req: crate::requests::ListPays = match req.into_inner().try_into() {
-	    Ok(v) => v,
-	    Err(e) => {
-		return Err(Status::new(
-		    Code::InvalidArgument,
-		    format!(
-			"Could not convert argument to valid JSON-RPC request: {}",
-			e
-		    ),
-		))
-	    }
-	};
+        self.limit().await;
+        let rpc = self.rpc.lock().await;
+        let req: crate::requests::ListPays = match req.into_inner().try_into() {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(Status::new(
+                    Code::InvalidArgument,
+                    format!(
+                        "Could not convert argument to valid JSON-RPC request: {}",
+                        e
+                    ),
+                ))
+            }
+        };
 
-	let res: Result<crate::responses::ListPays, crate::rpc::Error> =
-	    rpc.call("listpays", req).await;
+        let res: Result<crate::responses::ListPays, crate::rpc::Error> =
+            rpc.call("listpays", req).await;
 
-	match res {
-	    Ok(v) => Ok(Response::new(v.try_into().unwrap())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match res {
+            Ok(v) => Ok(Response::new(v.try_into().unwrap())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn list_invoices(
-	&self,
-	req: tonic::Request<pb::ListInvoicesRequest>,
+        &self,
+        req: tonic::Request<pb::ListInvoicesRequest>,
     ) -> Result<tonic::Response<pb::ListInvoicesResponse>, tonic::Status> {
-	self.limit().await;
-	let req = req.into_inner();
-	let req: crate::requests::ListInvoices = match req.try_into() {
-	    Ok(v) => v,
-	    Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
-	};
-	let rpc = self.rpc.lock().await;
-	let res: Result<crate::responses::ListInvoices, crate::rpc::Error> =
-	    rpc.call("listinvoices", req).await;
+        self.limit().await;
+        let req = req.into_inner();
+        let req: crate::requests::ListInvoices = match req.try_into() {
+            Ok(v) => v,
+            Err(e) => return Err(Status::new(Code::InvalidArgument, e.to_string())),
+        };
+        let rpc = self.rpc.lock().await;
+        let res: Result<crate::responses::ListInvoices, crate::rpc::Error> =
+            rpc.call("listinvoices", req).await;
 
-	match res {
-	    Ok(v) => Ok(Response::new(v.try_into().unwrap())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+        match res {
+            Ok(v) => Ok(Response::new(v.try_into().unwrap())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     type StreamIncomingStream = ReceiverStream<Result<pb::IncomingPayment, Status>>;
 
     async fn stream_incoming(
-	&self,
-	_req: tonic::Request<pb::StreamIncomingFilter>,
+        &self,
+        _req: tonic::Request<pb::StreamIncomingFilter>,
     ) -> Result<Response<Self::StreamIncomingStream>, Status> {
-	// TODO See if we can just return the broadcast::Receiver
-	// instead of pulling off broadcast and into an mpsc.
-	let (tx, rx) = mpsc::channel(1);
-	let mut bcast = self.events.subscribe();
-	tokio::spawn(async move {
-	    while let Ok(p) = bcast.recv().await {
-		match p {
-		    super::Event::IncomingPayment(p) => {
-			let _ = tx.send(Ok(p)).await;
-		    }
-		    _ => {}
-		}
-	    }
-	});
+        // TODO See if we can just return the broadcast::Receiver
+        // instead of pulling off broadcast and into an mpsc.
+        let (tx, rx) = mpsc::channel(1);
+        let mut bcast = self.events.subscribe();
+        tokio::spawn(async move {
+            while let Ok(p) = bcast.recv().await {
+                match p {
+                    super::Event::IncomingPayment(p) => {
+                        let _ = tx.send(Ok(p)).await;
+                    }
+                    _ => {}
+                }
+            }
+        });
 
-	return Ok(Response::new(ReceiverStream::new(rx)));
+        return Ok(Response::new(ReceiverStream::new(rx)));
     }
 
     async fn keysend(
-	&self,
-	request: tonic::Request<pb::KeysendRequest>,
+        &self,
+        request: tonic::Request<pb::KeysendRequest>,
     ) -> Result<tonic::Response<pb::Payment>, tonic::Status> {
-	match async {
-	    let rpcreq: crate::requests::Keysend = request.into_inner().try_into().unwrap();
-	    let rpc = self.get_rpc().await;
-	    let res: Result<crate::responses::Keysend, crate::rpc::Error> =
-		rpc.call("keysend", rpcreq).await;
+        match async {
+            let rpcreq: crate::requests::Keysend = request.into_inner().try_into().unwrap();
+            let rpc = self.get_rpc().await;
+            let res: Result<crate::responses::Keysend, crate::rpc::Error> =
+                rpc.call("keysend", rpcreq).await;
 
-	    res
-	}
-	.await
-	{
-	    Ok(v) => Ok(Response::new(v.into())),
-	    Err(e) => Err(Status::new(Code::Internal, e.to_string())),
-	}
+            res
+        }
+        .await
+        {
+            Ok(v) => Ok(Response::new(v.into())),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 }
 
@@ -867,125 +881,126 @@ use nix::unistd::getppid;
 
 impl PluginNodeServer {
     pub async fn run(self) -> Result<()> {
-	let addr = self.grpc_binding.parse().unwrap();
+        let addr = self.grpc_binding.parse().unwrap();
 
-	let cln_node = NodeServer::new(
-	    WrappedNodeServer::new(&self.rpc_path)
-		.await
-		.context("creating NodeServer instance")?,
-	);
+        let cln_node = NodeServer::new(
+            WrappedNodeServer::new(&self.rpc_path)
+                .await
+                .context("creating NodeServer instance")?,
+        );
 
-	let router = tonic::transport::Server::builder()
-	    .max_frame_size(4 * 1024 * 1024) // 4MB max request size
-	    .tcp_keepalive(Some(tokio::time::Duration::from_secs(1)))
-	    .tls_config(self.tls.clone())?
-	    .layer(SignatureContextLayer {
-		ctx: self.ctx.clone(),
-	    })
-	    .add_service(RpcWaitService::new(cln_node, self.rpc_path.clone()))
-	    .add_service(crate::pb::node_server::NodeServer::new(self.clone()));
+        let router = tonic::transport::Server::builder()
+            .max_frame_size(4 * 1024 * 1024) // 4MB max request size
+            .tcp_keepalive(Some(tokio::time::Duration::from_secs(1)))
+            .tls_config(self.tls.clone())?
+            .layer(SignatureContextLayer {
+                ctx: self.ctx.clone(),
+            })
+            .add_service(RpcWaitService::new(cln_node, self.rpc_path.clone()))
+            .add_service(crate::pb::node_server::NodeServer::new(self.clone()));
 
-	router
-	    .serve(addr)
-	    .await
-	    .context("grpc interface exited with error")
+        router
+            .serve(addr)
+            .await
+            .context("grpc interface exited with error")
     }
 
     /// Do your best to kill `lightningd`, by sending a TERM signal, give
     /// it a couple of seconds and then sending a KILL.
     async fn kill(&self) -> ! {
-	let ppid = getppid();
-	signal::kill(ppid, signal::Signal::SIGTERM).expect("sending SIGTERM");
-	time::sleep(time::Duration::from_secs(5)).await;
-	signal::kill(ppid, signal::Signal::SIGKILL).expect("sending SIGKILL");
-	std::process::exit(0);
+        let ppid = getppid();
+        signal::kill(ppid, signal::Signal::SIGTERM).expect("sending SIGTERM");
+        time::sleep(time::Duration::from_secs(5)).await;
+        signal::kill(ppid, signal::Signal::SIGKILL).expect("sending SIGKILL");
+        std::process::exit(0);
     }
 
     async fn terminate(&self) -> ! {
-	// Give the node some time to stop gracefully, otherwise kill
-	// it. We need to call `stop` in a task because we might not
-	// have completed startup. This can happen if we're stuck
-	// waiting on the signer.
-	let path = self.rpc_path.clone();
-	tokio::spawn(async move {
-	    let mut rpc = cln_rpc::ClnRpc::new(path).await.unwrap();
-	    rpc.call_typed(cln_rpc::model::requests::StopRequest {})
-		.await
-		.expect("calling `stop`");
-	});
-	time::sleep(time::Duration::from_secs(2)).await;
-	self.kill().await
+        // Give the node some time to stop gracefully, otherwise kill
+        // it. We need to call `stop` in a task because we might not
+        // have completed startup. This can happen if we're stuck
+        // waiting on the signer.
+        let path = self.rpc_path.clone();
+        tokio::spawn(async move {
+            let mut rpc = cln_rpc::ClnRpc::new(path).await.unwrap();
+            rpc.call_typed(cln_rpc::model::requests::StopRequest {})
+                .await
+                .expect("calling `stop`");
+        });
+        time::sleep(time::Duration::from_secs(2)).await;
+        self.kill().await
     }
 
     /// Reconnect all peers with whom we have a channel or previously
     /// connected explicitly to.
     async fn reconnect_peers(&self) -> Result<(), Error> {
-	let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await?;
-	let peers = self.get_reconnect_peers().await?;
+	log::info!("Reconnecting all peers");
+        let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await?;
+        let peers = self.get_reconnect_peers().await?;
 
-	for r in peers {
-	    trace!("Calling connect: {:?}", &r.id);
-	    let res = rpc.call_typed(r.clone()).await;
-	    trace!("Connect returned: {:?} -> {:?}", &r.id, res);
+        for r in peers {
+            trace!("Calling connect: {:?}", &r.id);
+            let res = rpc.call_typed(r.clone()).await;
+            trace!("Connect returned: {:?} -> {:?}", &r.id, res);
 
-	    match res {
-		Ok(r) => info!("Connection to {} established: {:?}", &r.id, r),
-		Err(e) => warn!("Could not connect to {}: {:?}", &r.id, e),
-	    }
-	}
+            match res {
+                Ok(r) => info!("Connection to {} established: {:?}", &r.id, r),
+                Err(e) => warn!("Could not connect to {}: {:?}", &r.id, e),
+            }
+        }
 
-	todo!()
+        todo!()
     }
 
     async fn get_reconnect_peers(&self) -> Result<Vec<ConnectRequest>, Error> {
-	let rpc_path = self.rpc_path.clone();
-	let mut rpc = cln_rpc::ClnRpc::new(rpc_path).await?;
-	let peers = rpc
-	    .call_typed(cln_rpc::model::ListpeersRequest {
-		id: None,
-		level: None,
-	    })
-	    .await?;
+        let rpc_path = self.rpc_path.clone();
+        let mut rpc = cln_rpc::ClnRpc::new(rpc_path).await?;
+        let peers = rpc
+            .call_typed(cln_rpc::model::ListpeersRequest {
+                id: None,
+                level: None,
+            })
+            .await?;
 
-	let mut requests: Vec<ConnectRequest> = peers
-	    .peers
-	    .iter()
-	    .filter(|&p| p.connected)
-	    .map(|p| cln_rpc::model::ConnectRequest {
-		id: p.id.to_string(),
-		host: None,
-		port: None,
-	    })
-	    .collect();
+        let mut requests: Vec<ConnectRequest> = peers
+            .peers
+            .iter()
+            .filter(|&p| p.connected)
+            .map(|p| cln_rpc::model::ConnectRequest {
+                id: p.id.to_string(),
+                host: None,
+                port: None,
+            })
+            .collect();
 
-	let mut dspeers: Vec<ConnectRequest> = rpc
-	    .call_typed(cln_rpc::model::ListdatastoreRequest {
-		key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
-	    })
-	    .await?
-	    .datastore
-	    .iter()
-	    .map(|x| {
-		// We need to replace unnecessary escape characters that
-		// have been added by the datastore, as serde is a bit
-		// picky on that.
-		let mut s = x.string.clone().unwrap();
-		s = s.replace('\\', "");
-		serde_json::from_str::<messages::Peer>(&s).unwrap()
-	    })
-	    .map(|x| ConnectRequest {
-		id: x.id,
-		host: Some(x.addr),
-		port: None,
-	    })
-	    .collect();
+        let mut dspeers: Vec<ConnectRequest> = rpc
+            .call_typed(cln_rpc::model::ListdatastoreRequest {
+                key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
+            })
+            .await?
+            .datastore
+            .iter()
+            .map(|x| {
+                // We need to replace unnecessary escape characters that
+                // have been added by the datastore, as serde is a bit
+                // picky on that.
+                let mut s = x.string.clone().unwrap();
+                s = s.replace('\\', "");
+                serde_json::from_str::<messages::Peer>(&s).unwrap()
+            })
+            .map(|x| ConnectRequest {
+                id: x.id,
+                host: Some(x.addr),
+                port: None,
+            })
+            .collect();
 
-	// Merge the two peer lists;
-	requests.append(&mut dspeers);
-	requests.sort_by(|a, b| a.id.cmp(&b.id));
-	requests.dedup_by(|a, b| a.id.eq(&b.id));
+        // Merge the two peer lists;
+        requests.append(&mut dspeers);
+        requests.sort_by(|a, b| a.id.cmp(&b.id));
+        requests.dedup_by(|a, b| a.id.eq(&b.id));
 
-	Ok(requests)
+        Ok(requests)
     }
 }
 
@@ -998,7 +1013,7 @@ pub struct SignatureContextLayer {
 
 impl SignatureContextLayer {
     pub fn new(context: crate::context::Context) -> Self {
-	SignatureContextLayer { ctx: context }
+        SignatureContextLayer { ctx: context }
     }
 }
 
@@ -1006,10 +1021,10 @@ impl<S> Layer<S> for SignatureContextLayer {
     type Service = SignatureContextService<S>;
 
     fn layer(&self, service: S) -> Self::Service {
-	SignatureContextService {
-	    inner: service,
-	    ctx: self.ctx.clone(),
-	}
+        SignatureContextService {
+            inner: service,
+            ctx: self.ctx.clone(),
+        }
     }
 }
 
@@ -1025,9 +1040,9 @@ pub struct SignatureContextService<S> {
 impl<S> Service<hyper::Request<hyper::Body>> for SignatureContextService<S>
 where
     S: Service<hyper::Request<hyper::Body>, Response = hyper::Response<tonic::body::BoxBody>>
-	+ Clone
-	+ Send
-	+ 'static,
+        + Clone
+        + Send
+        + 'static,
     S::Future: Send + 'static,
     S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
 {
@@ -1036,102 +1051,102 @@ where
     type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(
-	&mut self,
-	cx: &mut std::task::Context<'_>,
+        &mut self,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
-	self.inner.poll_ready(cx).map_err(Into::into)
+        self.inner.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, request: hyper::Request<hyper::Body>) -> Self::Future {
-	// This is necessary because tonic internally uses `tower::buffer::Buffer`.
-	// See https://github.com/tower-rs/tower/issues/547#issuecomment-767629149
-	// for details on why this is necessary
-	let clone = self.inner.clone();
-	let mut inner = std::mem::replace(&mut self.inner, clone);
-	let reqctx = self.ctx.clone();
+        // This is necessary because tonic internally uses `tower::buffer::Buffer`.
+        // See https://github.com/tower-rs/tower/issues/547#issuecomment-767629149
+        // for details on why this is necessary
+        let clone = self.inner.clone();
+        let mut inner = std::mem::replace(&mut self.inner, clone);
+        let reqctx = self.ctx.clone();
 
-	Box::pin(async move {
-	    use tonic::codegen::Body;
-	    let _ = RPC_BCAST.clone().send(super::Event::RpcCall);
-	    let (parts, mut body) = request.into_parts();
+        Box::pin(async move {
+            use tonic::codegen::Body;
+            let _ = RPC_BCAST.clone().send(super::Event::RpcCall);
+            let (parts, mut body) = request.into_parts();
 
-	    let uri = parts.uri.path_and_query().unwrap();
+            let uri = parts.uri.path_and_query().unwrap();
 
-	    let pubkey = parts
-		.headers
-		.get("glauthpubkey")
-		.map(|k| base64::decode(k).ok())
-		.flatten();
+            let pubkey = parts
+                .headers
+                .get("glauthpubkey")
+                .map(|k| base64::decode(k).ok())
+                .flatten();
 
-	    let sig = parts
-		.headers
-		.get("glauthsig")
-		.map(|s| base64::decode(s).ok())
-		.flatten();
+            let sig = parts
+                .headers
+                .get("glauthsig")
+                .map(|s| base64::decode(s).ok())
+                .flatten();
 
-	    use bytes::Buf;
-	    let timestamp: Option<u64> = parts
-		.headers
-		.get("glts")
-		.map(|s| base64::decode(s).ok())
-		.flatten()
-		.map(|s| s.as_slice().get_u64());
+            use bytes::Buf;
+            let timestamp: Option<u64> = parts
+                .headers
+                .get("glts")
+                .map(|s| base64::decode(s).ok())
+                .flatten()
+                .map(|s| s.as_slice().get_u64());
 
-	    if let (Some(pk), Some(sig)) = (pubkey, sig) {
-		// Now that we know we'll be adding this to the
-		// context we can start buffering the request.
-		let mut buf = Vec::new();
-		while let Some(chunk) = body.data().await {
-		    let chunk = chunk.unwrap();
-		    // We check on the MAX_MESSAGE_SIZE to avoid an unlimited sized
-		    // message buffer
-		    if buf.len() + chunk.len() > MAX_MESSAGE_SIZE {
-			debug!("Message {} exceeds size limit", uri.path().to_string());
-			return Ok(tonic::Status::new(
-			    tonic::Code::InvalidArgument,
-			    format!("payload too large"),
-			)
-			.to_http());
-		    }
-		    buf.put(chunk);
-		}
+            if let (Some(pk), Some(sig)) = (pubkey, sig) {
+                // Now that we know we'll be adding this to the
+                // context we can start buffering the request.
+                let mut buf = Vec::new();
+                while let Some(chunk) = body.data().await {
+                    let chunk = chunk.unwrap();
+                    // We check on the MAX_MESSAGE_SIZE to avoid an unlimited sized
+                    // message buffer
+                    if buf.len() + chunk.len() > MAX_MESSAGE_SIZE {
+                        debug!("Message {} exceeds size limit", uri.path().to_string());
+                        return Ok(tonic::Status::new(
+                            tonic::Code::InvalidArgument,
+                            format!("payload too large"),
+                        )
+                        .to_http());
+                    }
+                    buf.put(chunk);
+                }
 
-		trace!(
-		    "Got a request for {} with pubkey={}, sig={} and body size={:?}",
-		    uri,
-		    hex::encode(&pk),
-		    hex::encode(&sig),
-		    &buf.len(),
-		);
-		let req = crate::context::Request::new(
-		    uri.to_string(),
-		    <bytes::Bytes>::from(buf.clone()),
-		    pk,
-		    sig,
-		    timestamp,
-		);
+                trace!(
+                    "Got a request for {} with pubkey={}, sig={} and body size={:?}",
+                    uri,
+                    hex::encode(&pk),
+                    hex::encode(&sig),
+                    &buf.len(),
+                );
+                let req = crate::context::Request::new(
+                    uri.to_string(),
+                    <bytes::Bytes>::from(buf.clone()),
+                    pk,
+                    sig,
+                    timestamp,
+                );
 
-		reqctx.add_request(req.clone()).await;
+                reqctx.add_request(req.clone()).await;
 
-		let body: hyper::Body = buf.into();
-		let request = hyper::Request::from_parts(parts, body);
-		let res = inner.call(request).await;
+                let body: hyper::Body = buf.into();
+                let request = hyper::Request::from_parts(parts, body);
+                let res = inner.call(request).await;
 
-		// Defer cleanup into a separate task, otherwise we'd
-		// need `res` to be `Send` which we can't
-		// guarantee. This is needed since adding an await
-		// point splits the state machine at that point.
-		tokio::spawn(async move {
-		    reqctx.remove_request(req).await;
-		});
-		res.map_err(Into::into)
-	    } else {
-		// No point in buffering the request, we're not going
-		// to add it to the `HsmRequestContext`
-		let request = hyper::Request::from_parts(parts, body);
-		inner.call(request).await.map_err(Into::into)
-	    }
-	})
+                // Defer cleanup into a separate task, otherwise we'd
+                // need `res` to be `Send` which we can't
+                // guarantee. This is needed since adding an await
+                // point splits the state machine at that point.
+                tokio::spawn(async move {
+                    reqctx.remove_request(req).await;
+                });
+                res.map_err(Into::into)
+            } else {
+                // No point in buffering the request, we're not going
+                // to add it to the `HsmRequestContext`
+                let request = hyper::Request::from_parts(parts, body);
+                inner.call(request).await.map_err(Into::into)
+            }
+        })
     }
 }
 
