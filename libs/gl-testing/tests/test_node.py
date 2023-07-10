@@ -7,6 +7,7 @@ from pyln import grpc as clnpb
 from flaky import flaky
 
 import struct
+import time
 import unittest
 
 
@@ -350,3 +351,26 @@ def test_custommsg(clients, node_factory, bitcoind, executor):
         r'connectd: peer_in INVALID 65535',
         r'Calling custommsg hook of plugin chanbackup',
     ])
+
+
+def test_node_reconnect(clients, scheduler, node_factory, bitcoind):
+    """Connect from GL to a peer, then restart and we should reconnect.
+    """
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+
+    l1 = node_factory.get_node()
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+
+    time.sleep(1)
+    node = scheduler.nodes[0]
+    node.process.stop()
+    node.process = None
+
+    gl1 = c.node()
+
+    peer = scheduler.nodes[0].rpc().listpeers()['peers'][0]
+    assert peer['connected']
+    assert peer['id'] == l1.info['id']
