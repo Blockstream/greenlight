@@ -74,10 +74,10 @@ where
 // R is the data-type of the result if the query is successful
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JsonRpcRequest<I> {
-    json_rpc: String,
-    id: String,
-    method: String,
-    params: I,
+    pub json_rpc: String,
+    pub id: String,
+    pub method: String,
+    pub params: I,
 }
 
 // LSPS0 specifies that the RPC-request must use a parameter-by-name structure.
@@ -263,7 +263,8 @@ mod test {
 
     #[test]
     fn parse_rpc_response_failure_from_call() {
-        let rpc_method = JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
+        let rpc_method: JsonRpcMethod<'_, NoParams, String, ()> =
+            JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
 
         let json_value = serde_json::json!({
             "json_rpc" : "2.0",
