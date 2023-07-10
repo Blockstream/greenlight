@@ -98,7 +98,7 @@ impl DaemonConnection {
         );
         let mut client = self.conn.lock().await;
         client.write_u32(msg.body.len() as u32).await?;
-        client.write(&msg.body).await?;
+        client.write_all(&msg.body).await?;
 
         for fd in msg.fds {
             client.as_raw_fd().send_fd(fd)?;
@@ -106,5 +106,4 @@ impl DaemonConnection {
 
         Ok(())
     }
-
 }
