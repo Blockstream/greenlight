@@ -34,6 +34,11 @@ static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
 
 lazy_static! {
     static ref HSM_ID_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+    /// The number of signers that are currently connected (best guess
+    /// due to races). Allows us to determine whether we should
+    /// initiate operations that might require signatures.
+    static ref SIGNER_COUNT: AtomicUsize = AtomicUsize::new(0);
     static ref RPC_BCAST: broadcast::Sender<super::Event> = broadcast::channel(4).0;
 }
 
@@ -83,12 +88,11 @@ impl PluginNodeServer {
             }
         });
 
-
         let signer_state = signer_state_store.read().await?;
 
         let ctx = crate::context::Context::new();
 
-	let rrpc = rpc.clone();
+        let rrpc = rpc.clone();
 
         let s = PluginNodeServer {
             ctx,
@@ -107,8 +111,8 @@ impl PluginNodeServer {
             debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
             use tokio::time::{sleep, Duration};
 
-	    // Move the lock into the closure so we can release it later.
-	    let rpc = rrpc.lock().await;
+            // Move the lock into the closure so we can release it later.
+            let rpc = rrpc.lock().await;
             loop {
                 let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
                     rpc.call("getinfo", json!({})).await;
@@ -125,8 +129,8 @@ impl PluginNodeServer {
             }
             drop(rpc);
 
-	    // Now piggyback the reconnection on top of the RPC
-	    // reachability test
+            // Now piggyback the reconnection on top of the RPC
+            // reachability test
             if let Err(e) = c.reconnect_peers().await {
                 log::warn!("Could not reconnect to peers: {:?}", e);
             }
@@ -437,7 +441,7 @@ impl Node for PluginNodeServer {
         _request: Request<pb::Empty>,
     ) -> Result<Response<Self::StreamHsmRequestsStream>, Status> {
         let hsm_id = HSM_ID_COUNT.fetch_add(1, Ordering::SeqCst);
-
+        SIGNER_COUNT.fetch_add(1, Ordering::SeqCst);
         info!(
             "New signer with hsm_id={} attached, streaming requests",
             hsm_id
@@ -494,6 +498,7 @@ impl Node for PluginNodeServer {
                 }
             }
             info!("Signer hsm_id={} exited", hsm_id);
+            SIGNER_COUNT.fetch_sub(1, Ordering::SeqCst);
         });
 
         let c = self.clone();
@@ -934,7 +939,14 @@ impl PluginNodeServer {
     /// Reconnect all peers with whom we have a channel or previously
     /// connected explicitly to.
     async fn reconnect_peers(&self) -> Result<(), Error> {
-	log::info!("Reconnecting all peers");
+        if SIGNER_COUNT.load(Ordering::SeqCst) < 1 {
+	    use anyhow::anyhow;
+            return Err(anyhow!(
+                "Cannot reconnect peers, no signer to complete the handshake"
+            ));
+        }
+
+        log::info!("Reconnecting all peers");
         let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await?;
         let peers = self.get_reconnect_peers().await?;
 
@@ -948,8 +960,7 @@ impl PluginNodeServer {
                 Err(e) => warn!("Could not connect to {}: {:?}", &r.id, e),
             }
         }
-
-        todo!()
+        return Ok(());
     }
 
     async fn get_reconnect_peers(&self) -> Result<Vec<ConnectRequest>, Error> {
