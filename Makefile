@@ -75,6 +75,9 @@ docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
 	  .
 
 docker-shell:
+	mkdir -p /tmp/target && \
+	mkdir -p /tmp/gltesting && \
+	mkdir -p /tmp/gl-cargo-registry && \
 	docker run \
 	  -ti \
 	  --net=host \

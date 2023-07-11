@@ -127,6 +127,34 @@ ENV PATH=/root/.cargo/bin:$PATH
 # invoked somewhere else.
 ENV GL_DOCKER=1
 
+RUN cd /tmp/ && \
+    wget https://storage.googleapis.com/c-lightning-tests/bitcoin-$BITCOIN_VERSION-x86_64-linux-gnu.tar.bz2 -O bitcoin.tar.bz2 && \
+    tar -xvjf bitcoin.tar.bz2 && \
+    mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
+    rm -rf bitcoin.tar.bz2 /tmp/bitcoin-$BITCOIN_VERSION
+
+COPY --from=builder /repo/cln-versions/ /opt/cln
+RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
+
+RUN mkdir /tmp/protoc && \
+    cd /tmp/protoc && \
+    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
+    unzip protoc.zip && \
+    mv /tmp/protoc/bin/* /usr/local/bin/ && \
+    rm -rf protoc.zip /tmp/protoc && \
+    chmod a+x /usr/local/bin/protoc
+
+RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1.5.0_linux_amd64 -O /usr/bin/cfssl && \
+    chmod a+x /usr/bin/cfssl
+RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
+    chmod a+x /usr/bin/cfssljson
+
+# Copy from builder
+COPY --from=builder /repo/libs/target/wheels/gl_client* /opt/
+
+# Switch to docker user bevore we install dependencies.
+USER $DOCKER_USER
+
 # Add cargo and the rust toolchain in case we want to compile
 # gl-plugin and gl-signerproxy. This can be useful if we want to
 # develop them, and bind-mount the repository from the host into
@@ -136,19 +164,6 @@ RUN curl \
     --tlsv1.2 \
     -sSf https://sh.rustup.rs | sh \
     -s -- -y --default-toolchain ${RUST_VERSION}
-
-RUN mkdir /tmp/protoc && \
-    cd /tmp/protoc && \
-    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
-    unzip protoc.zip && \
-    mv /tmp/protoc/bin/protoc /usr/local/bin && \
-    rm -rf /tmp/protoc
-
-RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1.5.0_linux_amd64 -O /usr/bin/cfssl && \
-    chmod a+x /usr/bin/cfssl
-RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
-    chmod a+x /usr/bin/cfssljson
-
 
 # Run in a venv, so we don't get warnings about root being special.
 RUN python3 -m venv /tmp/venv
@@ -168,19 +183,19 @@ RUN python3 -m pip install -U pip tomli && \
     pytest-cov \
     grpcio \
     pytest-xdist \
-    maturin
+    maturin \
+    /opt/gl_client*
 
 RUN git config --global --add safe.directory /repo
 
 # Install nodejs
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+RUN mkdir "${HOME}/.npm-packages" && npm config set prefix "${HOME}/.npm-packages"
+ENV NPM_PACKAGES="${HOME}/.npm-packages"
+ENV PATH="${PATH}:${NPM_PACKAGES}/bin"
 
-RUN cd /tmp/ && \
-    wget https://storage.googleapis.com/c-lightning-tests/bitcoin-$BITCOIN_VERSION-x86_64-linux-gnu.tar.bz2 -O bitcoin.tar.bz2 && \
-    tar -xvjf bitcoin.tar.bz2 && \
-    mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
-    rm -rf bitcoin.tar.bz2 /tmp/bitcoin-$BITCOIN_VERSION
-
+# Required to build and test the JS bindings
+RUN npm install -g cargo-cp-artifact
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
 RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
@@ -192,9 +207,6 @@ RUN (cd /repo/libs/gl-client-py; maturin develop)
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`
 RUN python3 -m pip install /repo/libs/gl-testing
-
-# Required to build and test the JS bindings
-RUN npm install -g cargo-cp-artifact
 
 # Hack: importing the proto files twice isn't a good idea, and
 # pyln-testing currently does.
