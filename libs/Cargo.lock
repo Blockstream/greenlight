@@ -1619,7 +1619,7 @@ dependencies = [
 [[package]]
 name = "lightning-storage-server"
 version = "0.3.0"
-source = "git+https://gitlab.com/lightning-signer/validating-lightning-signer.git?branch=main#84cabcab3ea2f2918ee0ae5e5e527ac7369b4be2"
+source = "git+https://gitlab.com/cdecker/vls?tag=snapshot-20230620#3a016a06ca61edbaa7fc1350d5bde2ba0b9417d6"
 dependencies = [
  "anyhow",
  "async-trait",

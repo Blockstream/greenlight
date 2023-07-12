@@ -5,6 +5,7 @@ codegen-units = 1
 panic = "abort"
 
 [workspace]
+resolver = "2"
 members = [
   "gl-client",
   "gl-client-py",
