@@ -892,7 +892,7 @@ impl PluginNodeServer {
         let addr = self.grpc_binding.parse().unwrap();
 
         let cln_node = NodeServer::new(
-            WrappedNodeServer::new(&self.rpc_path)
+            WrappedNodeServer::new(self.clone())
                 .await
                 .context("creating NodeServer instance")?,
         );
