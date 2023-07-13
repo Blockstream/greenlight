@@ -129,11 +129,14 @@ impl PluginNodeServer {
             }
             drop(rpc);
 
-            // Now piggyback the reconnection on top of the RPC
-            // reachability test
-            if let Err(e) = c.reconnect_peers().await {
-                log::warn!("Could not reconnect to peers: {:?}", e);
-            }
+            tokio::spawn(async move {
+                // Now piggyback the reconnection on top of the RPC
+                // reachability test
+                log::info!("Reconnecting peers after RPC became available.");
+                if let Err(e) = c.reconnect_peers().await {
+                    log::warn!("Could not reconnect to peers: {:?}", e);
+                }
+            });
         });
 
         Ok(s)
@@ -940,7 +943,7 @@ impl PluginNodeServer {
     /// connected explicitly to.
     async fn reconnect_peers(&self) -> Result<(), Error> {
         if SIGNER_COUNT.load(Ordering::SeqCst) < 1 {
-	    use anyhow::anyhow;
+            use anyhow::anyhow;
             return Err(anyhow!(
                 "Cannot reconnect peers, no signer to complete the handshake"
             ));
