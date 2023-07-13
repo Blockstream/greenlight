@@ -13,6 +13,7 @@ use crate::node::{Client, ClnClient};
 use crate::pb::{Custommsg, StreamCustommsgRequest};
 use cln_grpc::pb::SendcustommsgRequest;
 use std::io::{Cursor, Read, Write};
+use thiserror::Error;
 
 // BOLT8 message ID 37913
 const LSPS_MESSAGE_ID: [u8; 2] = [0x94, 0x19];
@@ -23,18 +24,18 @@ pub struct JsonRpcTransport {
     cln_client: ClnClient, // USed for sending custom message
 }
 
+#[derive(Error, Debug)]
 pub enum TransportError {
-    JsonParseError(serde_json::Error),
-    Other(String),
-    GrpcError(tonic::Status),
+    #[error("Failed to parse json")]
+    JsonParseError(#[from] serde_json::Error),
+    #[error("Error while calling lightning grpc-method")]
+    GrpcError(#[from] tonic::Status),
+    #[error("Connection closed")]
     ConnectionClosed,
+    #[error("Timeout")]
     Timeout,
-}
-
-impl From<serde_json::Error> for TransportError {
-    fn from(value: serde_json::Error) -> Self {
-        return Self::JsonParseError(value);
-    }
+    #[error("Something unexpected happened")]
+    Other(String),
 }
 
 impl From<std::io::Error> for TransportError {
@@ -43,11 +44,6 @@ impl From<std::io::Error> for TransportError {
     }
 }
 
-impl From<tonic::Status> for TransportError {
-    fn from(value: tonic::Status) -> Self {
-        Self::GrpcError(value)
-    }
-}
 
 impl JsonRpcTransport {
     pub async fn request<I, O, E>(
