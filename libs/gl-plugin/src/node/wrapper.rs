@@ -4,6 +4,8 @@ use cln_grpc::pb::{self, node_server::Node};
 use log::debug;
 use tonic::{Request, Response, Status};
 
+use super::PluginNodeServer;
+
 /// `WrappedNodeServer` enables us to quickly add customizations to
 /// the pure passthru of the `cln_grpc::Server`. In particular it
 /// implements the guarding against RPC commands that'd require a
@@ -11,17 +13,14 @@ use tonic::{Request, Response, Status};
 /// providing RouteHints for disconnected and zeroconf channels too.
 pub struct WrappedNodeServer {
     inner: cln_grpc::Server,
-    // Temporary `allow` since wrappers will likely use the RPC
-    #[allow(dead_code)]
-    rpcpath: std::path::PathBuf,
+    node_server: PluginNodeServer,
 }
 
 // TODO Make node into a module and add the WrappedNodeServer as a submodule.
 impl WrappedNodeServer {
-    pub async fn new(path: &std::path::Path) -> anyhow::Result<Self> {
-        let rpcpath = path.to_path_buf();
-        let inner = cln_grpc::Server::new(path.clone()).await?;
-        Ok(WrappedNodeServer { inner, rpcpath })
+    pub async fn new(node_server: PluginNodeServer) -> anyhow::Result<Self> {
+        let inner = cln_grpc::Server::new(&node_server.rpc_path).await?;
+        Ok(WrappedNodeServer { inner, node_server })
     }
 }
 
@@ -36,7 +35,7 @@ impl Node for WrappedNodeServer {
         let req = req.into_inner();
 
         use crate::rpc::LightningClient;
-        let mut rpc = LightningClient::new(self.rpcpath.clone());
+        let mut rpc = LightningClient::new(self.node_server.rpc_path.clone());
 
         // First we get the incoming channels so we can force them to
         // be added to the invoice. This is best effort and will be
@@ -294,6 +293,7 @@ impl Node for WrappedNodeServer {
     }
 
     async fn pay(&self, r: Request<pb::PayRequest>) -> Result<Response<pb::PayResponse>, Status> {
+        let _ = self.node_server.reconnect_peers().await;
         self.inner.pay(r).await
     }
 
