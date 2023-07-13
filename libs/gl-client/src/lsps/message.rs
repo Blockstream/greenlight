@@ -2,7 +2,6 @@ use crate::lsps::json_rpc::{JsonRpcMethod, NoParams};
 use serde::{Deserialize, Serialize};
 
 use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 use uuid::Uuid;
 
 type SatAmount = u64;
