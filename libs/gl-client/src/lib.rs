@@ -57,6 +57,9 @@ pub mod utils {
 /// Functionality to integrate greenlight with a Lightning Service Provider
 pub mod lsps;
 
+
+mod util;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
