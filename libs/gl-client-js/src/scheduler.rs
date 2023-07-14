@@ -4,6 +4,7 @@ use crate::tls::TlsConfig;
 use crate::Signer;
 use gl_client::bitcoin::Network;
 use neon::prelude::*;
+use neon::types::buffer::TypedArray;
 use prost::Message;
 
 pub(crate) struct Scheduler {
@@ -13,7 +14,7 @@ pub(crate) struct Scheduler {
 impl Scheduler {
     pub(crate) fn new(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
         let buf = cx.argument::<JsBuffer>(0)?;
-        let node_id: Vec<u8> = cx.borrow(&buf, |data| data.as_slice().to_vec());
+        let node_id: Vec<u8> = buf.as_slice(&mut cx).to_vec();
         let network = cx.argument::<JsString>(1)?.value(&mut cx);
 
         let network: Network = match network.parse() {
@@ -57,8 +58,8 @@ impl Scheduler {
             Err(e) => return cx.throw_error(e.to_string()),
         };
 
-        let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
-        cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
+        let mut jsbuf = JsBuffer::new(&mut cx, buf.len())?;
+        jsbuf.as_mut_slice(&mut cx).copy_from_slice(&buf);
         Ok(jsbuf)
     }
 
@@ -133,8 +134,8 @@ where
         Err(e) => return cx.throw_error(e.to_string()),
     };
 
-    let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
-    cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
+    let mut jsbuf = JsBuffer::new(&mut cx, buf.len())?;
+    jsbuf.as_mut_slice(&mut cx).copy_from_slice(&buf);
 
     Ok(jsbuf)
 }

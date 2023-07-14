@@ -2,7 +2,9 @@ use gl_client::bitcoin::Network;
 use log::debug;
 use log::warn;
 use neon::prelude::*;
+use neon::types::buffer::TypedArray;
 use tokio::sync::mpsc;
+
 #[derive(Clone)]
 pub struct Signer {
     pub(crate) inner: gl_client::signer::Signer,
@@ -16,7 +18,7 @@ pub struct SignerHandle {
 impl Signer {
     pub(crate) fn new(mut cx: FunctionContext) -> JsResult<JsBox<Signer>> {
         let buf = cx.argument::<JsBuffer>(0)?;
-        let secret: Vec<u8> = cx.borrow(&buf, |data| data.as_slice().to_vec());
+        let secret: Vec<u8> = buf.as_slice(&mut cx).to_vec();
         let network: String = cx.argument::<JsString>(1)?.value(&mut cx);
         let tls = (&**cx.argument::<JsBox<crate::TlsConfig>>(2)?).clone();
 
@@ -66,8 +68,8 @@ impl Signer {
     pub(crate) fn node_id(mut cx: FunctionContext) -> JsResult<JsBuffer> {
         let this = cx.argument::<JsBox<Signer>>(0)?;
         let node_id = this.inner.node_id();
-        let buf = JsBuffer::new(&mut cx, 33)?;
-        cx.borrow(&buf, |buf| buf.as_mut_slice().copy_from_slice(&node_id));
+        let mut buf = JsBuffer::new(&mut cx, 33)?;
+        buf.as_mut_slice(&mut cx).copy_from_slice(&node_id);
         Ok(buf)
     }
     pub(crate) fn version(mut cx: FunctionContext) -> JsResult<JsString> {
