@@ -15,7 +15,7 @@
     "test": "cargo test --release && jest"
   },
   "binary": {
-      "module_name": "index",
+    "module_name": "index",
     "host": "https://storage.googleapis.com/greenlight-artifacts/npm/gl-client-js/",
     "remote_path": "{version}",
     "package_name": "gl-client-{version}-{platform}-{arch}.tar.gz",
@@ -30,6 +30,6 @@
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0.10",
     "cargo-cp-artifact": "^0.1.7",
-    "protobufjs": "^6.11.2"
+    "protobufjs": "^7.2.4"
   }
 }
