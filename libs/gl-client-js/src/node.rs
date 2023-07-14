@@ -4,6 +4,7 @@ use crate::{
 };
 use gl_client::{node::Client, pb};
 use neon::prelude::*;
+use neon::types::buffer::TypedArray;
 use prost::Message;
 use tonic::Status;
 
@@ -106,12 +107,12 @@ impl Node {
         let this = cx.argument::<JsBox<Node>>(0)?;
         let method = cx.argument::<JsString>(1)?.value(&mut cx);
         let buf = cx.argument::<JsBuffer>(2)?;
-        let args: Vec<u8> = cx.borrow(&buf, |data| data.as_slice().to_vec());
+        let args: Vec<u8> = buf.as_slice(&mut cx).to_vec();
 
         match exec(this.dispatch(method.as_ref(), &args)) {
             Ok(res) => {
-                let jsbuf = JsBuffer::new(&mut cx, res.len() as u32)?;
-                cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&res));
+                let mut jsbuf = JsBuffer::new(&mut cx, res.len())?;
+                jsbuf.as_mut_slice(&mut cx).copy_from_slice(&res);
                 Ok(jsbuf)
             }
             Err(e) => return cx.throw_error(format!("error calling {}: {}", method, e))?,
@@ -192,8 +193,8 @@ fn convert_stream_entry<T: Message>(
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
 
-    let jsbuf = JsBuffer::new(&mut cx, buf.len() as u32)?;
-    cx.borrow(&jsbuf, |jsbuf| jsbuf.as_mut_slice().copy_from_slice(&buf));
+    let mut jsbuf = JsBuffer::new(&mut cx, buf.len())?;
+    jsbuf.as_mut_slice(&mut cx).copy_from_slice(&buf);
 
     Ok(jsbuf)
 }
