@@ -18,9 +18,9 @@ pub struct SignerHandle {
 impl Signer {
     pub(crate) fn new(mut cx: FunctionContext) -> JsResult<JsBox<Signer>> {
         let buf = cx.argument::<JsBuffer>(0)?;
-        let secret: Vec<u8> = buf.as_slice(&mut cx).to_vec();
+        let secret: Vec<u8> = buf.as_slice(&cx).to_vec();
         let network: String = cx.argument::<JsString>(1)?.value(&mut cx);
-        let tls = (&**cx.argument::<JsBox<crate::TlsConfig>>(2)?).clone();
+        let tls = (**cx.argument::<JsBox<crate::TlsConfig>>(2)?).clone();
 
         let network: Network = network
             .parse()

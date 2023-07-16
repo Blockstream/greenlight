@@ -8,8 +8,8 @@ use scheduler::Scheduler;
 use signer::{Signer, SignerHandle};
 mod tls;
 use tls::TlsConfig;
-mod runtime;
 mod error;
+mod runtime;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
@@ -26,6 +26,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("schedulerSchedule", Scheduler::schedule)?;
     cx.export_function("schedulerGetInviteCodes", Scheduler::get_invite_codes)?;
 
+    cx.export_function("nodeNew", Node::new)?;
     cx.export_function("nodeCall", Node::call)?;
     cx.export_function("nodeCallStreamLog", Node::call_stream_log)?;
     cx.export_function("logStreamNext", LogStream::next)?;

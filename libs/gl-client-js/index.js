@@ -20,6 +20,7 @@ const {
     schedulerRecover,
     schedulerSchedule,
 
+	nodeNew,
     nodeCall,
     nodeCallStreamLog,
     logStreamNext,
@@ -88,10 +89,17 @@ class Scheduler {
     }
 
     schedule() {
-	let n = new Node()
-	n.inner = schedulerSchedule(this.inner, this.tls.inner)
-	return n
+	res = proto.scheduler.NodeInfoResponse.decode(
+		schedulerSchedule(this.inner)
+	)
+	this.grpc_uri = res.grpc_uri
+	return res
     }
+
+	node() {
+		this.schedule()
+		return Node(this.nodeId, this.network, this.tls, this.grpc_uri);
+	}
 }
 
 function ensureByteNodeId(node_id) {
@@ -184,6 +192,9 @@ function parseBtcAddress(a) {
 }
 
 class Node {
+	constructor(secret, network, tls, grpc_uri) {
+		this.inner = nodeNew(secret, network, tls.inner, grpc_uri)
+	}
     _call(method, reqType, resType, properties) {
 	let req = reqType.create(properties)
 	var raw = reqType.encode(req).finish();
