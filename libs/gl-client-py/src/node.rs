@@ -25,7 +25,7 @@ impl Node {
             Err(_) => return Err(PyValueError::new_err("unknown network")),
         };
 
-        let inner = gl::node::Node::new(node_id.clone(), network, tls.inner);
+        let inner = gl::node::Node::new(node_id, network, tls.inner);
 
         // Connect to both interfaces in parallel to avoid doubling the startup time:
 
