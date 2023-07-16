@@ -19,4 +19,9 @@ pub enum Error {
     },
     #[error("no method {0}")]
     NoSuchMethod(String),
+    #[error("error: {source}")]
+    General {
+        #[from]
+        source: anyhow::Error,
+    },
 }

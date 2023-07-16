@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     runtime::{convert, exec},
 };
-use gl_client::{node::Client, pb};
+use gl_client::{bitcoin::Network, pb, tls::TlsConfig};
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 use prost::Message;
@@ -13,8 +13,24 @@ pub(crate) struct Node {
 }
 
 impl Node {
-    pub(crate) fn new(client: Client) -> Self {
-        Node { client }
+    pub(crate) fn new(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
+        let buf = cx.argument::<JsBuffer>(0)?;
+        let node_id: Vec<u8> = buf.as_slice(&cx).to_vec();
+        let network = cx.argument::<JsString>(1)?.value(&mut cx);
+        let tls = (**cx.argument::<JsBox<TlsConfig>>(2)?).clone();
+        let grpc_uri = cx.argument::<JsString>(3)?.value(&mut cx);
+
+        let network: Network = match network.parse() {
+            Ok(v) => v,
+            Err(_) => cx.throw_error("Error parsing the network")?,
+        };
+
+        let node = gl_client::node::Node::new(node_id, network, tls);
+        let client = match exec(node.connect(grpc_uri)) {
+            Ok(n) => n,
+            Err(e) => cx.throw_error(format!("Error creating node: {}", e))?,
+        };
+        Ok(cx.boxed(Self { client }))
     }
 
     async fn dispatch(&self, method: &str, req: &[u8]) -> Result<Vec<u8>, crate::error::Error> {
@@ -107,7 +123,7 @@ impl Node {
         let this = cx.argument::<JsBox<Node>>(0)?;
         let method = cx.argument::<JsString>(1)?.value(&mut cx);
         let buf = cx.argument::<JsBuffer>(2)?;
-        let args: Vec<u8> = buf.as_slice(&mut cx).to_vec();
+        let args: Vec<u8> = buf.as_slice(&cx).to_vec();
 
         match exec(this.dispatch(method.as_ref(), &args)) {
             Ok(res) => {

@@ -1,6 +1,4 @@
-use crate::node::Node;
 use crate::runtime::{convert, exec};
-use crate::tls::TlsConfig;
 use crate::Signer;
 use gl_client::bitcoin::Network;
 use neon::prelude::*;
@@ -14,7 +12,7 @@ pub(crate) struct Scheduler {
 impl Scheduler {
     pub(crate) fn new(mut cx: FunctionContext) -> JsResult<JsBox<Self>> {
         let buf = cx.argument::<JsBuffer>(0)?;
-        let node_id: Vec<u8> = buf.as_slice(&mut cx).to_vec();
+        let node_id: Vec<u8> = buf.as_slice(&cx).to_vec();
         let network = cx.argument::<JsString>(1)?.value(&mut cx);
 
         let network: Network = match network.parse() {
@@ -69,15 +67,9 @@ impl Scheduler {
         jsconvert(exec(this.inner.recover(&signer.inner)), cx)
     }
 
-    pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsBox<Node>> {
+    pub(crate) fn schedule(mut cx: FunctionContext) -> JsResult<JsBuffer> {
         let this = cx.argument::<JsBox<Scheduler>>(0)?;
-
-        let tls = dbg!(cx.argument::<JsBox<TlsConfig>>(1))?;
-
-        match exec(this.inner.schedule(tls.inner.clone())) {
-            Ok(client) => Ok(cx.boxed(Node::new(client))),
-            Err(e) => cx.throw_error(format!("{}", e))?,
-        }
+        jsconvert(exec(this.inner.schedule()), cx)
     }
 
     pub(crate) fn get_invite_codes(mut cx: FunctionContext) -> JsResult<JsBox<Vec<InviteCode>>> {
