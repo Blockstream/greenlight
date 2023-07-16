@@ -22,10 +22,10 @@ impl TlsConfig {
     pub(crate) fn identity(mut cx: FunctionContext) -> JsResult<JsBox<TlsConfig>> {
         let this = cx.argument::<JsBox<TlsConfig>>(0)?;
         let buf = cx.argument::<JsBuffer>(1)?;
-        let cert_pem: Vec<u8> = buf.as_slice(&mut cx).to_vec();
+        let cert_pem: Vec<u8> = buf.as_slice(&cx).to_vec();
 
         let buf = cx.argument::<JsBuffer>(2)?;
-        let key_pem: Vec<u8> = buf.as_slice(&mut cx).to_vec();
+        let key_pem: Vec<u8> = buf.as_slice(&cx).to_vec();
         Ok(cx.boxed(Self {
             inner: this.inner.clone().identity(cert_pem, key_pem),
         }))

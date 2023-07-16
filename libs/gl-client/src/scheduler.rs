@@ -199,24 +199,15 @@ impl Scheduler {
         Ok(res)
     }
 
-    pub async fn schedule<T>(&self, tls: TlsConfig) -> Result<T>
-    where
-        T: GrpcClient,
-    {
-        let sched = self
+    pub async fn schedule(&self) -> Result<pb::scheduler::NodeInfoResponse> {
+        let res = self
             .client
             .clone()
             .schedule(pb::scheduler::ScheduleRequest {
                 node_id: self.node_id.clone(),
             })
-            .await?
-            .into_inner();
-
-        let uri = sched.grpc_uri;
-
-        node::Node::new(self.node_id.clone(), self.network, tls)
-            .connect(uri)
-            .await
+            .await?;
+        Ok(res.into_inner())
     }
 
     pub async fn export_node(&self) -> Result<pb::scheduler::ExportNodeResponse> {
