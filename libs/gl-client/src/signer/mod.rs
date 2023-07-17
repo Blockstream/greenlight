@@ -5,8 +5,9 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context};
 use bytes::{Buf, BufMut, Bytes};
+use http::uri::InvalidUri;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use log::{debug, info, trace, warn};
@@ -41,8 +42,32 @@ pub struct Signer {
     state: Arc<Mutex<crate::persist::State>>,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("could not connect to scheduler: ")]
+    SchedulerConnection(),
+
+    #[error("scheduler returned an error: {0}")]
+    Scheduler(tonic::Status),
+
+    #[error("could not connect to node: {0}")]
+    NodeConnection(#[from] tonic::transport::Error),
+
+    #[error("connection to node lost: {0}")]
+    NodeDisconnect(#[from] tonic::Status),
+
+    #[error("authentication error: {0}")]
+    Auth(crate::Error),
+
+    #[error("scheduler returned faulty URI: {0}")]
+    InvalidUri(#[from] InvalidUri),
+
+    #[error("other: {0}")]
+    Other(anyhow::Error),
+}
+
 impl Signer {
-    pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer> {
+    pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer, anyhow::Error> {
         use lightning_signer::policy::{
             filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
         };
@@ -98,7 +123,7 @@ impl Signer {
         })
     }
 
-    fn handler(&self) -> Result<handler::RootHandler> {
+    fn handler(&self) -> Result<handler::RootHandler, anyhow::Error> {
         Ok(handler::RootHandlerBuilder::new(
             self.network,
             0 as u64,
@@ -110,7 +135,10 @@ impl Signer {
         .0)
     }
 
-    fn handler_with_approver(&self, approver: Arc<dyn Approve>) -> Result<handler::RootHandler> {
+    fn handler_with_approver(
+        &self,
+        approver: Arc<dyn Approve>,
+    ) -> Result<handler::RootHandler, Error> {
         Ok(handler::RootHandlerBuilder::new(
             self.network,
             0 as u64,
@@ -119,7 +147,7 @@ impl Signer {
         )
         .approver(approver)
         .build()
-        .map_err(|e| anyhow!("handler_with_approver build: {:?}", e))?
+        .map_err(|e| Error::Other(anyhow!("handler_with_approver build: {:?}", e)))?
         .0)
     }
 
@@ -158,7 +186,7 @@ impl Signer {
         })
     }
 
-    fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>> {
+    fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>, Error> {
         Ok(handler.handle(Signer::initreq()).unwrap().0.as_vec())
     }
 
@@ -170,7 +198,7 @@ impl Signer {
     fn check_request_auth(
         &self,
         requests: Vec<crate::pb::PendingRequest>,
-    ) -> Vec<Result<crate::pb::PendingRequest>> {
+    ) -> Vec<Result<crate::pb::PendingRequest, anyhow::Error>> {
         // Filter out requests lacking a required field. They are unverifiable anyway.
         use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
         requests
@@ -197,7 +225,7 @@ impl Signer {
     /// Given the URI of the running node, connect to it and stream
     /// requests from it. The requests are then verified and processed
     /// using the `Hsmd`.
-    pub async fn run_once(&self, node_uri: Uri) -> Result<()> {
+    pub async fn run_once(&self, node_uri: Uri) -> Result<(), Error> {
         debug!("Connecting to node at {}", node_uri);
         let c = Channel::builder(node_uri)
             .tls_config(self.tls.inner.clone().domain_name("localhost"))?
@@ -216,7 +244,7 @@ impl Signer {
             let req = match stream
                 .message()
                 .await
-                .context("receiving the next request")?
+                .map_err(|e| Error::NodeDisconnect(e))?
             {
                 Some(r) => r,
                 None => {
@@ -245,7 +273,7 @@ impl Signer {
             // TODO: Decode requests and reconcile them with the changes
             use auth::Authorizer;
             let auth = auth::DummyAuthorizer {};
-            let approvals = auth.authorize(ctxrequests)?;
+            let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
             // TODO: apply approval to approver / handler
 
             match self.process_request(req, approvals).await {
@@ -254,7 +282,7 @@ impl Signer {
                     client
                         .respond_hsm_request(response)
                         .await
-                        .context("sending response to hsm request")?;
+                        .map_err(|e| Error::NodeDisconnect(e))?;
                 }
                 Err(e) => {
                     warn!(
@@ -270,7 +298,7 @@ impl Signer {
         &self,
         req: HsmRequest,
         approvals: Vec<Approval>,
-    ) -> Result<HsmResponse> {
+    ) -> Result<HsmResponse, Error> {
         let mut b = Bytes::from(req.raw.clone());
         let diff: crate::persist::State = req.signer_state.into();
         let prestate = {
@@ -288,10 +316,14 @@ impl Signer {
 
         if b.get_u16() == 23 {
             warn!("Refusing to process sign-message request");
-            return Err(anyhow!("Cannot process sign-message requests from node."));
+            return Err(Error::Other(anyhow!(
+                "Cannot process sign-message requests from node."
+            )));
         }
 
-        let msg = vls_protocol::msgs::from_vec(req.raw)?;
+        let msg = vls_protocol::msgs::from_vec(req.raw)
+            .context("parsing request")
+            .map_err(|e| Error::Other(e))?;
 
         log::trace!("Handling message {:?}", msg);
 
@@ -314,7 +346,7 @@ impl Signer {
                     .handle(msg)
             }
         }
-        .map_err(|e| anyhow!("processing request: {e:?}"))?;
+        .map_err(|e| Error::Other(anyhow!("processing request: {e:?}")))?;
 
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
@@ -392,7 +424,7 @@ impl Signer {
     /// `GL_SCHEDULER_GRPC_URI` (of the default URI) and wait for the
     /// node to be scheduled. Once scheduled, connect to the node
     /// directly and start streaming and processing requests.
-    pub async fn run_forever(&self, shutdown: mpsc::Receiver<()>) -> Result<()> {
+    pub async fn run_forever(&self, shutdown: mpsc::Receiver<()>) -> Result<(), anyhow::Error> {
         let scheduler_uri = crate::utils::scheduler_uri();
         Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await
     }
@@ -401,7 +433,7 @@ impl Signer {
         &self,
         mut shutdown: mpsc::Receiver<()>,
         scheduler_uri: String,
-    ) -> Result<()> {
+    ) -> Result<(), anyhow::Error> {
         debug!(
             "Contacting scheduler at {} to get the node address",
             &scheduler_uri
@@ -483,7 +515,7 @@ impl Signer {
     }
 
     // TODO See comment on `sign_device_key`.
-    pub fn sign_challenge(&self, challenge: Vec<u8>) -> Result<Vec<u8>> {
+    pub fn sign_challenge(&self, challenge: Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
         if challenge.len() != 32 {
             return Err(anyhow!("challenge is not 32 bytes long"));
         }
@@ -497,7 +529,7 @@ impl Signer {
     // TODO Use a lower-level API that bypasses the LN message
     // prefix. This will allow us to re-expose the sign-message API to
     // node users.
-    pub fn sign_device_key(&self, key: &[u8]) -> Result<Vec<u8>> {
+    pub fn sign_device_key(&self, key: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
         if key.len() != 65 {
             return Err(anyhow!("key is not 65 bytes long"));
         }
@@ -505,7 +537,7 @@ impl Signer {
     }
 
     /// Signs a message with the hsmd client.
-    fn sign_message(&self, msg: Vec<u8>) -> Result<Vec<u8>> {
+    fn sign_message(&self, msg: Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
         if msg.len() > u16::MAX as usize {
             return Err(anyhow!("Message exceeds max len of {}", u16::MAX));
         }
@@ -530,7 +562,7 @@ impl Signer {
     }
 
     /// Signs an invoice.
-    pub fn sign_invoice(&self, msg: Vec<u8>) -> Result<Vec<u8>> {
+    pub fn sign_invoice(&self, msg: Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
         if msg.len() > u16::MAX as usize {
             return Err(anyhow!("Message exceeds max len of {}", u16::MAX));
         }
@@ -544,7 +576,7 @@ impl Signer {
 
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
-    pub async fn node(&self) -> Result<Client> {
+    pub async fn node(&self) -> Result<Client, anyhow::Error> {
         node::Node::new(self.node_id(), self.network, self.tls.clone())
             .schedule()
             .await
@@ -560,7 +592,7 @@ impl Signer {
 /// incoming requests match up with the user intent. User intent here
 /// refers to there being a user-signed command that matches the
 /// effects we are being asked to sign off.
-fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request> {
+fn decode_request(r: crate::pb::PendingRequest) -> Result<model::Request, anyhow::Error> {
     // Strip the compressions flag (1 byte) and the length prefix (4
     // bytes big endian) and we're left with just the payload. See
     // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
