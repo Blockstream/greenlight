@@ -17,12 +17,26 @@ PACKAGE=${JSDIR}/build/stage/${VERSION}/gl-client-${VERSION}-${PLAT}-${ARCH}.tar
 .PHONY: build-js-macos-${ARCH} build-js-macos build-js-linux build-js
 .NOTPARALLEL: build-js-macos-arm64 build-js-macos-x86_64 build-js-linux
 
+JSPROTOS = \
+	${REPO}/libs/proto/scheduler.proto \
+	${REPO}/libs/proto/greenlight.proto
+
+jsproto: ${JSDIR}/proto.js
+
+${JSDIR}/proto.js: node_modules ${JSPROTOS}
+	cd ${JSDIR} && \
+	npx pbjs -t static-module -w commonjs -o ${JSDIR}/proto.js ${JSPROTOS}
+
 build-js-macos-${ARCH}: ${JSSRC} ${JSRSSRC} 
 	cd ${JSDIR} && \
 	TARGET=${RSARCH}-apple-darwin npm run build && \
 	mv index.node index-${VERSION}-${ARCH}-apple-darwin.node
 
 build-js-macos: build-js-macos-${ARCH}
+
+# Installs the js dependencies.
+node_modules:
+	cd ${JSDIR}; npm install
 
 # We build the binary in an old(-ish) ubuntu so we don't rely on new
 # `glibc`
@@ -77,13 +91,13 @@ ${JSDIR}/package.json: ${JSDIR}/Cargo.toml
 
 clean-js:
 	cargo clean
-	rm -rf ${JSDIR}/index.node ${JSDIR}/node_modules ${JSDIR}/build
+	rm -rf ${JSDIR}/index.node ${JSDIR}/node_modules ${JSDIR}/build ${JSDIR}/proto.js
 
 publish-js: upload-bin-js
 	cd libs/gl-client-js/ && \
 	npm publish || true  # Careful, there is no --skip-existing, so check the outcome here!
 
-check-js: ${JSDIR}/index.node
+check-js: node_modules ${JSDIR}/index.node
 	cd ${JSDIR}; npm install && npm run test
 
 JSARTIFACTS = \

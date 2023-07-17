@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "build": "cargo-cp-artifact -a cdylib gl_client_js index.node -- cargo build --message-format=json-render-diagnostics --release",
+    "build:protos": "pbjs -t static-module -w commonjs -o proto.js ../proto/scheduler.proto",
     "install": "node-pre-gyp install --fallback-to-build=false || npm run build",
     "test": "cargo test --release && jest"
   },
@@ -25,6 +26,7 @@
   "license": "MIT",
   "devDependencies": {
     "jest": "^27.5.1",
+    "protobufjs-cli": "^1.1.1",
     "rewire": "^6.0.0"
   },
   "dependencies": {
