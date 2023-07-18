@@ -1,4 +1,9 @@
+ifdef GL_DOCKER
+REPO_ROOT=/repo
+else
 REPO_ROOT=$(shell git rev-parse --show-toplevel)
+endif
+
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -p)
 
