@@ -33,7 +33,7 @@ build-self: ensure-docker
 	(cd libs; cargo build --all)
 	(cd libs/gl-client-py && \
 	maturin build --strip && \
-	pip install --force-reinstall /tmp/target/wheels/gl_client*.whl)
+	pip install --force-reinstall ${CARGO_TARGET_DIR}/wheels/gl_client*.whl)
 	pip install coverage
 
 check-self: ensure-docker
@@ -58,9 +58,9 @@ docker-shell:
 	  --net=host \
 	  --rm \
           --cap-add=SYS_PTRACE \
-	  -e TMPDIR=/tmp/gltesting/ \
+	  -e TMPDIR=/tmp/gltesting/tmp \
 	  -v /tmp/gltesting/:/tmp/gltesting \
-          -e CARGO_TARGET_DIR=/tmp/target \
+          -e CARGO_TARGET_DIR=/tmp/gltesting/target \
           -v /tmp/target:/tmp/target \
           -v /tmp/gl-cargo-registry:/root/.cargo/registry/ \
 	  -v ${REPO_ROOT}:/repo \
