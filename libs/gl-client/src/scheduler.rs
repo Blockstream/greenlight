@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
 
@@ -27,10 +29,13 @@ impl Scheduler {
         tls: &TlsConfig,
     ) -> Result<Scheduler> {
         debug!("Connecting to scheduler at {}", uri);
-        let channel = Channel::from_shared(uri)?
+        let channel = tonic::transport::Endpoint::from_shared(uri)?
+            .tcp_keepalive(Some(Duration::from_secs(10)))
             .tls_config(tls.inner.clone())?
-            .connect()
-            .await?;
+            .http2_keep_alive_interval(Duration::from_secs(10))
+            .keep_alive_timeout(Duration::from_secs(60))
+            .keep_alive_while_idle(true)
+            .connect_lazy();
 
         let client = SchedulerClient::new(channel);
 
