@@ -1,4 +1,9 @@
+ifdef GL_DOCKER
+REPO=/repo
+else
 REPO=$(shell git rev-parse --show-toplevel)
+endif
+
 ARCH=$(shell node -e "console.log(process.arch)")
 PLAT=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 JSDIR=${REPO}/libs/gl-client-js
