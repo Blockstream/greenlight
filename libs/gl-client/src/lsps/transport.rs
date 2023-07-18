@@ -8,7 +8,8 @@
 // are used as the transport layer. All messages related to LSPS will start
 // with the LSPS_MESSAGE_ID.
 //
-use super::json_rpc::{JsonRpcRequest, JsonRpcResponse};
+use super::json_rpc::{JsonRpcResponse};
+use super::json_rpc_erased::JsonRpcMethodUnerased;
 use crate::node::{Client, ClnClient};
 use crate::pb::{Custommsg, StreamCustommsgRequest};
 use cln_grpc::pb::SendcustommsgRequest;
@@ -44,26 +45,36 @@ impl From<std::io::Error> for TransportError {
     }
 }
 
-
 impl JsonRpcTransport {
-    pub async fn request<I, O, E>(
+
+    pub fn new(client : Client, cln_client : ClnClient) -> Self {
+        Self {
+            client : client,
+            cln_client : cln_client,
+        }
+    }
+
+    pub async fn request<'a, I, O, E>(
         &mut self,
-        peer_id: Vec<u8>,
-        request: JsonRpcRequest<I>,
+        peer_id: &[u8],
+        method : &impl JsonRpcMethodUnerased<'a, I, O, E>,
+        param : I
     ) -> Result<JsonRpcResponse<O, E>, TransportError>
     where
         I: serde::Serialize,
         E: serde::de::DeserializeOwned,
         O: serde::de::DeserializeOwned,
     {
-        // Constructs the message by serializing JsonRpcRequest
+        // Constructs the JsonRpcRequest
+        let request = method.create_request(param)?;
+
         // Core-lightning uses the convention that the first two bytes are the BOLT-8 message id
         let mut cursor: Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
         cursor.write(&LSPS_MESSAGE_ID)?;
         serde_json::to_writer(&mut cursor, &request)?;
 
         let custom_message_request = SendcustommsgRequest {
-            node_id: peer_id.clone(),
+            node_id: peer_id.to_vec(),
             msg: cursor.into_inner(),
         };
 
@@ -127,3 +138,5 @@ impl JsonRpcTransport {
         return Err(TransportError::ConnectionClosed);
     }
 }
+
+

@@ -12,8 +12,8 @@ fn generate_random_rpc_id() -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct JsonRpcMethod<'a, I, O, E> {
-    method: &'a str,
+pub struct JsonRpcMethod<I, O, E> {
+    pub method: &'static str,
     #[serde(skip_serializing)]
     request: std::marker::PhantomData<I>,
     #[serde(skip_serializing)]
@@ -22,14 +22,18 @@ pub struct JsonRpcMethod<'a, I, O, E> {
     error_type: std::marker::PhantomData<E>,
 }
 
-impl<'a, I, O, E> JsonRpcMethod<'a, I, O, E> {
-    pub const fn new(method: &'a str) -> Self {
+impl<I, O, E> JsonRpcMethod<I, O, E> {
+    pub const fn new(method: &'static str) -> Self {
         return Self {
             method: method,
             request: std::marker::PhantomData,
             return_type: std::marker::PhantomData,
             error_type: std::marker::PhantomData,
         };
+    }
+
+    pub const fn name(&self) -> &'static str {
+        self.method
     }
 
     pub fn create_request(&self, params: I) -> JsonRpcRequest<I> {
@@ -42,19 +46,19 @@ impl<'a, I, O, E> JsonRpcMethod<'a, I, O, E> {
     }
 }
 
-impl<O, E> JsonRpcMethod<'static, NoParams, O, E> {
+impl<O, E> JsonRpcMethod<NoParams, O, E> {
     pub fn create_request_no_params(&self) -> JsonRpcRequest<NoParams> {
         self.create_request(NoParams::default())
     }
 }
 
-impl<'a, I, O, E> std::convert::From<&JsonRpcMethod<'a, I, O, E>> for String {
+impl<'a, I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
     fn from(value: &JsonRpcMethod<I, O, E>) -> Self {
         return value.method.clone().into();
     }
 }
 
-impl<'de, 'a, I, O, E> JsonRpcMethod<'a, I, O, E>
+impl<'de, 'a, I, O, E> JsonRpcMethod<I, O, E>
 where
     O: Deserialize<'de>,
     E: Deserialize<'de>,
@@ -122,16 +126,16 @@ impl JsonRpcRequest<NoParams> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcResponseSuccess<O> {
-    id: String,
-    result: O,
-    json_rpc: String,
+    pub id: String,
+    pub result: O,
+    pub json_rpc: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcResponseFailure<E> {
-    id: String,
-    error: ErrorData<E>,
-    json_rpc: String,
+    pub id: String,
+    pub error: ErrorData<E>,
+    pub json_rpc: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -142,10 +146,10 @@ pub enum JsonRpcResponse<O, E> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ErrorData<E> {
-    code: i64,
-    message: String,
-    data: Option<E>,
+pub struct ErrorData<E> {
+    pub code: i64,
+    pub message: String,
+    pub data: Option<E>,
 }
 
 #[cfg(test)]
@@ -263,7 +267,7 @@ mod test {
 
     #[test]
     fn parse_rpc_response_failure_from_call() {
-        let rpc_method: JsonRpcMethod<'_, NoParams, String, ()> =
+        let rpc_method: JsonRpcMethod<NoParams, String, ()> =
             JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
 
         let json_value = serde_json::json!({

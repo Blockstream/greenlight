@@ -1,4 +1,5 @@
-use crate::lsps::json_rpc::{JsonRpcMethod, NoParams};
+pub use crate::lsps::json_rpc::{JsonRpcMethod, NoParams};
+use crate::lsps::json_rpc_erased::{JsonRpcMethodErased, JsonRpcMethodUnerased};
 use serde::{Deserialize, Serialize};
 
 use time::format_description::well_known::Rfc3339;
@@ -12,17 +13,65 @@ type OnchainFeeRate = u64;
 // - I represents the params
 // - O represents the result data
 // - E represents the error if present
-pub const LSPS0_LISTPROTOCOLS: JsonRpcMethod<NoParams, ProtocolList, ()> =
-    JsonRpcMethod::new("lsps0.listprotocols");
+//
+// When creating a new type you must
+// 1. Add it to the JsonRpcMethodEnum
+// 2. Add it to the from_method_name function
+pub type Lsps0ListProtocols = JsonRpcMethod<NoParams, ProtocolList, ()>;
+pub type Lsps1Info = JsonRpcMethod<NoParams, Lsps1InfoResponse, ()>;
+pub type Lsps1Order = JsonRpcMethod<Lsps1GetOrderRequest, Lsps1GetOrderResponse, ()>;
 
-pub const LSPS1_GETINFO: JsonRpcMethod<NoParams, Lsps1InfoResponse, ()> =
-    JsonRpcMethod::new("lsps1.info");
-pub const LSPS1_GETORDER: JsonRpcMethod<Lsps1GetOrderRequest, Lsps1GetOrderResponse, ()> =
-    JsonRpcMethod::new("lsps1.order");
+pub const LSPS0_LISTPROTOCOLS: Lsps0ListProtocols = Lsps0ListProtocols::new("lsps0.listprotocols");
+pub const LSPS1_GETINFO: Lsps1Info = Lsps1Info::new("lsps1.info");
+pub const LSPS1_GETORDER: Lsps1Order = Lsps1Order::new("lsps1.order");
+
+pub enum JsonRpcMethodEnum {
+    Lsps0ListProtocols(Lsps0ListProtocols),
+    Lsps1Info(Lsps1Info),
+    Lsps1Order(Lsps1Order)
+}
+
+impl JsonRpcMethodEnum {
+
+    pub fn from_method_name(value : &str) -> Result<Self, ()> {
+        match value {
+            "lsps0.list_protocols" => Ok(Self::Lsps0ListProtocols(LSPS0_LISTPROTOCOLS)),
+            "lsps1.info" => Ok(Self::Lsps1Info(LSPS1_GETINFO)),
+            "lsps1.order" => Ok(Self::Lsps1Order(LSPS1_GETORDER)),
+            _ => Err(()),
+        }
+    }
+
+    pub fn ref_erase<'a>(&'a self) -> &'a dyn JsonRpcMethodErased {
+        match self {
+            Self::Lsps0ListProtocols(list_protocol) => list_protocol.ref_erase(),
+            Self::Lsps1Info(info) => info.ref_erase(),
+            Self::Lsps1Order(order) => order.ref_erase(),
+        }
+    }
+}
+
+impl<'a> JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> for JsonRpcMethodEnum {
+
+    fn name(&self) -> &str {
+        self.ref_erase().name()
+    }
+
+    fn create_request(&self, params: Vec<u8>) -> Result<super::json_rpc::JsonRpcRequest<Vec<u8>>, serde_json::Error> {
+        self.ref_erase().create_request(params)
+    }
+
+    fn parse_json_response(
+            &self,
+            json_str: &str,
+        ) -> Result<super::json_rpc::JsonRpcResponse<Vec<u8>, Vec<u8>>, serde_json::Error> {
+            self.ref_erase().parse_json_response(json_str)
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProtocolList {
-    protocols: Vec<u32>,
+    pub protocols: Vec<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,15 +97,15 @@ pub struct Lsps1Options {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Lsps1GetOrderRequest {
-    api_version: u16,
-    lsp_balance_sat: SatAmount,
-    client_balance_sat: SatAmount,
-    confirms_within_blocks: u8,
-    channel_expiry_blocks: u32,
-    token: Option<String>,
-    refund_onchain_address: Option<String>,
+    pub api_version: u16,
+    pub lsp_balance_sat: SatAmount,
+    pub client_balance_sat: SatAmount,
+    pub confirms_within_blocks: u8,
+    pub channel_expiry_blocks: u32,
+    pub token: Option<String>,
+    pub refund_onchain_address: Option<String>,
     #[serde(rename = "announceChannel")]
-    announce_channel: String,
+    pub announce_channel: String,
 }
 
 use serde_with::serde_as;
@@ -141,7 +190,10 @@ mod test {
         // LSPS-0 spec demands that a parameter-by-name scheme is always followed
         let v: Value = from_str(&json_str).unwrap();
         assert_eq!(v.get("json_rpc").unwrap(), "2.0");
-        assert_eq!(v.get("method").unwrap(), "lsps0.listprotocols");
+        assert_eq!(
+            v.get("method").unwrap().as_str().unwrap(),
+            "lsps0.listprotocols"
+        );
         assert!(v.get("params").unwrap().as_object().unwrap().is_empty())
     }
 }
