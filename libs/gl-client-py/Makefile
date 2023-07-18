@@ -1,5 +1,10 @@
 # Execute only from the repo root
+ifdef GL_DOCKER
+REPO=/repo
+else
 REPO=$(shell git rev-parse --show-toplevel)
+endif
+
 DIR=${REPO}/libs/gl-client-py
 PYVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "gl-client-py") | .version')
 PYDIR=${REPO}/libs/gl-client-py
