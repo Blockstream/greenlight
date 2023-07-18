@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
@@ -98,11 +100,13 @@ impl Node {
             }
         };
 
-        let chan: tonic::transport::Channel = Channel::builder(node_uri)
+        let chan = tonic::transport::Endpoint::from_shared(node_uri.to_string())?
+            .tcp_keepalive(Some(Duration::from_secs(10)))
             .tls_config(tls.inner)?
-            .connect()
-            .await?;
-
+            .http2_keep_alive_interval(Duration::from_secs(10))
+            .keep_alive_timeout(Duration::from_secs(60))
+            .keep_alive_while_idle(true)
+            .connect_lazy();
         let chan = ServiceBuilder::new().layer(layer).service(chan);
 
         Ok(C::new_with_inner(chan))
