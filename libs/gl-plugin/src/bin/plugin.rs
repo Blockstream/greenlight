@@ -67,7 +67,7 @@ async fn start_node_server(
     .await?;
 
     let cln_node = gl_plugin::grpc::pb::node_server::NodeServer::new(
-        gl_plugin::node::WrappedNodeServer::new(&rpc_path)
+        gl_plugin::node::WrappedNodeServer::new(node_server.clone())
             .await
             .context("creating cln_grpc::pb::node_server::NodeServer instance")?,
     );
