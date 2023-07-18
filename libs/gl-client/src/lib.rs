@@ -46,7 +46,7 @@ pub mod utils {
 
     pub fn scheduler_uri() -> String {
         std::env::var("GL_SCHEDULER_GRPC_URI")
-            .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com:2601".to_string())
+            .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com".to_string())
     }
 }
 
