@@ -259,10 +259,10 @@ class Scheduler(object):
         node_version = n.signer_version.get_node_version()
         node_version = self.versions.get(node_version, None)
 
-        logging.debug(f"Determined that we need to start {node_version=} for {n.signer_version=}")
+        logging.debug(f"Determined that we need to start node_version={node_version} for n.signer_version={n.signer_version}")
 
         if node_version is None:
-            raise ValueError(f"No node_version found for {n.signer_version=}")
+            raise ValueError(f"No node_version found for n.signer_version={n.signer_version}")
 
         # Otherwise we need to start a new process
         n.process = NodeProcess(

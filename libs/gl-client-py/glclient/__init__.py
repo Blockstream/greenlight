@@ -7,7 +7,7 @@ from .glclient import backup_decrypt_with_seed
 from google.protobuf.message import Message as PbMessage
 from .greenlight_pb2 import Amount
 from binascii import hexlify, unhexlify
-from typing import Optional, List, Union, Iterable, SupportsIndex, Type, TypeVar
+from typing import Optional, List, Union, Iterable, Any, Type, TypeVar
 import logging
 
 
@@ -15,7 +15,7 @@ import logging
 __version__ = "v23.05"
 
 E = TypeVar('E', bound=PbMessage)
-def _convert(cls: Type[E], res: Iterable[SupportsIndex]) -> E:
+def _convert(cls: Type[E], res: Iterable[Any]) -> E:
     return cls.FromString(bytes(res))
 
 

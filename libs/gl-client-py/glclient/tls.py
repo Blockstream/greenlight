@@ -1,5 +1,5 @@
 from . import glclient as native
-from typing import Optional, List, Union, Tuple, Iterable, SupportsIndex, Type, Any, TypeVar
+from typing import Optional, List, Union, Tuple, Iterable, Type, Any, TypeVar
 import logging
 
 logger = logging.getLogger("glclientpy.tls.TlsConfig")
