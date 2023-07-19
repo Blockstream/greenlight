@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
 cryptography = ">=36.0.1,<37.0.0"
 ephemeral-port-reserve = "^1.1.4"
 sh = "^1.14.2"
