@@ -3,7 +3,7 @@ name = "gl-client"
 
 dependencies = [
     "protobuf>=3",
-    "grpcio==1.51.3",
+    "grpcio>=1.56",
     "pyln-grpc-proto>=0.1",
 ]
 
@@ -28,7 +28,7 @@ pyln-grpc-proto = "^0.1"
 
 # Yes, this is pinned to an older version. 1.53 and 1.54 appear to
 # have an issue with TLS (TSI corruption).
-grpcio-tools = "1.51.3"
+grpcio-tools = ">=1.56"
 protobuf = ">=3"
 
 [build-system]
