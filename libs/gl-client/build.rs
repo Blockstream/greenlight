@@ -2,8 +2,18 @@ const NOBODY_CRT: &'static str = "../../tls/users-nobody.pem";
 const NOBODY_KEY: &'static str = "../../tls/users-nobody-key.pem";
 
 use std::env::var;
+use std::process::Command;
 
 fn main() {
+    // It's a lot easier to help users if we have the exact version of
+    // the Rust bindings that were used.
+    let output = Command::new("git")
+        .args(&["rev-parse", "HEAD"])
+        .output()
+        .unwrap();
+    let git_hash = String::from_utf8(output.stdout).unwrap();
+    println!("cargo:rustc-env=GIT_HASH={}", git_hash);
+
     // Either both are set or none is :-) We set an env-var for
     // `rustc` to pick up and include using `env!`.
     let vars = match (var("GL_CUSTOM_NOBODY_KEY"), var("GL_CUSTOM_NOBODY_CERT")) {
