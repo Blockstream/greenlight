@@ -27,6 +27,7 @@ mod auth;
 pub mod model;
 
 const VERSION: &str = "v23.05";
+const GITHASH: &str = env!("GIT_HASH");
 
 #[derive(Clone)]
 pub struct Signer {
@@ -74,7 +75,7 @@ impl Signer {
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
 
-        info!("Initializing signer for {VERSION} (VLS)");
+        info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let mut sec: [u8; 32] = [0; 32];
         sec.copy_from_slice(&secret[0..32]);
 
