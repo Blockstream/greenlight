@@ -30,10 +30,10 @@ impl Scheduler {
     ) -> Result<Scheduler> {
         debug!("Connecting to scheduler at {}", uri);
         let channel = tonic::transport::Endpoint::from_shared(uri)?
-            .tcp_keepalive(Some(Duration::from_secs(10)))
             .tls_config(tls.inner.clone())?
-            .http2_keep_alive_interval(Duration::from_secs(10))
-            .keep_alive_timeout(Duration::from_secs(60))
+            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
+            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
+            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
             .keep_alive_while_idle(true)
             .connect_lazy();
 

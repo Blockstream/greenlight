@@ -50,6 +50,8 @@ pub mod utils {
     }
 }
 
+use std::time::Duration;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -59,3 +61,6 @@ pub enum Error {
 }
 
 pub use lightning_signer::bitcoin;
+
+pub(crate) const TCP_KEEPALIVE: Duration = Duration::from_secs(30);
+pub(crate) const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(90);

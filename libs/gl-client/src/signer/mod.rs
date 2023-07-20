@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
-use tonic::transport::{Channel, Uri};
+use tonic::transport::{Endpoint, Uri};
 use tonic::Request;
 use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApprover};
 use vls_protocol_signer::handler;
@@ -227,10 +227,13 @@ impl Signer {
     /// using the `Hsmd`.
     pub async fn run_once(&self, node_uri: Uri) -> Result<(), Error> {
         debug!("Connecting to node at {}", node_uri);
-        let c = Channel::builder(node_uri)
+        let c = Endpoint::from_shared(node_uri.to_string())?
             .tls_config(self.tls.inner.clone().domain_name("localhost"))?
-            .connect()
-            .await?;
+            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
+            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
+            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
+            .keep_alive_while_idle(true)
+            .connect_lazy();
 
         let mut client = NodeClient::new(c);
 
@@ -439,10 +442,13 @@ impl Signer {
             &scheduler_uri
         );
 
-        let channel = Channel::from_shared(scheduler_uri)?
+        let channel = Endpoint::from_shared(scheduler_uri)?
             .tls_config(self.tls.inner.clone())?
-            .connect()
-            .await?;
+            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
+            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
+            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
+            .keep_alive_while_idle(true)
+            .connect_lazy();
         let mut scheduler = SchedulerClient::new(channel);
 
         #[allow(deprecated)]
