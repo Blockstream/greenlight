@@ -526,7 +526,8 @@ impl Signer {
         if challenge.len() != 32 {
             return Err(anyhow!("challenge is not 32 bytes long"));
         }
-        self.sign_message(challenge)
+        let (sig, _) = self.sign_message(challenge)?;
+        Ok(sig)
     }
 
     /// Signs the devices public key. This signature is meant to be appended
@@ -540,11 +541,13 @@ impl Signer {
         if key.len() != 65 {
             return Err(anyhow!("key is not 65 bytes long"));
         }
-        self.sign_message(key.to_vec())
+        let (sig, _) = self.sign_message(key.to_vec())?;
+        Ok(sig)
     }
 
-    /// Signs a message with the hsmd client.
-    fn sign_message(&self, msg: Vec<u8>) -> Result<Vec<u8>, anyhow::Error> {
+    /// Signs a message with the hsmd client. Returns a tuple with the signature
+    /// and the unmodified recovery id.
+    pub fn sign_message(&self, msg: Vec<u8>) -> Result<(Vec<u8>, u8), anyhow::Error> {
         if msg.len() > u16::MAX as usize {
             return Err(anyhow!("Message exceeds max len of {}", u16::MAX));
         }
@@ -565,7 +568,12 @@ impl Signer {
             .handle(vls_protocol::msgs::Message::SignMessage(req))
             .unwrap();
 
-        Ok(response.0.as_vec()[2..66].to_vec())
+        // The signature returned by VLS consists of the signature with the
+        // recovery id appended.
+        let complete_sig = response.0.as_vec();
+        let sig = complete_sig[2..66].to_vec();
+        let recovery_id = complete_sig[66];
+        Ok((sig, recovery_id))
     }
 
     /// Signs an invoice.
