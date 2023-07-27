@@ -59,7 +59,7 @@ RUN python3 -m pip install -U \
 ADD . /repo
 WORKDIR /repo
 
-RUN make -j $(proc) cln
+RUN make cln
 
 RUN (cd /repo/libs/gl-client && cargo build --release) && \
     (cd /repo/libs/gl-client-py && maturin build --release --strip --compatibility manylinux_2_28) && \
