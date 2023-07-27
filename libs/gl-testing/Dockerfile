@@ -17,7 +17,7 @@ ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
 
 # Some variables to fix python's absolutely horrendous grpcio
 # package. Forking in the process seems to get it really confused.
-ENV GRPC_ENABLE_FORK_SUPPORT=false
+ENV GRPC_ENABLE_FORK_SUPPORT=1
 ENV GRPC_POLL_STRATEGY=poll
 
 
@@ -65,7 +65,7 @@ RUN python3 -m pip install -U \
 ADD . /repo
 WORKDIR /repo
 
-RUN make -j $(proc) cln
+RUN make cln
 
 RUN (cd /repo/libs/gl-client && cargo build --release) && \
     (cd /repo/libs/gl-client-py && maturin build --release --strip --compatibility manylinux_2_28) && \
