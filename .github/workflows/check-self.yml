@@ -1,0 +1,27 @@
+name: Check Self
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - opened
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and push
+      uses: docker/build-push-action @v4
+      with:
+        push: false
+        tags: gltesting:latest
+        file: libs/gl-testing/Dockerfile
+        load: true
+    - name: Check Self
+      run: make docker-check-self
