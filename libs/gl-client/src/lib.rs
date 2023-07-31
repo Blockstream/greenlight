@@ -30,6 +30,8 @@ pub mod signer;
 
 pub mod persist;
 
+pub mod lnurl;
+
 /// Helpers to configure the mTLS connection authentication.
 ///
 /// mTLS configuration for greenlight clients. Clients are
