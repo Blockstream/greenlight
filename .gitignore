@@ -8,6 +8,7 @@ hsm_secret
 libs/Cargo.lock
 *~
 site
+.DS_Store
 
 # These files are auto generated and may contain sensible data that
 # we do not want to check-in!
