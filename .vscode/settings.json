@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./libs/gl-client/Cargo.toml",
+    "./libs/gl-client/Cargo.toml"
+  ]
+}
