@@ -80,21 +80,20 @@ docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
 	  .
 
 docker-shell:
-	mkdir -p /tmp/target && \
-	mkdir -p /tmp/gltesting && \
-	mkdir -p /tmp/gl-cargo-registry && \
+	mkdir -p /tmp/gltesting/tmp && \
+	mkdir -p /tmp/gltesting/target && \
+	mkdir -p /tmp/gltesting/.cargo/.registry && \
 	docker run \
-	  -ti \
-	  --net=host \
-	  --rm \
-          --cap-add=SYS_PTRACE \
-	  -e TMPDIR=/tmp/gltesting/tmp \
-	  -v /tmp/gltesting/:/tmp/gltesting \
-          -e CARGO_TARGET_DIR=/tmp/gltesting/target \
-          -v /tmp/target:/tmp/target \
-          -v /tmp/gl-cargo-registry:/root/.cargo/registry/ \
-	  -v ${REPO_ROOT}:/repo \
-	  gltesting bash
+		-ti \
+		--net=host \
+		--rm \
+		--cap-add=SYS_PTRACE \
+		-e TMPDIR=/tmp/gltesting/tmp \
+		-v /tmp/gltesting/:/tmp/gltesting \
+		-e CARGO_TARGET_DIR=/tmp/gltesting/target \
+		-v /tmp/gltesting/.cargo/.registry:/home/$(shell whoami)/.cargo/registry/ \
+		-v ${REPO_ROOT}:/repo \
+		gltesting bash
 
 docker-check-self:
 	docker run \
