@@ -23,6 +23,8 @@ PROTOSRC = \
 	libs/proto/greenlight.proto \
 	libs/proto/node.proto
 
+GENALL += ${PYPROTOS}
+
 pygrpc: ${PYPROTOS}
 
 ${PYPROTOS}: ${PROTOSRC}
