@@ -23,7 +23,7 @@ black = "^23.1.0"
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
-grpcio = "^1.56"
+grpcio = ">=1.56"
 pyln-grpc-proto = "^0.1"
 
 # Yes, this is pinned to an older version. 1.53 and 1.54 appear to

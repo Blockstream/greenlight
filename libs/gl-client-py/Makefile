@@ -11,12 +11,10 @@ PYPROTOC_OPTS = \
 	--experimental_allow_proto3_optional
 
 PYPROTOS = \
-	${PYDIR}/glclient/scheduler_pb2.py \
 	${PYDIR}/glclient/greenlight_pb2.py \
-	${PYDIR}/glclient/node_pb2.py \
-	${PYDIR}/glclient/scheduler_pb2_grpc.py \
 	${PYDIR}/glclient/greenlight_pb2_grpc.py \
-	${PYDIR}/glclient/node_pb2_grpc.py
+	${PYDIR}/glclient/scheduler_pb2.py \
+	${PYDIR}/glclient/scheduler_pb2_grpc.py
 
 PROTOSRC = \
 	libs/proto/scheduler.proto \
@@ -30,11 +28,8 @@ pygrpc: ${PYPROTOS}
 ${PYPROTOS}: ${PROTOSRC}
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} scheduler.proto
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} greenlight.proto
-	python -m grpc_tools.protoc ${PYPROTOC_OPTS} node.proto
-	# Postprocess the import path
 	sed -i 's/import scheduler_pb2 as scheduler__pb2/from . import scheduler_pb2 as scheduler__pb2/g' ${PYDIR}/glclient/scheduler_pb2_grpc.py
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/greenlight_pb2_grpc.py
-	sed -i 's/import node_pb2 as node__pb2/from . import node_pb2 as node__pb2/g' ${PYDIR}/glclient/node_pb2_grpc.py
 
 check-py:
 	cd libs/gl-client-py; pytest tests -n $(shell nproc)
