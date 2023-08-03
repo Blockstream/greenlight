@@ -15,12 +15,6 @@ ENV RUST_LOG=debug
 ENV PYTHONPATH=/repo/libs/gl-testing
 ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
 
-# Some variables to fix python's absolutely horrendous grpcio
-# package. Forking in the process seems to get it really confused.
-ENV GRPC_ENABLE_FORK_SUPPORT=false
-ENV GRPC_POLL_STRATEGY=poll
-
-
 RUN apt-get update && apt-get install -qqy \
     python3 \
     python3-pip \

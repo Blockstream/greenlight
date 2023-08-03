@@ -1,26 +1,28 @@
-from gltesting.utils import NodeVersion, SignerVersion, Network
-from gltesting.node import NodeProcess
-from glclient import scheduler_pb2_grpc as schedgrpc
-from glclient import scheduler_pb2 as schedpb
-from glclient import greenlight_pb2 as greenlightpb
-from concurrent.futures import ThreadPoolExecutor
-import grpc
 import logging
-import tempfile
-from pathlib import Path
-from gltesting import certs
-from dataclasses import dataclass
-from gltesting.identity import Identity
 import os
-import subprocess
 import shutil
-from typing import Optional
-from pyln.testing.utils import BitcoinD
-from threading import Condition
-from pyln.client import LightningRpc
-import time
 import socket
-from typing import List
+import subprocess
+import tempfile
+import threading
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from threading import Condition
+from typing import List, Optional
+
+import anyio
+import purerpc
+from glclient import greenlight_pb2 as greenlightpb
+from glclient import scheduler_pb2 as schedpb
+from pyln.client import LightningRpc
+from pyln.testing.utils import BitcoinD
+
+from gltesting import certs
+from gltesting import scheduler_grpc as schedgrpc
+from gltesting.identity import Identity
+from gltesting.node import NodeProcess
+from gltesting.utils import Network, NodeVersion, SignerVersion
 
 
 @dataclass
@@ -54,6 +56,7 @@ class InviteCode:
     code: str
     is_redeemed: bool
 
+
 def enumerate_cln_versions():
     """Search `$PATH` and `$CLN_PATH` for CLN versions."""
     path = os.environ["PATH"].split(":")
@@ -76,10 +79,12 @@ def enumerate_cln_versions():
     return versions
 
 
-class Scheduler(object):
-    """A mock Scheduler simulating Greenlight's behavior."""
+class AsyncScheduler(schedgrpc.SchedulerServicer):
+    """A mock scheduler to test against."""
 
-    def __init__(self, bitcoind: BitcoinD, grpc_port=2601, identity=None, node_directory=None):
+    def __init__(
+        self, bitcoind: BitcoinD, grpc_port=2601, identity=None, node_directory=None
+    ):
         self.grpc_port = grpc_port
         self.server = None
         print("Starting scheduler with caroot", identity.caroot)
@@ -89,7 +94,7 @@ class Scheduler(object):
         self.nodes: List[Node] = []
         self.versions = enumerate_cln_versions()
         self.bitcoind = bitcoind
-        self.invite_codes = []
+        self.invite_codes: List[str] = []
         self.received_invite_code = None
 
         if node_directory is not None:
@@ -101,20 +106,26 @@ class Scheduler(object):
     def grpc_addr(self):
         return f"https://localhost:{self.grpc_port}"
 
+    async def run(self):
+        """Entrypoint for the async runtime to take over."""
+        await self.server.serve_async()
+
     def start(self):
         logging.info(f"Starting scheduler on port {self.grpc_port}")
         if self.server is not None:
             raise ValueError("Server already running")
+        self.server = purerpc.Server(
+            port=self.grpc_port, ssl_context=self.identity.to_ssl_context()
+        )
+        self.server.add_service(self.service)
 
-        cred = self.identity.to_server_credentials()
-        self.server = grpc.server(ThreadPoolExecutor(max_workers=10))
-        schedgrpc.add_SchedulerServicer_to_server(self, self.server)
-        self.server.add_secure_port(f"[::]:{self.grpc_port}", cred)
-        self.server.start()
+        threading.Thread(target=anyio.run, args=(self.run,), daemon=True).start()
+        print("Hello")
         logging.info(f"Scheduler started on port {self.grpc_port}")
 
     def stop(self):
-        self.server.stop(grace=1)
+        # TODO Find a way to stop the server gracefully. Restarting
+        # the xdist worker after each test might also address this.
         self.server = None
         for n in self.nodes:
             if n.process:
@@ -133,7 +144,23 @@ class Scheduler(object):
         for code in codes:
             self.invite_codes.append(code)
 
-    def Register(self, req: schedpb.RegistrationRequest, ctx):
+    async def GetChallenge(
+        self,
+        req,
+    ):
+        challenge = Challenge(
+            node_id=req.node_id,
+            scope=req.scope,
+            challenge=bytes([self.next_challenge] * 32),
+            used=False,
+        )
+        self.next_challenge = (self.next_challenge + 1) % 256
+        self.challenges.append(challenge)
+        return schedpb.ChallengeResponse(challenge=challenge.challenge)
+
+    async def Register(
+        self, req: schedpb.RegistrationRequest
+    ) -> schedpb.RegistrationResponse:
         self.received_invite_code = req.invite_code
 
         challenge = None
@@ -175,7 +202,10 @@ class Scheduler(object):
         # the two.
         # TODO Remove this conversion once we merged or shared the implementation
 
-        startupmsgs = [greenlightpb.StartupMessage(request=sm.request, response=sm.response) for sm in req.startupmsgs]
+        startupmsgs = [
+            greenlightpb.StartupMessage(request=sm.request, response=sm.response)
+            for sm in req.startupmsgs
+        ]
 
         self.nodes.append(
             Node(
@@ -206,7 +236,7 @@ class Scheduler(object):
             device_key=key,
         )
 
-    def Recover(self, req, ctx):
+    async def Recover(self, req):
         challenge = None
         for c in self.challenges:
             if c.challenge == req.challenge and not c.used:
@@ -224,29 +254,15 @@ class Scheduler(object):
             device_cert = certs.gencert_from_csr(req.csr, recover=True)
             device_key = None
         else:
-            device_id = certs.gencert(f"/users/{hex_node_id}/recover-{len(self.challenges)}")
+            device_id = certs.gencert(
+                f"/users/{hex_node_id}/recover-{len(self.challenges)}"
+            )
             device_key = device_id.private_key
             device_cert = device_id.cert_chain
 
-        return schedpb.RecoveryResponse(
-            device_cert=device_cert,
-            device_key=device_key
-        )
+        return schedpb.RecoveryResponse(device_cert=device_cert, device_key=device_key)
 
-    def GetChallenge(self, req, ctx):
-        challenge = Challenge(
-            node_id=req.node_id,
-            scope=req.scope,
-            challenge=bytes([self.next_challenge] * 32),
-            used=False,
-        )
-        self.next_challenge = (self.next_challenge + 1) % 256
-
-        self.challenges.append(challenge)
-
-        return schedpb.ChallengeResponse(challenge=challenge.challenge)
-
-    def Schedule(self, req, ctx):
+    async def Schedule(self, req):
         n = self.get_node(req.node_id)
 
         # If already running we just return the existing binding
@@ -259,10 +275,14 @@ class Scheduler(object):
         node_version = n.signer_version.get_node_version()
         node_version = self.versions.get(node_version, None)
 
-        logging.debug(f"Determined that we need to start node_version={node_version} for n.signer_version={n.signer_version}")
+        logging.debug(
+            f"Determined that we need to start node_version={node_version} for n.signer_version={n.signer_version}"
+        )
 
         if node_version is None:
-            raise ValueError(f"No node_version found for n.signer_version={n.signer_version}")
+            raise ValueError(
+                f"No node_version found for n.signer_version={n.signer_version}"
+            )
 
         # Otherwise we need to start a new process
         n.process = NodeProcess(
@@ -286,12 +306,16 @@ class Scheduler(object):
         timeout = 10
         while True:
             try:
-                with socket.create_connection(("localhost", n.process.grpc_port), timeout=0.1):
+                with socket.create_connection(
+                    ("localhost", n.process.grpc_port), timeout=0.1
+                ):
                     break
-            except:
+            except Exception:
                 time.sleep(0.01)
                 if time.perf_counter() - start_time >= timeout:
-                    raise TimeoutError(f'Waited too for port localhost:{n.process.grpc_port} to become reachable')
+                    raise TimeoutError(
+                        f"Waited too for port localhost:{n.process.grpc_port} to become reachable"
+                    )
         # TODO Actually wait for the port to be accessible
         time.sleep(1)
 
@@ -300,16 +324,27 @@ class Scheduler(object):
             grpc_uri=n.process.grpc_uri,
         )
 
-    def ExportNode(self, req, ctx):
-        raise ValueError("export_node is not currently implemented in gltesting.Scheduler")
+    async def MaybeUpgrade(self, req):
+        # Very roundabout way of extracting the x509 common name from
+        # which we can extract the node_id
+        # TODO Implement version ordering and upgrade here
+        # common_name = ctx.auth_context()['x509_common_name'][0].decode('ASCII')
+        # node_id = common_name.split('/')[2]
+        # node = self.get_node(unhexlify(node_id))
 
-    def GetNodeInfo(self, req, ctx):
+        return schedpb.UpgradeResponse(
+            old_version="v0.11.0.1",
+        )
+
+    async def GetNodeInfo(self, req):
         node = self.get_node(req.node_id)
 
         if req.wait:
             with node.condition:
                 while node.process is not None and node.process.proc is None:
-                    logging.info(f"Signer waiting for node {node.node_id.hex()} to get scheduled")
+                    logging.info(
+                        f"Signer waiting for node {node.node_id.hex()} to get scheduled"
+                    )
                     node.condition.wait()
 
         return schedpb.NodeInfoResponse(
@@ -317,26 +352,5 @@ class Scheduler(object):
             grpc_uri=node.process.grpc_uri if node.process else None,
         )
 
-    def MaybeUpgrade(self, req, ctx):
-        # Very roundabout way of extracting the x509 common name from
-        # which we can extract the node_id
-        # TODO Implement version ordering and upgrade here
-        #common_name = ctx.auth_context()['x509_common_name'][0].decode('ASCII')
-        #node_id = common_name.split('/')[2]
-        #node = self.get_node(unhexlify(node_id))
 
-        return schedpb.UpgradeResponse(
-            old_version="v0.11.0.1",
-        )
-
-    def ListInviteCodes(self, req, ctx):
-        # Mocks the invite code return. The Server might be started
-        # with a list of invite codes.
-        res = schedpb.ListInviteCodesResponse()
-        for code in self.invite_codes:
-            print(f"ADD CODE: {code}")
-            res.invite_code_list.extend([schedpb.InviteCode(
-                code=code["code"],
-                    is_redeemed=code["is_redeemed"],
-            )])
-        return res
+Scheduler = AsyncScheduler

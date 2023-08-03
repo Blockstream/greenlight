@@ -12,7 +12,7 @@ from gltesting.utils import NodeVersion, Network
 from pyln.testing.utils import TailableProc, BitcoinD
 from ephemeral_port_reserve import reserve
 import os
-from typing import List
+from typing import List, Optional
 
 
 target_dir = Path(
