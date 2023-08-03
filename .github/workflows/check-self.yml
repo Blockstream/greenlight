@@ -6,7 +6,7 @@ on:
       - synchronize
       - opened
   workflow_dispatch:
-  merge_queue:
+  merge_group:
 
 jobs:
   linux:
