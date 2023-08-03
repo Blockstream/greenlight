@@ -2,7 +2,6 @@ TESTINGDIR=${REPO}/libs/gl-testing
 
 TESTPROTOC_OPTS = \
 	-I${REPO}/libs/proto \
-	--python_out=${TESTINGDIR}/gltesting \
 	--purerpc_out=${TESTINGDIR}/gltesting \
 	--experimental_allow_proto3_optional
 
