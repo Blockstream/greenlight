@@ -26,6 +26,9 @@ pyln-testing = "^23.05"
 pyln-grpc-proto = "^0.1"
 protobuf = ">=3"
 flaky = "^3"
+anyio = "^3.7.1"
+purerpc = { version = "^0.8.0", extras = ["grpc"] }
+pytest-sugar = "^0.9.7"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.971"

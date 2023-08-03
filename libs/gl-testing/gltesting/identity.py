@@ -1,5 +1,6 @@
 import os
 import grpc
+import ssl
 
 class Identity(object):
     """A wrapper encapsulating our certificate conventions."""
@@ -12,7 +13,8 @@ class Identity(object):
 
         certdir = os.environ.get('GL_CERT_PATH', None)
         assert certdir is not None
-        self.caroot = open(os.path.join(certdir, "ca.pem"), "rb").read()
+        self.caroot_path = os.path.join(certdir, "ca.pem")
+        self.caroot = open(self.caroot_path, "rb").read()
 
         splits = path[1:].split("/")
         relpath, fstub = splits[:-1], splits[-1]
@@ -51,6 +53,17 @@ class Identity(object):
             root_certificates=self.caroot,
             require_client_auth=True,
         )
+
+    def to_ssl_context(self):
+        s = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        s.load_cert_chain(self.cert_chain_path, keyfile=self.private_key_path)
+        s.load_verify_locations(capath=self.caroot_path)
+        s.set_alpn_protocols(['h2'])
+        try:
+            s.set_npn_protocols(['h2'])
+        except NotImplementedError:
+            pass
+        return s
 
     def __str__(self):
         return f"Identity[{self.path}]"
