@@ -371,6 +371,8 @@ def test_node_reconnect(clients, scheduler, node_factory, bitcoind):
 
     gl1 = c.node()
 
-    peer = scheduler.nodes[0].rpc().listpeers()['peers'][0]
+    rpc = scheduler.nodes[0].rpc()
+    wait_for(lambda: rpc.listpeers()['peers'] != [])
+    peer = rpc.listpeers()['peers'][0]
     assert peer['connected']
     assert peer['id'] == l1.info['id']
