@@ -18,16 +18,35 @@ endif
 ARTIFACTS = \
 	.coverage
 
+# Variable to collect all generated files into, so we can clean and
+# rebuild them easily.
+GENALL =
+
+CLN_VERSIONS = \
+	v0.10.1 \
+	v0.10.2 \
+	v0.11.0.1 \
+	v0.11.2gl2 \
+	v0.11.2 \
+	v22.11gl1 \
+	v23.05gl1
+
+CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)
+
 .PHONY: ensure-docker build-self check-self docker-image docs wheels
 
 include libs/gl-client/Makefile
 include libs/gl-client-py/Makefile
 include libs/gl-client-js/Makefile
+include libs/gl-testing/Makefile
 
 check: check-rs check-py check-js
 
 clean: clean-rs
 	rm -rf ${ARTIFACTS}
+	rm ${GENALL}
+
+gen: ${GENALL}
 
 build-self: ensure-docker
 	(cd libs; cargo build --all)
@@ -49,6 +68,7 @@ ensure-docker:
 		echo "We are not running in the gl-testing docker container, refusing to run"; \
 		exit 1; \
 	fi
+
 docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
 	docker buildx build --load -t gltesting -f libs/gl-testing/Dockerfile .
 
@@ -80,16 +100,6 @@ docker-check:
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting make check
 
-CLN_VERSIONS = \
-	v0.10.1 \
-	v0.10.2 \
-	v0.11.0.1 \
-	v0.11.2gl2 \
-	v0.11.2 \
-	v22.11gl1 \
-	v23.05gl1
-
-CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)
 
 cln-versions/%/usr/local/bin/lightningd: cln-versions/lightningd-%.tar.bz2
 	@echo "Extracting $* from tarball $< into cln-versions/$*/"
