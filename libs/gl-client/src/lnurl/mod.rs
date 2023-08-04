@@ -1,15 +1,16 @@
+mod models;
 mod pay;
-mod tor_http_client;
+mod utils;
 
-use anyhow::{Result};
+use anyhow::Result;
+use models::LnUrlHttpClearnetClient;
 use pay::resolve_to_invoice;
-use pay::models::{LnUrlHttpClientImpl};
 
 pub struct LNURL;
 
 impl LNURL {
-  pub fn resolve_lnurl_to_invoice(&self, lnurl: &str, amount: u64) -> Result<String> {
-    let http_client = LnUrlHttpClientImpl::new();
-    resolve_to_invoice(http_client, lnurl, amount)
-  }
+    pub async fn resolve_lnurl_to_invoice(&self, lnurl: &str, amount: u64) -> Result<String> {
+        let http_client = LnUrlHttpClearnetClient::new();
+        resolve_to_invoice(http_client, lnurl, amount).await
+    }
 }
