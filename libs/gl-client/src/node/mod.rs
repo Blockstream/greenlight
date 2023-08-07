@@ -2,7 +2,7 @@ use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
-use crate::utils;
+use crate::{serialize::AuthBlob, utils};
 use anyhow::{anyhow, Result};
 use lightning_signer::bitcoin::Network;
 use log::{debug, info, trace};
@@ -63,6 +63,16 @@ impl Node {
             tls,
             rune,
         }
+    }
+
+    pub fn new_from_auth(
+        node_id: Vec<u8>,
+        network: Network,
+        tls: TlsConfig,
+        auth: &[u8],
+    ) -> Result<Self> {
+        let blob = AuthBlob::deserialize(auth)?;
+        Ok(Self::new(node_id, network, tls, blob.rune))
     }
 
     pub async fn connect<C>(&self, node_uri: String) -> Result<C>

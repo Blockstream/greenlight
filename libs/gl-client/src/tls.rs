@@ -1,3 +1,4 @@
+use crate::serialize::AuthBlob;
 use anyhow::{Context, Result};
 use log::debug;
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
@@ -71,6 +72,17 @@ impl TlsConfig {
             private_key: Some(key_pem),
             ..self
         }
+    }
+
+    /// This function is used to upgrade the anonymous `NOBODY`
+    /// configuration to a fully authenticated configuration using
+    /// an auth blob.
+    ///
+    /// Creates an identity from the the cert and key that are
+    /// serialized in the auth blob.
+    pub fn identity_from_auth(self, auth: &[u8]) -> Result<Self> {
+        let blob = AuthBlob::deserialize(auth)?;
+        Ok(self.identity(blob.cert, blob.key))
     }
 
     /// This function is mostly used to allow running integration
