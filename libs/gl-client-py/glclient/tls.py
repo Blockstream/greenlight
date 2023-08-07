@@ -28,6 +28,17 @@ class TlsConfig(object):
         logger.debug("Authenticating TLS identity")
         c.authenticated = True
         return c
+    
+    def identity_from_auth(self, auth: bytes) -> "TlsConfig":
+        c = TlsConfig()
+        try:
+            c.inner = self.inner.identity_from_auth(auth)
+        except ValueError as e:
+            raise ValueError("Could not create identity", e)
+        
+        logger.debug("Authenticating TLS identity from auth")
+        c.authenticated = True
+        return c
 
     def with_ca_certificate(self, ca: Union[str, bytes]) -> "TlsConfig":
         logger.debug("Customizing greenlight CA")

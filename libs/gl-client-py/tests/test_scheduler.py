@@ -50,6 +50,7 @@ def test_register(sclient, signer):
     assert(res.device_cert)
     assert(res.device_key)
     assert(res.rune)
+    assert(res.auth)
 
 
 def test_recover(sclient, signer):
@@ -58,6 +59,7 @@ def test_recover(sclient, signer):
     assert(res.device_cert)
     assert(res.device_key)
     assert(res.rune)
+    assert(res.auth)
 
 
 @unittest.skip("Scheduler is being reworked")
@@ -89,3 +91,11 @@ def test_get_invite_codes(scheduler, sclient):
 def test_register_with_invite_code(scheduler, sclient, signer):
     sclient.register(signer, "some-invite-code")
     assert scheduler.received_invite_code == "some-invite-code"
+
+def test_identity_from_auth_blob(sclient, signer, tls):
+    req = sclient.register(signer)
+    res = sclient.schedule()
+    tls = tls.identity_from_auth(req.auth)
+    node = Node(signer.node_id(), 'regtest', tls, res.grpc_uri, req.rune)
+    info = node.get_info()
+    assert(info)
