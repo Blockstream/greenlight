@@ -227,6 +227,11 @@ message RegistrationResponse {
 	// own signer. The signer is necessary as the response is intercepted on the
 	// client side and appends the rune to the registratrion response.
 	string rune = 3;
+
+	// Auth contains a serialized version of the device certificate, the device 
+	// key and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes auth = 4;
 };
 
 // Ask the scheduler to schedule the node to be run on an available nodelet.
@@ -271,6 +276,11 @@ message RecoveryResponse {
 	// own signer. The signer is necessary as the response is intercepted on the
 	// client side and appends the rune to the registratrion response.
 	string rune = 3;
+
+	// Auth contains a serialized version of the device certificate, the device 
+	// key and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes auth = 4;
 };
 
 message UpgradeRequest {

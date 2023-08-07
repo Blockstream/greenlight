@@ -1,8 +1,6 @@
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
-
-use crate::node::GrpcClient;
-use crate::{node, pb, signer::Signer, utils};
+use crate::{pb, serialize, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
@@ -17,6 +15,7 @@ pub struct Scheduler {
     node_id: Vec<u8>,
     client: Client,
     network: Network,
+    ca: Vec<u8>,
 }
 
 impl Scheduler {
@@ -41,6 +40,7 @@ impl Scheduler {
             client,
             node_id,
             network,
+            ca: tls.ca.clone(),
         })
     }
 
@@ -143,6 +143,17 @@ impl Scheduler {
         )?;
         let restriction = futhark::Restriction::new(vec![alt])?;
         res.rune = signer.create_rune("device", vec![restriction])?;
+
+        // Serialize an auth blob that can be used to store the device cert,
+        // the device key and the rune on the device.
+        let blob = serialize::AuthBlob {
+            cert: res.device_cert.clone().into_bytes(),
+            key: res.device_key.clone().into_bytes(),
+            ca: self.ca.clone(),
+            rune: res.rune.clone(),
+        };
+        res.auth = blob.serialize()?;
+
         Ok(res)
     }
 
@@ -208,6 +219,17 @@ impl Scheduler {
         )?;
         let restriction = futhark::Restriction::new(vec![alt])?;
         res.rune = signer.create_rune("device", vec![restriction])?;
+
+        // Serialize an auth blob that can be used to store the device cert,
+        // the device key and the rune on the device.
+        let blob = serialize::AuthBlob {
+            cert: res.device_cert.clone().into_bytes(),
+            key: res.device_key.clone().into_bytes(),
+            ca: self.ca.clone(),
+            rune: res.rune.clone(),
+        };
+        res.auth = blob.serialize()?;
+
         Ok(res)
     }
 
