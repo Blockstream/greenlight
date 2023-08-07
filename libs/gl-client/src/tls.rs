@@ -1,7 +1,8 @@
+use crate::serialize::AuthBlob;
 use anyhow::{Context, Result};
 use log::debug;
-use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 use std::path::Path;
+use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
 const NOBODY_CRT: &[u8] = include_str!(env!("GL_NOBODY_CRT")).as_bytes();
@@ -80,14 +81,27 @@ impl TlsConfig {
     /// The path is a directory that contains a `client.crt` and
     /// a `client-key.pem`-file which contain respectively the certificate
     /// and private key.
-    pub fn identity_from_path<P : AsRef<Path>>(self, path: P) -> Result<Self> {
+    pub fn identity_from_path<P: AsRef<Path>>(self, path: P) -> Result<Self> {
         let cert_path = path.as_ref().join("client.crt");
         let key_path = path.as_ref().join("client-key.pem");
 
-        let cert_pem = std::fs::read(cert_path.clone()).with_context(|| format!("Failed to read '{}'", cert_path.display()))?;
-        let key_pem = std::fs::read(key_path.clone()).with_context(|| format!("Failed to read '{}", key_path.display()))?;
+        let cert_pem = std::fs::read(cert_path.clone())
+            .with_context(|| format!("Failed to read '{}'", cert_path.display()))?;
+        let key_pem = std::fs::read(key_path.clone())
+            .with_context(|| format!("Failed to read '{}", key_path.display()))?;
 
         Ok(self.identity(cert_pem, key_pem))
+    }
+
+    /// This function is used to upgrade the anonymous `NOBODY`
+    /// configuration to a fully authenticated configuration using
+    /// an auth blob.
+    ///
+    /// Creates an identity from the the cert and key that are
+    /// serialized in the auth blob.
+    pub fn identity_from_auth(self, auth: &[u8]) -> Result<Self> {
+        let blob = AuthBlob::deserialize(auth)?;
+        Ok(self.identity(blob.cert, blob.key))
     }
 
     /// This function is mostly used to allow running integration
