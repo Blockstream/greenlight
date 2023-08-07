@@ -10,7 +10,7 @@ PYVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.package
 PYDIR=${REPO}/libs/gl-client-py
 
 PYPROTOC_OPTS = \
-	-Ilibs/proto \
+	-I${REPO}/libs/proto \
 	--python_out=${PYDIR}/glclient \
 	--grpc_python_out=${PYDIR}/glclient \
 	--experimental_allow_proto3_optional \
@@ -23,9 +23,9 @@ PYPROTOS = \
 	${PYDIR}/glclient/scheduler_pb2_grpc.py
 
 PROTOSRC = \
-	libs/proto/scheduler.proto \
-	libs/proto/greenlight.proto \
-	libs/proto/node.proto
+	${REPO}/libs/proto/scheduler.proto \
+	${REPO}/libs/proto/greenlight.proto \
+	${REPO}/libs/proto/node.proto
 
 GENALL += ${PYPROTOS}
 
