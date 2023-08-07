@@ -13,6 +13,7 @@ const {
 
     tlsConfigNew,
     tlsConfigIdentity,
+	tlsConfigIdentityFromAuth,
 
     schedulerNew,
     schedulerRegister,
@@ -426,6 +427,12 @@ class TlsConfig {
 	tls.inner = tlsConfigIdentity(this.inner, cert, key);
 	return tls;
     }
+
+	identity_from_auth(auth) {
+	let tls = new TlsConfig();
+	tls.inner = tlsConfigIdentityFromAuth(this.inner, auth);
+	return tls;
+	}
 }
 
 module.exports = {
