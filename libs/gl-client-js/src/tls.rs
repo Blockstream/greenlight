@@ -30,4 +30,15 @@ impl TlsConfig {
             inner: this.inner.clone().identity(cert_pem, key_pem),
         }))
     }
+
+    pub(crate) fn identity_from_auth(mut cx: FunctionContext) -> JsResult<JsBox<TlsConfig>> {
+        let this = cx.argument::<JsBox<TlsConfig>>(0)?;
+        let buf = cx.argument::<JsBuffer>(1)?;
+        let auth = buf.as_slice(&cx).to_vec();
+
+        match this.inner.clone().identity_from_auth(&auth) {
+            Ok(inner) => Ok(cx.boxed(Self { inner })),
+            Err(e) => cx.throw_error(format! {"{}", e}),
+        }
+    }
 }

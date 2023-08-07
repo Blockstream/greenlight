@@ -36,6 +36,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
 
     cx.export_function("tlsConfigNew", TlsConfig::new)?;
     cx.export_function("tlsConfigIdentity", TlsConfig::identity)?;
+    cx.export_function("tlsConfigIdentityFromAuth", TlsConfig::identity_from_auth)?;
 
     cx.export_function("signerHandleShutdown", SignerHandle::shutdown)?;
 

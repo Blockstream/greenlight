@@ -1294,6 +1294,7 @@ $root.scheduler = (function() {
          * @property {string|null} [deviceCert] RegistrationResponse deviceCert
          * @property {string|null} [deviceKey] RegistrationResponse deviceKey
          * @property {string|null} [rune] RegistrationResponse rune
+         * @property {Uint8Array|null} [auth] RegistrationResponse auth
          */
 
         /**
@@ -1336,6 +1337,14 @@ $root.scheduler = (function() {
         RegistrationResponse.prototype.rune = "";
 
         /**
+         * RegistrationResponse auth.
+         * @member {Uint8Array} auth
+         * @memberof scheduler.RegistrationResponse
+         * @instance
+         */
+        RegistrationResponse.prototype.auth = $util.newBuffer([]);
+
+        /**
          * Creates a new RegistrationResponse instance using the specified properties.
          * @function create
          * @memberof scheduler.RegistrationResponse
@@ -1365,6 +1374,8 @@ $root.scheduler = (function() {
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.deviceKey);
             if (message.rune != null && Object.hasOwnProperty.call(message, "rune"))
                 writer.uint32(/* id 3, wireType 2 =*/26).string(message.rune);
+            if (message.auth != null && Object.hasOwnProperty.call(message, "auth"))
+                writer.uint32(/* id 4, wireType 2 =*/34).bytes(message.auth);
             return writer;
         };
 
@@ -1411,6 +1422,10 @@ $root.scheduler = (function() {
                         message.rune = reader.string();
                         break;
                     }
+                case 4: {
+                        message.auth = reader.bytes();
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -1455,6 +1470,9 @@ $root.scheduler = (function() {
             if (message.rune != null && message.hasOwnProperty("rune"))
                 if (!$util.isString(message.rune))
                     return "rune: string expected";
+            if (message.auth != null && message.hasOwnProperty("auth"))
+                if (!(message.auth && typeof message.auth.length === "number" || $util.isString(message.auth)))
+                    return "auth: buffer expected";
             return null;
         };
 
@@ -1476,6 +1494,11 @@ $root.scheduler = (function() {
                 message.deviceKey = String(object.deviceKey);
             if (object.rune != null)
                 message.rune = String(object.rune);
+            if (object.auth != null)
+                if (typeof object.auth === "string")
+                    $util.base64.decode(object.auth, message.auth = $util.newBuffer($util.base64.length(object.auth)), 0);
+                else if (object.auth.length >= 0)
+                    message.auth = object.auth;
             return message;
         };
 
@@ -1496,6 +1519,13 @@ $root.scheduler = (function() {
                 object.deviceCert = "";
                 object.deviceKey = "";
                 object.rune = "";
+                if (options.bytes === String)
+                    object.auth = "";
+                else {
+                    object.auth = [];
+                    if (options.bytes !== Array)
+                        object.auth = $util.newBuffer(object.auth);
+                }
             }
             if (message.deviceCert != null && message.hasOwnProperty("deviceCert"))
                 object.deviceCert = message.deviceCert;
@@ -1503,6 +1533,8 @@ $root.scheduler = (function() {
                 object.deviceKey = message.deviceKey;
             if (message.rune != null && message.hasOwnProperty("rune"))
                 object.rune = message.rune;
+            if (message.auth != null && message.hasOwnProperty("auth"))
+                object.auth = options.bytes === String ? $util.base64.encode(message.auth, 0, message.auth.length) : options.bytes === Array ? Array.prototype.slice.call(message.auth) : message.auth;
             return object;
         };
 
@@ -2537,6 +2569,7 @@ $root.scheduler = (function() {
          * @property {string|null} [deviceCert] RecoveryResponse deviceCert
          * @property {string|null} [deviceKey] RecoveryResponse deviceKey
          * @property {string|null} [rune] RecoveryResponse rune
+         * @property {Uint8Array|null} [auth] RecoveryResponse auth
          */
 
         /**
@@ -2579,6 +2612,14 @@ $root.scheduler = (function() {
         RecoveryResponse.prototype.rune = "";
 
         /**
+         * RecoveryResponse auth.
+         * @member {Uint8Array} auth
+         * @memberof scheduler.RecoveryResponse
+         * @instance
+         */
+        RecoveryResponse.prototype.auth = $util.newBuffer([]);
+
+        /**
          * Creates a new RecoveryResponse instance using the specified properties.
          * @function create
          * @memberof scheduler.RecoveryResponse
@@ -2608,6 +2649,8 @@ $root.scheduler = (function() {
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.deviceKey);
             if (message.rune != null && Object.hasOwnProperty.call(message, "rune"))
                 writer.uint32(/* id 3, wireType 2 =*/26).string(message.rune);
+            if (message.auth != null && Object.hasOwnProperty.call(message, "auth"))
+                writer.uint32(/* id 4, wireType 2 =*/34).bytes(message.auth);
             return writer;
         };
 
@@ -2654,6 +2697,10 @@ $root.scheduler = (function() {
                         message.rune = reader.string();
                         break;
                     }
+                case 4: {
+                        message.auth = reader.bytes();
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -2698,6 +2745,9 @@ $root.scheduler = (function() {
             if (message.rune != null && message.hasOwnProperty("rune"))
                 if (!$util.isString(message.rune))
                     return "rune: string expected";
+            if (message.auth != null && message.hasOwnProperty("auth"))
+                if (!(message.auth && typeof message.auth.length === "number" || $util.isString(message.auth)))
+                    return "auth: buffer expected";
             return null;
         };
 
@@ -2719,6 +2769,11 @@ $root.scheduler = (function() {
                 message.deviceKey = String(object.deviceKey);
             if (object.rune != null)
                 message.rune = String(object.rune);
+            if (object.auth != null)
+                if (typeof object.auth === "string")
+                    $util.base64.decode(object.auth, message.auth = $util.newBuffer($util.base64.length(object.auth)), 0);
+                else if (object.auth.length >= 0)
+                    message.auth = object.auth;
             return message;
         };
 
@@ -2739,6 +2794,13 @@ $root.scheduler = (function() {
                 object.deviceCert = "";
                 object.deviceKey = "";
                 object.rune = "";
+                if (options.bytes === String)
+                    object.auth = "";
+                else {
+                    object.auth = [];
+                    if (options.bytes !== Array)
+                        object.auth = $util.newBuffer(object.auth);
+                }
             }
             if (message.deviceCert != null && message.hasOwnProperty("deviceCert"))
                 object.deviceCert = message.deviceCert;
@@ -2746,6 +2808,8 @@ $root.scheduler = (function() {
                 object.deviceKey = message.deviceKey;
             if (message.rune != null && message.hasOwnProperty("rune"))
                 object.rune = message.rune;
+            if (message.auth != null && message.hasOwnProperty("auth"))
+                object.auth = options.bytes === String ? $util.base64.encode(message.auth, 0, message.auth.length) : options.bytes === Array ? Array.prototype.slice.call(message.auth) : message.auth;
             return object;
         };
 
