@@ -54,6 +54,8 @@ pub mod utils {
     }
 }
 
+pub mod serialize;
+
 /// Functionality to integrate greenlight with a Lightning Service Provider
 pub mod lsps;
 
