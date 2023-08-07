@@ -1185,6 +1185,7 @@ dependencies = [
  "mockall",
  "pin-project 1.1.3",
  "prost 0.11.9",
+ "prost-derive 0.11.9",
  "rand 0.8.5",
  "rcgen",
  "reqwest",
