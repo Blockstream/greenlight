@@ -17,8 +17,6 @@ use ring::{
     signature::{self, EcdsaKeyPair},
 };
 
-use crate::tls::generate_self_signed_device_cert;
-
 pub struct AuthLayer {
     key: Vec<u8>,
     rune: String,
