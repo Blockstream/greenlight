@@ -20,6 +20,7 @@ lightning-invoice = "0.23.0"
 log = "^0.4"
 pin-project = "*"
 prost = "0.11"
+prost-derive = "0.11"
 reqwest = {version="^0.11", features=["json", "rustls-tls-native-roots"], default-features = false}
 ring = "*"
 rustls-pemfile = "*"
