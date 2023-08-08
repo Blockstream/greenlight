@@ -56,11 +56,12 @@ class Signer(object):
 
 class Scheduler(object):
 
-    def __init__(self, node_id: bytes, network: str, tls: TlsConfig):
+    def __init__(self, node_id: bytes, network: str, tls: TlsConfig, rune: str=""):
         self.node_id = node_id
         self.network = network
         self.tls = tls
         self.inner = native.Scheduler(node_id, network, tls.inner)
+        self.rune = rune
 
     def get_node_info(self) -> schedpb.NodeInfoResponse:
         return _convert(
@@ -94,7 +95,8 @@ class Scheduler(object):
             node_id=self.node_id,
             network=self.network,
             tls=self.tls,
-            grpc_uri=res.grpc_uri
+            grpc_uri=res.grpc_uri,
+            rune=self.rune
         )
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
@@ -103,14 +105,16 @@ class Scheduler(object):
 
 
 class Node(object):
-    def __init__(self, node_id: bytes, network: str, tls: TlsConfig, grpc_uri: str) -> None:
+    def __init__(self, node_id: bytes, network: str, tls: TlsConfig, grpc_uri: str, rune: str) -> None:
         self.tls = tls
+        self.rune = rune
         self.grpc_uri = grpc_uri
         self.inner = native.Node(
             node_id=node_id,
             network=network,
             tls=tls.inner,
-            grpc_uri=grpc_uri
+            grpc_uri=grpc_uri,
+            rune=rune
         )
         self.logger = logging.getLogger("glclient.Node")
 

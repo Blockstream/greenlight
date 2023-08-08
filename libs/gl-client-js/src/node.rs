@@ -19,13 +19,14 @@ impl Node {
         let network = cx.argument::<JsString>(1)?.value(&mut cx);
         let tls = (**cx.argument::<JsBox<TlsConfig>>(2)?).clone();
         let grpc_uri = cx.argument::<JsString>(3)?.value(&mut cx);
+        let rune = cx.argument::<JsString>(4)?.value(&mut cx);
 
         let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => cx.throw_error("Error parsing the network")?,
         };
 
-        let node = gl_client::node::Node::new(node_id, network, tls);
+        let node = gl_client::node::Node::new(node_id, network, tls, rune);
         let client = match exec(node.connect(grpc_uri)) {
             Ok(n) => n,
             Err(e) => cx.throw_error(format!("Error creating node: {}", e))?,
