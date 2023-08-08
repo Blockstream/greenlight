@@ -34,7 +34,7 @@ impl Scheduler {
 
         // Check if an invite code is set. If so, pass it on to the register
         // method, else pass on `None`.
-        let mut invite_code = None;
+        let mut invite_code: Option<String> = None;
         _ = cx
             .argument::<JsString>(2)
             .map(|ic_arg| invite_code = Some(ic_arg.value(&mut cx)));
