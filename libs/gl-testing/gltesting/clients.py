@@ -74,10 +74,26 @@ class Client:
             .with_ca_certificate(capath.open(mode="r").read())
             .identity(certpath.open(mode="r").read(), keypath.open(mode="r").read())
         )
+    
+    def rune(self) -> str:
+        """Load the devices rune
+        
+        Returns the devices rune if it is available or an empty string
+        if the rune can not be found.
+        """
+        self.log.info("Trying to find a rune")
+        runepath = self.directory / "device.rune"    
+        if runepath.exists():
+            self.log.info(f"Loading rune from {runepath}")
+            rune = runepath.open(mode="r").read()
+            return rune
+        else:
+            self.log.info(f"No rune loaded expecting nobody identity")
+            return ""
 
     def scheduler(self) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        return glclient.Scheduler(self.node_id, network=NETWORK, tls=self.tls())
+        return glclient.Scheduler(self.node_id, network=NETWORK, tls=self.tls(), rune=self.rune())
 
     def signer(self) -> glclient.Signer:
         secret = (self.directory / "hsm_secret").open(mode="rb").read()
@@ -104,6 +120,8 @@ class Client:
                 f.write(r.device_cert)
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
+            with (self.directory / "device.rune").open("w") as f:
+                f.write(r.rune)
 
     def recover(self, configure: bool = True) -> None:
         r = self.scheduler().recover(self.signer())
@@ -112,6 +130,8 @@ class Client:
                 f.write(r.device_cert)
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
+            with (self.directory / "device.rune").open("w") as f:
+                f.write(r.rune)
 
     def find_node(self):
         """If we registered find the matching node in the scheduler
