@@ -36,7 +36,6 @@ pub trait LnUrlHttpClient {
     async fn get_pay_request_callback_response(
         &self,
         callback_url: &str,
-        amount: u64,
     ) -> Result<PayRequestCallbackResponse>;
 }
 
@@ -72,7 +71,6 @@ impl LnUrlHttpClient for LnUrlHttpClearnetClient {
     async fn get_pay_request_callback_response(
         &self,
         callback_url: &str,
-        amount: u64,
     ) -> Result<PayRequestCallbackResponse> {
         self.get::<PayRequestCallbackResponse>(callback_url).await
     }

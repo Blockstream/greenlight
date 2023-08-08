@@ -1,27 +1,24 @@
 use super::models;
 use super::utils::parse_lnurl;
-use crate::lnurl::models::{
-    LnUrlHttpClient, MockLnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse,
-};
+use crate::lnurl::models::{LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse};
 use anyhow::{anyhow, ensure, Result};
-use futures::future;
 use lightning_invoice::{Invoice, InvoiceDescription};
 use log::debug;
 use reqwest::Url;
 use sha256;
-use std::str::FromStr; // Import the future module
+use std::str::FromStr;
 
 pub async fn resolve_to_invoice<T: LnUrlHttpClient>(
     http_client: T,
     lnurl: &str,
-    amount: u64,
+    amount_msats: u64,
 ) -> Result<String> {
     let url = parse_lnurl(lnurl)?;
 
     let lnurl_pay_request_response: PayRequestResponse =
         http_client.get_pay_request_response(&url).await?;
 
-    validate_pay_request_response(&lnurl_pay_request_response, amount)?;
+    validate_pay_request_response(&lnurl_pay_request_response, amount_msats)?;
     let description = extract_description(&lnurl_pay_request_response)?;
 
     debug!("Domain: {}", Url::parse(&url).unwrap().host().unwrap());
@@ -31,13 +28,13 @@ pub async fn resolve_to_invoice<T: LnUrlHttpClient>(
         lnurl_pay_request_response.min_sendable, lnurl_pay_request_response.max_sendable
     );
 
-    let callback_url = build_callback_url(&lnurl_pay_request_response, amount)?;
+    let callback_url = build_callback_url(&lnurl_pay_request_response, amount_msats)?;
     let callback_response: PayRequestCallbackResponse = http_client
-        .get_pay_request_callback_response(&callback_url, amount)
+        .get_pay_request_callback_response(&callback_url)
         .await?;
 
     let invoice = parse_invoice(&callback_response.pr)?;
-    validate_invoice_from_callback_response(&invoice, amount, lnurl_pay_request_response)?;
+    validate_invoice_from_callback_response(&invoice, amount_msats, lnurl_pay_request_response)?;
     Ok(invoice.to_string())
 }
 
@@ -108,7 +105,7 @@ fn validate_pay_request_response(
 fn validate_invoice_from_callback_response(
     invoice: &Invoice,
     amount: u64,
-    lnurl_pay_request: PayRequestResponse,
+    lnurl_pay_request_response: PayRequestResponse,
 ) -> Result<()> {
     ensure!(invoice.amount_milli_satoshis().unwrap_or_default() == amount ,
         "Amount found in invoice was not equal to the amount found in the original request\nRequest amount: {}\nInvoice amount:{:?}", amount, invoice.amount_milli_satoshis().unwrap()
@@ -120,7 +117,7 @@ fn validate_invoice_from_callback_response(
     };
 
     ensure!(
-        description_hash == sha256::digest(lnurl_pay_request.metadata),
+        description_hash == sha256::digest(lnurl_pay_request_response.metadata),
         "description_hash does not match the hash of the metadata"
     );
     Ok(())
@@ -128,6 +125,8 @@ fn validate_invoice_from_callback_response(
 
 #[cfg(test)]
 mod tests {
+    use crate::lnurl::models::MockLnUrlHttpClient;
+    use futures::future;
     use futures::future::Ready;
     use std::pin::Pin;
 
@@ -160,7 +159,7 @@ mod tests {
             convert_to_async_return_value(Ok(x))
         });
 
-        mock_http_client.expect_get_pay_request_callback_response().returning(|_url, _amount| {
+        mock_http_client.expect_get_pay_request_callback_response().returning(|_url| {
             let invoice = "lnbc1u1pjv9qrvsp5e5wwexctzp9yklcrzx448c68q2a7kma55cm67ruajjwfkrswnqvqpp55x6mmz8ch6nahrcuxjsjvs23xkgt8eu748nukq463zhjcjk4s65shp5dd6hc533r655wtyz63jpf6ja08srn6rz6cjhwsjuyckrqwanhjtsxqzjccqpjrzjqw6lfdpjecp4d5t0gxk5khkrzfejjxyxtxg5exqsd95py6rhwwh72rpgrgqq3hcqqgqqqqlgqqqqqqgq9q9qxpqysgq95njz4sz6h7r2qh7txnevcrvg0jdsfpe72cecmjfka8mw5nvm7tydd0j34ps2u9q9h6v5u8h3vxs8jqq5fwehdda6a8qmpn93fm290cquhuc6r";
             let callback_response_json = format!("{{\"pr\":\"{}\",\"routes\":[]}}", invoice).to_string();
             let x = serde_json::from_str(&callback_response_json).unwrap();
@@ -202,7 +201,7 @@ mod tests {
             convert_to_async_return_value(Ok(x))
         });
 
-        mock_http_client.expect_get_pay_request_callback_response().returning(|_url, _amount| {
+        mock_http_client.expect_get_pay_request_callback_response().returning(|_url| {
             let invoice = "lnbc1u1pjv9qrvsp5e5wwexctzp9yklcrzx448c68q2a7kma55cm67ruajjwfkrswnqvqpp55x6mmz8ch6nahrcuxjsjvs23xkgt8eu748nukq463zhjcjk4s65shp5dd6hc533r655wtyz63jpf6ja08srn6rz6cjhwsjuyckrqwanhjtsxqzjccqpjrzjqw6lfdpjecp4d5t0gxk5khkrzfejjxyxtxg5exqsd95py6rhwwh72rpgrgqq3hcqqgqqqqlgqqqqqqgq9q9qxpqysgq95njz4sz6h7r2qh7txnevcrvg0jdsfpe72cecmjfka8mw5nvm7tydd0j34ps2u9q9h6v5u8h3vxs8jqq5fwehdda6a8qmpn93fm290cquhuc6r";
             let callback_response_json = format!("{{\"pr\":\"{}\",\"routes\":[]}}", invoice).to_string();
             let callback_response = serde_json::from_str(&callback_response_json).unwrap();
@@ -231,7 +230,7 @@ mod tests {
             convert_to_async_return_value(Ok(x))
         });
 
-        mock_http_client.expect_get_pay_request_callback_response().returning(|_url, _amount| {
+        mock_http_client.expect_get_pay_request_callback_response().returning(|_url| {
             let invoice = "lnbc1u1pjv9qrvsp5e5wwexctzp9yklcrzx448c68q2a7kma55cm67ruajjwfkrswnqvqpp55x6mmz8ch6nahrcuxjsjvs23xkgt8eu748nukq463zhjcjk4s65shp5dd6hc533r655wtyz63jpf6ja08srn6rz6cjhwsjuyckrqwanhjtsxqzjccqpjrzjqw6lfdpjecp4d5t0gxk5khkrzfejjxyxtxg5exqsd95py6rhwwh72rpgrgqq3hcqqgqqqqlgqqqqqqgq9q9qxpqysgq95njz4sz6h7r2qh7txnevcrvg0jdsfpe72cecmjfka8mw5nvm7tydd0j34ps2u9q9h6v5u8h3vxs8jqq5fwehdda6a8qmpn93fm290cquhuc6r";
             let callback_response_json = format!("{{\"pr\":\"{}\",\"routes\":[]}}", invoice).to_string();
             let value = serde_json::from_str(&callback_response_json).unwrap();
