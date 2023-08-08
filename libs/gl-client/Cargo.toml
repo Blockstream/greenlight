@@ -26,7 +26,6 @@ rustls-pemfile = "*"
 sha256 = "1.1.4"
 tokio = { version = "1", features = ["full"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
-tor-rtcompat = {version="0.9.2"}
 tower = { version = "0.4" }
 rcgen = { version = "0.10.0", features = ["pem", "x509-parser"]}
 tempfile = "3.3.0"
