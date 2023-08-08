@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fscheduler.proto\x12\tscheduler\"M\n\x10\x43hallengeRequest\x12(\n\x05scope\x18\x01 \x01(\x0e\x32\x19.scheduler.ChallengeScope\x12\x0f\n\x07node_id\x18\x02 \x01(\x0c\"&\n\x11\x43hallengeResponse\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\"\xea\x01\n\x13RegistrationRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x11\n\tbip32_key\x18\x02 \x01(\x0c\x12\x0f\n\x07network\x18\x04 \x01(\t\x12\x11\n\tchallenge\x18\x05 \x01(\x0c\x12\x11\n\tsignature\x18\x06 \x01(\x0c\x12\x14\n\x0csigner_proto\x18\x07 \x01(\t\x12\x10\n\x08init_msg\x18\x08 \x01(\x0c\x12\x0b\n\x03\x63sr\x18\t \x01(\x0c\x12\x13\n\x0binvite_code\x18\n \x01(\t\x12.\n\x0bstartupmsgs\x18\x03 \x03(\x0b\x32\x19.scheduler.StartupMessage\"?\n\x14RegistrationResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\"\"\n\x0fScheduleRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\"0\n\x0fNodeInfoRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x0c\n\x04wait\x18\x02 \x01(\x08\"5\n\x10NodeInfoResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x10\n\x08grpc_uri\x18\x02 \x01(\t\"U\n\x0fRecoveryRequest\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\x12\x11\n\tsignature\x18\x02 \x01(\x0c\x12\x0f\n\x07node_id\x18\x03 \x01(\x0c\x12\x0b\n\x03\x63sr\x18\t \x01(\x0c\";\n\x10RecoveryResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\"m\n\x0eUpgradeRequest\x12\x16\n\x0esigner_version\x18\x01 \x01(\t\x12\x13\n\x07initmsg\x18\x02 \x01(\x0c\x42\x02\x18\x01\x12.\n\x0bstartupmsgs\x18\x03 \x03(\x0b\x32\x19.scheduler.StartupMessage\"&\n\x0fUpgradeResponse\x12\x13\n\x0bold_version\x18\x01 \x01(\t\"3\n\x0eStartupMessage\x12\x0f\n\x07request\x18\x01 \x01(\x0c\x12\x10\n\x08response\x18\x02 \x01(\x0c\"\x18\n\x16ListInviteCodesRequest\"J\n\x17ListInviteCodesResponse\x12/\n\x10invite_code_list\x18\x01 \x03(\x0b\x32\x15.scheduler.InviteCode\"/\n\nInviteCode\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x13\n\x0bis_redeemed\x18\x02 \x01(\x08\"\x13\n\x11\x45xportNodeRequest\"!\n\x12\x45xportNodeResponse\x12\x0b\n\x03url\x18\x01 \x01(\t*+\n\x0e\x43hallengeScope\x12\x0c\n\x08REGISTER\x10\x00\x12\x0b\n\x07RECOVER\x10\x01\x32\xf0\x04\n\tScheduler\x12M\n\x08Register\x12\x1e.scheduler.RegistrationRequest\x1a\x1f.scheduler.RegistrationResponse\"\x00\x12\x44\n\x07Recover\x12\x1a.scheduler.RecoveryRequest\x1a\x1b.scheduler.RecoveryResponse\"\x00\x12K\n\x0cGetChallenge\x12\x1b.scheduler.ChallengeRequest\x1a\x1c.scheduler.ChallengeResponse\"\x00\x12\x45\n\x08Schedule\x12\x1a.scheduler.ScheduleRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12H\n\x0bGetNodeInfo\x12\x1a.scheduler.NodeInfoRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12G\n\x0cMaybeUpgrade\x12\x19.scheduler.UpgradeRequest\x1a\x1a.scheduler.UpgradeResponse\"\x00\x12Z\n\x0fListInviteCodes\x12!.scheduler.ListInviteCodesRequest\x1a\".scheduler.ListInviteCodesResponse\"\x00\x12K\n\nExportNode\x12\x1c.scheduler.ExportNodeRequest\x1a\x1d.scheduler.ExportNodeResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fscheduler.proto\x12\tscheduler\"M\n\x10\x43hallengeRequest\x12(\n\x05scope\x18\x01 \x01(\x0e\x32\x19.scheduler.ChallengeScope\x12\x0f\n\x07node_id\x18\x02 \x01(\x0c\"&\n\x11\x43hallengeResponse\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\"\xea\x01\n\x13RegistrationRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x11\n\tbip32_key\x18\x02 \x01(\x0c\x12\x0f\n\x07network\x18\x04 \x01(\t\x12\x11\n\tchallenge\x18\x05 \x01(\x0c\x12\x11\n\tsignature\x18\x06 \x01(\x0c\x12\x14\n\x0csigner_proto\x18\x07 \x01(\t\x12\x10\n\x08init_msg\x18\x08 \x01(\x0c\x12\x0b\n\x03\x63sr\x18\t \x01(\x0c\x12\x13\n\x0binvite_code\x18\n \x01(\t\x12.\n\x0bstartupmsgs\x18\x03 \x03(\x0b\x32\x19.scheduler.StartupMessage\"M\n\x14RegistrationResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\x12\x0c\n\x04rune\x18\x03 \x01(\t\"\"\n\x0fScheduleRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\"0\n\x0fNodeInfoRequest\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x0c\n\x04wait\x18\x02 \x01(\x08\"5\n\x10NodeInfoResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\x0c\x12\x10\n\x08grpc_uri\x18\x02 \x01(\t\"U\n\x0fRecoveryRequest\x12\x11\n\tchallenge\x18\x01 \x01(\x0c\x12\x11\n\tsignature\x18\x02 \x01(\x0c\x12\x0f\n\x07node_id\x18\x03 \x01(\x0c\x12\x0b\n\x03\x63sr\x18\t \x01(\x0c\"I\n\x10RecoveryResponse\x12\x13\n\x0b\x64\x65vice_cert\x18\x01 \x01(\t\x12\x12\n\ndevice_key\x18\x02 \x01(\t\x12\x0c\n\x04rune\x18\x03 \x01(\t\"m\n\x0eUpgradeRequest\x12\x16\n\x0esigner_version\x18\x01 \x01(\t\x12\x13\n\x07initmsg\x18\x02 \x01(\x0c\x42\x02\x18\x01\x12.\n\x0bstartupmsgs\x18\x03 \x03(\x0b\x32\x19.scheduler.StartupMessage\"&\n\x0fUpgradeResponse\x12\x13\n\x0bold_version\x18\x01 \x01(\t\"3\n\x0eStartupMessage\x12\x0f\n\x07request\x18\x01 \x01(\x0c\x12\x10\n\x08response\x18\x02 \x01(\x0c\"\x18\n\x16ListInviteCodesRequest\"J\n\x17ListInviteCodesResponse\x12/\n\x10invite_code_list\x18\x01 \x03(\x0b\x32\x15.scheduler.InviteCode\"/\n\nInviteCode\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x13\n\x0bis_redeemed\x18\x02 \x01(\x08\"\x13\n\x11\x45xportNodeRequest\"!\n\x12\x45xportNodeResponse\x12\x0b\n\x03url\x18\x01 \x01(\t*+\n\x0e\x43hallengeScope\x12\x0c\n\x08REGISTER\x10\x00\x12\x0b\n\x07RECOVER\x10\x01\x32\xf0\x04\n\tScheduler\x12M\n\x08Register\x12\x1e.scheduler.RegistrationRequest\x1a\x1f.scheduler.RegistrationResponse\"\x00\x12\x44\n\x07Recover\x12\x1a.scheduler.RecoveryRequest\x1a\x1b.scheduler.RecoveryResponse\"\x00\x12K\n\x0cGetChallenge\x12\x1b.scheduler.ChallengeRequest\x1a\x1c.scheduler.ChallengeResponse\"\x00\x12\x45\n\x08Schedule\x12\x1a.scheduler.ScheduleRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12H\n\x0bGetNodeInfo\x12\x1a.scheduler.NodeInfoRequest\x1a\x1b.scheduler.NodeInfoResponse\"\x00\x12G\n\x0cMaybeUpgrade\x12\x19.scheduler.UpgradeRequest\x1a\x1a.scheduler.UpgradeResponse\"\x00\x12Z\n\x0fListInviteCodes\x12!.scheduler.ListInviteCodesRequest\x1a\".scheduler.ListInviteCodesResponse\"\x00\x12K\n\nExportNode\x12\x1c.scheduler.ExportNodeRequest\x1a\x1d.scheduler.ExportNodeResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,8 +23,8 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _UPGRADEREQUEST.fields_by_name['initmsg']._options = None
   _UPGRADEREQUEST.fields_by_name['initmsg']._serialized_options = b'\030\001'
-  _globals['_CHALLENGESCOPE']._serialized_start=1151
-  _globals['_CHALLENGESCOPE']._serialized_end=1194
+  _globals['_CHALLENGESCOPE']._serialized_start=1179
+  _globals['_CHALLENGESCOPE']._serialized_end=1222
   _globals['_CHALLENGEREQUEST']._serialized_start=30
   _globals['_CHALLENGEREQUEST']._serialized_end=107
   _globals['_CHALLENGERESPONSE']._serialized_start=109
@@ -32,33 +32,33 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_REGISTRATIONREQUEST']._serialized_start=150
   _globals['_REGISTRATIONREQUEST']._serialized_end=384
   _globals['_REGISTRATIONRESPONSE']._serialized_start=386
-  _globals['_REGISTRATIONRESPONSE']._serialized_end=449
-  _globals['_SCHEDULEREQUEST']._serialized_start=451
-  _globals['_SCHEDULEREQUEST']._serialized_end=485
-  _globals['_NODEINFOREQUEST']._serialized_start=487
-  _globals['_NODEINFOREQUEST']._serialized_end=535
-  _globals['_NODEINFORESPONSE']._serialized_start=537
-  _globals['_NODEINFORESPONSE']._serialized_end=590
-  _globals['_RECOVERYREQUEST']._serialized_start=592
-  _globals['_RECOVERYREQUEST']._serialized_end=677
-  _globals['_RECOVERYRESPONSE']._serialized_start=679
-  _globals['_RECOVERYRESPONSE']._serialized_end=738
-  _globals['_UPGRADEREQUEST']._serialized_start=740
-  _globals['_UPGRADEREQUEST']._serialized_end=849
-  _globals['_UPGRADERESPONSE']._serialized_start=851
-  _globals['_UPGRADERESPONSE']._serialized_end=889
-  _globals['_STARTUPMESSAGE']._serialized_start=891
-  _globals['_STARTUPMESSAGE']._serialized_end=942
-  _globals['_LISTINVITECODESREQUEST']._serialized_start=944
-  _globals['_LISTINVITECODESREQUEST']._serialized_end=968
-  _globals['_LISTINVITECODESRESPONSE']._serialized_start=970
-  _globals['_LISTINVITECODESRESPONSE']._serialized_end=1044
-  _globals['_INVITECODE']._serialized_start=1046
-  _globals['_INVITECODE']._serialized_end=1093
-  _globals['_EXPORTNODEREQUEST']._serialized_start=1095
-  _globals['_EXPORTNODEREQUEST']._serialized_end=1114
-  _globals['_EXPORTNODERESPONSE']._serialized_start=1116
-  _globals['_EXPORTNODERESPONSE']._serialized_end=1149
-  _globals['_SCHEDULER']._serialized_start=1197
-  _globals['_SCHEDULER']._serialized_end=1821
+  _globals['_REGISTRATIONRESPONSE']._serialized_end=463
+  _globals['_SCHEDULEREQUEST']._serialized_start=465
+  _globals['_SCHEDULEREQUEST']._serialized_end=499
+  _globals['_NODEINFOREQUEST']._serialized_start=501
+  _globals['_NODEINFOREQUEST']._serialized_end=549
+  _globals['_NODEINFORESPONSE']._serialized_start=551
+  _globals['_NODEINFORESPONSE']._serialized_end=604
+  _globals['_RECOVERYREQUEST']._serialized_start=606
+  _globals['_RECOVERYREQUEST']._serialized_end=691
+  _globals['_RECOVERYRESPONSE']._serialized_start=693
+  _globals['_RECOVERYRESPONSE']._serialized_end=766
+  _globals['_UPGRADEREQUEST']._serialized_start=768
+  _globals['_UPGRADEREQUEST']._serialized_end=877
+  _globals['_UPGRADERESPONSE']._serialized_start=879
+  _globals['_UPGRADERESPONSE']._serialized_end=917
+  _globals['_STARTUPMESSAGE']._serialized_start=919
+  _globals['_STARTUPMESSAGE']._serialized_end=970
+  _globals['_LISTINVITECODESREQUEST']._serialized_start=972
+  _globals['_LISTINVITECODESREQUEST']._serialized_end=996
+  _globals['_LISTINVITECODESRESPONSE']._serialized_start=998
+  _globals['_LISTINVITECODESRESPONSE']._serialized_end=1072
+  _globals['_INVITECODE']._serialized_start=1074
+  _globals['_INVITECODE']._serialized_end=1121
+  _globals['_EXPORTNODEREQUEST']._serialized_start=1123
+  _globals['_EXPORTNODEREQUEST']._serialized_end=1142
+  _globals['_EXPORTNODERESPONSE']._serialized_start=1144
+  _globals['_EXPORTNODERESPONSE']._serialized_end=1177
+  _globals['_SCHEDULER']._serialized_start=1225
+  _globals['_SCHEDULER']._serialized_end=1849
 # @@protoc_insertion_point(module_scope)

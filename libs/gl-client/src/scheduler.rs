@@ -126,16 +126,23 @@ impl Scheduler {
             res.device_key = device_cert.serialize_private_key_pem();
         }
 
-        // We ask the signer for a signature of the public key to append the
-        // public key to any payload that is sent to a node.
         let public_key = device_cert.get_key_pair().public_key_raw();
         debug!(
-            "Asking singer to sign public key {}",
+            "Asking singer to create a rune for public key {}",
             hex::encode(public_key)
         );
-        let r = signer.sign_device_key(public_key)?;
-        debug!("Got signature: {}", hex::encode(r));
 
+        // Create a new rune for the tls certs public key and append it to the
+        // grpc response. Restricts the rune to the public key used for mTLS
+        // authentication.
+        let alt = futhark::Alternative::new(
+            "pubkey".to_string(),
+            futhark::Condition::Equal,
+            hex::encode(public_key),
+            false,
+        )?;
+        let restriction = futhark::Restriction::new(vec![alt])?;
+        res.rune = signer.create_rune("device", vec![restriction])?;
         Ok(res)
     }
 
@@ -184,16 +191,23 @@ impl Scheduler {
             res.device_key = device_cert.serialize_private_key_pem();
         }
 
-        // We ask the signer for a signature of the public key to append the
-        // public key to any payload that is sent to a node.
         let public_key = device_cert.get_key_pair().public_key_raw();
         debug!(
-            "Asking singer to sign public key {}",
+            "Asking singer to create a rune for public key {}",
             hex::encode(public_key)
         );
-        let r = signer.sign_device_key(public_key)?;
-        debug!("Got signature: {}", hex::encode(r));
 
+        // Create a new rune for the tls certs public key and append it to the
+        // grpc response. Restricts the rune to the public key used for mTLS
+        // authentication.
+        let alt = futhark::Alternative::new(
+            "pubkey".to_string(),
+            futhark::Condition::Equal,
+            hex::encode(public_key),
+            false,
+        )?;
+        let restriction = futhark::Restriction::new(vec![alt])?;
+        res.rune = signer.create_rune("device", vec![restriction])?;
         Ok(res)
     }
 
