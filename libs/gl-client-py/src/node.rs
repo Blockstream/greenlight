@@ -17,14 +17,19 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[new]
-    fn new(node_id: Vec<u8>, network: String, tls: TlsConfig, grpc_uri: String) -> PyResult<Self> {
+    fn new(
+        node_id: Vec<u8>,
+        network: String,
+        tls: TlsConfig,
+        grpc_uri: String,
+        rune: String,
+    ) -> PyResult<Self> {
         let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("unknown network")),
         };
 
-        let inner = gl::node::Node::new(node_id, network, tls.inner);
-
+        let inner = gl::node::Node::new(node_id, network, tls.inner, rune);
         // Connect to both interfaces in parallel to avoid doubling the startup time:
 
         // TODO: Could be massively simplified by using a scoped task
