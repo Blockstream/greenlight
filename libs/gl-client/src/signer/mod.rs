@@ -3,6 +3,7 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
+use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::anyhow;
@@ -25,8 +26,10 @@ use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApp
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 
+mod approver;
 mod auth;
 pub mod model;
+mod resolve;
 
 const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
@@ -65,8 +68,8 @@ pub enum Error {
     #[error("scheduler returned faulty URI: {0}")]
     InvalidUri(#[from] InvalidUri),
 
-    #[error("signer refused a request: {0}")]
-    Signer(#[from] vls_protocol::Error),
+    #[error("resolver error: request {0:?}, context: {1:?}")]
+    Resolver(Vec<u8>, Vec<crate::signer::model::Request>),
 
     #[error("other: {0}")]
     Other(anyhow::Error),
@@ -75,7 +78,8 @@ pub enum Error {
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer, anyhow::Error> {
         use lightning_signer::policy::{
-            filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
+            filter::{FilterRule, PolicyFilter},
+            simple_validator::SimpleValidatorFactory,
         };
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
@@ -96,6 +100,10 @@ impl Signer {
         #[cfg(not(feature = "permissive"))]
         {
             policy.filter = PolicyFilter::default();
+            policy.filter.merge(PolicyFilter {
+                // TODO: Remove once we have fully switched over to zero-fee anchors
+                rules: vec![FilterRule::new_warn("policy-channel-safe-type-anchors")],
+            });
         }
 
         let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(policy));
@@ -288,7 +296,11 @@ impl Signer {
         }
     }
 
-    fn authenticate_request(&self, req: &HsmRequest) -> Result<Vec<Approval>, Error> {
+    fn authenticate_request(
+        &self,
+        msg: &vls_protocol::msgs::Message,
+        req: &HsmRequest,
+    ) -> Result<Vec<Approval>, Error> {
         let ctxrequests: Vec<model::Request> = self
             .check_request_auth(req.requests.clone())
             .into_iter()
@@ -303,6 +315,12 @@ impl Signer {
             })
             .collect::<Vec<model::Request>>();
 
+        log::trace!(
+            "Resolving signature request against pending grpc commands: {:?}",
+            req.requests
+        );
+        Resolver::try_resolve(msg, &ctxrequests)?;
+
         use auth::Authorizer;
         let auth = auth::GreenlightAuthorizer {};
         let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
@@ -311,8 +329,7 @@ impl Signer {
     }
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
-        let approvals = self.authenticate_request(&req)?;
-        let diff: crate::persist::State = req.signer_state.into();
+        let diff: crate::persist::State = req.signer_state.clone().into();
 
         let prestate = {
             debug!("Updating local signer state with state from node");
@@ -342,7 +359,9 @@ impl Signer {
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", serde_json::to_string(&prestate).unwrap());
 
-        let approver = Arc::new(MemoApprover::new(PositiveApprover()));
+        let approver = Arc::new(MemoApprover::new(approver::ReportingApprover::new(
+            PositiveApprover(),
+        )));
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver)?;
 
@@ -499,7 +518,7 @@ impl Signer {
                     .collect(),
             })
             .await
-            .map_err(|e| anyhow!("error asking scheduler to upgrade: {}", e))?;
+            .context("Error asking scheduler to upgrade")?;
 
         loop {
             debug!("Calling scheduler.get_node_info");
@@ -700,7 +719,7 @@ mod tests {
                 requests: Vec::new(),
             },)
             .await
-            .is_err())
+            .is_err());
     }
 
     /// We should reject a signing request with an empty message.
