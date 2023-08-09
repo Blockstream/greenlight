@@ -263,27 +263,7 @@ impl Signer {
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
 
-            let ctxrequests: Vec<model::Request> = self
-                .check_request_auth(req.requests.clone())
-                .into_iter()
-                .filter_map(|r| r.ok())
-                .map(|r| decode_request(r))
-                .filter_map(|r| match r {
-                    Ok(r) => Some(r),
-                    Err(e) => {
-                        log::error!("Unable to decode request in context: {}", e);
-                        None
-                    }
-                })
-                .collect::<Vec<model::Request>>();
-
-            // TODO: Decode requests and reconcile them with the changes
-            use auth::Authorizer;
-            let auth = auth::DummyAuthorizer {};
-            let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
-            // TODO: apply approval to approver / handler
-
-            match self.process_request(req, approvals).await {
+            match self.process_request(req).await {
                 Ok(response) => {
                     trace!("Sending response {}", hex::encode(&response.raw));
                     client
@@ -301,13 +281,35 @@ impl Signer {
         }
     }
 
-    async fn process_request(
-        &self,
-        req: HsmRequest,
-        approvals: Vec<Approval>,
-    ) -> Result<HsmResponse, Error> {
-        let mut b = Bytes::from(req.raw.clone());
+    fn authenticate_request(&self, req: &HsmRequest) -> Result<Vec<Approval>, Error> {
+        let ctxrequests: Vec<model::Request> = self
+            .check_request_auth(req.requests.clone())
+            .into_iter()
+            .filter_map(|r| r.ok())
+            .map(|r| decode_request(r))
+            .filter_map(|r| match r {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    log::error!("Unable to decode request in context: {}", e);
+                    None
+                }
+            })
+            .collect::<Vec<model::Request>>();
+
+        use auth::Authorizer;
+        let auth = auth::GreenlightAuthorizer {};
+        let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
+        debug!("Current approvals: {:?}", approvals);
+        Ok(approvals)
+    }
+
+    async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
+        let approvals = self.authenticate_request(&req)?;
         let diff: crate::persist::State = req.signer_state.into();
+        let mut b = bytes::BytesMut::new();
+        b.put_u16(req.raw.len().try_into().expect("message exceeds u16 size"));
+        b.put_slice(&req.raw);
+
         let prestate = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().unwrap();
@@ -317,7 +319,7 @@ impl Signer {
             );
 
             state.merge(&diff).unwrap();
-            trace!("Processing request {}", hex::encode(&req.raw),);
+            trace!("Processing request {}", hex::encode(&b),);
             state.clone()
         };
 
@@ -330,7 +332,6 @@ impl Signer {
 
         let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e|
         Error::Signer(e))?;
-
         log::trace!("Handling message {:?}", msg);
 
         let approver = Arc::new(MemoApprover::new(PositiveApprover()));
