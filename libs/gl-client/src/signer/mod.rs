@@ -70,7 +70,8 @@ pub enum Error {
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer, anyhow::Error> {
         use lightning_signer::policy::{
-            filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
+            filter::{FilterRule, PolicyFilter},
+            simple_validator::SimpleValidatorFactory,
         };
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
@@ -91,6 +92,10 @@ impl Signer {
         #[cfg(not(feature = "permissive"))]
         {
             policy.filter = PolicyFilter::default();
+            policy.filter.merge(PolicyFilter {
+                // TODO: Remove once we have fully switched over to zero-fee anchors
+                rules: vec![FilterRule::new_warn("policy-channel-safe-type-anchors")],
+            });
         }
 
         let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(policy));
