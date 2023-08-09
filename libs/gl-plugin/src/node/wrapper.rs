@@ -385,7 +385,10 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::TxprepareRequest>,
     ) -> Result<Response<pb::TxprepareResponse>, Status> {
-        self.inner.tx_prepare(r).await
+        debug!("Processing a tx_prepare call: {:?}", r);
+        let res = self.inner.tx_prepare(r).await;
+        debug!("tx_prepare response: {:?}", res);
+        res
     }
 
     async fn tx_send(
