@@ -52,7 +52,8 @@ RUN mkdir /tmp/protoc && \
     rm -rf /tmp/protoc
 
 RUN python3 -m pip install -U \
-      pip \
+      pip tomli &&\
+    python3 -m pip install \
     maturin \
     mrkd \
     mako
@@ -62,7 +63,6 @@ WORKDIR /repo
 RUN make cln
 
 RUN (cd /repo/libs/gl-client && cargo build --release) && \
-    (cd /repo/libs/gl-client-py && maturin build --release --strip --compatibility manylinux_2_28) && \
     (cd /repo/libs && cargo build --all --release --bin gl-plugin && cargo build --all --release --bin gl-signerproxy)
 
 # Move the binaries into the location the tester expects, we copy just
@@ -77,7 +77,7 @@ ARG BITCOIN_VERSION=0.20.1
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_DIR=/tmp/target/
-ENV RUST_VERSION=1.67.0
+ENV RUST_VERSION=1.70.0
 
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0
@@ -149,8 +149,9 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljs
 # Run in a venv, so we don't get warnings about root being special.
 RUN python3 -m venv /tmp/venv
 ENV PATH=/tmp/venv/bin:$PATH
+ENV VIRTUAL_ENV=/tmp/venv
 
-RUN python3 -m pip install -U pip && \
+RUN python3 -m pip install -U pip tomli && \
     python3 -m pip install \
     mako \
     protobuf \
@@ -176,10 +177,8 @@ RUN cd /tmp/ && \
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
 COPY --from=builder /tmp/target /tmp/target
-COPY --from=builder /repo/libs/target/wheels/gl_client* /opt/
-RUN python3 -m pip install /opt/gl_client*
 ADD . /repo
-
+RUN (cd /repo/libs/gl-client-py; maturin develop)
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`
 RUN python3 -m pip install /repo/libs/gl-testing
