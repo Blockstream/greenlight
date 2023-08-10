@@ -484,6 +484,20 @@ impl Node for WrappedNodeServer {
     ) -> Result<Response<pb::StopResponse>, Status> {
         self.inner.stop(r).await
     }
+
+    async fn static_backup(
+        &self,
+        r: Request<pb::StaticbackupRequest>,
+    ) -> Result<Response<pb::StaticbackupResponse>, Status> {
+        self.inner.static_backup(r).await
+    }
+
+    async fn list_htlcs(
+        &self,
+        r: Request<pb::ListhtlcsRequest>,
+    ) -> Result<Response<pb::ListhtlcsResponse>, Status> {
+        self.inner.list_htlcs(r).await
+    }
 }
 
 impl WrappedNodeServer {
