@@ -6,7 +6,6 @@ use crate::storage::StateStore;
 use crate::{messages, Event};
 use anyhow::{Context, Error, Result};
 use bytes::BufMut;
-use cln_rpc::model::ConnectRequest;
 use gl_client::persist::State;
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
@@ -344,7 +343,7 @@ impl Node for PluginNodeServer {
         match cln_rpc::ClnRpc::new(self.rpc_path.clone()).await {
             Ok(mut rpc) => {
                 let res = rpc
-                    .call_typed(cln_rpc::model::DeldatastoreRequest {
+                    .call_typed(cln_rpc::model::requests::DeldatastoreRequest {
                         key: vec![
                             "greenlight".to_string(),
                             "peerlist".to_string(),
@@ -966,29 +965,31 @@ impl PluginNodeServer {
         return Ok(());
     }
 
-    async fn get_reconnect_peers(&self) -> Result<Vec<ConnectRequest>, Error> {
+    async fn get_reconnect_peers(
+        &self,
+    ) -> Result<Vec<cln_rpc::model::requests::ConnectRequest>, Error> {
         let rpc_path = self.rpc_path.clone();
         let mut rpc = cln_rpc::ClnRpc::new(rpc_path).await?;
         let peers = rpc
-            .call_typed(cln_rpc::model::ListpeersRequest {
+            .call_typed(cln_rpc::model::requests::ListpeersRequest {
                 id: None,
                 level: None,
             })
             .await?;
 
-        let mut requests: Vec<ConnectRequest> = peers
+        let mut requests: Vec<cln_rpc::model::requests::ConnectRequest> = peers
             .peers
             .iter()
             .filter(|&p| p.connected)
-            .map(|p| cln_rpc::model::ConnectRequest {
+            .map(|p| cln_rpc::model::requests::ConnectRequest {
                 id: p.id.to_string(),
                 host: None,
                 port: None,
             })
             .collect();
 
-        let mut dspeers: Vec<ConnectRequest> = rpc
-            .call_typed(cln_rpc::model::ListdatastoreRequest {
+        let mut dspeers: Vec<cln_rpc::model::requests::ConnectRequest> = rpc
+            .call_typed(cln_rpc::model::requests::ListdatastoreRequest {
                 key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
             })
             .await?
@@ -1002,7 +1003,7 @@ impl PluginNodeServer {
                 s = s.replace('\\', "");
                 serde_json::from_str::<messages::Peer>(&s).unwrap()
             })
-            .map(|x| ConnectRequest {
+            .map(|x| cln_rpc::model::requests::ConnectRequest {
                 id: x.id,
                 host: Some(x.addr),
                 port: None,
