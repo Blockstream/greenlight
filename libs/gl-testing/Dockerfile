@@ -63,7 +63,7 @@ WORKDIR /repo
 RUN make cln
 
 RUN cd /repo/libs/gl-plugin && cargo build --release && \
-    cd /repo/libs/ && cargo build --all --release --bin gl-plugin && cargo build --all --release --bin gl-signerproxy)
+    cd /repo/libs/gl-signerproxy && cargo build --release
 
 # Move the binaries into the location the tester expects, we copy just
 # the binaries and we switch from release to debug, simply to keep the
