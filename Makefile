@@ -50,10 +50,7 @@ gen: ${GENALL}
 
 build-self: ensure-docker
 	(cd libs; cargo build --all)
-	(cd libs/gl-client-py && \
-	maturin build --strip && \
-	pip install --force-reinstall ${CARGO_TARGET_DIR}/wheels/gl_client*.whl)
-	pip install coverage
+	(cd libs/gl-client-py && python3 -m maturin develop)
 
 check-self: ensure-docker
 	PYTHONPATH=/repo/libs/gl-testing \
@@ -91,7 +88,7 @@ docker-check-self:
 	  -t \
 	  --rm \
 	  -v ${REPO_ROOT}:/repo \
-	  gltesting make check-self
+	  gltesting make build-self check-self
 
 docker-check:
 	docker run \
