@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "cln-grpc"
 version = "0.1.3"
-source = "git+https://github.com/ElementsProject/lightning.git?branch=master#0281111ca128cbff4ea332f012a60e7f62eb2560"
+source = "git+https://github.com/ElementsProject/lightning.git?branch=master#846cec4f2a70429c0a366b0b3884edf7a9edcd97"
 dependencies = [
  "anyhow",
  "bitcoin 0.29.2",
@@ -528,7 +528,7 @@ dependencies = [
 [[package]]
 name = "cln-rpc"
 version = "0.1.3"
-source = "git+https://github.com/ElementsProject/lightning.git?branch=master#0281111ca128cbff4ea332f012a60e7f62eb2560"
+source = "git+https://github.com/ElementsProject/lightning.git?branch=master#846cec4f2a70429c0a366b0b3884edf7a9edcd97"
 dependencies = [
  "anyhow",
  "bitcoin 0.29.2",
@@ -2645,9 +2645,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.7"
+version = "0.38.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "172891ebdceb05aa0005f533a6cbfca599ddd7d966f6f5d4d9b2e70478e70399"
+checksum = "19ed4fa021d81c8392ce04db050a3da9a60299050b7ae1cf482d862b54a7218f"
 dependencies = [
  "bitflags 2.3.3",
  "errno",
