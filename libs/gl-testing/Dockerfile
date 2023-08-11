@@ -53,17 +53,17 @@ RUN mkdir /tmp/protoc && \
 
 RUN python3 -m pip install -U \
       pip tomli &&\
-    python3 -m pip install \
-    maturin \
-    mrkd \
-    mako
+      python3 -m pip install \
+      maturin \
+      mrkd \
+      mako
 ADD . /repo
 WORKDIR /repo
 
 RUN make cln
 
-RUN (cd /repo/libs/gl-client && cargo build --release) && \
-    (cd /repo/libs && cargo build --all --release --bin gl-plugin && cargo build --all --release --bin gl-signerproxy)
+RUN cd /repo/libs/gl-plugin && cargo build --release && \
+    cd /repo/libs/gl-signerproxy && cargo build --release
 
 # Move the binaries into the location the tester expects, we copy just
 # the binaries and we switch from release to debug, simply to keep the
@@ -165,6 +165,8 @@ RUN python3 -m pip install -U pip tomli && \
     grpcio \
     pytest-xdist \
     maturin
+
+RUN git config --global --add safe.directory /repo
 
 # Install nodejs
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
