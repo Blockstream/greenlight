@@ -1,10 +1,13 @@
 use base64::Engine as _;
+use serde::de::DeserializeOwned;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
 
-fn generate_random_rpc_id() -> String {
-    // TODO: verify that rand::random is a CSRNG
-
+/// Generate a random json_rpc_id string that follows the requirements of LSPS0
+///
+/// - Should be a String
+/// - Should be at generated using at least 80 bits of randomness
+pub fn generate_random_rpc_id() -> String {
     // The specification requires an id using least 80 random bits of randomness
     let seed: [u8; 10] = rand::random();
     let result = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(seed);
@@ -36,10 +39,10 @@ impl<I, O, E> JsonRpcMethod<I, O, E> {
         self.method
     }
 
-    pub fn create_request(&self, params: I) -> JsonRpcRequest<I> {
+    pub fn create_request(&self, params: I, json_rpc_id: String) -> JsonRpcRequest<I> {
         JsonRpcRequest::<I> {
-            json_rpc: String::from("2.0"),
-            id: generate_random_rpc_id(),
+            jsonrpc: String::from("2.0"),
+            id: String::from(json_rpc_id),
             method: self.method.into(),
             params: params,
         }
@@ -47,8 +50,8 @@ impl<I, O, E> JsonRpcMethod<I, O, E> {
 }
 
 impl<O, E> JsonRpcMethod<NoParams, O, E> {
-    pub fn create_request_no_params(&self) -> JsonRpcRequest<NoParams> {
-        self.create_request(NoParams::default())
+    pub fn create_request_no_params(&self, json_rpc_id: String) -> JsonRpcRequest<NoParams> {
+        self.create_request(NoParams::default(), json_rpc_id)
     }
 }
 
@@ -58,16 +61,29 @@ impl<'a, I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
     }
 }
 
-impl<'de, 'a, I, O, E> JsonRpcMethod<I, O, E>
+impl<'de, I, O, E> JsonRpcMethod<I, O, E>
 where
     O: Deserialize<'de>,
     E: Deserialize<'de>,
 {
-    pub fn parse_json_response(
+    pub fn parse_json_response_str(
         &self,
         json_str: &'de str,
     ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
         serde_json::from_str(&json_str)
+    }
+}
+
+impl<I, O, E> JsonRpcMethod<I, O, E>
+where
+    O: DeserializeOwned,
+    E: DeserializeOwned,
+{
+    pub fn parse_json_response_value(
+        &self,
+        json_value: serde_json::Value,
+    ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
+        serde_json::from_value(json_value)
     }
 }
 
@@ -78,7 +94,7 @@ where
 // R is the data-type of the result if the query is successful
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JsonRpcRequest<I> {
-    pub json_rpc: String,
+    pub jsonrpc: String,
     pub id: String,
     pub method: String,
     pub params: I,
@@ -105,7 +121,7 @@ impl Serialize for NoParams {
 impl<I> JsonRpcRequest<I> {
     pub fn new<O, E>(method: JsonRpcMethod<I, O, E>, params: I) -> Self {
         return Self {
-            json_rpc: String::from("2.0"),
+            jsonrpc: String::from("2.0"),
             id: generate_random_rpc_id(),
             method: method.method.into(),
             params: params,
@@ -116,7 +132,7 @@ impl<I> JsonRpcRequest<I> {
 impl JsonRpcRequest<NoParams> {
     pub fn new_no_params<O, E>(method: JsonRpcMethod<NoParams, O, E>) -> Self {
         return Self {
-            json_rpc: String::from("2.0"),
+            jsonrpc: String::from("2.0"),
             id: generate_random_rpc_id(),
             method: method.method.into(),
             params: NoParams::default(),
@@ -128,14 +144,14 @@ impl JsonRpcRequest<NoParams> {
 pub struct JsonRpcResponseSuccess<O> {
     pub id: String,
     pub result: O,
-    pub json_rpc: String,
+    pub jsonrpc: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcResponseFailure<E> {
     pub id: String,
     pub error: ErrorData<E>,
-    pub json_rpc: String,
+    pub jsonrpc: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -174,7 +190,7 @@ mod test {
     fn serialize_json_rpc_request() {
         let rpc_request = JsonRpcRequest {
             id: "abcefg".into(),
-            json_rpc: "2.0".into(),
+            jsonrpc: "2.0".into(),
             params: NoParams::default(),
             method: "test.method".into(),
         };
@@ -182,7 +198,7 @@ mod test {
         let json_str = serde_json::to_string(&rpc_request).unwrap();
 
         let value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(value.get("json_rpc").unwrap(), "2.0");
+        assert_eq!(value.get("jsonrpc").unwrap(), "2.0");
         assert_eq!(value.get("id").unwrap(), &rpc_request.id);
         assert_eq!(value.get("method").unwrap(), "test.method");
         assert!(value.get("params").unwrap().as_object().unwrap().is_empty())
@@ -193,7 +209,7 @@ mod test {
         let rpc_response_ok: JsonRpcResponseSuccess<String> = JsonRpcResponseSuccess {
             id: String::from("abc"),
             result: String::from("result_data"),
-            json_rpc: String::from("2.0"),
+            jsonrpc: String::from("2.0"),
         };
 
         let rpc_response: JsonRpcResponse<String, ()> = JsonRpcResponse::Ok(rpc_response_ok);
@@ -201,7 +217,7 @@ mod test {
         let json_str: String = serde_json::to_string(&rpc_response).unwrap();
 
         let value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(value.get("json_rpc").unwrap(), "2.0");
+        assert_eq!(value.get("jsonrpc").unwrap(), "2.0");
         assert_eq!(value.get("id").unwrap(), "abc");
         assert_eq!(value.get("result").unwrap(), "result_data")
     }
@@ -210,7 +226,7 @@ mod test {
     fn serialize_json_rpc_response_error() {
         let rpc_response: JsonRpcResponse<String, ()> =
             JsonRpcResponse::Error(JsonRpcResponseFailure {
-                json_rpc: String::from("2.0"),
+                jsonrpc: String::from("2.0"),
                 id: String::from("abc"),
                 error: ErrorData {
                     code: -32700,
@@ -222,7 +238,7 @@ mod test {
         let json_str: String = serde_json::to_string(&rpc_response).unwrap();
 
         let value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(value.get("json_rpc").unwrap(), "2.0");
+        assert_eq!(value.get("jsonrpc").unwrap(), "2.0");
         assert_eq!(value.get("id").unwrap(), "abc");
         assert_eq!(value.get("error").unwrap().get("code").unwrap(), -32700);
         assert_eq!(
@@ -234,10 +250,11 @@ mod test {
     #[test]
     fn create_rpc_request_from_call() {
         let rpc_method = JsonRpcMethod::<NoParams, (), ()>::new("test.method");
-        let rpc_request = rpc_method.create_request_no_params();
+        let json_rpc_id = generate_random_rpc_id();
+        let rpc_request = rpc_method.create_request_no_params(json_rpc_id);
 
         assert_eq!(rpc_request.method, "test.method");
-        assert_eq!(rpc_request.json_rpc, "2.0");
+        assert_eq!(rpc_request.jsonrpc, "2.0");
         assert_eq!(rpc_request.params, NoParams::default());
     }
 
@@ -246,19 +263,19 @@ mod test {
         let rpc_method = JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
 
         let json_value = serde_json::json!({
-            "json_rpc" : "2.0",
+            "jsonrpc" : "2.0",
             "result" : "result_data",
             "id" : "request_id"
         });
 
         let json_str = serde_json::to_string(&json_value).unwrap();
 
-        let result = rpc_method.parse_json_response(&json_str).unwrap();
+        let result = rpc_method.parse_json_response_str(&json_str).unwrap();
 
         match result {
             JsonRpcResponse::Error(_) => panic!("Deserialized a good response but got panic"),
             JsonRpcResponse::Ok(ok) => {
-                assert_eq!(ok.json_rpc, "2.0");
+                assert_eq!(ok.jsonrpc, "2.0");
                 assert_eq!(ok.id, "request_id");
                 assert_eq!(ok.result, "result_data")
             }
@@ -271,18 +288,18 @@ mod test {
             JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
 
         let json_value = serde_json::json!({
-            "json_rpc" : "2.0",
+            "jsonrpc" : "2.0",
             "error" : { "code" : -32700, "message" : "Failed to parse response"},
             "id" : "request_id"
         });
 
         let json_str = serde_json::to_string(&json_value).unwrap();
 
-        let result = rpc_method.parse_json_response(&json_str).unwrap();
+        let result = rpc_method.parse_json_response_str(&json_str).unwrap();
 
         match result {
             JsonRpcResponse::Error(err) => {
-                assert_eq!(err.json_rpc, "2.0");
+                assert_eq!(err.jsonrpc, "2.0");
 
                 assert_eq!(err.error.code, -32700);
                 assert_eq!(err.error.message, "Failed to parse response");

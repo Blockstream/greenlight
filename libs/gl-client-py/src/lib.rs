@@ -9,11 +9,14 @@ mod runtime;
 mod scheduler;
 mod signer;
 mod tls;
+mod lsps;
 
 pub use node::Node;
 pub use scheduler::Scheduler;
 pub use signer::Signer;
 pub use tls::TlsConfig;
+pub use lsps::LspClient;
+
 
 #[pyfunction]
 pub fn backup_decrypt_with_seed(encrypted: Vec<u8>, seed: Vec<u8>) -> PyResult<Vec<u8>> {
@@ -36,6 +39,7 @@ fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Node>()?;
     m.add_class::<Scheduler>()?;
     m.add_class::<TlsConfig>()?;
+    m.add_class::<LspClient>()?;
 
     m.add_function(wrap_pyfunction!(backup_decrypt_with_seed, m)?)?;
 

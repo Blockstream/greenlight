@@ -1,5 +1,6 @@
 use crate::runtime::exec;
 use crate::tls::TlsConfig;
+use crate::lsps::LspClient;
 use gl_client as gl;
 use gl_client::bitcoin::Network;
 use gl_client::pb;
@@ -12,6 +13,7 @@ use tonic::{Code, Status};
 pub struct Node {
     client: gl::node::Client,
     gclient: gl::node::GClient,
+    cln_client : gl::node::ClnClient
 }
 
 #[pymethods]
@@ -29,21 +31,24 @@ impl Node {
 
         // TODO: Could be massively simplified by using a scoped task
         // from tokio_scoped to a
-        let (client, gclient) = exec(async {
+        let (client, gclient, cln_client, ) = exec(async {
             let i = inner.clone();
             let u = grpc_uri.clone();
             let h1 = tokio::spawn(async move { i.connect(u).await });
             let i = inner.clone();
             let u = grpc_uri.clone();
             let h2 = tokio::spawn(async move { i.connect(u).await });
+            let i = inner.clone();
+            let u = grpc_uri.clone();
+            let h3 = tokio::spawn(async move { i.connect(u).await });
 
-            Ok::<(gl::node::Client, gl::node::GClient), anyhow::Error>((h1.await??, h2.await??))
+            Ok::<(gl::node::Client, gl::node::GClient, gl::node::ClnClient), anyhow::Error>((h1.await??, h2.await??, h3.await??))
         })
         .map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
         })?;
 
-        Ok(Node { client, gclient })
+        Ok(Node { client, gclient, cln_client })
     }
 
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {
@@ -76,6 +81,13 @@ impl Node {
             .map(|x| x.into_inner())
             .map_err(error_starting_stream)?;
         Ok(CustommsgStream { inner: stream })
+    }
+
+    fn get_lsp_client(&self) -> LspClient {
+        LspClient::new(
+            self.client.clone(),
+            self.cln_client.clone()
+        )
     }
 }
 
