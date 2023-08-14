@@ -679,7 +679,6 @@ mod tests {
                     signer_state: vec![],
                     requests: Vec::new(),
                 },
-                vec![],
             )
             .await
             .is_err())
