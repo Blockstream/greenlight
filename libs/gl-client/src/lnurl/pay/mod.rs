@@ -1,15 +1,18 @@
 use super::models;
 use super::utils::parse_lnurl;
-use crate::lnurl::models::{LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse};
+use crate::lnurl::{
+    models::{LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse},
+    utils::parse_invoice,
+};
 use anyhow::{anyhow, ensure, Result};
 use lightning_invoice::{Invoice, InvoiceDescription};
 use log::debug;
 use reqwest::Url;
 use sha256;
-use std::str::FromStr;
 
-pub async fn resolve_to_invoice<T: LnUrlHttpClient>(
-    http_client: T,
+
+pub async fn resolve_lnurl_to_invoice<T: LnUrlHttpClient>(
+    http_client: &T,
     lnurl: &str,
     amount_msats: u64,
 ) -> Result<String> {
@@ -18,7 +21,11 @@ pub async fn resolve_to_invoice<T: LnUrlHttpClient>(
     let lnurl_pay_request_response: PayRequestResponse =
         http_client.get_pay_request_response(&url).await?;
 
-    validate_pay_request_response(&lnurl_pay_request_response, amount_msats)?;
+    if lnurl_pay_request_response.tag != "payRequest" {
+        return Err(anyhow!("Expected tag to say 'payRequest'"));
+    }
+
+    ensure_amount_is_within_range(&lnurl_pay_request_response, amount_msats)?;
     let description = extract_description(&lnurl_pay_request_response)?;
 
     debug!("Domain: {}", Url::parse(&url).unwrap().host().unwrap());
@@ -34,13 +41,35 @@ pub async fn resolve_to_invoice<T: LnUrlHttpClient>(
         .await?;
 
     let invoice = parse_invoice(&callback_response.pr)?;
-    validate_invoice_from_callback_response(&invoice, amount_msats, lnurl_pay_request_response)?;
+    validate_invoice_from_callback_response(
+        &invoice,
+        amount_msats,
+        &lnurl_pay_request_response.metadata,
+    )?;
     Ok(invoice.to_string())
 }
 
-// Get an Invoice from a Lightning Network URL pay request
-fn parse_invoice(invoice_str: &str) -> Result<Invoice> {
-    Invoice::from_str(&invoice_str).map_err(|e| anyhow!(format!("Failed to parse invoice: {}", e)))
+// Validates the invoice on the pay request's callback response
+pub fn validate_invoice_from_callback_response(
+    invoice: &Invoice,
+    amount_msats: u64,
+    metadata: &str,
+) -> Result<()> {
+    ensure!(invoice.amount_milli_satoshis().unwrap_or_default() == amount_msats ,
+        "Amount found in invoice was not equal to the amount found in the original request\nRequest amount: {}\nInvoice amount:{:?}", amount_msats, invoice.amount_milli_satoshis().unwrap()
+    );
+
+    let description_hash: String = match invoice.description() {
+        InvoiceDescription::Direct(d) => sha256::digest(d.clone().into_inner()),
+        InvoiceDescription::Hash(h) => h.0.to_string(),
+    };
+
+    ensure!(
+        description_hash == sha256::digest(metadata),
+        "description_hash does not match the hash of the metadata"
+    );
+
+    Ok(())
 }
 
 // Function to extract the description from the lnurl pay request response
@@ -59,8 +88,6 @@ fn extract_description(lnurl_pay_request_response: &PayRequestResponse) -> Resul
         }
     }
 
-    ensure!(!description.is_empty(), "No description found");
-
     Ok(description)
 }
 
@@ -76,7 +103,7 @@ fn build_callback_url(
 }
 
 // Validates the pay request response for expected values
-fn validate_pay_request_response(
+fn ensure_amount_is_within_range(
     lnurl_pay_request_response: &PayRequestResponse,
     amount: u64,
 ) -> Result<()> {
@@ -94,32 +121,6 @@ fn validate_pay_request_response(
         ));
     }
 
-    if lnurl_pay_request_response.tag != "payRequest" {
-        return Err(anyhow!("Expected tag to say 'payRequest'"));
-    }
-
-    Ok(())
-}
-
-// Validates the invoice on the pay request's callback response
-fn validate_invoice_from_callback_response(
-    invoice: &Invoice,
-    amount: u64,
-    lnurl_pay_request_response: PayRequestResponse,
-) -> Result<()> {
-    ensure!(invoice.amount_milli_satoshis().unwrap_or_default() == amount ,
-        "Amount found in invoice was not equal to the amount found in the original request\nRequest amount: {}\nInvoice amount:{:?}", amount, invoice.amount_milli_satoshis().unwrap()
-    );
-
-    let description_hash: String = match invoice.description() {
-        InvoiceDescription::Direct(d) => sha256::digest(d.clone().into_inner()),
-        InvoiceDescription::Hash(h) => h.0.to_string(),
-    };
-
-    ensure!(
-        description_hash == sha256::digest(lnurl_pay_request_response.metadata),
-        "description_hash does not match the hash of the metadata"
-    );
     Ok(())
 }
 
@@ -169,7 +170,7 @@ mod tests {
         let lnurl = "LNURL1DP68GURN8GHJ7CMFWP5X2UNSW4HXKTNRDAKJ7CTSDYHHVVF0D3H82UNV9UCSAXQZE2";
         let amount = 100000;
 
-        let _ = resolve_to_invoice(mock_http_client, lnurl, amount).await;
+        let _ = resolve_lnurl_to_invoice(&mock_http_client, lnurl, amount).await;
     }
 
     #[tokio::test]
@@ -179,7 +180,7 @@ mod tests {
         let lnurl = "LNURL1111111111111111111111111111111111111111111111111111111111111111111";
         let amount = 100000;
 
-        let result = resolve_to_invoice(mock_http_client, lnurl, amount).await;
+        let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, amount).await;
 
         match result {
             Err(err) => {
@@ -211,7 +212,7 @@ mod tests {
         let lnurl = "LNURL1DP68GURN8GHJ7CMFWP5X2UNSW4HXKTNRDAKJ7CTSDYHHVVF0D3H82UNV9UCSAXQZE2";
         let amount = 1;
 
-        let result = resolve_to_invoice(mock_http_client, lnurl, amount).await;
+        let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, amount).await;
 
         match result {
             Err(err) => {
@@ -240,7 +241,7 @@ mod tests {
         let lnurl = "LNURL1DP68GURN8GHJ7CMFWP5X2UNSW4HXKTNRDAKJ7CTSDYHHVVF0D3H82UNV9UCSAXQZE2";
         let amount = 1;
 
-        let result = resolve_to_invoice(mock_http_client, lnurl, amount).await;
+        let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, amount).await;
 
         match result {
             Err(err) => {

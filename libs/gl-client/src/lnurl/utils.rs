@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use bech32::FromBase32;
+use lightning_invoice::Invoice;
+use std::str::FromStr;
 
 // Function to decode and parse the lnurl into a URL
 pub fn parse_lnurl(lnurl: &str) -> Result<String> {
@@ -11,4 +13,9 @@ pub fn parse_lnurl(lnurl: &str) -> Result<String> {
 
     let url = String::from_utf8(vec).map_err(|e| anyhow!("Failed to convert to utf-8: {}", e))?;
     Ok(url)
+}
+
+// Get an Invoice from a Lightning Network URL pay request
+pub fn parse_invoice(invoice_str: &str) -> Result<Invoice> {
+    Invoice::from_str(&invoice_str).map_err(|e| anyhow!(format!("Failed to parse invoice: {}", e)))
 }
