@@ -120,12 +120,16 @@ ENV PATH=/opt/cln-latest/usr/local/bin/:$PATH
 
 # And we also add the cargo bin directory just for the sake of
 # simplifying a dev's life.
-ENV PATH=/root/.cargo/bin:$PATH
+ENV PATH=/home/$DOCKER_USER/.cargo/bin:$PATH
 
 # Make sure we can tell when running in the docker container. This is
 # helpful if we expect to be run in the container, but have been
 # invoked somewhere else.
 ENV GL_DOCKER=1
+ENV PATH=/tmp/venv/bin:$PATH
+ENV VIRTUAL_ENV=/tmp/venv
+ENV NPM_PACKAGES="${HOME}/.npm-packages"
+ENV PATH="${PATH}:${NPM_PACKAGES}/bin"
 
 RUN cd /tmp/ && \
     wget https://storage.googleapis.com/c-lightning-tests/bitcoin-$BITCOIN_VERSION-x86_64-linux-gnu.tar.bz2 -O bitcoin.tar.bz2 && \
@@ -149,8 +153,10 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1
 RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
     chmod a+x /usr/bin/cfssljson
 
-# Copy from builder
-COPY --from=builder /repo/libs/target/wheels/gl_client* /opt/
+COPY --from=builder /repo/cln-versions/ /opt/cln
+COPY --from=builder /tmp/target /tmp/target
+ADD . /repo
+RUN chown $DOCKER_USER -R /tmp/target /repo
 
 # Switch to docker user bevore we install dependencies.
 USER $DOCKER_USER
@@ -167,8 +173,6 @@ RUN curl \
 
 # Run in a venv, so we don't get warnings about root being special.
 RUN python3 -m venv /tmp/venv
-ENV PATH=/tmp/venv/bin:$PATH
-ENV VIRTUAL_ENV=/tmp/venv
 
 RUN python3 -m pip install -U pip tomli && \
     python3 -m pip install \
@@ -183,26 +187,17 @@ RUN python3 -m pip install -U pip tomli && \
     pytest-cov \
     grpcio \
     pytest-xdist \
-    maturin \
-    /opt/gl_client*
+    maturin[patchelf]
 
 RUN git config --global --add safe.directory /repo
 
 # Install nodejs
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 RUN mkdir "${HOME}/.npm-packages" && npm config set prefix "${HOME}/.npm-packages"
-ENV NPM_PACKAGES="${HOME}/.npm-packages"
-ENV PATH="${PATH}:${NPM_PACKAGES}/bin"
 
 # Required to build and test the JS bindings
 RUN npm install -g cargo-cp-artifact
 
-COPY --from=builder /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
-
-USER $DOCKER_USER
-COPY --from=builder /tmp/target /tmp/target
-ADD . /repo
 RUN (cd /repo/libs/gl-client-py; maturin develop)
 # Install `gl-testing`. When integrators use this image they'll mount
 # their own code into `/repo`

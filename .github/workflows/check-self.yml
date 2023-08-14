@@ -18,7 +18,5 @@ jobs:
       
     - name: Build tester image
       run: |
-        docker build -t gltesting:latest -f libs/gl-testing/Dockerfile .
-      
-    - name: Check Self
-      run: make docker-check-self
+        sudo chmod a+rwx -R libs/gl-client-py
+        make docker-image docker-check-self
