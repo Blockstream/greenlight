@@ -8,13 +8,13 @@
 // are used as the transport layer. All messages related to LSPS will start
 // with the LSPS_MESSAGE_ID.
 //
-use super::json_rpc::{JsonRpcResponse};
+use super::json_rpc::{generate_random_rpc_id, JsonRpcResponse};
 use super::json_rpc_erased::JsonRpcMethodUnerased;
+use crate::lsps::error::LspsError;
 use crate::node::{Client, ClnClient};
 use crate::pb::{Custommsg, StreamCustommsgRequest};
 use cln_grpc::pb::SendcustommsgRequest;
 use std::io::{Cursor, Read, Write};
-use thiserror::Error;
 
 // BOLT8 message ID 37913
 const LSPS_MESSAGE_ID: [u8; 2] = [0x94, 0x19];
@@ -25,53 +25,65 @@ pub struct JsonRpcTransport {
     cln_client: ClnClient, // USed for sending custom message
 }
 
-#[derive(Error, Debug)]
-pub enum TransportError {
-    #[error("Failed to parse json")]
-    JsonParseError(#[from] serde_json::Error),
-    #[error("Error while calling lightning grpc-method")]
-    GrpcError(#[from] tonic::Status),
-    #[error("Connection closed")]
-    ConnectionClosed,
-    #[error("Timeout")]
-    Timeout,
-    #[error("Something unexpected happened")]
-    Other(String),
-}
-
-impl From<std::io::Error> for TransportError {
-    fn from(value: std::io::Error) -> Self {
-        return Self::Other(value.to_string());
-    }
-}
-
 impl JsonRpcTransport {
-
-    pub fn new(client : Client, cln_client : ClnClient) -> Self {
+    pub fn new(client: Client, cln_client: ClnClient) -> Self {
         Self {
-            client : client,
-            cln_client : cln_client,
+            client: client,
+            cln_client: cln_client,
         }
     }
 
+    /// Create a JSON-rpc request to a LSPS
+    ///
+    /// # Arguments:
+    /// - peer_id: the node_id of the lsps
+    /// - method: the request method as defined in the LSPS
+    /// - param: the request parameter
+    ///
     pub async fn request<'a, I, O, E>(
         &mut self,
         peer_id: &[u8],
-        method : &impl JsonRpcMethodUnerased<'a, I, O, E>,
-        param : I
-    ) -> Result<JsonRpcResponse<O, E>, TransportError>
+        method: &impl JsonRpcMethodUnerased<'a, I, O, E>,
+        param: I,
+    ) -> Result<JsonRpcResponse<O, E>, LspsError>
+    where
+        I: serde::Serialize,
+        E: serde::de::DeserializeOwned,
+        O: serde::de::DeserializeOwned,
+    {
+        let json_rpc_id = generate_random_rpc_id();
+        return self
+            .request_with_json_rpc_id(peer_id, method, param, json_rpc_id)
+            .await;
+    }
+
+    /// Makes the jsonrpc request and returns the response
+    ///
+    /// This method allows the user to specify a custom json_rpc_id.
+    /// To ensure compliance with LSPS0 the use of `[request`] is recommended.
+    /// For some testing scenario's it is useful to have a reproducable json_rpc_id
+    pub async fn request_with_json_rpc_id<'a, I, O, E>(
+        &mut self,
+        peer_id: &[u8],
+        method: &impl JsonRpcMethodUnerased<'a, I, O, E>,
+        param: I,
+        json_rpc_id: String,
+    ) -> Result<JsonRpcResponse<O, E>, LspsError>
     where
         I: serde::Serialize,
         E: serde::de::DeserializeOwned,
         O: serde::de::DeserializeOwned,
     {
         // Constructs the JsonRpcRequest
-        let request = method.create_request(param)?;
+        let request = method
+            .create_request(param, json_rpc_id)
+            .map_err(|x| LspsError::JsonParseRequestError(x))?;
 
         // Core-lightning uses the convention that the first two bytes are the BOLT-8 message id
         let mut cursor: Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
         cursor.write(&LSPS_MESSAGE_ID)?;
-        serde_json::to_writer(&mut cursor, &request)?;
+        serde_json::to_writer(&mut cursor, &request)
+            .map_err(|x| LspsError::JsonParseRequestError(x))?;
 
         let custom_message_request = SendcustommsgRequest {
             node_id: peer_id.to_vec(),
@@ -91,7 +103,7 @@ impl JsonRpcTransport {
 
         // Sends the JsonRpcRequest
         // Once the await has completed our greenlight node has successfully send the message
-        // It doesn't mean that the LSPS has already responded to it
+        // The LSPS did probably not respond yet
         self.cln_client
             .send_custom_msg(custom_message_request)
             .await?;
@@ -116,9 +128,13 @@ impl JsonRpcTransport {
 
             // Deserialize the JSON compare the json_rpc_id
             // If it matches we return a typed JsonRpcRequest
-            let value: serde_json::Value = serde_json::from_reader(&mut msg_cursor)?;
+            let value: serde_json::Value = serde_json::from_reader(&mut msg_cursor)
+                .map_err(|x| LspsError::JsonParseResponseError(x))?;
             if value.get("id").and_then(|x| x.as_str()) == Some(&request.id) {
-                let rpc_response: JsonRpcResponse<O, E> = serde_json::from_value(value)?;
+                // There is a bug here. We need to do the parsing in the underlying trait
+                let rpc_response = method
+                    .parse_json_response_value(value)
+                    .map_err(|x| LspsError::JsonParseResponseError(x))?;
                 return Ok(rpc_response);
             }
 
@@ -130,13 +146,11 @@ impl JsonRpcTransport {
             // I might have to add a built-in time-out mechanism in StreamCustomMsg or come up with
             // a better solution.
             if loop_start_instant.elapsed().as_millis() >= TIMEOUT_MILLIS {
-                return Err(TransportError::Timeout);
+                return Err(LspsError::Timeout);
             }
         }
 
         // If the stream was closed
-        return Err(TransportError::ConnectionClosed);
+        return Err(LspsError::ConnectionClosed);
     }
 }
-
-

@@ -9,6 +9,7 @@ from .greenlight_pb2 import Amount
 from binascii import hexlify, unhexlify
 from typing import Optional, List, Union, Iterable, Any, Type, TypeVar
 import logging
+from glclient.lsps import LspClient
 
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
@@ -550,6 +551,13 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
+
+    def get_lsp_client(
+        self,
+        peer_id : bytes
+    ) -> LspClient:
+        native_lsps = self.inner.get_lsp_client()
+        return LspClient(native_lsps, peer_id)
 
 
 def normalize_node_id(node_id, string=False):

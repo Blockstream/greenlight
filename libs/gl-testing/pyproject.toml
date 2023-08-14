@@ -17,7 +17,7 @@ sh = "^1.14.2"
 pytest-timeout = "^2.1.0"
 # `pip` doesn't like relative-path dependencies. Should be ok once we
 # publish this on PyPI so pip can find it too.
-#gl-client-py = {path = "../gl-client-py"}
+# gl-client-py = {path = "../gl-client-py"}
 pytest-xdist = "^2.5.0"
 pytest = "^7.1.2"
 pytest-cov = "^3.0.0"

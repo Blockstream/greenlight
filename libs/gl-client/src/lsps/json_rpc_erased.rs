@@ -36,15 +36,21 @@ pub trait JsonRpcMethodErased {
     fn create_request(
         &self,
         params: Vec<u8>,
+        json_rpc_id: String,
     ) -> Result<JsonRpcRequestErased, serde_json::Error>;
 
-    fn parse_json_response(
+    fn parse_json_response_str(
         &self,
         json_str: &str,
     ) -> Result<JsonRpcResponseErased, serde_json::Error>;
+
+    fn parse_json_response_value(
+        &self,
+        json_str: serde_json::Value,
+    ) -> Result<JsonRpcResponseErased, serde_json::Error>;
 }
 
-impl<I, O, E> JsonRpcMethodErased for JsonRpcMethod< I, O, E>
+impl<I, O, E> JsonRpcMethodErased for JsonRpcMethod<I, O, E>
 where
     I: serde::de::DeserializeOwned + Serialize,
     O: serde::de::DeserializeOwned + Serialize,
@@ -54,24 +60,36 @@ where
         &self.method
     }
 
-    fn create_request(&self, params: Vec<u8>) -> Result<JsonRpcRequestErased, serde_json::Error> {
+    fn create_request(
+        &self,
+        params: Vec<u8>,
+        json_rpc_id: String,
+    ) -> Result<JsonRpcRequestErased, serde_json::Error> {
         let typed_params: I = serde_json::from_slice(&params)?;
         let typed_json_rpc_request: JsonRpcRequest<I> =
-            JsonRpcMethod::create_request(&self, typed_params);
+            JsonRpcMethod::create_request(&self, typed_params, json_rpc_id);
         typed_json_rpc_request.erase()
     }
 
-    fn parse_json_response(
+    fn parse_json_response_str(
         &self,
         json_str: &str,
     ) -> Result<JsonRpcResponseErased, serde_json::Error> {
         // Check if the json-struct matches the expected type
         let result: JsonRpcResponse<O, E> =
-            JsonRpcMethod::<I, O, E>::parse_json_response(&self, json_str)?;
+            JsonRpcMethod::<I, O, E>::parse_json_response_str(&self, json_str)?;
+        return result.erase();
+    }
+
+    fn parse_json_response_value(
+        &self,
+        json_value: serde_json::Value,
+    ) -> Result<JsonRpcResponseErased, serde_json::Error> {
+        let result: JsonRpcResponse<O, E> =
+            JsonRpcMethod::<I, O, E>::parse_json_response_value(&self, json_value)?;
         return result.erase();
     }
 }
-
 
 impl<I, O, E> JsonRpcMethod<I, O, E>
 where
@@ -84,12 +102,9 @@ where
     }
 
     pub fn ref_erase<'a>(&'a self) -> &'a dyn JsonRpcMethodErased {
-        return self
+        return self;
     }
-
 }
-
-
 
 // The trait JsonRpcUnerased is only intended to be used by library developers
 //
@@ -105,14 +120,22 @@ where
 // By using this trait, functionality will work for both type of users
 
 pub trait JsonRpcMethodUnerased<'a, I, O, E> {
-
     fn name(&self) -> &str;
 
-    fn create_request(&self, params: I) -> Result<JsonRpcRequest<I>, serde_json::Error>;
+    fn create_request(
+        &self,
+        params: I,
+        json_rpc_id: String,
+    ) -> Result<JsonRpcRequest<I>, serde_json::Error>;
 
-    fn parse_json_response(
+    fn parse_json_response_str(
         &self,
         json_str: &str,
+    ) -> Result<JsonRpcResponse<O, E>, serde_json::Error>;
+
+    fn parse_json_response_value(
+        &self,
+        json_value: serde_json::Value,
     ) -> Result<JsonRpcResponse<O, E>, serde_json::Error>;
 }
 
@@ -126,43 +149,62 @@ where
         JsonRpcMethod::name(self)
     }
 
-    fn create_request(&self, params: I) -> Result<JsonRpcRequest<I>, serde_json::Error> {
-        Ok(JsonRpcMethod::create_request(&self, params))
+    fn create_request(
+        &self,
+        params: I,
+        json_rpc_id: String,
+    ) -> Result<JsonRpcRequest<I>, serde_json::Error> {
+        Ok(JsonRpcMethod::create_request(&self, params, json_rpc_id))
     }
 
-    fn parse_json_response(
+    fn parse_json_response_str(
         &self,
         json_str: &str,
     ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
-        JsonRpcMethod::parse_json_response(&self, json_str)
+        JsonRpcMethod::parse_json_response_str(&self, json_str)
+    }
+
+    fn parse_json_response_value(
+        &self,
+        json_value: serde_json::Value,
+    ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
+        JsonRpcMethod::parse_json_response_value(&self, json_value)
     }
 }
 
 struct UneraseWrapper<'a> {
-    inner : &'a dyn JsonRpcMethodErased
+    inner: &'a dyn JsonRpcMethodErased,
 }
 
 impl<'a> JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> for UneraseWrapper<'a> {
-
     fn name(&self) -> &str {
         self.inner.name()
     }
 
-    fn create_request(&self, params: Vec<u8>) -> Result<JsonRpcRequest<Vec<u8>>, serde_json::Error> {
-        self.inner.create_request(params)
+    fn create_request(
+        &self,
+        params: Vec<u8>,
+        json_rpc_id: String,
+    ) -> Result<JsonRpcRequest<Vec<u8>>, serde_json::Error> {
+        self.inner.create_request(params, json_rpc_id)
     }
 
-    fn parse_json_response(
-            &self,
-            json_str: &str,
-        ) -> Result<JsonRpcResponse<Vec<u8>, Vec<u8>>, serde_json::Error> {
-       self.inner.parse_json_response(json_str)
+    fn parse_json_response_str(
+        &self,
+        json_str: &str,
+    ) -> Result<JsonRpcResponse<Vec<u8>, Vec<u8>>, serde_json::Error> {
+        self.inner.parse_json_response_str(json_str)
     }
 
+    fn parse_json_response_value(
+        &self,
+        json_value: serde_json::Value,
+    ) -> Result<JsonRpcResponse<Vec<u8>, Vec<u8>>, serde_json::Error> {
+        self.inner.parse_json_response_value(json_value)
+    }
 }
 
 impl dyn JsonRpcMethodErased {
-
     // The impl promises here we return a concrete type
     // However, we'd rather keep the implementation details private in this module and don't want users messing with it
     pub fn unerase<'a>(&'a self) -> impl JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> {
@@ -177,7 +219,7 @@ where
     fn erase(self) -> Result<JsonRpcRequestErased, serde_json::Error> {
         let value = serde_json::to_vec(&self.params)?;
         Ok(JsonRpcRequest {
-            json_rpc: self.json_rpc,
+            jsonrpc: self.jsonrpc,
             id: self.id,
             method: self.method,
             params: value,
@@ -193,7 +235,7 @@ where
         Ok(JsonRpcResponseSuccessErased {
             id: self.id,
             result: serde_json::to_vec(&self.result)?,
-            json_rpc: self.json_rpc,
+            jsonrpc: self.jsonrpc,
         })
     }
 }
@@ -206,7 +248,7 @@ where
         Ok(JsonRpcResponseFailureErased {
             id: self.id,
             error: self.error.erase()?,
-            json_rpc: self.json_rpc,
+            jsonrpc: self.jsonrpc,
         })
     }
 }
@@ -250,37 +292,83 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lsps::json_rpc::JsonRpcMethod;
+    use crate::lsps::json_rpc::{generate_random_rpc_id, JsonRpcMethod};
 
     #[derive(Serialize, serde::Deserialize)]
-    struct TestStruct {
+    struct TestRequestStruct {
         test: String,
+    }
+
+    #[derive(Serialize, serde::Deserialize)]
+    struct TestResponseStruct {
+        response: String,
     }
 
     #[test]
     fn create_rpc_request_from_method_erased() {
-        let rpc_method = JsonRpcMethod::<TestStruct, (), ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<TestRequestStruct, (), ()>::new("test.method");
         let rpc_method_erased = rpc_method.erase_box();
 
         // This rpc-request should work becasue the parameters match the schema
-        let data = serde_json::json!({"test" : "This should work"});
-        let rpc_request = rpc_method_erased.create_request(data).unwrap();
+        let json_data = serde_json::json!({"test" : "This should work"});
+        let vec_data: Vec<u8> = serde_json::to_vec(&json_data).unwrap();
+
+        let json_rpc_id = generate_random_rpc_id();
+        let rpc_request: JsonRpcRequest<Vec<u8>> = rpc_method_erased
+            .create_request(vec_data, json_rpc_id)
+            .unwrap();
         assert_eq!(rpc_request.method, "test.method");
-        assert_eq!(
-            rpc_request.params.get("test").unwrap().as_str().unwrap(),
-            "This should work"
-        );
     }
 
     #[test]
     fn create_rpc_request_from_method_erased_checks_types() {
-        let rpc_method = JsonRpcMethod::<TestStruct, (), ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<TestRequestStruct, (), ()>::new("test.method");
         let rpc_method_erased = rpc_method.erase_box();
 
         // This rpc-request should fail because the parameters do not match the schema
         // The test field is missing
-        let rpc_request = rpc_method_erased.create_request(serde_json::json!({}));
-        assert!(rpc_request.is_err())
+        let param_vec = serde_json::to_vec(&serde_json::json!({})).unwrap();
+        let json_rpc_id = generate_random_rpc_id();
+        let rpc_request = rpc_method_erased.create_request(param_vec, json_rpc_id);
+        assert!(rpc_request.is_err());
     }
 
+    #[test]
+    fn parse_rpc_request_from_method_erased() {
+        let rpc_method =
+            JsonRpcMethod::<TestRequestStruct, TestResponseStruct, ()>::new("test.method");
+        let rpc_method_erased = rpc_method.erase_box();
+
+        let json_value = serde_json::json!({
+            "jsonrpc" : "2.0",
+            "id" : "abcdef",
+            "result" : {"response" : "content"}
+        });
+
+        rpc_method_erased
+            .parse_json_response_value(json_value)
+            .unwrap();
+    }
+
+    #[test]
+    fn parse_rpc_request_from_method_erased_fails() {
+        let rpc_method =
+            JsonRpcMethod::<TestRequestStruct, TestResponseStruct, ()>::new("test.method");
+        let rpc_method_erased = rpc_method.erase_box();
+
+        let json_value = serde_json::json!({
+            "jsonrpd" : "2.0", // See the typo-here
+            "id" : "abcdef",
+            "result" : {"response" : "content"}
+        });
+
+        let result: Result<JsonRpcResponseErased, serde_json::Error> =
+            rpc_method_erased.parse_json_response_value(json_value);
+        assert!(result.is_err());
+
+        // TODO: improve the error-message here
+        // It currently gives a vague error-message about not matching one of the enum scenarios in JsonRpcResponse
+        // It should at least mention that the field jsonrpc is missing
+        //assert!(format!("{:?}", result).contains("jsonrpc"));
+    }
 }
