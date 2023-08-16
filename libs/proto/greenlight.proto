@@ -146,6 +146,30 @@ service Node {
 
 }
 
+// The signer service is the endpoint at the node that the signer
+// connects to. It includes all of the operations that only the signer
+// is allowed to perform, such as streaming signer requests,
+// responding to them, and reporting issues back to the service.
+service Signer {
+
+  // The signer is refusing to process a request. This can have a
+  // variety of causes, such as a failed attribution, a missing
+  // signature, insufficient access granted by the Rune, decoding
+  // errors, or a violation of a policy. We report these back together
+  // with their context and state, so that we can debug whether it was
+  // a valid refusal, or if the policies need tweaking.
+  rpc ReportError(SignerError) returns (Empty) {}
+}
+
+message SignerError {
+  uint32 request_id = 1;
+  bytes request = 2;
+  HsmRequestContext context = 3;
+  repeated SignerStateEntry signer_state = 4;
+  repeated PendingRequest requests = 5;
+  string error = 6;
+}
+
 message HsmRequestContext {
 	bytes node_id = 1;
 	uint64 dbid = 2;
