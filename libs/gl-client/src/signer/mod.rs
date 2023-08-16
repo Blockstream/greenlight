@@ -71,6 +71,12 @@ pub enum Error {
     #[error("resolver error: request {0:?}, context: {1:?}")]
     Resolver(Vec<u8>, Vec<crate::signer::model::Request>),
 
+    #[error("error asking node to be upgraded: {0}")]
+    Upgrade(tonic::Status),
+
+    #[error("protocol error: {0}")]
+    Protocol(#[from] vls_protocol::Error),
+
     #[error("other: {0}")]
     Other(anyhow::Error),
 }
@@ -78,8 +84,7 @@ pub enum Error {
 impl Signer {
     pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer, anyhow::Error> {
         use lightning_signer::policy::{
-            filter::{FilterRule, PolicyFilter},
-            simple_validator::SimpleValidatorFactory,
+            filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
         };
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
@@ -355,9 +360,11 @@ impl Signer {
             _ => {}
         }
 
-        let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e| Error::Signer(e))?;
+        let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", serde_json::to_string(&prestate).unwrap());
+
+        let approvals = self.authenticate_request(&msg, &req)?;
 
         let approver = Arc::new(MemoApprover::new(approver::ReportingApprover::new(
             PositiveApprover(),
@@ -518,7 +525,7 @@ impl Signer {
                     .collect(),
             })
             .await
-            .context("Error asking scheduler to upgrade")?;
+            .map_err(|s| Error::Upgrade(s))?;
 
         loop {
             debug!("Calling scheduler.get_node_info");

@@ -225,7 +225,12 @@ def test_node_listpays_preimage(clients, node_factory, bitcoind):
         'preimage': preimage,
     })
 
+    from rich.rule import Rule
+    from rich.console import Console
+    console = Console()
+    console.rule("[bold red]<pay>")
     gl1.pay(i['bolt11'])
+    console.rule("[bold red]</pay>")
 
     pay = gl1.listpays()
     assert len(pay.pays) == 1
