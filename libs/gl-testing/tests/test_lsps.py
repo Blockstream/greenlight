@@ -3,6 +3,7 @@ from pyln.testing.utils import NodeFactory, BitcoinD, LightningNode
 import json
 
 from glclient.lsps import ProtocolList
+import time
 
 import threading
 
@@ -33,6 +34,7 @@ class AwaitResult:
 
         self._thread = threading.Thread(target=wrap_function, args=args, kwargs=kwargs)
         self._thread.start()
+
 
     def await_result(self, timeout_seconds : float=30.0):
         self._thread.join(timeout=timeout_seconds)
@@ -67,6 +69,10 @@ def test_lsps_list_protocol(clients : Clients, node_factory : NodeFactory, bitco
     # The client sends a message
     json_rpc_id = "abcdef"
     protocol_fut = AwaitResult(lambda: lsp_client.list_protocols(json_rpc_id=json_rpc_id))
+
+    # The sleep ensures the lsp-client has actually send the message and is ready to receive
+    # the response
+    time.sleep(1.0)
 
     # The n1.rpc.sendcustommsg expects that both the node_id and msg are hex encoded strings
     msg_content = {
