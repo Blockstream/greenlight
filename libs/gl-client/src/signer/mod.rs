@@ -5,7 +5,7 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use bytes::{Buf, BufMut, Bytes};
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::Network;
@@ -62,6 +62,9 @@ pub enum Error {
 
     #[error("scheduler returned faulty URI: {0}")]
     InvalidUri(#[from] InvalidUri),
+
+    #[error("signer refused a request: {0}")]
+    Signer(#[from] vls_protocol::Error),
 
     #[error("other: {0}")]
     Other(anyhow::Error),
@@ -325,9 +328,8 @@ impl Signer {
             )));
         }
 
-        let msg = vls_protocol::msgs::from_vec(req.raw)
-            .context("parsing request")
-            .map_err(|e| Error::Other(e))?;
+        let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e|
+        Error::Signer(e))?;
 
         log::trace!("Handling message {:?}", msg);
 
@@ -464,7 +466,7 @@ impl Signer {
                     .collect(),
             })
             .await
-            .context("Error asking scheduler to upgrade")?;
+            .map_err(|e| anyhow!("error asking scheduler to upgrade: {}", e))?;
 
         loop {
             debug!("Calling scheduler.get_node_info");
