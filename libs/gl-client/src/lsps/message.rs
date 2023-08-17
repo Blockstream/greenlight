@@ -24,7 +24,7 @@ pub type Lsps0ListProtocols = JsonRpcMethod<NoParams, ProtocolList, ()>;
 pub type Lsps1Info = JsonRpcMethod<NoParams, Lsps1InfoResponse, ()>;
 pub type Lsps1Order = JsonRpcMethod<Lsps1GetOrderRequest, Lsps1GetOrderResponse, ()>;
 
-pub const LSPS0_LISTPROTOCOLS: Lsps0ListProtocols = Lsps0ListProtocols::new("lsps0.listprotocols");
+pub const LSPS0_LIST_PROTOCOLS: Lsps0ListProtocols = Lsps0ListProtocols::new("lsps0.list_protocols");
 pub const LSPS1_GETINFO: Lsps1Info = Lsps1Info::new("lsps1.info");
 pub const LSPS1_GETORDER: Lsps1Order = Lsps1Order::new("lsps1.order");
 
@@ -37,7 +37,7 @@ pub enum JsonRpcMethodEnum {
 impl JsonRpcMethodEnum {
     pub fn from_method_name(value: &str) -> Result<JsonRpcMethodEnum, LspsError> {
         match value {
-            "lsps0.listprotocols" => Ok(Self::Lsps0ListProtocols(LSPS0_LISTPROTOCOLS)),
+            "lsps0.list_protocols" => Ok(Self::Lsps0ListProtocols(LSPS0_LIST_PROTOCOLS)),
             "lsps1.info" => Ok(Self::Lsps1Info(LSPS1_GETINFO)),
             "lsps1.order" => Ok(Self::Lsps1Order(LSPS1_GETORDER)),
             default => Err(LspsError::MethodUnknown(String::from(default))),
@@ -195,7 +195,7 @@ mod test {
 
     #[test]
     fn serialize_request_with_no_params() {
-        let method = LSPS0_LISTPROTOCOLS;
+        let method = LSPS0_LIST_PROTOCOLS;
         let json_rpc_id = generate_random_rpc_id();
         let rpc_request = method.create_request_no_params(json_rpc_id);
         let json_str = to_string(&rpc_request).unwrap();
@@ -207,7 +207,7 @@ mod test {
         assert_eq!(v.get("jsonrpc").unwrap(), "2.0");
         assert_eq!(
             v.get("method").unwrap().as_str().unwrap(),
-            "lsps0.listprotocols"
+            "lsps0.list_protocols"
         );
         assert!(v.get("params").unwrap().as_object().unwrap().is_empty())
     }
