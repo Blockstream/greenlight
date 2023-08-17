@@ -8,10 +8,10 @@ use crate::{node, node::Client};
 use anyhow::anyhow;
 use bytes::{Buf, BufMut};
 use http::uri::InvalidUri;
+use lightning_signer::bitcoin::hashes::Hash;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use log::{debug, info, trace, warn};
-use serde_bolt::Octets;
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -19,6 +19,7 @@ use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Endpoint, Uri};
 use tonic::Request;
+use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
@@ -162,7 +163,7 @@ impl Signer {
                 pubkey_version: 0,
                 privkey_version: 0,
             },
-            chain_params: vls_protocol::model::BlockId([0; 32]),
+            chain_params: lightning_signer::bitcoin::BlockHash::all_zeros(),
             encryption_key: None,
             dev_privkey: None,
             dev_bip32_seed: None,
@@ -184,6 +185,7 @@ impl Signer {
             info: Octets("scb secret".as_bytes().to_vec()),
         })
     }
+
     fn commandoinitreq() -> vls_protocol::msgs::Message {
         vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
             info: Octets("commando".as_bytes().to_vec()),
@@ -387,37 +389,32 @@ impl Signer {
         let requests = vec![
             // The classical init message; response will either be 111
             // or 113 depending on signer proto version.
-            (11, Signer::initreq()),
+            Signer::initreq(),
             // v22.11 introduced an addiotiona startup message, the
             // bolt12 key generation
-            (27, Signer::bolt12initreq()),
+            Signer::bolt12initreq(),
             // SCB needs a secret derived too
-            (27, Signer::scbinitreq()),
+            Signer::scbinitreq(),
             // Commando needs a secret for its runes
-            (27, Signer::commandoinitreq()),
+            Signer::commandoinitreq(),
         ];
 
-        let serialized: Vec<Vec<u8>> = requests
-            .iter()
-            .map(|m| {
-                let mut b = bytes::BytesMut::new();
-                b.put_u16(m.0);
-                b.put_slice(&serde_bolt::to_vec(&m.1).unwrap());
-
-                b.to_vec()
-            })
-            .collect();
+        let serialized: Vec<Vec<u8>> = requests.iter().map(|m| m.inner().as_vec()).collect();
         let responses: Vec<Vec<u8>> = requests
             .into_iter()
-            .map(|r| self.handler().unwrap().handle(r.1).unwrap().0.as_vec())
+            .map(|r| self.handler().unwrap().handle(r).unwrap().0.as_vec())
             .collect();
 
         serialized
             .into_iter()
             .zip(responses)
-            .map(|r| StartupMessage {
-                request: r.0,
-                response: r.1,
+            .map(|r| {
+                log::debug!("Storing canned request-response: {:?} -> {:?}", r.0, r.1);
+
+                StartupMessage {
+                    request: r.0,
+                    response: r.1,
+                }
             })
             .collect()
     }
