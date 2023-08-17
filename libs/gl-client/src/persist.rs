@@ -4,6 +4,7 @@ use lightning_signer::channel::ChannelId;
 use lightning_signer::channel::ChannelStub;
 use lightning_signer::node::NodeConfig;
 use lightning_signer::node::NodeState;
+use lightning_signer::persist::ChainTrackerListenerEntry;
 use lightning_signer::persist::{Error, Persist};
 use lightning_signer::policy::validator::ValidatorFactory;
 use lightning_signer::SendSync;
@@ -85,6 +86,10 @@ impl State {
         self.values
             .insert(key, (0u64, serde_json::to_value(channel_entry).unwrap()));
         Ok(())
+    }
+
+    fn delete_channel(&mut self, key: &str) {
+        self.values.remove(key);
     }
 
     fn update_channel(
@@ -317,6 +322,13 @@ impl Persist for MemoryPersister {
         )
     }
 
+    fn delete_channel(&self, node_id: &PublicKey, channel: &ChannelId) -> Result<(), Error> {
+        let node_channel_id = vls_persist::model::NodeChannelId::new(node_id, &channel);
+        let id = hex::encode(node_channel_id.0);
+        self.state.lock().unwrap().delete_channel(&id);
+        Ok(())
+    }
+
     fn update_node(
         &self,
         node_id: &lightning_signer::bitcoin::secp256k1::PublicKey,
@@ -347,6 +359,8 @@ impl Persist for MemoryPersister {
             channel_setup: None,
             id: None,
             enforcement_state,
+            // birth blockheight for stub, None for channel
+            blockheight: Some(stub.blockheight),
         };
         let id = hex::encode(id.0);
 
@@ -366,6 +380,7 @@ impl Persist for MemoryPersister {
             channel_setup: Some(channel.setup.clone()),
             id: channel.id.clone(),
             enforcement_state: channel.enforcement_state.clone(),
+            blockheight: None,
         };
         self.state.lock().unwrap().update_channel(&id, entry)
     }
@@ -380,7 +395,7 @@ impl Persist for MemoryPersister {
         self.state.lock().unwrap().get_channel(&id)
     }
 
-    fn new_chain_tracker(
+    fn new_tracker(
         &self,
         node_id: &PublicKey,
         tracker: &ChainTracker<lightning_signer::monitor::ChainMonitor>,
@@ -410,7 +425,13 @@ impl Persist for MemoryPersister {
         &self,
         node_id: PublicKey,
         validator_factory: Arc<dyn ValidatorFactory>,
-    ) -> Result<ChainTracker<lightning_signer::monitor::ChainMonitor>, Error> {
+    ) -> Result<
+        (
+            ChainTracker<lightning_signer::monitor::ChainMonitor>,
+            Vec<ChainTrackerListenerEntry>,
+        ),
+        Error,
+    > {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
 
@@ -463,6 +484,8 @@ impl Persist for MemoryPersister {
     fn get_nodes(
         &self,
     ) -> Result<Vec<(PublicKey, lightning_signer::persist::model::NodeEntry)>, Error> {
+        use lightning_signer::node::NodeState as CoreNodeState;
+
         let state = self.state.lock().unwrap();
         let node_ids: Vec<&str> = state
             .values
@@ -479,10 +502,19 @@ impl Persist for MemoryPersister {
 
             let node: vls_persist::model::NodeEntry =
                 serde_json::from_value(state.values.get(&node_key).unwrap().1.clone()).unwrap();
-            let node_state: vls_persist::model::NodeStateEntry =
+            let state_e: vls_persist::model::NodeStateEntry =
                 serde_json::from_value(state.values.get(&state_key).unwrap().1.clone()).unwrap();
 
-            let state = NodeState {
+            let state = CoreNodeState::restore(
+                state_e.invoices,
+                state_e.issued_invoices,
+                state_e.preimages,
+                0,
+                state_e.velocity_control.into(),
+                state_e.fee_velocity_control.into(),
+            );
+/*
+            let state = CoreNodeState {
                 invoices: Default::default(),
                 issued_invoices: Default::default(),
                 payments: Default::default(),
@@ -490,7 +522,9 @@ impl Persist for MemoryPersister {
                 log_prefix: "".to_string(),
                 velocity_control: node_state.velocity_control.into(),
                 fee_velocity_control: node_state.fee_velocity_control.into(),
+                last_summary: None,
             };
+*/
             let entry = lightning_signer::persist::model::NodeEntry {
                 key_derivation_style: node.key_derivation_style,
                 network: node.network,
