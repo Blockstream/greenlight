@@ -69,13 +69,13 @@ build-py: ${PYDIR}/pyproject.toml build-py-${OS}
 # drops them into ${REPO}/wheelhouse. The docker build is needed to
 # get an old(-ish) glibc, maximizing compatibility.
 build-py-linux:
-	sudo docker buildx build \
+	docker buildx build \
 	  --load \
 	  -t gl-client-py-builder \
 	  --build-arg DOCKER_USER=$(shell whoami) \
 	  ${PYDIR}
 
-	sudo docker run -ti \
+	docker run -ti \
           -v ${REPO}:/io \
 	  gl-client-py-builder
 
