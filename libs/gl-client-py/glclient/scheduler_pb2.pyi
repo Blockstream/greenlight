@@ -3,7 +3,9 @@
 isort:skip_file
 """
 import builtins
+import collections.abc
 import google.protobuf.descriptor
+import google.protobuf.internal.containers
 import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
 import sys
@@ -77,6 +79,8 @@ class RegistrationRequest(google.protobuf.message.Message):
     SIGNER_PROTO_FIELD_NUMBER: builtins.int
     INIT_MSG_FIELD_NUMBER: builtins.int
     CSR_FIELD_NUMBER: builtins.int
+    INVITE_CODE_FIELD_NUMBER: builtins.int
+    STARTUPMSGS_FIELD_NUMBER: builtins.int
     node_id: builtins.bytes
     """33 bytes node public key."""
     bip32_key: builtins.bytes
@@ -114,6 +118,16 @@ class RegistrationRequest(google.protobuf.message.Message):
     greenlight backend. Notice that this must have the valid
     CN corresponding to the node_id e.g. /users/{node_id} set.
     """
+    invite_code: builtins.str
+    """An optional invite code. We may want to throttle the
+    registration rate. Therefore we might check that a registration
+    request has a valid invite code.
+    """
+    @property
+    def startupmsgs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___StartupMessage]:
+        """Messages stashed at the scheduler to allow signerless
+        startups.
+        """
     def __init__(
         self,
         *,
@@ -125,8 +139,10 @@ class RegistrationRequest(google.protobuf.message.Message):
         signer_proto: builtins.str = ...,
         init_msg: builtins.bytes = ...,
         csr: builtins.bytes = ...,
+        invite_code: builtins.str = ...,
+        startupmsgs: collections.abc.Iterable[global___StartupMessage] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["bip32_key", b"bip32_key", "challenge", b"challenge", "csr", b"csr", "init_msg", b"init_msg", "network", b"network", "node_id", b"node_id", "signature", b"signature", "signer_proto", b"signer_proto"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["bip32_key", b"bip32_key", "challenge", b"challenge", "csr", b"csr", "init_msg", b"init_msg", "invite_code", b"invite_code", "network", b"network", "node_id", b"node_id", "signature", b"signature", "signer_proto", b"signer_proto", "startupmsgs", b"startupmsgs"]) -> None: ...
 
 global___RegistrationRequest = RegistrationRequest
 
@@ -271,6 +287,7 @@ class UpgradeRequest(google.protobuf.message.Message):
 
     SIGNER_VERSION_FIELD_NUMBER: builtins.int
     INITMSG_FIELD_NUMBER: builtins.int
+    STARTUPMSGS_FIELD_NUMBER: builtins.int
     signer_version: builtins.str
     """The version of the signer, i.e., the maximum version of the
     protocol that this signer can understand.
@@ -278,14 +295,19 @@ class UpgradeRequest(google.protobuf.message.Message):
     initmsg: builtins.bytes
     """The new initmsg matching the above version. Necessary to
     schedule the node without a signer present.
+    Deprecated: Replaced by the more generic `startupmsgs`
     """
+    @property
+    def startupmsgs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___StartupMessage]:
+        """Messages stashed at the scheduler to allow signerless startups."""
     def __init__(
         self,
         *,
         signer_version: builtins.str = ...,
         initmsg: builtins.bytes = ...,
+        startupmsgs: collections.abc.Iterable[global___StartupMessage] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["initmsg", b"initmsg", "signer_version", b"signer_version"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["initmsg", b"initmsg", "signer_version", b"signer_version", "startupmsgs", b"startupmsgs"]) -> None: ...
 
 global___UpgradeRequest = UpgradeRequest
 
@@ -306,3 +328,102 @@ class UpgradeResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["old_version", b"old_version"]) -> None: ...
 
 global___UpgradeResponse = UpgradeResponse
+
+@typing_extensions.final
+class StartupMessage(google.protobuf.message.Message):
+    """A message that we know will be requested by `lightningd` at
+    startup, and that we stash a response to on the scheduler. This
+    allows the scheduler to start a node without requiring the signer
+    to connect first. Messages are stored in full, including type
+    prefix, but without the length prefix.
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    REQUEST_FIELD_NUMBER: builtins.int
+    RESPONSE_FIELD_NUMBER: builtins.int
+    request: builtins.bytes
+    response: builtins.bytes
+    def __init__(
+        self,
+        *,
+        request: builtins.bytes = ...,
+        response: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["request", b"request", "response", b"response"]) -> None: ...
+
+global___StartupMessage = StartupMessage
+
+@typing_extensions.final
+class ListInviteCodesRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___ListInviteCodesRequest = ListInviteCodesRequest
+
+@typing_extensions.final
+class ListInviteCodesResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    INVITE_CODE_LIST_FIELD_NUMBER: builtins.int
+    @property
+    def invite_code_list(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___InviteCode]: ...
+    def __init__(
+        self,
+        *,
+        invite_code_list: collections.abc.Iterable[global___InviteCode] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["invite_code_list", b"invite_code_list"]) -> None: ...
+
+global___ListInviteCodesResponse = ListInviteCodesResponse
+
+@typing_extensions.final
+class InviteCode(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    CODE_FIELD_NUMBER: builtins.int
+    IS_REDEEMED_FIELD_NUMBER: builtins.int
+    code: builtins.str
+    is_redeemed: builtins.bool
+    def __init__(
+        self,
+        *,
+        code: builtins.str = ...,
+        is_redeemed: builtins.bool = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["code", b"code", "is_redeemed", b"is_redeemed"]) -> None: ...
+
+global___InviteCode = InviteCode
+
+@typing_extensions.final
+class ExportNodeRequest(google.protobuf.message.Message):
+    """Empty message for now, node identity is extracted from the mTLS
+    certificate used to authenticate against the Scheduler.
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___ExportNodeRequest = ExportNodeRequest
+
+@typing_extensions.final
+class ExportNodeResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    URL_FIELD_NUMBER: builtins.int
+    url: builtins.str
+    """URL where the encrypted backup can be retrieved from."""
+    def __init__(
+        self,
+        *,
+        url: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["url", b"url"]) -> None: ...
+
+global___ExportNodeResponse = ExportNodeResponse

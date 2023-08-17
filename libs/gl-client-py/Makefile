@@ -13,7 +13,8 @@ PYPROTOC_OPTS = \
 	-Ilibs/proto \
 	--python_out=${PYDIR}/glclient \
 	--grpc_python_out=${PYDIR}/glclient \
-	--experimental_allow_proto3_optional
+	--experimental_allow_proto3_optional \
+	--mypy_out=${PYDIR}/glclient
 
 PYPROTOS = \
 	${PYDIR}/glclient/greenlight_pb2.py \

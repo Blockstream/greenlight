@@ -187,7 +187,10 @@ RUN python3 -m pip install -U pip tomli && \
     pytest-cov \
     grpcio \
     pytest-xdist \
-    maturin[patchelf]
+    maturin[patchelf] \
+    grpcio-tools \
+    purerpc[grpc] \
+    mypy-protobuf
 
 RUN git config --global --add safe.directory /repo
 

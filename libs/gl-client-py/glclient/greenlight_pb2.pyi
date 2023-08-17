@@ -192,6 +192,7 @@ class HsmRequest(google.protobuf.message.Message):
     CONTEXT_FIELD_NUMBER: builtins.int
     RAW_FIELD_NUMBER: builtins.int
     SIGNER_STATE_FIELD_NUMBER: builtins.int
+    REQUESTS_FIELD_NUMBER: builtins.int
     request_id: builtins.int
     @property
     def context(self) -> global___HsmRequestContext: ...
@@ -201,6 +202,11 @@ class HsmRequest(google.protobuf.message.Message):
         """A list of key-value-version tuples that the signer should
         use to update its internal state.
         """
+    @property
+    def requests(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PendingRequest]:
+        """Currently active requests that are used to justify changes
+        in state.
+        """
     def __init__(
         self,
         *,
@@ -208,9 +214,10 @@ class HsmRequest(google.protobuf.message.Message):
         context: global___HsmRequestContext | None = ...,
         raw: builtins.bytes = ...,
         signer_state: collections.abc.Iterable[global___SignerStateEntry] | None = ...,
+        requests: collections.abc.Iterable[global___PendingRequest] | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["context", b"context"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["context", b"context", "raw", b"raw", "request_id", b"request_id", "signer_state", b"signer_state"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["context", b"context", "raw", b"raw", "request_id", b"request_id", "requests", b"requests", "signer_state", b"signer_state"]) -> None: ...
 
 global___HsmRequest = HsmRequest
 
@@ -397,11 +404,30 @@ class Htlc(google.protobuf.message.Message):
 global___Htlc = Htlc
 
 @typing_extensions.final
+class Aliases(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    LOCAL_FIELD_NUMBER: builtins.int
+    REMOTE_FIELD_NUMBER: builtins.int
+    local: builtins.str
+    remote: builtins.str
+    def __init__(
+        self,
+        *,
+        local: builtins.str = ...,
+        remote: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["local", b"local", "remote", b"remote"]) -> None: ...
+
+global___Aliases = Aliases
+
+@typing_extensions.final
 class Channel(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     STATE_FIELD_NUMBER: builtins.int
     OWNER_FIELD_NUMBER: builtins.int
+    ALIAS_FIELD_NUMBER: builtins.int
     SHORT_CHANNEL_ID_FIELD_NUMBER: builtins.int
     DIRECTION_FIELD_NUMBER: builtins.int
     CHANNEL_ID_FIELD_NUMBER: builtins.int
@@ -419,6 +445,8 @@ class Channel(google.protobuf.message.Message):
     HTLCS_FIELD_NUMBER: builtins.int
     state: builtins.str
     owner: builtins.str
+    @property
+    def alias(self) -> global___Aliases: ...
     short_channel_id: builtins.str
     direction: builtins.int
     channel_id: builtins.str
@@ -441,6 +469,7 @@ class Channel(google.protobuf.message.Message):
         *,
         state: builtins.str = ...,
         owner: builtins.str = ...,
+        alias: global___Aliases | None = ...,
         short_channel_id: builtins.str = ...,
         direction: builtins.int = ...,
         channel_id: builtins.str = ...,
@@ -457,7 +486,8 @@ class Channel(google.protobuf.message.Message):
         status: collections.abc.Iterable[builtins.str] | None = ...,
         htlcs: collections.abc.Iterable[global___Htlc] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["channel_id", b"channel_id", "close_to", b"close_to", "close_to_addr", b"close_to_addr", "direction", b"direction", "dust_limit", b"dust_limit", "funding_txid", b"funding_txid", "htlcs", b"htlcs", "our_to_self_delay", b"our_to_self_delay", "owner", b"owner", "private", b"private", "receivable", b"receivable", "short_channel_id", b"short_channel_id", "spendable", b"spendable", "state", b"state", "status", b"status", "their_to_self_delay", b"their_to_self_delay", "total", b"total"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["alias", b"alias"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["alias", b"alias", "channel_id", b"channel_id", "close_to", b"close_to", "close_to_addr", b"close_to_addr", "direction", b"direction", "dust_limit", b"dust_limit", "funding_txid", b"funding_txid", "htlcs", b"htlcs", "our_to_self_delay", b"our_to_self_delay", "owner", b"owner", "private", b"private", "receivable", b"receivable", "short_channel_id", b"short_channel_id", "spendable", b"spendable", "state", b"state", "status", b"status", "their_to_self_delay", b"their_to_self_delay", "total", b"total"]) -> None: ...
 
 global___Channel = Channel
 
@@ -592,12 +622,16 @@ class ListFundsOutput(google.protobuf.message.Message):
     AMOUNT_FIELD_NUMBER: builtins.int
     ADDRESS_FIELD_NUMBER: builtins.int
     STATUS_FIELD_NUMBER: builtins.int
+    RESERVED_FIELD_NUMBER: builtins.int
+    RESERVED_TO_BLOCK_FIELD_NUMBER: builtins.int
     @property
     def output(self) -> global___Outpoint: ...
     @property
     def amount(self) -> global___Amount: ...
     address: builtins.str
     status: global___OutputStatus.ValueType
+    reserved: builtins.bool
+    reserved_to_block: builtins.int
     def __init__(
         self,
         *,
@@ -605,9 +639,11 @@ class ListFundsOutput(google.protobuf.message.Message):
         amount: global___Amount | None = ...,
         address: builtins.str = ...,
         status: global___OutputStatus.ValueType = ...,
+        reserved: builtins.bool = ...,
+        reserved_to_block: builtins.int = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["amount", b"amount", "output", b"output"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["address", b"address", "amount", b"amount", "output", b"output", "status", b"status"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["address", b"address", "amount", b"amount", "output", b"output", "reserved", b"reserved", "reserved_to_block", b"reserved_to_block", "status", b"status"]) -> None: ...
 
 global___ListFundsOutput = ListFundsOutput
 
@@ -1017,6 +1053,8 @@ class PayRequest(google.protobuf.message.Message):
     BOLT11_FIELD_NUMBER: builtins.int
     AMOUNT_FIELD_NUMBER: builtins.int
     TIMEOUT_FIELD_NUMBER: builtins.int
+    MAXFEEPERCENT_FIELD_NUMBER: builtins.int
+    MAXFEE_FIELD_NUMBER: builtins.int
     bolt11: builtins.str
     @property
     def amount(self) -> global___Amount:
@@ -1025,15 +1063,20 @@ class PayRequest(google.protobuf.message.Message):
     """Non-zero number of seconds before we should stop retrying
     the payment and return an error.
     """
+    maxfeepercent: builtins.float
+    @property
+    def maxfee(self) -> global___Amount: ...
     def __init__(
         self,
         *,
         bolt11: builtins.str = ...,
         amount: global___Amount | None = ...,
         timeout: builtins.int = ...,
+        maxfeepercent: builtins.float = ...,
+        maxfee: global___Amount | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["amount", b"amount"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["amount", b"amount", "bolt11", b"bolt11", "timeout", b"timeout"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["amount", b"amount", "maxfee", b"maxfee"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["amount", b"amount", "bolt11", b"bolt11", "maxfee", b"maxfee", "maxfeepercent", b"maxfeepercent", "timeout", b"timeout"]) -> None: ...
 
 global___PayRequest = PayRequest
 
@@ -1049,6 +1092,7 @@ class Payment(google.protobuf.message.Message):
     AMOUNT_SENT_FIELD_NUMBER: builtins.int
     BOLT11_FIELD_NUMBER: builtins.int
     CREATED_AT_FIELD_NUMBER: builtins.int
+    COMPLETED_AT_FIELD_NUMBER: builtins.int
     destination: builtins.bytes
     payment_hash: builtins.bytes
     payment_preimage: builtins.bytes
@@ -1060,6 +1104,10 @@ class Payment(google.protobuf.message.Message):
     bolt11: builtins.str
     created_at: builtins.float
     """UTC Unix timestamp of the time the invoice was created."""
+    completed_at: builtins.int
+    """UTC Unix timestamp of the time the payment was completed
+    (successfully or failed). 0 if not completed yet.
+    """
     def __init__(
         self,
         *,
@@ -1071,9 +1119,10 @@ class Payment(google.protobuf.message.Message):
         amount_sent: global___Amount | None = ...,
         bolt11: builtins.str = ...,
         created_at: builtins.float = ...,
+        completed_at: builtins.int = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["amount", b"amount", "amount_sent", b"amount_sent"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["amount", b"amount", "amount_sent", b"amount_sent", "bolt11", b"bolt11", "created_at", b"created_at", "destination", b"destination", "payment_hash", b"payment_hash", "payment_preimage", b"payment_preimage", "status", b"status"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["amount", b"amount", "amount_sent", b"amount_sent", "bolt11", b"bolt11", "completed_at", b"completed_at", "created_at", b"created_at", "destination", b"destination", "payment_hash", b"payment_hash", "payment_preimage", b"payment_preimage", "status", b"status"]) -> None: ...
 
 global___Payment = Payment
 
@@ -1406,3 +1455,117 @@ class SignerStateEntry(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["key", b"key", "value", b"value", "version", b"version"]) -> None: ...
 
 global___SignerStateEntry = SignerStateEntry
+
+@typing_extensions.final
+class PendingRequest(google.protobuf.message.Message):
+    """This represents a grpc request that is currently pending, along
+    with the pubkey of the client issuing the request and a matching
+    signature. This allows the signer to verify that the state changes
+    implied in a signature request correspond to authentic grpc
+    commands, and were not injected somewhere along the way.
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    REQUEST_FIELD_NUMBER: builtins.int
+    URI_FIELD_NUMBER: builtins.int
+    SIGNATURE_FIELD_NUMBER: builtins.int
+    PUBKEY_FIELD_NUMBER: builtins.int
+    TIMESTAMP_FIELD_NUMBER: builtins.int
+    request: builtins.bytes
+    uri: builtins.str
+    signature: builtins.bytes
+    pubkey: builtins.bytes
+    timestamp: builtins.int
+    def __init__(
+        self,
+        *,
+        request: builtins.bytes = ...,
+        uri: builtins.str = ...,
+        signature: builtins.bytes = ...,
+        pubkey: builtins.bytes = ...,
+        timestamp: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pubkey", b"pubkey", "request", b"request", "signature", b"signature", "timestamp", b"timestamp", "uri", b"uri"]) -> None: ...
+
+global___PendingRequest = PendingRequest
+
+@typing_extensions.final
+class NodeConfig(google.protobuf.message.Message):
+    """The `NodeConfig` is used to pass startup parameters to the
+    node. The `gl-plugin` will look for a file in its directory to load
+    these values from. Please refer to the individual fields to learn
+    what they do.
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    STARTUPMSGS_FIELD_NUMBER: builtins.int
+    @property
+    def startupmsgs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___StartupMessage]:
+        """In order to start without a signer attached we need to
+        stash a couple of canned messages that we'd otherwise ask
+        from the signer. These are just request-response tuples
+        that we use to match and reply against incoming requests.
+        """
+    def __init__(
+        self,
+        *,
+        startupmsgs: collections.abc.Iterable[global___StartupMessage] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["startupmsgs", b"startupmsgs"]) -> None: ...
+
+global___NodeConfig = NodeConfig
+
+@typing_extensions.final
+class StartupMessage(google.protobuf.message.Message):
+    """A message that we know will be requested by `lightningd` at
+    startup, and that we stash a response to on the scheduler. This
+    allows the scheduler to start a node without requiring the signer
+    to connect first. Messages are stored in full, including type
+    prefix, but without the length prefix.
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    REQUEST_FIELD_NUMBER: builtins.int
+    RESPONSE_FIELD_NUMBER: builtins.int
+    request: builtins.bytes
+    response: builtins.bytes
+    def __init__(
+        self,
+        *,
+        request: builtins.bytes = ...,
+        response: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["request", b"request", "response", b"response"]) -> None: ...
+
+global___StartupMessage = StartupMessage
+
+@typing_extensions.final
+class StreamCustommsgRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___StreamCustommsgRequest = StreamCustommsgRequest
+
+@typing_extensions.final
+class Custommsg(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PEER_ID_FIELD_NUMBER: builtins.int
+    PAYLOAD_FIELD_NUMBER: builtins.int
+    peer_id: builtins.bytes
+    payload: builtins.bytes
+    def __init__(
+        self,
+        *,
+        peer_id: builtins.bytes = ...,
+        payload: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["payload", b"payload", "peer_id", b"peer_id"]) -> None: ...
+
+global___Custommsg = Custommsg
