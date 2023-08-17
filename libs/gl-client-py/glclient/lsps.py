@@ -113,7 +113,7 @@ class LspClient:
     def list_protocols(self, json_rpc_id: t.Optional[str] = None) -> ProtocolList:
         json_bytes = _dump_json_bytes(NoParams)
         result = self._rpc_call(
-            self._peer_id, "lsps0.listprotocols", json_bytes, json_rpc_id=json_rpc_id
+            self._peer_id, "lsps0.list_protocols", json_bytes, json_rpc_id=json_rpc_id
         )
         response_dict = json.loads(result)
         return ProtocolList(**response_dict)
