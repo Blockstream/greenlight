@@ -26,7 +26,7 @@ use vls_protocol_signer::handler::Handler;
 mod auth;
 pub mod model;
 
-const VERSION: &str = "v23.05";
+const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
 
 #[derive(Clone)]
