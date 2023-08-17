@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};

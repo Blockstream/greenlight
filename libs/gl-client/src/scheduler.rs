@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
 
