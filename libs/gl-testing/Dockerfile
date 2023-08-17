@@ -73,7 +73,7 @@ RUN mkdir -p /tmp/target/debug && \
     mv /repo/libs/target/release/gl-signerproxy /tmp/target/debug/
 
 FROM ubuntu:20.04 as tester
-ARG BITCOIN_VERSION=0.20.1
+ARG BITCOIN_VERSION=25.0
 ARG DOCKER_USER=default_user
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
@@ -110,7 +110,7 @@ RUN apt-get update && apt-get install -qqy \
     && rm -rf /var/lib/apt/lists/*
 
 # Enumerate all CLN version we want `gl-testing` to find.
-ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/
+ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/
 
 # Shorten poll intervals so tests are faster to run
 ENV DEVELOPER=1
@@ -133,10 +133,10 @@ ENV NPM_PACKAGES="${HOME}/.npm-packages"
 ENV PATH="${PATH}:${NPM_PACKAGES}/bin"
 
 RUN cd /tmp/ && \
-    wget https://storage.googleapis.com/c-lightning-tests/bitcoin-$BITCOIN_VERSION-x86_64-linux-gnu.tar.bz2 -O bitcoin.tar.bz2 && \
-    tar -xvjf bitcoin.tar.bz2 && \
+    wget "https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz" -O bitcoin.tar.gz && \
+    tar -xvzf bitcoin.tar.gz && \
     mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
-    rm -rf bitcoin.tar.bz2 /tmp/bitcoin-$BITCOIN_VERSION
+    rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
 RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest

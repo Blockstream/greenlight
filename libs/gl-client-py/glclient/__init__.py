@@ -13,7 +13,7 @@ from glclient.lsps import LspClient
 
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
-__version__ = "v23.05"
+__version__ = "v23.08"
 
 E = TypeVar('E', bound=PbMessage)
 def _convert(cls: Type[E], res: Iterable[Any]) -> E:
