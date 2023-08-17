@@ -6,7 +6,7 @@ use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, H
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::anyhow;
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{Buf, BufMut};
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
