@@ -95,6 +95,7 @@ class NodeProcess(TailableProc):
             '--dev-bitcoind-poll=5',
             '--dev-fast-gossip',
             '--offline',
+            '--experimental-anchors',
         ]
 
     def write_node_config(self, network: str):
