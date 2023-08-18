@@ -19,6 +19,7 @@ use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Endpoint, Uri};
 use tonic::Request;
+use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
 use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApprover};
 use vls_protocol_signer::handler;
@@ -114,7 +115,11 @@ impl Signer {
 
         #[allow(deprecated)]
         let init = Signer::initmsg(&handler.0)?;
-        let id = init[2..35].to_vec();
+
+        let init = HsmdInitReplyV4::from_vec(init).unwrap();
+        let id = init.node_id.0.to_vec();
+	use vls_protocol::msgs::SerBolt;
+	let init = init.as_vec();
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
@@ -169,8 +174,8 @@ impl Signer {
             dev_bip32_seed: None,
             dev_channel_secrets: None,
             dev_channel_secrets_shaseed: None,
-            hsm_wire_min_version: 1,
-            hsm_wire_max_version: 2,
+            hsm_wire_min_version: 3,
+            hsm_wire_max_version: 4,
         })
     }
 
