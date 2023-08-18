@@ -65,7 +65,6 @@ check-self: ensure-docker
 	pytest -vvv \
 	  /repo/libs/gl-testing \
 	  --force-flaky \
-	  -n $(shell nproc) \
 	  ${PYTEST_OPTS}
 
 ensure-docker:
