@@ -16,6 +16,7 @@ from decimal import Decimal
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 logging.getLogger("sh").setLevel(logging.ERROR)
+logging.getLogger("hpack").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
