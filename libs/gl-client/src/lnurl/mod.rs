@@ -1,17 +1,21 @@
 mod models;
 mod pay;
 mod utils;
+mod withdraw;
 
 use crate::node::Client;
-use crate::pb::{PayRequest, Payment};
+use crate::pb::{Amount, InvoiceRequest, PayRequest, Payment};
+use crate::pb::amount::Unit;
 use anyhow::{anyhow, Result};
 use models::LnUrlHttpClearnetClient;
-use pay::resolve_lnurl_to_invoice;
+use pay::{resolve_lnurl_to_invoice, validate_invoice_from_callback_response};
 use url::Url;
-
-use self::models::{LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse};
-use self::pay::validate_invoice_from_callback_response;
+use withdraw::{build_withdraw_request_callback_url, parse_withdraw_request_response_from_url};
+use self::models::{
+    LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse, WithdrawRequestResponse,
+};
 use self::utils::{parse_invoice, parse_lnurl};
+
 
 pub struct LNURL<T: LnUrlHttpClient> {
     http_client: T,
@@ -74,5 +78,50 @@ impl<T: LnUrlHttpClient> LNURL<T> {
         })
         .await
         .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn get_withdraw_request_response(
+        &self,
+        lnurl: &str,
+    ) -> Result<WithdrawRequestResponse> {
+        let url = parse_lnurl(lnurl)?;
+        let withdrawal_request_response = parse_withdraw_request_response_from_url(&url);
+
+        //If it's not a quick withdraw, then get the withdrawal_request_response from the web.
+        let withdrawal_request_response = match withdrawal_request_response {
+            Some(w) => w,
+            None => {
+                self.http_client
+                    .get_withdrawal_request_response(&url)
+                    .await?
+            }
+        };
+
+        Ok(withdrawal_request_response)
+    }
+
+    pub async fn withdraw(&self, lnurl: &str, amount_msats: u64, node: &mut Client) -> Result<()> {
+        let withdraw_request_response = self.get_withdraw_request_response(lnurl).await?;
+
+        let amount = Amount {
+            unit: Some(Unit::Millisatoshi(amount_msats))
+        };
+        let invoice = node
+            .create_invoice(InvoiceRequest {
+                amount: Some(amount),
+                description: withdraw_request_response.default_description.clone(),
+                ..Default::default()
+            })
+            .await
+            .map_err(|e| anyhow!(e))?
+            .into_inner();
+
+        let callback_url =
+            build_withdraw_request_callback_url(&withdraw_request_response, invoice.bolt11)?;
+
+        let _ =self.http_client
+            .send_invoice_for_withdraw_request(&callback_url);
+
+        Ok(())
     }
 }

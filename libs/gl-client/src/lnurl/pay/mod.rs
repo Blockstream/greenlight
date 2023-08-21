@@ -10,7 +10,6 @@ use log::debug;
 use reqwest::Url;
 use sha256;
 
-
 pub async fn resolve_lnurl_to_invoice<T: LnUrlHttpClient>(
     http_client: &T,
     lnurl: &str,

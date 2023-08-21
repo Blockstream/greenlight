@@ -24,9 +24,27 @@ pub struct PayRequestCallbackResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ErrorResponse {
+pub struct OkResponse {
+    status: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ErrorResponse {
     status: String,
     reason: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WithdrawRequestResponse {
+    pub tag: String,
+    pub callback: String,
+    pub k1: String,
+    #[serde(rename = "defaultDescription")]
+    pub default_description: String,
+    #[serde(rename = "minWithdrawable")]
+    pub min_withdrawable: u64,
+    #[serde(rename = "maxWithdrawable")]
+    pub max_withdrawable: u64,
 }
 
 #[async_trait]
@@ -37,6 +55,8 @@ pub trait LnUrlHttpClient {
         &self,
         callback_url: &str,
     ) -> Result<PayRequestCallbackResponse>;
+    async fn get_withdrawal_request_response(&self, url: &str) -> Result<WithdrawRequestResponse>;
+    async fn send_invoice_for_withdraw_request(&self, url: &str) -> Result<OkResponse>;
 }
 
 pub struct LnUrlHttpClearnetClient {
@@ -73,5 +93,13 @@ impl LnUrlHttpClient for LnUrlHttpClearnetClient {
         callback_url: &str,
     ) -> Result<PayRequestCallbackResponse> {
         self.get::<PayRequestCallbackResponse>(callback_url).await
+    }
+
+    async fn get_withdrawal_request_response(&self, url: &str) -> Result<WithdrawRequestResponse> {
+        self.get::<WithdrawRequestResponse>(url).await
+    }
+
+    async fn send_invoice_for_withdraw_request(&self, url: &str) -> Result<OkResponse>{
+        self.get::<OkResponse>(url).await
     }
 }
