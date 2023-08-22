@@ -54,7 +54,7 @@ RUN mkdir /tmp/protoc && \
 RUN python3 -m pip install -U \
       pip tomli &&\
       python3 -m pip install \
-      maturin \
+      maturin[patchelf] \
       mrkd \
       mako
 ADD . /repo
