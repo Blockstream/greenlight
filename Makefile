@@ -57,6 +57,8 @@ build-self: ensure-docker
 	(cd libs; cargo build --all)
 	(cd libs/gl-client-py && python3 -m maturin develop)
 
+check-all: check-self check-self-gl-client check-py check-js
+
 check-self: ensure-docker
 	PYTHONPATH=/repo/libs/gl-testing \
 	pytest -vvv \
@@ -101,6 +103,13 @@ docker-check-self:
 	  --rm \
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting make build-self check-self
+
+docker-check-all:
+	docker run \
+	  -t \
+	  --rm \
+	  -v ${REPO_ROOT}:/repo \
+	  gltesting make build-self check-all
 
 docker-check:
 	docker run \
