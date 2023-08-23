@@ -106,6 +106,7 @@ RUN apt-get update && apt-get install -qqy \
     socat \
     unzip \
     wget \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Enumerate all CLN version we want `gl-testing` to find.
