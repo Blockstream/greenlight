@@ -25,12 +25,12 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 	from glclient import Scheduler, Signer, TlsConfig
 	
 	tls = TlsConfig()
+	signer = Signer(seed, network="bitcoin", tls=tls)
 	scheduler = Scheduler(
 	    node_id=signer.node_id(),
 		network="bitcoin",
 		tls=tls,
 	)
-	signer = Signer(seed, network="bitcoin", tls=tls)
 	res = scheduler.recover(signer)
 	```
 
