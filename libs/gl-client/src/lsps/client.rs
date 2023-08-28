@@ -12,14 +12,15 @@ use super::json_rpc::{generate_random_rpc_id, JsonRpcResponse};
 use super::json_rpc_erased::JsonRpcMethodUnerased;
 use crate::lsps::error::LspsError;
 use crate::node::{Client, ClnClient};
-use crate::util::is_feature_bit_enabled;
 use crate::pb::{Custommsg, StreamCustommsgRequest};
-use cln_grpc::pb::{SendcustommsgRequest, ListnodesRequest};
+use crate::util::is_feature_bit_enabled;
+use cln_grpc::pb::{ListnodesRequest, SendcustommsgRequest};
 use std::io::{Cursor, Read, Write};
 
 // BOLT8 message ID 37913
 const LSPS_MESSAGE_ID: [u8; 2] = [0x94, 0x19];
 const TIMEOUT_MILLIS: u128 = 30_000;
+const BITNUM_LSP_FEATURE: usize = 729;
 
 pub struct LspClient {
     client: Client,        // Used for receiving custom messages
@@ -156,21 +157,17 @@ impl LspClient {
     }
 
     pub async fn list_lsp_servers(&mut self) -> Result<Vec<Vec<u8>>, LspsError> {
-        let request = ListnodesRequest { id : None};
+        let request = ListnodesRequest { id: None };
 
         // Query all known lightning-nodes
-        let response  = self.cln_client.list_nodes(request).await?;
+        let response = self.cln_client.list_nodes(request).await?;
 
-        // Only include those with a feature_bitmap and
-        let result = response
+        return Ok(response
             .get_ref()
             .nodes
             .iter()
-            .filter(|node| {
-                node.features.as_ref().map_or(
-                    false, | f | is_feature_bit_enabled(&f, 729))})
-            .map(|node| node.nodeid.clone()).collect();
-
-        return Ok(result)
+            .filter(|x| is_feature_bit_enabled(&x.features(), BITNUM_LSP_FEATURE))
+            .map(|n| n.nodeid.clone())
+            .collect());
     }
 }

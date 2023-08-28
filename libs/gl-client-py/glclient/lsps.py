@@ -91,9 +91,8 @@ class NoParams:
 
 
 class LspClient:
-    def __init__(self, native: native.LspClient, peer_id: t.Union[bytes, str]):
+    def __init__(self, native: native.LspClient):
         self._native = native
-        self._peer_id: bytes = parse_and_validate_peer_id(peer_id)
 
     def _rpc_call(
         self,
@@ -109,6 +108,9 @@ class LspClient:
             return self._native.rpc_call_with_json_rpc_id(
                 peer_id, method_name, param_json, json_rpc_id=json_rpc_id
             )
+
+    def list_lsp_servers(self) -> t.List[bytes]:
+        return self._native.list_lsp_servers()
 
     def list_protocols(self, json_rpc_id: t.Optional[str] = None) -> ProtocolList:
         json_bytes = _dump_json_bytes(NoParams)
