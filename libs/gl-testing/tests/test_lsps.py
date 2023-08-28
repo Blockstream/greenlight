@@ -1,4 +1,5 @@
 from gltesting.fixtures import *
+from gltesting.scheduler import Scheduler
 from pyln.testing.utils import NodeFactory, BitcoinD, LightningNode
 import json
 
@@ -6,8 +7,23 @@ from glclient.lsps import ProtocolList
 import time
 
 import threading
+import subprocess
 
 logger = logging.getLogger(__name__)
+
+def get_lsps_dummy_plugin_path() -> str:
+    # Find the fully specified path to the LSPS-plugin
+    # This plugin sets the feature flags and makes the node appear as an LSP
+
+    base_path, _ = os.path.split(__file__)
+    return os.path.join(base_path, "util", "dummy_lsps_plugin.sh")
+
+
+
+@pytest.fixture
+def dummy_plugin(scope="session"):
+    logger.info(f"Configure {get_lsps_dummy_plugin_path()} to become executable using chmod +x")
+    subprocess.run(["chmod", "+x", get_lsps_dummy_plugin_path()], check=True)
 
 class AwaitResult:
     """ A very poor implementation of an awaitable in python
@@ -64,7 +80,7 @@ def test_lsps_list_protocol(clients : Clients, node_factory : NodeFactory, bitco
 
 
     # Get the lsp-client and do list-protocols
-    lsp_client = gl1.get_lsp_client(n1.info['id'])
+    lsp_client = gl1.get_lsp_client()
 
     # The client sends a message
     json_rpc_id = "abcdef"
@@ -92,3 +108,47 @@ def test_lsps_list_protocol(clients : Clients, node_factory : NodeFactory, bitco
 
     result = protocol_fut.await_result()
     assert result == ProtocolList([1,2])
+
+def test_list_lsp_server(
+        clients : Clients,
+        node_factory : NodeFactory,
+        bitcoind : BitcoinD,
+        dummy_plugin : None):
+
+    # Create a network
+    n1 : LightningNode = node_factory.get_node(options=dict(plugin=get_lsps_dummy_plugin_path()))
+    n2 : LightningNode = node_factory.get_node(options=dict(plugin=get_lsps_dummy_plugin_path()))
+    n3 : LightningNode = node_factory.get_node()
+
+    # Fund all nodes so they can open a channel
+    n1.fundwallet(100_000_000)
+    n2.fundwallet(100_000_000)
+    n3.fundwallet(100_000_000)
+
+    # Create a basic channel graph
+    n1.openchannel(n2, 500_000, connect=True)
+    n2.openchannel(n3, 500_000, connect=True)
+
+    # Initiate the greenlight node
+    c = clients.new()
+    c.register(configure=True)
+    gl1 = c.node()
+    s = c.signer().run_in_thread()
+
+
+    n1_full_address = f"{n1.info['binding'][0]['address']}:{n1.info['binding'][0]['port']}"
+    _ = gl1.connect_peer(
+        node_id = n1.info['id'],
+        addr=n1_full_address
+    )
+
+    # Await gossip
+    time.sleep(1.0)
+
+    lsp_client = gl1.get_lsp_client()
+    lsp_servers = lsp_client.list_lsp_servers()
+
+    assert len(lsp_servers) == 2, "There are 2 lsp-servers defined"
+    assert n1.info['id'] in lsp_servers
+    assert n2.info['id'] in lsp_servers
+    assert n3.info['id'] not in lsp_servers
