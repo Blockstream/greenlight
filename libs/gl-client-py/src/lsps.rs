@@ -2,7 +2,7 @@ use crate::runtime::exec;
 use gl_client::lsps::error::LspsError;
 use gl_client::lsps::json_rpc::{JsonRpcResponse, generate_random_rpc_id};
 use gl_client::lsps::message as lsps_message;
-use gl_client::lsps::transport::JsonRpcTransport;
+use gl_client::lsps::transport::{LspClient as LspClientInner};
 use gl_client::node::{Client, ClnClient};
 use pyo3::exceptions::{PyBaseException, PyConnectionError, PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
@@ -11,13 +11,13 @@ use pyo3::types::PyBytes;
 
 #[pyclass]
 pub struct LspClient {
-    transport: JsonRpcTransport,
+    transport: LspClientInner,
 }
 
 impl LspClient {
     pub fn new(client: Client, cln_client: ClnClient) -> Self {
         LspClient {
-            transport: JsonRpcTransport::new(client, cln_client),
+            transport: LspClientInner::new(client, cln_client),
         }
     }
 }

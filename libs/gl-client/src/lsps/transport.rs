@@ -20,12 +20,12 @@ use std::io::{Cursor, Read, Write};
 const LSPS_MESSAGE_ID: [u8; 2] = [0x94, 0x19];
 const TIMEOUT_MILLIS: u128 = 30_000;
 
-pub struct JsonRpcTransport {
+pub struct LspClient {
     client: Client,        // Used for receiving custom messages
     cln_client: ClnClient, // USed for sending custom message
 }
 
-impl JsonRpcTransport {
+impl LspClient {
     pub fn new(client: Client, cln_client: ClnClient) -> Self {
         Self {
 						client,
