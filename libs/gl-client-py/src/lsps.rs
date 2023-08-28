@@ -2,7 +2,7 @@ use crate::runtime::exec;
 use gl_client::lsps::error::LspsError;
 use gl_client::lsps::json_rpc::{JsonRpcResponse, generate_random_rpc_id};
 use gl_client::lsps::message as lsps_message;
-use gl_client::lsps::transport::{LspClient as LspClientInner};
+use gl_client::lsps::client::{LspClient as LspClientInner};
 use gl_client::node::{Client, ClnClient};
 use pyo3::exceptions::{PyBaseException, PyConnectionError, PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
