@@ -1,10 +1,7 @@
 
 
 
-pub fn to_bitmap(feature_hex_string : &str) -> Result<Vec<u8>, String> {
-    hex::decode(&feature_hex_string)
-        .map_err(|x| x.to_string())
-}
+
 
 pub fn is_feature_bit_enabled(bitmap : &[u8], index : usize) -> bool {
     let n_bytes = bitmap.len();
@@ -27,6 +24,11 @@ pub fn is_feature_bit_enabled(bitmap : &[u8], index : usize) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    fn to_bitmap(feature_hex_string : &str) -> Result<Vec<u8>, String> {
+        hex::decode(&feature_hex_string)
+            .map_err(|x| x.to_string())
+    }
 
     #[test]
     fn test_parse_bitmap() {
