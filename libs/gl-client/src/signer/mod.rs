@@ -6,7 +6,7 @@ use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, H
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::anyhow;
-use bytes::{Buf, BufMut};
+use bytes::BufMut;
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
@@ -306,9 +306,6 @@ impl Signer {
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
         let approvals = self.authenticate_request(&req)?;
         let diff: crate::persist::State = req.signer_state.into();
-        let mut b = bytes::BytesMut::new();
-        b.put_u16(req.raw.len().try_into().expect("message exceeds u16 size"));
-        b.put_slice(&req.raw);
 
         let prestate = {
             debug!("Updating local signer state with state from node");
@@ -319,15 +316,24 @@ impl Signer {
             );
 
             state.merge(&diff).unwrap();
-            trace!("Processing request {}", hex::encode(&b),);
+            trace!("Processing request {}", hex::encode(&req.raw));
             state.clone()
         };
 
-        if (&b[2..]).get_u16() == 23 {
-            warn!("Refusing to process sign-message request");
-            return Err(Error::Other(anyhow!(
-                "Cannot process sign-message requests from node."
-            )));
+        // The first two bytes represent the message type. Check that
+        // it is not a `sign-message` request (type 23).
+        match req.raw.as_slice() {
+            &[h, l, ..] => {
+                let typ = ((h as u16) << 8) | (l as u16);
+                if typ == 23 {
+                    warn!("Refusing to process sign-message request");
+                    return Err(Error::Other(anyhow!(
+                        "Cannot process sign-message requests from node."
+                    )));
+                }
+            }
+            // We skip empty requests.
+            _ => {}
         }
 
         let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e| Error::Signer(e))?;
@@ -679,6 +685,32 @@ mod tests {
             },)
             .await
             .is_err())
+    }
+
+    /// We should reject a signing request with an empty message.
+    #[tokio::test]
+    async fn test_empty_message() {
+        let signer = Signer::new(
+            vec![0 as u8; 32],
+            Network::Bitcoin,
+            TlsConfig::new().unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            signer
+                .process_request(HsmRequest {
+                    request_id: 0,
+                    context: None,
+                    raw: vec![],
+                    signer_state: vec![],
+                    requests: Vec::new(),
+                },)
+                .await
+                .unwrap_err()
+                .to_string(),
+            *"signer refused a request: ShortRead"
+        )
     }
 
     #[test]
