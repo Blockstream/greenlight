@@ -96,26 +96,27 @@ class LspClient:
 
     def _rpc_call(
         self,
-        peer_id: bytes,
+        peer_id: str,
         method_name: str,
         param_json: bytes,
         json_rpc_id: t.Optional[str] = None,
     ) -> bytes:
         logger.debug("Request lsp to peer %s and method %s", peer_id, method_name)
+        peer_id_bytes = bytes.fromhex(peer_id)
         if json_rpc_id is None:
-            return self._native.rpc_call(peer_id, method_name, param_json)
+            return self._native.rpc_call(peer_id_bytes, method_name, param_json)
         else:
             return self._native.rpc_call_with_json_rpc_id(
-                peer_id, method_name, param_json, json_rpc_id=json_rpc_id
+                peer_id_bytes, method_name, param_json, json_rpc_id=json_rpc_id
             )
 
     def list_lsp_servers(self) -> t.List[bytes]:
         return self._native.list_lsp_servers()
 
-    def list_protocols(self, json_rpc_id: t.Optional[str] = None) -> ProtocolList:
+    def list_protocols(self, peer_id, json_rpc_id: t.Optional[str] = None) -> ProtocolList:
         json_bytes = _dump_json_bytes(NoParams)
         result = self._rpc_call(
-            self._peer_id, "lsps0.list_protocols", json_bytes, json_rpc_id=json_rpc_id
+            peer_id, "lsps0.list_protocols", json_bytes, json_rpc_id=json_rpc_id
         )
         response_dict = json.loads(result)
         return ProtocolList(**response_dict)
