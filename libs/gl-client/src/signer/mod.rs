@@ -323,15 +323,14 @@ impl Signer {
             state.clone()
         };
 
-        if b.get_u16() == 23 {
+        if (&b[2..]).get_u16() == 23 {
             warn!("Refusing to process sign-message request");
             return Err(Error::Other(anyhow!(
                 "Cannot process sign-message requests from node."
             )));
         }
 
-        let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e|
-        Error::Signer(e))?;
+        let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e| Error::Signer(e))?;
         log::trace!("Handling message {:?}", msg);
 
         let approver = Arc::new(MemoApprover::new(PositiveApprover()));
@@ -671,15 +670,13 @@ mod tests {
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
-            .process_request(
-                HsmRequest {
-                    request_id: 0,
-                    context: None,
-                    raw: msg,
-                    signer_state: vec![],
-                    requests: Vec::new(),
-                },
-            )
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: msg,
+                signer_state: vec![],
+                requests: Vec::new(),
+            },)
             .await
             .is_err())
     }
