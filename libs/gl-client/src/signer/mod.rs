@@ -431,7 +431,15 @@ impl Signer {
     }
 
     pub fn bip32_ext_key(&self) -> Vec<u8> {
-        self.init[35..].to_vec()
+        use vls_protocol::{msgs, msgs::Message};
+        let initmsg = msgs::from_vec(self.init.clone()).expect("unparseable init message");
+
+        match initmsg {
+            Message::HsmdInit2Reply(m) => m.bip32.0.to_vec(),
+            Message::HsmdInitReplyV4(m) => m.bip32.0.to_vec(),
+            Message::HsmdInitReplyV2(m) => m.bip32.0.to_vec(),
+            m => panic!("Unknown initmsg {:?}, cannot extract bip32 key", m),
+        }
     }
 
     /// Connect to the scheduler given by the environment variable
