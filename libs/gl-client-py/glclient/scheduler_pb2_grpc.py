@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+import greenlight_pb2 as greenlight__pb2
 from . import scheduler_pb2 as scheduler__pb2
 
 
@@ -86,6 +87,11 @@ class SchedulerStub(object):
                 '/scheduler.Scheduler/ExportNode',
                 request_serializer=scheduler__pb2.ExportNodeRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.ExportNodeResponse.FromString,
+                )
+        self.ReportSignerRejection = channel.unary_unary(
+                '/scheduler.Scheduler/ReportSignerRejection',
+                request_serializer=scheduler__pb2.SignerRejection.SerializeToString,
+                response_deserializer=greenlight__pb2.Empty.FromString,
                 )
 
 
@@ -269,6 +275,12 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ReportSignerRejection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -311,6 +323,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.ExportNode,
                     request_deserializer=scheduler__pb2.ExportNodeRequest.FromString,
                     response_serializer=scheduler__pb2.ExportNodeResponse.SerializeToString,
+            ),
+            'ReportSignerRejection': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportSignerRejection,
+                    request_deserializer=scheduler__pb2.SignerRejection.FromString,
+                    response_serializer=greenlight__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -488,5 +505,22 @@ class Scheduler(object):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ExportNode',
             scheduler__pb2.ExportNodeRequest.SerializeToString,
             scheduler__pb2.ExportNodeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ReportSignerRejection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ReportSignerRejection',
+            scheduler__pb2.SignerRejection.SerializeToString,
+            greenlight__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

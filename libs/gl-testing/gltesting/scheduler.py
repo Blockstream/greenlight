@@ -96,6 +96,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.bitcoind = bitcoind
         self.invite_codes: List[str] = []
         self.received_invite_code = None
+        self.debugger = DebugServicer()
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -118,6 +119,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
             port=self.grpc_port, ssl_context=self.identity.to_ssl_context()
         )
         self.server.add_service(self.service)
+        self.server.add_service(self.debugger.service)
 
         threading.Thread(target=anyio.run, args=(self.run,), daemon=True).start()
         print("Hello")
@@ -357,4 +359,15 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         return schedpb.ListInviteCodesResponse(invite_code_list=codes)
 
 
+class DebugServicer(schedgrpc.DebugServicer):
+    """Collects and analyzes rejected signer requests."""
+    
+    def __init__(self):
+        self.reports: List[schedpb.SignerRejection] = []
+    
+    async def ReportSignerRejection(self, report):
+        self.reports.append(report)
+        return greenlightpb.Empty()
+
+        
 Scheduler = AsyncScheduler

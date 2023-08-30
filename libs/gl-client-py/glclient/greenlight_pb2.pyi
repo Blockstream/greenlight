@@ -22,7 +22,7 @@ class _NetAddressType:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _NetAddressTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_NetAddressType.ValueType], builtins.type):
+class _NetAddressTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_NetAddressType.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     Ipv4: _NetAddressType.ValueType  # 0
     Ipv6: _NetAddressType.ValueType  # 1
@@ -41,7 +41,7 @@ class _BtcAddressType:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _BtcAddressTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_BtcAddressType.ValueType], builtins.type):
+class _BtcAddressTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_BtcAddressType.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     BECH32: _BtcAddressType.ValueType  # 0
     """Default"""
@@ -58,7 +58,7 @@ class _OutputStatus:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _OutputStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_OutputStatus.ValueType], builtins.type):
+class _OutputStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_OutputStatus.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     CONFIRMED: _OutputStatus.ValueType  # 0
     UNCONFIRMED: _OutputStatus.ValueType  # 1
@@ -73,7 +73,7 @@ class _FeeratePreset:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _FeeratePresetEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_FeeratePreset.ValueType], builtins.type):
+class _FeeratePresetEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_FeeratePreset.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     NORMAL: _FeeratePreset.ValueType  # 0
     SLOW: _FeeratePreset.ValueType  # 1
@@ -93,7 +93,7 @@ class _CloseChannelType:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _CloseChannelTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_CloseChannelType.ValueType], builtins.type):
+class _CloseChannelTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_CloseChannelType.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     MUTUAL: _CloseChannelType.ValueType  # 0
     UNILATERAL: _CloseChannelType.ValueType  # 1
@@ -108,7 +108,7 @@ class _InvoiceStatus:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _InvoiceStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_InvoiceStatus.ValueType], builtins.type):
+class _InvoiceStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_InvoiceStatus.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     UNPAID: _InvoiceStatus.ValueType  # 0
     PAID: _InvoiceStatus.ValueType  # 1
@@ -125,7 +125,7 @@ class _PayStatus:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _PayStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_PayStatus.ValueType], builtins.type):
+class _PayStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_PayStatus.ValueType], builtins.type):  # noqa: F821
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     PENDING: _PayStatus.ValueType  # 0
     COMPLETE: _PayStatus.ValueType  # 1
@@ -138,7 +138,6 @@ COMPLETE: PayStatus.ValueType  # 1
 FAILED: PayStatus.ValueType  # 2
 global___PayStatus = PayStatus
 
-@typing_extensions.final
 class HsmRequestContext(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -159,7 +158,6 @@ class HsmRequestContext(google.protobuf.message.Message):
 
 global___HsmRequestContext = HsmRequestContext
 
-@typing_extensions.final
 class HsmResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -184,7 +182,6 @@ class HsmResponse(google.protobuf.message.Message):
 
 global___HsmResponse = HsmResponse
 
-@typing_extensions.final
 class HsmRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -221,7 +218,6 @@ class HsmRequest(google.protobuf.message.Message):
 
 global___HsmRequest = HsmRequest
 
-@typing_extensions.final
 class Empty(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -231,7 +227,6 @@ class Empty(google.protobuf.message.Message):
 
 global___Empty = Empty
 
-@typing_extensions.final
 class Address(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -252,7 +247,6 @@ class Address(google.protobuf.message.Message):
 
 global___Address = Address
 
-@typing_extensions.final
 class GetInfoRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -262,7 +256,6 @@ class GetInfoRequest(google.protobuf.message.Message):
 
 global___GetInfoRequest = GetInfoRequest
 
-@typing_extensions.final
 class GetInfoResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -299,7 +292,6 @@ class GetInfoResponse(google.protobuf.message.Message):
 
 global___GetInfoResponse = GetInfoResponse
 
-@typing_extensions.final
 class StopRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -309,7 +301,6 @@ class StopRequest(google.protobuf.message.Message):
 
 global___StopRequest = StopRequest
 
-@typing_extensions.final
 class StopResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -319,7 +310,6 @@ class StopResponse(google.protobuf.message.Message):
 
 global___StopResponse = StopResponse
 
-@typing_extensions.final
 class ConnectRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -337,7 +327,6 @@ class ConnectRequest(google.protobuf.message.Message):
 
 global___ConnectRequest = ConnectRequest
 
-@typing_extensions.final
 class ConnectResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -355,7 +344,6 @@ class ConnectResponse(google.protobuf.message.Message):
 
 global___ConnectResponse = ConnectResponse
 
-@typing_extensions.final
 class ListPeersRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -370,7 +358,6 @@ class ListPeersRequest(google.protobuf.message.Message):
 
 global___ListPeersRequest = ListPeersRequest
 
-@typing_extensions.final
 class Htlc(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -403,7 +390,6 @@ class Htlc(google.protobuf.message.Message):
 
 global___Htlc = Htlc
 
-@typing_extensions.final
 class Aliases(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -421,7 +407,6 @@ class Aliases(google.protobuf.message.Message):
 
 global___Aliases = Aliases
 
-@typing_extensions.final
 class Channel(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -491,7 +476,6 @@ class Channel(google.protobuf.message.Message):
 
 global___Channel = Channel
 
-@typing_extensions.final
 class Peer(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -520,7 +504,6 @@ class Peer(google.protobuf.message.Message):
 
 global___Peer = Peer
 
-@typing_extensions.final
 class ListPeersResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -536,7 +519,6 @@ class ListPeersResponse(google.protobuf.message.Message):
 
 global___ListPeersResponse = ListPeersResponse
 
-@typing_extensions.final
 class DisconnectRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -554,7 +536,6 @@ class DisconnectRequest(google.protobuf.message.Message):
 
 global___DisconnectRequest = DisconnectRequest
 
-@typing_extensions.final
 class DisconnectResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -564,7 +545,6 @@ class DisconnectResponse(google.protobuf.message.Message):
 
 global___DisconnectResponse = DisconnectResponse
 
-@typing_extensions.final
 class NewAddrRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -579,7 +559,6 @@ class NewAddrRequest(google.protobuf.message.Message):
 
 global___NewAddrRequest = NewAddrRequest
 
-@typing_extensions.final
 class NewAddrResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -597,7 +576,6 @@ class NewAddrResponse(google.protobuf.message.Message):
 
 global___NewAddrResponse = NewAddrResponse
 
-@typing_extensions.final
 class ListFundsRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -614,7 +592,6 @@ class ListFundsRequest(google.protobuf.message.Message):
 
 global___ListFundsRequest = ListFundsRequest
 
-@typing_extensions.final
 class ListFundsOutput(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -647,7 +624,6 @@ class ListFundsOutput(google.protobuf.message.Message):
 
 global___ListFundsOutput = ListFundsOutput
 
-@typing_extensions.final
 class ListFundsChannel(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -680,7 +656,6 @@ class ListFundsChannel(google.protobuf.message.Message):
 
 global___ListFundsChannel = ListFundsChannel
 
-@typing_extensions.final
 class ListFundsResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -700,7 +675,6 @@ class ListFundsResponse(google.protobuf.message.Message):
 
 global___ListFundsResponse = ListFundsResponse
 
-@typing_extensions.final
 class Feerate(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -723,7 +697,6 @@ class Feerate(google.protobuf.message.Message):
 
 global___Feerate = Feerate
 
-@typing_extensions.final
 class Confirmation(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -738,7 +711,6 @@ class Confirmation(google.protobuf.message.Message):
 
 global___Confirmation = Confirmation
 
-@typing_extensions.final
 class WithdrawRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -770,7 +742,6 @@ class WithdrawRequest(google.protobuf.message.Message):
 
 global___WithdrawRequest = WithdrawRequest
 
-@typing_extensions.final
 class WithdrawResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -788,7 +759,6 @@ class WithdrawResponse(google.protobuf.message.Message):
 
 global___WithdrawResponse = WithdrawResponse
 
-@typing_extensions.final
 class FundChannelRequest(google.protobuf.message.Message):
     """TODO: Extract AmountOrAll into its own message
     TODO: Extract Feerate into its own message
@@ -827,7 +797,6 @@ class FundChannelRequest(google.protobuf.message.Message):
 
 global___FundChannelRequest = FundChannelRequest
 
-@typing_extensions.final
 class Outpoint(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -845,7 +814,6 @@ class Outpoint(google.protobuf.message.Message):
 
 global___Outpoint = Outpoint
 
-@typing_extensions.final
 class FundChannelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -871,7 +839,6 @@ class FundChannelResponse(google.protobuf.message.Message):
 
 global___FundChannelResponse = FundChannelResponse
 
-@typing_extensions.final
 class Timeout(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -886,7 +853,6 @@ class Timeout(google.protobuf.message.Message):
 
 global___Timeout = Timeout
 
-@typing_extensions.final
 class BitcoinAddress(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -901,7 +867,6 @@ class BitcoinAddress(google.protobuf.message.Message):
 
 global___BitcoinAddress = BitcoinAddress
 
-@typing_extensions.final
 class CloseChannelRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -925,7 +890,6 @@ class CloseChannelRequest(google.protobuf.message.Message):
 
 global___CloseChannelRequest = CloseChannelRequest
 
-@typing_extensions.final
 class CloseChannelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -946,7 +910,6 @@ class CloseChannelResponse(google.protobuf.message.Message):
 
 global___CloseChannelResponse = CloseChannelResponse
 
-@typing_extensions.final
 class Amount(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -975,7 +938,6 @@ class Amount(google.protobuf.message.Message):
 
 global___Amount = Amount
 
-@typing_extensions.final
 class InvoiceRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1001,7 +963,6 @@ class InvoiceRequest(google.protobuf.message.Message):
 
 global___InvoiceRequest = InvoiceRequest
 
-@typing_extensions.final
 class Invoice(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1046,7 +1007,6 @@ class Invoice(google.protobuf.message.Message):
 
 global___Invoice = Invoice
 
-@typing_extensions.final
 class PayRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1080,7 +1040,6 @@ class PayRequest(google.protobuf.message.Message):
 
 global___PayRequest = PayRequest
 
-@typing_extensions.final
 class Payment(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1126,7 +1085,6 @@ class Payment(google.protobuf.message.Message):
 
 global___Payment = Payment
 
-@typing_extensions.final
 class PaymentIdentifier(google.protobuf.message.Message):
     """A payment identifier is a way to reference a unique payment, either
     by its bolt11 string or just the payment hash. Only one of the two
@@ -1152,7 +1110,6 @@ class PaymentIdentifier(google.protobuf.message.Message):
 
 global___PaymentIdentifier = PaymentIdentifier
 
-@typing_extensions.final
 class ListPaymentsRequest(google.protobuf.message.Message):
     """Request a list of payments that this node has performed. Optionally
     the query can be narrowed to a single payment by providing an
@@ -1174,7 +1131,6 @@ class ListPaymentsRequest(google.protobuf.message.Message):
 
 global___ListPaymentsRequest = ListPaymentsRequest
 
-@typing_extensions.final
 class ListPaymentsResponse(google.protobuf.message.Message):
     """The response matching `ListPaymentRequest`. It returns a list of
     PayResponses, i.e., the same format as `Pay` returned its result.
@@ -1194,7 +1150,6 @@ class ListPaymentsResponse(google.protobuf.message.Message):
 
 global___ListPaymentsResponse = ListPaymentsResponse
 
-@typing_extensions.final
 class InvoiceIdentifier(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1217,7 +1172,6 @@ class InvoiceIdentifier(google.protobuf.message.Message):
 
 global___InvoiceIdentifier = InvoiceIdentifier
 
-@typing_extensions.final
 class ListInvoicesRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1234,7 +1188,6 @@ class ListInvoicesRequest(google.protobuf.message.Message):
 
 global___ListInvoicesRequest = ListInvoicesRequest
 
-@typing_extensions.final
 class StreamIncomingFilter(google.protobuf.message.Message):
     """Options to stream_incoming to specify what to stream."""
 
@@ -1246,7 +1199,6 @@ class StreamIncomingFilter(google.protobuf.message.Message):
 
 global___StreamIncomingFilter = StreamIncomingFilter
 
-@typing_extensions.final
 class ListInvoicesResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1262,7 +1214,6 @@ class ListInvoicesResponse(google.protobuf.message.Message):
 
 global___ListInvoicesResponse = ListInvoicesResponse
 
-@typing_extensions.final
 class TlvField(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1283,7 +1234,6 @@ class TlvField(google.protobuf.message.Message):
 
 global___TlvField = TlvField
 
-@typing_extensions.final
 class OffChainPayment(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1316,7 +1266,6 @@ class OffChainPayment(google.protobuf.message.Message):
 
 global___OffChainPayment = OffChainPayment
 
-@typing_extensions.final
 class IncomingPayment(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1334,7 +1283,6 @@ class IncomingPayment(google.protobuf.message.Message):
 
 global___IncomingPayment = IncomingPayment
 
-@typing_extensions.final
 class RoutehintHop(google.protobuf.message.Message):
     """A single hop in a Routehint"""
 
@@ -1363,7 +1311,6 @@ class RoutehintHop(google.protobuf.message.Message):
 
 global___RoutehintHop = RoutehintHop
 
-@typing_extensions.final
 class Routehint(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1379,7 +1326,6 @@ class Routehint(google.protobuf.message.Message):
 
 global___Routehint = Routehint
 
-@typing_extensions.final
 class KeysendRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1410,7 +1356,6 @@ class KeysendRequest(google.protobuf.message.Message):
 
 global___KeysendRequest = KeysendRequest
 
-@typing_extensions.final
 class StreamLogRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1420,7 +1365,6 @@ class StreamLogRequest(google.protobuf.message.Message):
 
 global___StreamLogRequest = StreamLogRequest
 
-@typing_extensions.final
 class LogEntry(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1435,7 +1379,6 @@ class LogEntry(google.protobuf.message.Message):
 
 global___LogEntry = LogEntry
 
-@typing_extensions.final
 class SignerStateEntry(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1456,7 +1399,6 @@ class SignerStateEntry(google.protobuf.message.Message):
 
 global___SignerStateEntry = SignerStateEntry
 
-@typing_extensions.final
 class PendingRequest(google.protobuf.message.Message):
     """This represents a grpc request that is currently pending, along
     with the pubkey of the client issuing the request and a matching
@@ -1490,7 +1432,6 @@ class PendingRequest(google.protobuf.message.Message):
 
 global___PendingRequest = PendingRequest
 
-@typing_extensions.final
 class NodeConfig(google.protobuf.message.Message):
     """The `NodeConfig` is used to pass startup parameters to the
     node. The `gl-plugin` will look for a file in its directory to load
@@ -1517,7 +1458,6 @@ class NodeConfig(google.protobuf.message.Message):
 
 global___NodeConfig = NodeConfig
 
-@typing_extensions.final
 class StartupMessage(google.protobuf.message.Message):
     """A message that we know will be requested by `lightningd` at
     startup, and that we stash a response to on the scheduler. This
@@ -1542,7 +1482,6 @@ class StartupMessage(google.protobuf.message.Message):
 
 global___StartupMessage = StartupMessage
 
-@typing_extensions.final
 class StreamCustommsgRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1552,7 +1491,6 @@ class StreamCustommsgRequest(google.protobuf.message.Message):
 
 global___StreamCustommsgRequest = StreamCustommsgRequest
 
-@typing_extensions.final
 class Custommsg(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 

@@ -31,6 +31,7 @@ pyln-grpc-proto = "^0.1"
 # have an issue with TLS (TSI corruption).
 grpcio-tools = ">=1.56"
 protobuf = ">=3"
+mypy-protobuf = "^3.5.0"
 
 [build-system]
 requires = ["maturin>=0.11,<0.12"]
