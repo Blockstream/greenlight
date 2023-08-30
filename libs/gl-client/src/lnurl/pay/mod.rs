@@ -12,27 +12,20 @@ use sha256;
 
 pub async fn resolve_lnurl_to_invoice<T: LnUrlHttpClient>(
     http_client: &T,
-    lnurl: &str,
+    lnurl_identifier: &str,
     amount_msats: u64,
 ) -> Result<String> {
-    let url = parse_lnurl(lnurl)?;
+    let url = match is_lnurl(lnurl_identifier) {
+        true => parse_lnurl(lnurl_identifier)?,
+        false => parse_lightning_address(lnurl_identifier)?,
+    };
+
+    debug!("Domain: {}", Url::parse(&url).unwrap().host().unwrap());
 
     let lnurl_pay_request_response: PayRequestResponse =
         http_client.get_pay_request_response(&url).await?;
 
-    if lnurl_pay_request_response.tag != "payRequest" {
-        return Err(anyhow!("Expected tag to say 'payRequest'"));
-    }
-
-    ensure_amount_is_within_range(&lnurl_pay_request_response, amount_msats)?;
-    let description = extract_description(&lnurl_pay_request_response)?;
-
-    debug!("Domain: {}", Url::parse(&url).unwrap().host().unwrap());
-    debug!("Description: {}", description);
-    debug!(
-        "Accepted range (in millisatoshis): {} - {}",
-        lnurl_pay_request_response.min_sendable, lnurl_pay_request_response.max_sendable
-    );
+    validate_pay_request_response(lnurl_identifier, &lnurl_pay_request_response, amount_msats)?;
 
     let callback_url = build_callback_url(&lnurl_pay_request_response, amount_msats)?;
     let callback_response: PayRequestCallbackResponse = http_client
@@ -46,6 +39,60 @@ pub async fn resolve_lnurl_to_invoice<T: LnUrlHttpClient>(
         &lnurl_pay_request_response.metadata,
     )?;
     Ok(invoice.to_string())
+}
+
+fn is_lnurl(lnurl_identifier: &str) -> bool {
+    const LNURL_PREFIX: &str = "LNURL";
+    lnurl_identifier
+        .trim()
+        .to_uppercase()
+        .starts_with(LNURL_PREFIX)
+}
+
+pub fn validate_pay_request_response(
+    lnurl_identifier: &str,
+    lnurl_pay_request_response: &PayRequestResponse,
+    amount_msats: u64,
+) -> Result<()> {
+    if lnurl_pay_request_response.tag != "payRequest" {
+        return Err(anyhow!("Expected tag to say 'payRequest'"));
+    }
+    ensure_amount_is_within_range(&lnurl_pay_request_response, amount_msats)?;
+    let description = extract_description(&lnurl_pay_request_response)?;
+
+    debug!("Description: {}", description);
+    debug!(
+        "Accepted range (in millisatoshis): {} - {}",
+        lnurl_pay_request_response.min_sendable, lnurl_pay_request_response.max_sendable
+    );
+
+    if !is_lnurl(lnurl_identifier) {
+        let deserialized_metadata: Vec<Vec<String>> =
+            serde_json::from_str(&lnurl_pay_request_response.metadata.to_owned())
+                .map_err(|e| anyhow!("Failed to deserialize metadata: {}", e))?;
+
+        let mut identifier = String::new();
+
+        let metadata_entry_types = ["text/email", "text/identifier"];
+
+        for metadata in deserialized_metadata {
+            let x = &*metadata[0].clone();
+            if metadata_entry_types.contains(&x) {
+                identifier = String::from(metadata[1].clone());
+                break;
+            }
+        }
+
+        if identifier.is_empty() {
+            return Err(anyhow!("Could not find an entry of type "));
+        }
+
+        if identifier != lnurl_identifier {
+            return Err(anyhow!("The lightning address specified in the original request does not match what was found in the metadata array"));
+        }
+    }
+
+    Ok(())
 }
 
 // Validates the invoice on the pay request's callback response
@@ -65,7 +112,9 @@ pub fn validate_invoice_from_callback_response(
 
     ensure!(
         description_hash == sha256::digest(metadata),
-        "description_hash does not match the hash of the metadata"
+        "description_hash {} does not match the hash of the metadata {}",
+        description_hash,
+        sha256::digest(metadata)
     );
 
     Ok(())
@@ -123,6 +172,40 @@ fn ensure_amount_is_within_range(
     Ok(())
 }
 
+//LUD-16: Paying to static internet identifiers.
+pub fn parse_lightning_address(lightning_address: &str) -> Result<String> {
+    let lightning_address_components: Vec<&str> = lightning_address.split("@").collect();
+    
+    if lightning_address_components.len() != 2 {
+        return Err(anyhow!("The provided lightning address is improperly formatted"));
+    }
+
+    let username = match lightning_address_components.get(0) {
+        None => return Err(anyhow!("Could not parse username in lightning address")),
+        Some(u) => {
+            if u.is_empty() {
+                return Err(anyhow!("Username can not be empty"))
+            }
+
+            u
+        }
+    };
+
+    let domain = match lightning_address_components.get(1) {
+        None => return Err(anyhow!("Could not parse domain in lightning address")),
+        Some(d) => {
+            if d.is_empty() {
+                return Err(anyhow!("Domain can not be empty"))
+            }
+
+            d
+        }
+    };
+
+    let pay_request_url = ["https://", domain, "/.well-known/lnurlp/", username].concat();
+    return Ok(pay_request_url);
+}
+
 #[cfg(test)]
 mod tests {
     use crate::lnurl::models::MockLnUrlHttpClient;
@@ -169,7 +252,77 @@ mod tests {
         let lnurl = "LNURL1DP68GURN8GHJ7CMFWP5X2UNSW4HXKTNRDAKJ7CTSDYHHVVF0D3H82UNV9UCSAXQZE2";
         let amount = 100000;
 
-        let _ = resolve_lnurl_to_invoice(&mock_http_client, lnurl, amount).await;
+        let invoice = resolve_lnurl_to_invoice(&mock_http_client, &lnurl, amount).await;
+        assert!(invoice.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_lnurl_pay_with_lightning_address() {
+        let mut mock_http_client = MockLnUrlHttpClient::new();
+        let lightning_address_username = "satoshi";
+        let lightning_address_domain = "cipherpunk.com";
+        let lnurl = format!(
+            "{}@{}",
+            lightning_address_username, lightning_address_domain
+        );
+
+        let lnurl_clone = lnurl.clone();
+        mock_http_client.expect_get_pay_request_response().returning(move |url| {
+            let expected_url = format!("https://{}/.well-known/lnurlp/{}", lightning_address_domain, lightning_address_username);
+            assert_eq!(expected_url, url);
+
+            let pay_request_json = format!("{{\"callback\": \"https://cipherpunk.com/lnurlp/api/v1/lnurl/cb/1\", \"maxSendable\": 100000, \"minSendable\": 100, \"tag\": \"payRequest\", \"metadata\": \"[[\\\"text/plain\\\", \\\"Start the CoinTrain\\\"], [\\\"text/identifier\\\", \\\"{}\\\"]]\" }}", lnurl_clone);
+
+            let x: PayRequestResponse = serde_json::from_str(&pay_request_json).unwrap();
+            convert_to_async_return_value(Ok(x))
+        });
+
+        mock_http_client.expect_get_pay_request_callback_response().returning(|_url| {
+            let invoice = "lnbcrt1u1pj0ypx6sp5hzczugdw9eyw3fcsjkssux7awjlt68vpj7uhmen7sup0hdlrqxaqpp5gp5fm2sn5rua2jlzftkf5h22rxppwgszs7ncm73pmwhvjcttqp3qdy2tddjyar90p6z7urvv95kug3vyq39xarpwf6zqargv5syxmmfde28yctfdc396tpqtv38getcwshkjer9de6xjenfv4ezytpqyfekzar0wd5xjsrrd9cxsetjwp6ku6ewvdhk6gjat5xqyjw5qcqp29qxpqysgqujuf5zavazln2q9gks7nqwdgjypg2qlvv7aqwfmwg7xmjt8hy4hx2ctr5fcspjvmz9x5wvmur8vh6nkynsvateafm73zwg5hkf7xszsqajqwcf";
+            let callback_response_json = format!("{{\"pr\":\"{}\",\"routes\":[]}}", invoice).to_string();
+            let x = serde_json::from_str(&callback_response_json).unwrap();
+            convert_to_async_return_value(Ok(x))
+        });
+
+        let amount = 100000;
+
+        let invoice = resolve_lnurl_to_invoice(&mock_http_client, &lnurl, amount).await;
+        assert!(invoice.is_ok());
+    }
+
+
+    #[tokio::test]
+    async fn test_lnurl_pay_with_lightning_address_fails_with_empty_username() {
+        let mock_http_client = MockLnUrlHttpClient::new();
+        let lightning_address_username = "";
+        let lightning_address_domain = "cipherpunk.com";
+        let lnurl = format!(
+            "{}@{}",
+            lightning_address_username, lightning_address_domain
+        );
+
+        let amount = 100000;
+
+        let error = resolve_lnurl_to_invoice(&mock_http_client, &lnurl, amount).await;
+        assert!(error.is_err());
+        assert!(error.unwrap_err().to_string().contains("Username can not be empty"));
+    }
+
+    #[tokio::test]
+    async fn test_lnurl_pay_with_lightning_address_fails_with_empty_domain() {
+        let mock_http_client = MockLnUrlHttpClient::new();
+        let lightning_address_username = "satoshi";
+        let lightning_address_domain = "";
+        let lnurl = format!(
+            "{}@{}",
+            lightning_address_username, lightning_address_domain
+        );
+
+        let amount = 100000;
+
+        let error = resolve_lnurl_to_invoice(&mock_http_client, &lnurl, amount).await;
+        assert!(error.is_err());
+        assert!(error.unwrap_err().to_string().contains("Domain can not be empty"));
     }
 
     #[tokio::test]
