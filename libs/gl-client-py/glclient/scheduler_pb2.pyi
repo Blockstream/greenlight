@@ -23,7 +23,7 @@ class _ChallengeScope:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _ChallengeScopeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_ChallengeScope.ValueType], builtins.type):  # noqa: F821
+class _ChallengeScopeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_ChallengeScope.ValueType], builtins.type):
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     REGISTER: _ChallengeScope.ValueType  # 0
     RECOVER: _ChallengeScope.ValueType  # 1
@@ -35,6 +35,7 @@ REGISTER: ChallengeScope.ValueType  # 0
 RECOVER: ChallengeScope.ValueType  # 1
 global___ChallengeScope = ChallengeScope
 
+@typing_extensions.final
 class ChallengeRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -52,6 +53,7 @@ class ChallengeRequest(google.protobuf.message.Message):
 
 global___ChallengeRequest = ChallengeRequest
 
+@typing_extensions.final
 class ChallengeResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -66,6 +68,7 @@ class ChallengeResponse(google.protobuf.message.Message):
 
 global___ChallengeResponse = ChallengeResponse
 
+@typing_extensions.final
 class RegistrationRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -144,6 +147,7 @@ class RegistrationRequest(google.protobuf.message.Message):
 
 global___RegistrationRequest = RegistrationRequest
 
+@typing_extensions.final
 class RegistrationResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -168,6 +172,7 @@ class RegistrationResponse(google.protobuf.message.Message):
 
 global___RegistrationResponse = RegistrationResponse
 
+@typing_extensions.final
 class ScheduleRequest(google.protobuf.message.Message):
     """Ask the scheduler to schedule the node to be run on an available nodelet.
 
@@ -189,6 +194,7 @@ class ScheduleRequest(google.protobuf.message.Message):
 
 global___ScheduleRequest = ScheduleRequest
 
+@typing_extensions.final
 class NodeInfoRequest(google.protobuf.message.Message):
     """Discovery request asking the scheduler if a nodelet is currently assigned
     the specified node_id, or wait for one to be assigned. If `wait` is set to
@@ -212,6 +218,7 @@ class NodeInfoRequest(google.protobuf.message.Message):
 
 global___NodeInfoRequest = NodeInfoRequest
 
+@typing_extensions.final
 class NodeInfoResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -229,6 +236,7 @@ class NodeInfoResponse(google.protobuf.message.Message):
 
 global___NodeInfoResponse = NodeInfoResponse
 
+@typing_extensions.final
 class RecoveryRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -256,6 +264,7 @@ class RecoveryRequest(google.protobuf.message.Message):
 
 global___RecoveryRequest = RecoveryRequest
 
+@typing_extensions.final
 class RecoveryResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -273,6 +282,7 @@ class RecoveryResponse(google.protobuf.message.Message):
 
 global___RecoveryResponse = RecoveryResponse
 
+@typing_extensions.final
 class UpgradeRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -302,6 +312,7 @@ class UpgradeRequest(google.protobuf.message.Message):
 
 global___UpgradeRequest = UpgradeRequest
 
+@typing_extensions.final
 class UpgradeResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -319,6 +330,7 @@ class UpgradeResponse(google.protobuf.message.Message):
 
 global___UpgradeResponse = UpgradeResponse
 
+@typing_extensions.final
 class StartupMessage(google.protobuf.message.Message):
     """A message that we know will be requested by `lightningd` at
     startup, and that we stash a response to on the scheduler. This
@@ -343,6 +355,7 @@ class StartupMessage(google.protobuf.message.Message):
 
 global___StartupMessage = StartupMessage
 
+@typing_extensions.final
 class ListInviteCodesRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -352,6 +365,7 @@ class ListInviteCodesRequest(google.protobuf.message.Message):
 
 global___ListInviteCodesRequest = ListInviteCodesRequest
 
+@typing_extensions.final
 class ListInviteCodesResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -367,6 +381,7 @@ class ListInviteCodesResponse(google.protobuf.message.Message):
 
 global___ListInviteCodesResponse = ListInviteCodesResponse
 
+@typing_extensions.final
 class InviteCode(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -384,6 +399,7 @@ class InviteCode(google.protobuf.message.Message):
 
 global___InviteCode = InviteCode
 
+@typing_extensions.final
 class ExportNodeRequest(google.protobuf.message.Message):
     """Empty message for now, node identity is extracted from the mTLS
     certificate used to authenticate against the Scheduler.
@@ -397,6 +413,7 @@ class ExportNodeRequest(google.protobuf.message.Message):
 
 global___ExportNodeRequest = ExportNodeRequest
 
+@typing_extensions.final
 class ExportNodeResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -412,6 +429,7 @@ class ExportNodeResponse(google.protobuf.message.Message):
 
 global___ExportNodeResponse = ExportNodeResponse
 
+@typing_extensions.final
 class SignerRejection(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 

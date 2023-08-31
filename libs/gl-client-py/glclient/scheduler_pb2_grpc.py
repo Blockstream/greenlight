@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import greenlight_pb2 as greenlight__pb2
+from . import greenlight_pb2 as greenlight__pb2
 from . import scheduler_pb2 as scheduler__pb2
 
 
@@ -87,11 +87,6 @@ class SchedulerStub(object):
                 '/scheduler.Scheduler/ExportNode',
                 request_serializer=scheduler__pb2.ExportNodeRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.ExportNodeResponse.FromString,
-                )
-        self.ReportSignerRejection = channel.unary_unary(
-                '/scheduler.Scheduler/ReportSignerRejection',
-                request_serializer=scheduler__pb2.SignerRejection.SerializeToString,
-                response_deserializer=greenlight__pb2.Empty.FromString,
                 )
 
 
@@ -275,12 +270,6 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ReportSignerRejection(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -323,11 +312,6 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.ExportNode,
                     request_deserializer=scheduler__pb2.ExportNodeRequest.FromString,
                     response_serializer=scheduler__pb2.ExportNodeResponse.SerializeToString,
-            ),
-            'ReportSignerRejection': grpc.unary_unary_rpc_method_handler(
-                    servicer.ReportSignerRejection,
-                    request_deserializer=scheduler__pb2.SignerRejection.FromString,
-                    response_serializer=greenlight__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -508,6 +492,60 @@ class Scheduler(object):
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
+
+class DebugStub(object):
+    """A service to collect debugging information from clients.
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.ReportSignerRejection = channel.unary_unary(
+                '/scheduler.Debug/ReportSignerRejection',
+                request_serializer=scheduler__pb2.SignerRejection.SerializeToString,
+                response_deserializer=greenlight__pb2.Empty.FromString,
+                )
+
+
+class DebugServicer(object):
+    """A service to collect debugging information from clients.
+    """
+
+    def ReportSignerRejection(self, request, context):
+        """The signer is designed to fail closed, i.e., we reject requests
+        that do not resolve or that go against one of its policies. This
+        comes with some issues, such as false negatives, where we reject
+        despite the request being valid. As more apps use the API we need
+        to debug these false negatives, hence why we report rejections,
+        so we can investigate the validity of the rejection, and to
+        fine-tine the signer's ruleset.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_DebugServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'ReportSignerRejection': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportSignerRejection,
+                    request_deserializer=scheduler__pb2.SignerRejection.FromString,
+                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'scheduler.Debug', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class Debug(object):
+    """A service to collect debugging information from clients.
+    """
+
     @staticmethod
     def ReportSignerRejection(request,
             target,
@@ -519,7 +557,7 @@ class Scheduler(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ReportSignerRejection',
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Debug/ReportSignerRejection',
             scheduler__pb2.SignerRejection.SerializeToString,
             greenlight__pb2.Empty.FromString,
             options, channel_credentials,
