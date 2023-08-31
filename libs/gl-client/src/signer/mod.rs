@@ -12,6 +12,7 @@ use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
+use lightning_signer::policy::filter::FilterRule;
 use log::{debug, info, trace, warn};
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -29,6 +30,7 @@ use vls_protocol_signer::handler::Handler;
 mod approver;
 mod auth;
 pub mod model;
+mod report;
 mod resolve;
 
 const VERSION: &str = "v23.08";

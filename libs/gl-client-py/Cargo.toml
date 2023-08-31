@@ -12,7 +12,8 @@ crate-type = ["cdylib"]
 anyhow = { workspace = true }
 bytes = "1.4"
 env_logger = { workspace = true }
-gl-client = { path = "../gl-client", features = ["permissive"] }
+
+gl-client = { path = "../gl-client", default-features = false, features = [ "export" ] }
 hex = "*"
 log = "*"
 once_cell = "*"
@@ -21,3 +22,7 @@ pyo3 = {version = "0.18", features = ["extension-module", "serde", "abi3-py37"]}
 tokio = { version = "1", features = ["full"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
 serde_json = "^1.0"
+
+[features]
+default = ["permissive"]
+permissive = ["gl-client/permissive"]
