@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 cryptography = ">=36.0.1,<37.0.0"
 ephemeral-port-reserve = "^1.1.4"
 sh = "^1.14.2"
@@ -22,7 +22,7 @@ pytest-xdist = "^2.5.0"
 pytest = "^7.1.2"
 pytest-cov = "^3.0.0"
 rich = "^12.5.1"
-pyln-testing = "^23.05"
+pyln-testing = "^23.08"
 pyln-grpc-proto = "^0.1"
 protobuf = ">=3"
 flaky = "^3"
@@ -31,7 +31,7 @@ purerpc = { version = "^0.8.0", extras = ["grpc"] }
 pytest-sugar = "^0.9.7"
 
 [tool.poetry.dev-dependencies]
-mypy = "^0.971"
+mypy = "^1"
 typed-ast = "^1.5.4"
 
 [build-system]
