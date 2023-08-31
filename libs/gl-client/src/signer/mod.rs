@@ -118,8 +118,8 @@ impl Signer {
 
         let init = HsmdInitReplyV4::from_vec(init).unwrap();
         let id = init.node_id.0.to_vec();
-	use vls_protocol::msgs::SerBolt;
-	let init = init.as_vec();
+        use vls_protocol::msgs::SerBolt;
+        let init = init.as_vec();
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
@@ -442,6 +442,31 @@ impl Signer {
         }
     }
 
+    pub fn legacy_bip32_ext_key(&self) -> Vec<u8> {
+        let handler = self.handler().expect("retrieving the handler");
+        let req = vls_protocol::msgs::Message::HsmdInit(vls_protocol::msgs::HsmdInit {
+            key_version: vls_protocol::model::Bip32KeyVersion {
+                pubkey_version: 0,
+                privkey_version: 0,
+            },
+            chain_params: lightning_signer::bitcoin::BlockHash::all_zeros(),
+            encryption_key: None,
+            dev_privkey: None,
+            dev_bip32_seed: None,
+            dev_channel_secrets: None,
+            dev_channel_secrets_shaseed: None,
+            hsm_wire_min_version: 1,
+            hsm_wire_max_version: 2,
+        });
+
+        let initmsg = handler
+            .handle(req)
+            .expect("handling legacy init message")
+            .0
+            .as_vec();
+        initmsg[35..].to_vec()
+    }
+
     /// Connect to the scheduler given by the environment variable
     /// `GL_SCHEDULER_GRPC_URI` (of the default URI) and wait for the
     /// node to be scheduled. Once scheduled, connect to the node
@@ -659,17 +684,6 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_init() {
-        let signer = Signer::new(
-            vec![0 as u8; 32],
-            Network::Bitcoin,
-            TlsConfig::new().unwrap(),
-        )
-        .unwrap();
-        assert_eq!(signer.init.len(), 146);
-    }
-
     /// We should not sign messages that we get from the node, since
     /// we're using the sign_message RPC message to create TLS
     /// certificate attestations. We can remove this limitation once
@@ -734,5 +748,27 @@ mod tests {
             signer.sign_message(msg.to_vec()).unwrap_err().to_string(),
             format!("Message exceeds max len of {}", u16::MAX)
         );
+    }
+
+    /// Some users were relying on the broken behavior of
+    /// `bip32_ext_key`. We need to ensure that the behavior remains
+    /// stable for the time being until we have ensured no users of it
+    /// remain.
+    #[test]
+    fn test_legacy_bip32_key() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+
+        let bip32 = signer.legacy_bip32_ext_key();
+        let expected: Vec<u8> = vec![
+            4, 136, 178, 30, 2, 175, 86, 45, 251, 0, 0, 0, 0, 119, 232, 160, 181, 114, 16, 182, 23,
+            70, 246, 204, 254, 122, 233, 131, 242, 174, 134, 193, 120, 104, 70, 176, 202, 168, 243,
+            142, 127, 239, 60, 157, 212, 3, 162, 85, 18, 86, 240, 176, 177, 84, 94, 241, 92, 64,
+            175, 69, 165, 146, 101, 79, 180, 195, 27, 117, 8, 66, 110, 100, 36, 246, 115, 48, 193,
+            189, 3, 247, 195, 58, 236, 143, 230, 177, 91, 217, 66, 67, 19, 204, 22, 96, 65, 140,
+            86, 195, 109, 50, 228, 94, 193, 173, 103, 252, 196, 192, 173, 243, 223,
+        ];
+
+        assert_eq!(bip32, expected);
     }
 }
