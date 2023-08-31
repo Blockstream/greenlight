@@ -65,7 +65,6 @@ check-self: ensure-docker
 	PYTHONPATH=/repo/libs/gl-testing \
 	pytest -vvv \
 	  /repo/libs/gl-testing \
-	  --force-flaky \
 	  ${PYTEST_OPTS}
 
 ensure-docker:
