@@ -110,7 +110,7 @@ class LspClient:
                 peer_id_bytes, method_name, param_json, json_rpc_id=json_rpc_id
             )
 
-    def list_lsp_servers(self) -> t.List[bytes]:
+    def list_lsp_servers(self) -> t.List[str]:
         return self._native.list_lsp_servers()
 
     def list_protocols(self, peer_id, json_rpc_id: t.Optional[str] = None) -> ProtocolList:
