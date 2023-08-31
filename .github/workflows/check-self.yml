@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
     steps:
     - uses: actions/checkout@v3
-      
     - name: Build tester image
       run: |
+        sudo chmod a+rwx -R libs/gl-client-py
         make docker-image
 
     - name: Check Self
