@@ -11,26 +11,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-def parse_and_validate_peer_id(data: t.Union[str, bytes]) -> bytes:
-    if isinstance(data, bytes):
-        if len(data) == 33:
-            return data
-        else:
-            raise ValueError(
-                f"Invalid peer_id. Expected a byte-array of length 33 but received {len(data)} instead"
-            )
-    if isinstance(data, str):
-        if len(data) != 66:
-            raise ValueError(
-                f"Invalid peer_id. Must be a length 66 hex-string but received {len(data)}"
-            )
-        try:
-            return bytes.fromhex(data)
-        except Exception as e:
-            raise ValueError("Invalid peer_id. Failed to parse hex-string") from e
-
-
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if is_dataclass(o):
