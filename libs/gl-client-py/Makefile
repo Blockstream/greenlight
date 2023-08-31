@@ -36,6 +36,7 @@ ${PYPROTOS}: ${PROTOSRC}
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} scheduler.proto
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} greenlight.proto
 	sed -i 's/import scheduler_pb2 as scheduler__pb2/from . import scheduler_pb2 as scheduler__pb2/g' ${PYDIR}/glclient/scheduler_pb2_grpc.py
+	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/scheduler_pb2_grpc.py
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/scheduler_pb2.py
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/greenlight_pb2_grpc.py
 
