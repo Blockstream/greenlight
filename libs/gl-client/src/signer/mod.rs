@@ -100,18 +100,11 @@ impl Signer {
         let persister = Arc::new(crate::persist::MemoryPersister::new());
         let mut policy = lightning_signer::policy::simple_validator::make_simple_policy(network);
 
-        #[cfg(feature = "permissive")]
-        {
-            policy.filter = PolicyFilter::new_permissive();
-        }
-        #[cfg(not(feature = "permissive"))]
-        {
-            policy.filter = PolicyFilter::default();
-            policy.filter.merge(PolicyFilter {
-                // TODO: Remove once we have fully switched over to zero-fee anchors
-                rules: vec![FilterRule::new_warn("policy-channel-safe-type-anchors")],
-            });
-        }
+        policy.filter = PolicyFilter::default();
+        policy.filter.merge(PolicyFilter {
+            // TODO: Remove once we have fully switched over to zero-fee anchors
+            rules: vec![FilterRule::new_warn("policy-channel-safe-type-anchors")],
+        });
 
         let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(policy));
         let starting_time_factory = ClockStartingTimeFactory::new();
@@ -306,33 +299,18 @@ impl Signer {
     fn authenticate_request(
         &self,
         msg: &vls_protocol::msgs::Message,
-        req: &HsmRequest,
-    ) -> Result<Vec<Approval>, Error> {
-        let ctxrequests: Vec<model::Request> = self
-            .check_request_auth(req.requests.clone())
-            .into_iter()
-            .filter_map(|r| r.ok())
-            .map(|r| decode_request(r))
-            .filter_map(|r| match r {
-                Ok(r) => Some(r),
-                Err(e) => {
-                    log::error!("Unable to decode request in context: {}", e);
-                    None
-                }
-            })
-            .collect::<Vec<model::Request>>();
-
+        reqs: &Vec<model::Request>,
+    ) -> Result<(), Error> {
         log::trace!(
             "Resolving signature request against pending grpc commands: {:?}",
-            req.requests
+            reqs
         );
-        Resolver::try_resolve(msg, &ctxrequests)?;
 
-        use auth::Authorizer;
-        let auth = auth::GreenlightAuthorizer {};
-        let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
-        debug!("Current approvals: {:?}", approvals);
-        Ok(approvals)
+        // Quick path out of here: we can't find a resolution for a
+        // request, then abort!
+        Resolver::try_resolve(msg, &reqs)?;
+
+        Ok(())
     }
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
@@ -362,14 +340,45 @@ impl Signer {
             _ => {}
         }
 
+        let ctxrequests: Vec<model::Request> = self
+            .check_request_auth(req.requests.clone())
+            .into_iter()
+            .filter_map(|r| r.ok())
+            .map(|r| decode_request(r))
+            .filter_map(|r| match r {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    log::error!("Unable to decode request in context: {}", e);
+                    None
+                }
+            })
+            .collect::<Vec<model::Request>>();
+
         let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", serde_json::to_string(&prestate).unwrap());
 
-        let approvals = self.authenticate_request(&msg, &req)?;
+        if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
+            report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                msg: e.to_string(),
+                request: Some(req.clone()),
+		git_version: GITHASH.to_string(),
+            })
+            .await;
+            #[cfg(not(feature = "permissive"))]
+            return Err(Error::Resolver(req.raw, ctxrequests));
+        };
+
+        use auth::Authorizer;
+        let auth = auth::GreenlightAuthorizer {};
+        let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
+        debug!("Current approvals: {:?}", approvals);
 
         let approver = Arc::new(MemoApprover::new(approver::ReportingApprover::new(
-            PositiveApprover(),
+            #[cfg(feature = "permissive")]
+            vls_protocol_signer::approver::PositiveApprover(),
+            #[cfg(not(feature = "permissive"))]
+            vls_protocol_signer::approver::NegativeApprover(),
         )));
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver)?;
