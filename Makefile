@@ -57,6 +57,7 @@ gen: ${GENALL}
 build-self: ensure-docker
 	(cd libs; cargo build --all)
 	(cd libs/gl-client-py && python3 -m maturin develop)
+	pip install -e libs/gl-testing
 
 check-all: check-self check-self-gl-client check-py
 
