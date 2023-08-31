@@ -220,3 +220,4 @@ RUN sed -i \
     /tmp/venv/lib/python3.8/site-packages/pyln/testing/utils.py
 
 WORKDIR /repo
+

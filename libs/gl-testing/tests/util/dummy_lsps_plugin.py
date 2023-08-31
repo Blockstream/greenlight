@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 from pyln.client import Plugin
 
 # This is a dummy plugin

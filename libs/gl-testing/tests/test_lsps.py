@@ -8,6 +8,8 @@ import time
 
 import threading
 import subprocess
+import pwd
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -17,17 +19,7 @@ def get_lsps_dummy_plugin_path() -> str:
     # This plugin sets the feature flags and makes the node appear as an LSP
 
     base_path, _ = os.path.split(__file__)
-    return os.path.join(base_path, "util", "dummy_lsps_plugin.sh")
-
-
-@pytest.fixture
-def dummy_plugin(scope="session"):
-    logger.info(
-        f"Configure {get_lsps_dummy_plugin_path()} to become executable using chmod +x"
-    )
-    subprocess.run(["chmod", "+x", get_lsps_dummy_plugin_path()], check=True)
-
-
+    return os.path.join(base_path, "util", "dummy_lsps_plugin.py")
 class AwaitResult:
     """A very poor implementation of an awaitable in python
 
@@ -112,7 +104,7 @@ def test_lsps_list_protocol(
 
 
 def test_list_lsp_server(
-    clients: Clients, node_factory: NodeFactory, bitcoind: BitcoinD, dummy_plugin: None
+    clients: Clients, node_factory: NodeFactory, bitcoind: BitcoinD
 ):
     # Create a network
     n1: LightningNode = node_factory.get_node(
