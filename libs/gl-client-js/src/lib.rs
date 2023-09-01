@@ -8,8 +8,8 @@ use scheduler::Scheduler;
 use signer::{Signer, SignerHandle};
 mod tls;
 use tls::TlsConfig;
-mod runtime;
 mod error;
+mod runtime;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {

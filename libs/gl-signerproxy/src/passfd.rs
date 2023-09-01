@@ -1,7 +1,7 @@
 use libc::{self, c_int, c_uchar, c_void, msghdr};
-use std::mem;
 use log::trace;
 use std::io::{Error, ErrorKind};
+use std::mem;
 use std::os::unix::io::RawFd;
 
 pub trait SyncFdPassingExt {

@@ -1,13 +1,13 @@
 use crate::runtime::exec;
 use gl_client::lsps::error::LspsError;
-use gl_client::lsps::json_rpc::{JsonRpcResponse, generate_random_rpc_id};
+use gl_client::lsps::json_rpc::{generate_random_rpc_id, JsonRpcResponse};
 use gl_client::lsps::message as lsps_message;
 use gl_client::lsps::transport::JsonRpcTransport;
 use gl_client::node::{Client, ClnClient};
 use pyo3::exceptions::{PyBaseException, PyConnectionError, PyTimeoutError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::PyErr;
 use pyo3::types::PyBytes;
+use pyo3::PyErr;
 
 #[pyclass]
 pub struct LspClient {
@@ -50,7 +50,7 @@ impl LspClient {
     // The serialized result will be returned
     pub fn rpc_call(
         &mut self,
-        py : Python,
+        py: Python,
         peer_id: &[u8],
         method_name: &str,
         value: &[u8],
@@ -59,26 +59,32 @@ impl LspClient {
         self.rpc_call_with_json_rpc_id(py, peer_id, method_name, value, json_rpc_id)
     }
 
-
     pub fn rpc_call_with_json_rpc_id(
         &mut self,
-        py : Python,
+        py: Python,
         peer_id: &[u8],
         method_name: &str,
         value: &[u8],
-        json_rpc_id : String
+        json_rpc_id: String,
     ) -> PyResult<PyObject> {
         // Parse the method-name and call the rpc-request
         let rpc_response: JsonRpcResponse<Vec<u8>, Vec<u8>> =
             lsps_message::JsonRpcMethodEnum::from_method_name(method_name)
-                .and_then(|method| exec(self.transport.request_with_json_rpc_id(peer_id, &method, value.to_vec(), json_rpc_id)))
+                .and_then(|method| {
+                    exec(self.transport.request_with_json_rpc_id(
+                        peer_id,
+                        &method,
+                        value.to_vec(),
+                        json_rpc_id,
+                    ))
+                })
                 .map_err(|err| lsps_err_to_py_err(&err))?;
 
         match rpc_response {
             JsonRpcResponse::Ok(ok) => {
-                let response = ok.result;                               // response as byte-array
-                let py_object : PyObject = PyBytes::new(py, &response).into();
-                return Ok(py_object)
+                let response = ok.result; // response as byte-array
+                let py_object: PyObject = PyBytes::new(py, &response).into();
+                return Ok(py_object);
             }
             JsonRpcResponse::Error(err) => {
                 // We should be able to put the error-data in here

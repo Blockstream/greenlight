@@ -1,5 +1,5 @@
-use tonic::transport::NamedService;
 use log::warn;
+use tonic::transport::NamedService;
 use tower::Service;
 
 /// The RPC socket will not be available right away, so we wrap the

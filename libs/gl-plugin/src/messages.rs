@@ -289,7 +289,7 @@ where
 /// `peer_connected` hook.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PeerConnectedCall {
-    pub peer: Peer
+    pub peer: Peer,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -304,9 +304,8 @@ pub struct Peer {
 #[serde(rename_all = "snake_case")]
 pub enum Direction {
     In,
-    Out
+    Out,
 }
-
 
 #[cfg(test)]
 mod test {
@@ -324,7 +323,10 @@ mod test {
         });
 
         let call = serde_json::from_str::<PeerConnectedCall>(&msg.to_string()).unwrap();
-        assert_eq!(call.peer.id, "03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f");
+        assert_eq!(
+            call.peer.id,
+            "03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f"
+        );
         assert_eq!(call.peer.direction, Direction::In);
         assert_eq!(call.peer.addr, "34.239.230.56:9735");
         assert_eq!(call.peer.features, "");

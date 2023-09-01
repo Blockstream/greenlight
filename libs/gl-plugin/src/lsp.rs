@@ -77,8 +77,8 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
                 offer_id: None,
                 invstring: None,
                 start: None,
-		index: None,
-		limit: None,
+                index: None,
+                limit: None,
             })
             .await?;
         if res.invoices.len() != 1 {

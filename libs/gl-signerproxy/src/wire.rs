@@ -106,5 +106,4 @@ impl DaemonConnection {
 
         Ok(())
     }
-
 }

@@ -24,7 +24,8 @@ pub type Lsps0ListProtocols = JsonRpcMethod<NoParams, ProtocolList, ()>;
 pub type Lsps1Info = JsonRpcMethod<NoParams, Lsps1InfoResponse, ()>;
 pub type Lsps1Order = JsonRpcMethod<Lsps1GetOrderRequest, Lsps1GetOrderResponse, ()>;
 
-pub const LSPS0_LIST_PROTOCOLS: Lsps0ListProtocols = Lsps0ListProtocols::new("lsps0.list_protocols");
+pub const LSPS0_LIST_PROTOCOLS: Lsps0ListProtocols =
+    Lsps0ListProtocols::new("lsps0.list_protocols");
 pub const LSPS1_GETINFO: Lsps1Info = Lsps1Info::new("lsps1.info");
 pub const LSPS1_GETORDER: Lsps1Order = Lsps1Order::new("lsps1.order");
 
