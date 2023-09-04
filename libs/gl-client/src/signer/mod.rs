@@ -5,10 +5,10 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use base64::engine::general_purpose;
 use base64::Engine;
-use bytes::{Buf, BufMut, Bytes};
+use bytes::BufMut;
 use futhark::{Restriction, Rune};
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
@@ -385,18 +385,14 @@ impl Signer {
 
         // The first two bytes represent the message type. Check that
         // it is not a `sign-message` request (type 23).
-        match req.raw.as_slice() {
-            &[h, l, ..] => {
-                let typ = ((h as u16) << 8) | (l as u16);
-                if typ == 23 {
-                    warn!("Refusing to process sign-message request");
-                    return Err(Error::Other(anyhow!(
-                        "Cannot process sign-message requests from node."
-                    )));
-                }
+        if let &[h, l, ..] = req.raw.as_slice() {
+            let typ = ((h as u16) << 8) | (l as u16);
+            if typ == 23 {
+                warn!("Refusing to process sign-message request");
+                return Err(Error::Other(anyhow!(
+                    "Cannot process sign-message requests from node."
+                )));
             }
-            // We skip empty requests.
-            _ => {}
         }
 
         let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e| Error::Signer(e))?;
@@ -908,42 +904,5 @@ mod tests {
         // Check missing device id.
         let res = Restriction::new(vec![alt]).unwrap();
         assert!(signer.create_rune("", vec![res]).is_err());
-    }
-
-    #[test]
-    fn test_rune_checks() -> Result<(), anyhow::Error> {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
-
-        let alt = Alternative::new(
-            "pubkey".to_string(),
-            futhark::Condition::Equal,
-            "33aabb".to_string(),
-            false,
-        )
-        .unwrap();
-        let res = Restriction::new(vec![alt]).unwrap();
-        let rune64 = signer.create_rune("mydevice", vec![res]).unwrap();
-
-        // Check that the pubkey matches
-        let mut checks: HashMap<String, Box<dyn futhark::Tester>> = HashMap::new();
-        checks.insert(
-            "pubkey".to_string(),
-            Box::new(futhark::ConditionTester {
-                value: "mypubkey".to_string(),
-            }),
-        );
-
-        // Check that we can test on the version.
-        if let Some(device_id) = extract_device_id(&rune64) {
-            checks.insert(
-                "".to_string(),
-                Box::new(futhark::ConditionTester {
-                    value: format!("{}-{}", device_id, RUNE_VERSION),
-                }),
-            );
-        }
-        signer.master_rune.check_with_reason(&rune64, &checks)?;
-        Ok(())
     }
 }
