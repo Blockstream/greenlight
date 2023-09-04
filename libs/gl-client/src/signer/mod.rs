@@ -326,18 +326,14 @@ impl Signer {
 
         // The first two bytes represent the message type. Check that
         // it is not a `sign-message` request (type 23).
-        match req.raw.as_slice() {
-            &[h, l, ..] => {
-                let typ = ((h as u16) << 8) | (l as u16);
-                if typ == 23 {
-                    warn!("Refusing to process sign-message request");
-                    return Err(Error::Other(anyhow!(
-                        "Cannot process sign-message requests from node."
-                    )));
-                }
+        if let &[h, l, ..] = req.raw.as_slice() {
+            let typ = ((h as u16) << 8) | (l as u16);
+            if typ == 23 {
+                warn!("Refusing to process sign-message request");
+                return Err(Error::Other(anyhow!(
+                    "Cannot process sign-message requests from node."
+                )));
             }
-            // We skip empty requests.
-            _ => {}
         }
 
         let ctxrequests: Vec<model::Request> = self
