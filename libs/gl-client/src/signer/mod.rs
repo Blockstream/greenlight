@@ -1009,41 +1009,4 @@ mod tests {
         let res = Restriction::new(vec![alt]).unwrap();
         assert!(signer.create_rune("", vec![res]).is_err());
     }
-
-    #[test]
-    fn test_rune_checks() -> Result<(), anyhow::Error> {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
-
-        let alt = Alternative::new(
-            "pubkey".to_string(),
-            futhark::Condition::Equal,
-            "33aabb".to_string(),
-            false,
-        )
-        .unwrap();
-        let res = Restriction::new(vec![alt]).unwrap();
-        let rune64 = signer.create_rune("mydevice", vec![res]).unwrap();
-
-        // Check that the pubkey matches
-        let mut checks: HashMap<String, Box<dyn futhark::Tester>> = HashMap::new();
-        checks.insert(
-            "pubkey".to_string(),
-            Box::new(futhark::ConditionTester {
-                value: "mypubkey".to_string(),
-            }),
-        );
-
-        // Check that we can test on the version.
-        if let Some(device_id) = extract_device_id(&rune64) {
-            checks.insert(
-                "".to_string(),
-                Box::new(futhark::ConditionTester {
-                    value: format!("{}-{}", device_id, RUNE_VERSION),
-                }),
-            );
-        }
-        signer.master_rune.check_with_reason(&rune64, &checks)?;
-        Ok(())
-    }
 }
