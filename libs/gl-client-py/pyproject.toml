@@ -20,9 +20,10 @@ packages = [
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
+mypy-protobuf = "^3.5"
 
 [tool.poetry.dependencies]
-python = ">=3.7,<4"
+python = ">=3.8,<4"
 grpcio = ">=1.56"
 pyln-grpc-proto = "^0.1"
 

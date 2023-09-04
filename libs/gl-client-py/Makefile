@@ -8,9 +8,10 @@ endif
 DIR=${REPO}/libs/gl-client-py
 PYVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "gl-client-py") | .version')
 PYDIR=${REPO}/libs/gl-client-py
+PROTODIR=${REPO}/libs/proto
 
 PYPROTOC_OPTS = \
-	-Ilibs/proto \
+	-I${PROTODIR} \
 	--python_out=${PYDIR}/glclient \
 	--grpc_python_out=${PYDIR}/glclient \
 	--experimental_allow_proto3_optional \
@@ -23,9 +24,9 @@ PYPROTOS = \
 	${PYDIR}/glclient/scheduler_pb2_grpc.py
 
 PROTOSRC = \
-	libs/proto/scheduler.proto \
-	libs/proto/greenlight.proto \
-	libs/proto/node.proto
+	${PROTODIR}/scheduler.proto \
+	${PROTODIR}/greenlight.proto \
+	${PROTODIR}/node.proto
 
 GENALL += ${PYPROTOS}
 
@@ -41,7 +42,7 @@ check-py:
 	cd libs/gl-client-py; pytest tests -n $(shell nproc)
 
 clean-py:
-	rm -f ${PROTOS} ${PYDIR}/build ${PYDIR}/dist
+	rm -f ${PYPROTOS} ${PYDIR}/build ${PYDIR}/dist
 
 test: build
 	virtualenv .tmpenv --python=$(which python3) --download --always-copy --clear
