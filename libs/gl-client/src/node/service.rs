@@ -119,12 +119,6 @@ impl Service<Request<BoxBody>> for AuthService {
             let mut ts = vec![];
             ts.put_u64(time.try_into()?);
             buf.put_u64(time.try_into()?);
-            buf.put(
-                general_purpose::URL_SAFE
-                    .decode(rune.clone())
-                    .unwrap_or_else(|_| vec![])
-                    .as_ref(),
-            );
 
             let rng = rand::SystemRandom::new();
             let pubkey = keypair.public_key().as_ref();

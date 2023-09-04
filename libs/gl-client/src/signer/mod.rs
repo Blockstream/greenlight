@@ -233,8 +233,6 @@ impl Signer {
                 if r.timestamp != 0 {
                     data.put_u64(r.timestamp);
                 }
-                let rune: Vec<u8> = r.rune.clone();
-                data.put(&rune[..]);
 
                 pk.verify(&data, &r.signature)
                     .map_err(|e| anyhow!("signature verification failed: {}", e))?;
