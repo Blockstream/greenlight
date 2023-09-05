@@ -110,6 +110,26 @@ def test_node_invoice_preimage(clients):
     assert i.payment_hash.hex() == expected
 
 
+def test_node_invoice_expiration(clients):
+    """Test that we can set the invoice expiry
+
+    The invoice should expire after the set expiry.
+    """
+    c1: Client = clients.new()
+    c1.register()
+    s = c1.signer().run_in_thread()
+    n1 = c1.node()
+
+    now = int(time.time())
+    res = n1.invoice(
+        amount_msat=clnpb.AmountOrAny(any=True),
+        description="desc",
+        label="lbl",
+        expiry=100,
+    )
+    assert now <= res.expires_at <= now + 160
+    
+
 def test_cln_grpc_interface(clients):
     """Test that we can talk to the cln-grpc interface.
 
