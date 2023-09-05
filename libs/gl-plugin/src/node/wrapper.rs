@@ -66,7 +66,7 @@ impl Node for WrappedNodeServer {
                         "could not convert protobuf request into JSON-RPC request: {:?}",
                         e.to_string()
                     ),
-                ))
+                ));
             }
         };
         pbreq.dev_routes = hints.map(|v| {

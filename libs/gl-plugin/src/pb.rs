@@ -1,9 +1,10 @@
 tonic::include_proto!("greenlight");
+use self::amount::Unit;
 use crate::{messages, requests, responses};
 use anyhow::{anyhow, Context, Result};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use cln_grpc::pb::RouteHop;
-use cln_rpc::primitives::ShortChannelId;
+use cln_rpc::primitives::{self, ShortChannelId};
 use log::warn;
 use std::str::FromStr;
 
@@ -291,40 +292,41 @@ impl TryFrom<InvoiceRequest> for requests::Invoice {
     type Error = anyhow::Error;
 
     fn try_from(i: InvoiceRequest) -> Result<Self, Self::Error> {
-        if i.label == "" {
+        if i.label.is_empty() {
             return Err(anyhow!(
                 "Label must be set, not empty and unique from all other invoice labels."
             ));
         }
 
-        if let None = i.amount {
-            return Err(anyhow!(
-                "No amount specified. Use Amount(any=true) if you want an amountless invoice"
-            ));
+        let amt: Amount = i.amount.ok_or(anyhow!(
+            "No amount specified. Use Amount(any=true) if you want an amountless invoice"
+        ))?;
+
+        let preimage = (!i.preimage.is_empty()).then(|| hex::encode(&i.preimage));
+        let amount_msat: primitives::AmountOrAny = match amt.unit.ok_or(
+            anyhow!("No amount specified. Use Amount(any=true) if you want an amountless invoice")
+        )? {
+            Unit::All(_) => return Err(anyhow!(
+                "Amount cannot be set to `all`. Use Amount(any=true) if you want an amountless invoice"
+                )),
+            Unit::Any(_) => primitives::AmountOrAny::Any,
+            Unit::Millisatoshi(a) => primitives::AmountOrAny::Amount(primitives::Amount::from_msat(a)),
+            Unit::Satoshi(a) => primitives::AmountOrAny::Amount(primitives::Amount::from_sat(a)),
+            Unit::Bitcoin(a) => primitives::AmountOrAny::Amount(primitives::Amount::from_btc(a)),
+
         };
-
-        // We can unwrap since we checked the None case above.
-        let amt = i.amount.unwrap();
-
-        let preimage = if i.preimage.len() == 0 {
-            None
-        } else {
-            Some(hex::encode(i.preimage))
-        };
-
-        if let Some(amount::Unit::All(_)) = amt.unit {
-            return Err(anyhow!(
-		"Amount cannot be set to `all`. Use Amount(any=true) if you want an amountless invoice"
-	    ));
-        }
 
         Ok(requests::Invoice {
-            amount: amt.try_into()?,
+            amount_msat,
             label: i.label,
             description: i.description,
             exposeprivatechannels: None,
-            dev_routes: None,
+            expiry: None,
+            fallbacks: None,
             preimage,
+            cltv: None,
+            deschashonly: None,
+            dev_routes: None,
         })
     }
 }
@@ -761,16 +763,21 @@ impl From<RouteHop> for requests::RoutehintHopDev {
 
 impl From<cln_grpc::pb::InvoiceRequest> for requests::Invoice {
     fn from(ir: cln_grpc::pb::InvoiceRequest) -> Self {
+        let fallbacks = (!ir.fallbacks.is_empty()).then(|| ir.fallbacks);
         Self {
-            amount: ir
+            amount_msat: ir
                 .amount_msat
                 .map(|a| a.into())
-                .unwrap_or(requests::Amount::Any),
+                .unwrap_or(primitives::AmountOrAny::Any),
             description: ir.description,
             dev_routes: None,
             label: ir.label,
             exposeprivatechannels: None,
             preimage: ir.preimage.map(|p| hex::encode(p)),
+            expiry: ir.expiry,
+            fallbacks,
+            cltv: ir.cltv,
+            deschashonly: ir.deschashonly,
         }
     }
 }
@@ -790,7 +797,7 @@ impl From<responses::Invoice> for cln_grpc::pb::InvoiceResponse {
             warning_deadends: None,
             warning_offline: None,
             warning_private_unused: None,
-	    created_index: None,
+            created_index: None,
         }
     }
 }

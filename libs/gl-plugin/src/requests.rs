@@ -110,16 +110,21 @@ pub struct CloseChannel {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Invoice {
-    #[serde(rename = "msatoshi")]
-    pub amount: Amount,
-    pub label: String,
+    pub amount_msat: cln_rpc::primitives::AmountOrAny,
     pub description: String,
+    pub label: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub exposeprivatechannels: Option<Vec<String>>,
-
+    pub expiry: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallbacks: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preimage: Option<String>,
-
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cltv: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deschashonly: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exposeprivatechannels: Option<Vec<String>>,
     #[serde(rename = "dev-routes", skip_serializing_if = "Option::is_none")]
     pub dev_routes: Option<Vec<Vec<RoutehintHopDev>>>,
 }
