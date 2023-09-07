@@ -1,4 +1,5 @@
 use runeauth::{Alternative, Condition, Restriction, Rune, RuneError};
+use std::fmt::Display;
 
 /// Represents an entity that can provide restrictions.
 ///
@@ -111,6 +112,28 @@ impl<'a> Restrictor for DefRules<'a> {
     }
 }
 
+impl<'a> Display for DefRules<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DefRules::ReadOnly => write!(f, "readonly"),
+            DefRules::Pay => write!(f, "pay"),
+            DefRules::Add(rules) => {
+                write!(
+                    f,
+                    "{}",
+                    rules.into_iter().fold(String::new(), |acc, r| {
+                        if acc.is_empty() {
+                            format!("{}", r)
+                        } else {
+                            format!("{}|{}", acc, r)
+                        }
+                    })
+                )
+            }
+        }
+    }
+}
+
 /// Creates an `Alternative` based on the provided field, condition, and value.
 ///
 /// This function is a shorthand for creating new `Alternative` entities
@@ -167,5 +190,15 @@ mod tests {
 
         let carved_rune = Rune::from_base64(&carved).unwrap();
         assert!(mr.is_authorized(&carved_rune));
+    }
+
+    #[test]
+    fn test_defrules_display() {
+        let r = DefRules::Pay;
+        assert_eq!(format!("{}", r), "pay");
+        let r = DefRules::Add(&[DefRules::Pay]);
+        assert_eq!(format!("{}", r), "pay");
+        let r = DefRules::Add(&[DefRules::Pay, DefRules::ReadOnly]);
+        assert_eq!(format!("{}", r), "pay|readonly");
     }
 }
