@@ -75,12 +75,15 @@ RUN mkdir -p /tmp/target/debug && \
 FROM ubuntu:20.04 as tester
 ARG BITCOIN_VERSION=25.0
 ARG DOCKER_USER=default_user
+ARG UID=1000
+ARG GID=1000
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_DIR=/tmp/target/
 ENV RUST_VERSION=1.70.0
 
-RUN adduser $DOCKER_USER
+RUN groupadd -g $GID -o $DOCKER_USER &&\
+    useradd -m -u $UID -g $GID -o -s /bin/bash $DOCKER_USER
 
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0
