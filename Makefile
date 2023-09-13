@@ -118,6 +118,19 @@ docker-check:
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting make check
 
+docker-check-py:
+	docker run \
+		-t \
+		--rm \
+		-v ${REPO_ROOT}:/repo \
+		gltesting make build-self check-py
+
+docker-check-js:
+	docker run \
+		-t \
+		--rm \
+		-v ${REPO_ROOT}:/repoo \
+		gltesting make build-self check-py
 
 cln-versions/%/usr/local/bin/lightningd: cln-versions/lightningd-%.tar.bz2
 	@echo "Extracting $* from tarball $< into cln-versions/$*/"

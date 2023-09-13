@@ -352,5 +352,9 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
             grpc_uri=node.process.grpc_uri if node.process else None,
         )
 
+    async def ListInviteCodes(self, req) -> schedpb.ListInviteCodesResponse:
+        codes = [schedpb.InviteCode(**c) for c in self.invite_codes]
+        return schedpb.ListInviteCodesResponse(invite_code_list=codes)
+
 
 Scheduler = AsyncScheduler
