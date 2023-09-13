@@ -1,5 +1,8 @@
 # Blockstream Greenlight
 
+[![Read the Documentation](https://img.shields.io/badge/Read-Documentation-blue)](https://blockstream.github.io/greenlight/)
+[![Crates.io](https://img.shields.io/crates/d/gl-client)](https://crates.io/crates/gl-client)
+
 This repository contains everything to get you started with
 Blockstream Greenlight, your self-sovereign Lightning node in the
 cloud.
