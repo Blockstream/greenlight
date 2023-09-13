@@ -32,10 +32,16 @@ class Tls:
     def __init__(self):
         """Initialize an mTLS identity."""
         self.tls = TlsConfig()
+        # Try to load auth blob first
+        auth_path = Path('greenlight.auth')
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
         have_certs = cert_path.exists() and key_path.exists()
-        if have_certs:
+        if auth_path.exists():
+            with auth_path.open('rb') as f:
+                self.tls = self.tls.identity_from_auth(f.read())
+                logger.info("Configuring client with user identity from auth file.")
+        elif have_certs:
             device_cert = open('device.crt', 'rb').read()
             device_key = open('device-key.pem', 'rb').read()
             self.tls = self.tls.identity(device_cert, device_key)
@@ -277,6 +283,9 @@ def register(ctx, network, invite):
 
     with open("ca.pem", "wb") as f:
         f.write(env.ca_pem)
+    
+    with open("greenlight.auth", "wb") as f:
+        f.write(res.auth)
 
     pbprint(res)
 
@@ -299,6 +308,9 @@ def recover(ctx):
 
     with open("ca.pem", "wb") as f:
         f.write(env.ca_pem)
+
+    with open("greenlight.auth", "wb") as f:
+        f.write(res.auth)
 
     pbprint(res)
 
