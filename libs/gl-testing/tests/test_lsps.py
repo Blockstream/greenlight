@@ -115,14 +115,12 @@ def test_list_lsp_server(
     )
     n3: LightningNode = node_factory.get_node()
 
-    # Fund all nodes so they can open a channel
-    n1.fundwallet(100_000_000)
-    n2.fundwallet(100_000_000)
-    n3.fundwallet(100_000_000)
+    # Create the channel-graph
+    n1.fundchannel(n2, announce_channel=True)
+    n2.fundchannel(n3, announce_channel=True)
 
-    # Create a basic channel graph
-    n1.openchannel(n2, 500_000, connect=True)
-    n2.openchannel(n3, 500_000, connect=True)
+    # Generate some blocks to ensure the channels get confirmed
+    bitcoind.generate_block(6)
 
     # Initiate the greenlight node
     c = clients.new()
@@ -141,7 +139,7 @@ def test_list_lsp_server(
     lsp_client = gl1.get_lsp_client()
     lsp_servers = lsp_client.list_lsp_servers()
 
-    assert len(lsp_servers) == 2, "There are 2 lsp-servers defined"
+    assert len(lsp_servers) == 2, "Expected 2 lsp-servers defined"
     assert n1.info["id"] in lsp_servers
     assert n2.info["id"] in lsp_servers
     assert n3.info["id"] not in lsp_servers

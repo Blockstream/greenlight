@@ -163,11 +163,11 @@ impl LspClient {
         let response = self.cln_client.list_nodes(request).await?;
 
         return Ok(response
-            .get_ref()
+            .into_inner()
             .nodes
-            .iter()
-            .filter(|x| is_feature_bit_enabled(&x.features(), BITNUM_LSP_FEATURE))
-            .map(|n| n.nodeid.clone())
+            .into_iter()
+            .filter(|x| is_feature_bit_enabled(x.features(), BITNUM_LSP_FEATURE))
+            .map(|n| n.nodeid)
             .collect());
     }
 }
