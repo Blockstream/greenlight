@@ -18,5 +18,16 @@ jobs:
       
     - name: Build tester image
       run: |
-        sudo chmod a+rwx -R libs/gl-client-py
-        make docker-image docker-check-self
+        make docker-image
+
+    - name: Check Self
+      run : |
+        make docker-check-self
+
+    - name: Run python image
+      run : |
+        make docker-check-py
+
+    - name: Run javascript tests
+      run : |
+        make docker-check-js
