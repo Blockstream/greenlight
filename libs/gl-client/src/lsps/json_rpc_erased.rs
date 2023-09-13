@@ -1,20 +1,22 @@
 // The json-rpc implementation used in json_rpc is strongly typed and heavily
-// relies on Generics.
+// relies on Generics. In Rust all the required types are created at compile type.
+//
+// This is, Vec<u8> and Vec<u32> are considered 2 different types.
 //
 // When creating language bindings we must either
-// - explicitly implement ffi for every time
-// - use a trait that erases tye type. In this case we replace the type by serde_json::Value
+// - explicitly implement ffi for every type.
+// - use a trait that erases tye type. In this case we replace the type by Vec<u8>. This byte-array can be parsed by the foreign language
 //
 // Note, that this
 //
 // If you are a rust-developer you probably want to use the json_rpc-module directly
 // If you are building a foreign function interface you probably want to use the type-erased version
 //
-// The sonRpcMethodErased wraps the JsonRpcMethod into a type that works with serde_json::Value-objects.
+// The JsonRpcMethodErased wraps the JsonRpcMethod into a type that works with Vec<u8>.
 // The JsonRpcMethodErased is object-safe and can be owned using a Box.
 //
 // The JsonRpcMethodErased method
-// - does not do strict type-checking
+// - does not do strict type-checking at compile-time
 // - comes at a small runtime cost (requires Box, serializes and deserializes some objects twice, unwrapping results)
 // - comes at a small dev-cost for requiring a bit more error-handling
 
@@ -185,21 +187,21 @@ impl<'a> JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> for UneraseWrapper
         &self,
         params: Vec<u8>,
         json_rpc_id: String,
-    ) -> Result<JsonRpcRequest<Vec<u8>>, serde_json::Error> {
+    ) -> Result<JsonRpcRequestErased, serde_json::Error> {
         self.inner.create_request(params, json_rpc_id)
     }
 
     fn parse_json_response_str(
         &self,
         json_str: &str,
-    ) -> Result<JsonRpcResponse<Vec<u8>, Vec<u8>>, serde_json::Error> {
+    ) -> Result<JsonRpcResponseErased, serde_json::Error> {
         self.inner.parse_json_response_str(json_str)
     }
 
     fn parse_json_response_value(
         &self,
         json_value: serde_json::Value,
-    ) -> Result<JsonRpcResponse<Vec<u8>, Vec<u8>>, serde_json::Error> {
+    ) -> Result<JsonRpcResponseErased, serde_json::Error> {
         self.inner.parse_json_response_value(json_value)
     }
 }
