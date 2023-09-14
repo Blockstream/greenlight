@@ -23,3 +23,16 @@ impl From<std::io::Error> for LspsError {
         Self::Other(value.to_string())
     }
 }
+
+
+fn map_json_rpc_error_code_to_str(code : i64) -> &'static str {
+    match code {
+        -32700 => "parsing_error",
+        -32600 => "invalid_request",
+        -32601 => "method_not_found",
+        -32602 => "invalid_params",
+        -32603 => "internal_error",
+        -32099..=-32000 => "implementation_defined_server_error"
+        _ => "unknown_error_code"
+    }
+}
