@@ -22,7 +22,7 @@
 
 use crate::lsps::json_rpc::{
     ErrorData, JsonRpcMethod, JsonRpcRequest, JsonRpcResponse, JsonRpcResponseFailure,
-    JsonRpcResponseSuccess,
+    JsonRpcResponseSuccess, MapErrorCode,
 };
 use serde::Serialize;
 
@@ -56,7 +56,7 @@ impl<I, O, E> JsonRpcMethodErased for JsonRpcMethod<I, O, E>
 where
     I: serde::de::DeserializeOwned + Serialize,
     O: serde::de::DeserializeOwned + Serialize,
-    E: serde::de::DeserializeOwned + Serialize,
+    E: serde::de::DeserializeOwned + Serialize + MapErrorCode,
 {
     fn name(&self) -> &str {
         self.method
@@ -91,7 +91,7 @@ impl<I, O, E> JsonRpcMethod<I, O, E>
 where
     I: serde::de::DeserializeOwned + Serialize + 'static,
     O: serde::de::DeserializeOwned + Serialize + 'static,
-    E: serde::de::DeserializeOwned + Serialize + 'static,
+    E: serde::de::DeserializeOwned + Serialize + 'static + MapErrorCode,
 {
     pub fn erase_box(self) -> Box<dyn JsonRpcMethodErased> {
         Box::new(self)
@@ -139,7 +139,7 @@ pub trait JsonRpcMethodUnerased<'a, I, O, E> {
 impl<'a, I, O, E> JsonRpcMethodUnerased<'a, I, O, E> for JsonRpcMethod<I, O, E>
 where
     O: serde::de::DeserializeOwned,
-    E: serde::de::DeserializeOwned,
+    E: serde::de::DeserializeOwned + MapErrorCode,
 {
     fn name(&self) -> &str {
         JsonRpcMethod::name(self)
@@ -288,7 +288,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::lsps::json_rpc::{generate_random_rpc_id, JsonRpcMethod};
+    use crate::lsps::json_rpc::{generate_random_rpc_id, DefaultError, JsonRpcMethod};
 
     #[derive(Serialize, serde::Deserialize)]
     struct TestRequestStruct {
@@ -302,7 +302,7 @@ mod test {
 
     #[test]
     fn create_rpc_request_from_method_erased() {
-        let rpc_method = JsonRpcMethod::<TestRequestStruct, (), ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<TestRequestStruct, (), DefaultError>::new("test.method");
         let rpc_method_erased = rpc_method.erase_box();
 
         // This rpc-request should work becasue the parameters match the schema
@@ -318,7 +318,7 @@ mod test {
 
     #[test]
     fn create_rpc_request_from_method_erased_checks_types() {
-        let rpc_method = JsonRpcMethod::<TestRequestStruct, (), ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<TestRequestStruct, (), DefaultError>::new("test.method");
         let rpc_method_erased = rpc_method.erase_box();
 
         // This rpc-request should fail because the parameters do not match the schema
@@ -331,8 +331,9 @@ mod test {
 
     #[test]
     fn parse_rpc_request_from_method_erased() {
-        let rpc_method =
-            JsonRpcMethod::<TestRequestStruct, TestResponseStruct, ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<TestRequestStruct, TestResponseStruct, DefaultError>::new(
+            "test.method",
+        );
         let rpc_method_erased = rpc_method.erase_box();
 
         let json_value = serde_json::json!({
@@ -348,8 +349,9 @@ mod test {
 
     #[test]
     fn parse_rpc_request_from_method_erased_fails() {
-        let rpc_method =
-            JsonRpcMethod::<TestRequestStruct, TestResponseStruct, ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<TestRequestStruct, TestResponseStruct, DefaultError>::new(
+            "test.method",
+        );
         let rpc_method_erased = rpc_method.erase_box();
 
         let json_value = serde_json::json!({

@@ -3,6 +3,8 @@ use serde::de::DeserializeOwned;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
 
+use super::error::map_json_rpc_error_code_to_str;
+
 /// Generate a random json_rpc_id string that follows the requirements of LSPS0
 ///
 /// - Should be a String
@@ -14,7 +16,10 @@ pub fn generate_random_rpc_id() -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct JsonRpcMethod<I, O, E> {
+pub struct JsonRpcMethod<I, O, E>
+where
+    E: MapErrorCode,
+{
     pub method: &'static str,
     #[serde(skip_serializing)]
     request: std::marker::PhantomData<I>,
@@ -24,7 +29,10 @@ pub struct JsonRpcMethod<I, O, E> {
     error_type: std::marker::PhantomData<E>,
 }
 
-impl<I, O, E> JsonRpcMethod<I, O, E> {
+impl<I, O, E> JsonRpcMethod<I, O, E>
+where
+    E: MapErrorCode,
+{
     pub const fn new(method: &'static str) -> Self {
         Self {
 						method,
@@ -48,13 +56,19 @@ impl<I, O, E> JsonRpcMethod<I, O, E> {
     }
 }
 
-impl<O, E> JsonRpcMethod<NoParams, O, E> {
+impl<O, E> JsonRpcMethod<NoParams, O, E>
+where
+    E: MapErrorCode,
+{
     pub fn create_request_no_params(&self, json_rpc_id: String) -> JsonRpcRequest<NoParams> {
         self.create_request(NoParams::default(), json_rpc_id)
     }
 }
 
-impl<I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
+impl<I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String 
+where
+    E: MapErrorCode
+		{
     fn from(value: &JsonRpcMethod<I, O, E>) -> Self {
         value.method.into()
     }
@@ -63,7 +77,7 @@ impl<I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
 impl<'de, I, O, E> JsonRpcMethod<I, O, E>
 where
     O: Deserialize<'de>,
-    E: Deserialize<'de>,
+    E: Deserialize<'de> + MapErrorCode,
 {
     pub fn parse_json_response_str(
         &self,
@@ -76,7 +90,7 @@ where
 impl<I, O, E> JsonRpcMethod<I, O, E>
 where
     O: DeserializeOwned,
-    E: DeserializeOwned,
+    E: DeserializeOwned + MapErrorCode,
 {
     pub fn parse_json_response_value(
         &self,
@@ -118,8 +132,11 @@ impl Serialize for NoParams {
 }
 
 impl<I> JsonRpcRequest<I> {
-    pub fn new<O, E>(method: JsonRpcMethod<I, O, E>, params: I) -> Self {
-        Self {
+    pub fn new<O, E>(method: JsonRpcMethod<I, O, E>, params: I) -> Self
+    where
+        E: MapErrorCode,
+    {
+        return Self {
             jsonrpc: String::from("2.0"),
             id: generate_random_rpc_id(),
             method: method.method.into(),
@@ -129,8 +146,11 @@ impl<I> JsonRpcRequest<I> {
 }
 
 impl JsonRpcRequest<NoParams> {
-    pub fn new_no_params<O, E>(method: JsonRpcMethod<NoParams, O, E>) -> Self {
-        Self {
+    pub fn new_no_params<O, E>(method: JsonRpcMethod<NoParams, O, E>) -> Self
+    where
+        E: MapErrorCode,
+    {
+        return Self {
             jsonrpc: String::from("2.0"),
             id: generate_random_rpc_id(),
             method: method.method.into(),
@@ -165,6 +185,28 @@ pub struct ErrorData<E> {
     pub code: i64,
     pub message: String,
     pub data: Option<E>,
+}
+
+impl<E> ErrorData<E>
+where
+    E: MapErrorCode,
+{
+    pub fn code_str(&self) -> &str {
+        return E::get_code_str(self.code);
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DefaultError;
+
+pub trait MapErrorCode {
+    fn get_code_str(code: i64) -> &'static str;
+}
+
+impl MapErrorCode for DefaultError {
+    fn get_code_str(code: i64) -> &'static str {
+        map_json_rpc_error_code_to_str(code)
+    }
 }
 
 #[cfg(test)]
@@ -248,7 +290,7 @@ mod test {
 
     #[test]
     fn create_rpc_request_from_call() {
-        let rpc_method = JsonRpcMethod::<NoParams, (), ()>::new("test.method");
+        let rpc_method = JsonRpcMethod::<NoParams, (), DefaultError>::new("test.method");
         let json_rpc_id = generate_random_rpc_id();
         let rpc_request = rpc_method.create_request_no_params(json_rpc_id);
 
@@ -259,7 +301,7 @@ mod test {
 
     #[test]
     fn parse_rpc_response_success_from_call() {
-        let rpc_method = JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
+        let rpc_method = JsonRpcMethod::<NoParams, String, DefaultError>::new("test.return_string");
 
         let json_value = serde_json::json!({
             "jsonrpc" : "2.0",
@@ -283,8 +325,7 @@ mod test {
 
     #[test]
     fn parse_rpc_response_failure_from_call() {
-        let rpc_method: JsonRpcMethod<NoParams, String, ()> =
-            JsonRpcMethod::<NoParams, String, ()>::new("test.return_string");
+        let rpc_method = JsonRpcMethod::<NoParams, String, DefaultError>::new("test.return_string");
 
         let json_value = serde_json::json!({
             "jsonrpc" : "2.0",
@@ -301,9 +342,10 @@ mod test {
                 assert_eq!(err.jsonrpc, "2.0");
 
                 assert_eq!(err.error.code, -32700);
-                assert_eq!(err.error.message, "Failed to parse response");
+                assert_eq!(err.error.code_str(), "parsing_error");
 
-                assert_eq!(err.id, "request_id")
+                assert_eq!(err.error.message, "Failed to parse response");
+                assert_eq!(err.id, "request_id");
             }
             JsonRpcResponse::Ok(_ok) => {
                 panic!("Failure deserialized as Ok")
