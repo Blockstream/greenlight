@@ -1,6 +1,6 @@
 // TODO: Implement parsing of error types for lsps2.getinfo
 use crate::lsps::error::LspsError;
-pub use crate::lsps::json_rpc::{JsonRpcMethod, NoParams};
+pub use crate::lsps::json_rpc::{DefaultError, JsonRpcMethod, MapErrorCode, NoParams};
 use crate::lsps::json_rpc_erased::{JsonRpcMethodErased, JsonRpcMethodUnerased};
 use serde::de::Error as DeError;
 use serde::ser::Error as SeError;
@@ -10,6 +10,8 @@ use time::format_description::FormatItem;
 use time::macros::format_description;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
+
+use super::error::map_json_rpc_error_code_to_str;
 
 type OnchainFeeRate = u64;
 
@@ -23,13 +25,12 @@ type OnchainFeeRate = u64;
 // 1. Add it to the JsonRpcMethodEnum
 // 2. Add it to the from_method_name function
 // 3. Add it to the ref_erase function
-pub type Lsps0ListProtocols = JsonRpcMethod<NoParams, ProtocolList, ()>;
-pub type Lsps1Info = JsonRpcMethod<NoParams, Lsps1InfoResponse, ()>;
-pub type Lsps1Order = JsonRpcMethod<Lsps1GetOrderRequest, Lsps1GetOrderResponse, ()>;
-pub type Lsps2GetVersions = JsonRpcMethod<NoParams, Lsps2GetVersionsResponse, ()>;
-pub type Lsps2GetInfo = JsonRpcMethod<Lsps2GetInfoRequest, Lsp2GetInfoResponse, ()>;
-pub type Lsps2Buy = JsonRpcMethod<Lsps2BuyRequest, Lsps2BuyResponse, ()>;
-
+pub type Lsps0ListProtocols = JsonRpcMethod<NoParams, ProtocolList, DefaultError>;
+pub type Lsps1Info = JsonRpcMethod<NoParams, Lsps1InfoResponse, DefaultError>;
+pub type Lsps1Order = JsonRpcMethod<Lsps1GetOrderRequest, Lsps1GetOrderResponse, DefaultError>;
+pub type Lsps2GetVersions = JsonRpcMethod<NoParams, Lsps2GetVersionsResponse, DefaultError>;
+pub type Lsps2GetInfo = JsonRpcMethod<Lsps2GetInfoRequest, Lsp2GetInfoResponse, Lsp2GetInfoError>;
+pub type Lsps2Buy = JsonRpcMethod<Lsps2BuyRequest, Lsps2BuyResponse, Lsps2BuyError>;
 
 pub const LSPS0_LIST_PROTOCOLS: Lsps0ListProtocols =
     Lsps0ListProtocols::new("lsps0.list_protocols");
@@ -90,7 +91,7 @@ pub enum JsonRpcMethodEnum {
     Lsps1Order(Lsps1Order),
     Lsp2GetVersions(Lsps2GetVersions),
     Lsps2GetInfo(Lsps2GetInfo),
-    Lsps2Buy(Lsps2Buy)
+    Lsps2Buy(Lsps2Buy),
 }
 
 impl JsonRpcMethodEnum {
@@ -115,7 +116,7 @@ impl JsonRpcMethodEnum {
             Self::Lsps1Order(order) => order.ref_erase(),
             Self::Lsp2GetVersions(order) => order.ref_erase(),
             Self::Lsps2GetInfo(order) => order.ref_erase(),
-            Self::Lsps2Buy(buy) => buy.ref_erase()
+            Self::Lsps2Buy(buy) => buy.ref_erase(),
         }
     }
 }
@@ -223,7 +224,6 @@ impl<'de> Deserialize<'de> for MsatAmount {
 // achieved if the LSPS2 sends a fully compliant timestamp.
 //
 // I have decided to fail early if another timestamp is received
-
 #[derive(Debug)]
 pub struct Datetime {
     datetime: PrimitiveDateTime,
@@ -395,6 +395,19 @@ pub struct Lsp2GetInfoResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Lsp2GetInfoError {}
+
+impl MapErrorCode for Lsp2GetInfoError {
+    fn get_code_str(code: i64) -> &'static str {
+        match code {
+            1 => "unsupported_version",
+            2 => "unrecognized_or_stale_token",
+            _ => map_json_rpc_error_code_to_str(code),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OpeningFeeParamsMenuItem {
     min_fee_msat: MsatAmount,
@@ -414,10 +427,25 @@ pub struct Lsps2BuyRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Lsps2BuyResponse {
-    jit_channel_scid : String,
-    lsp_cltv_expiry_delta : u64,
+    jit_channel_scid: String,
+    lsp_cltv_expiry_delta: u64,
     #[serde(default)]
-    client_trusts_lsp : bool
+    client_trusts_lsp: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Lsps2BuyError {}
+
+impl MapErrorCode for Lsps2BuyError {
+    fn get_code_str(code: i64) -> &'static str {
+        match code {
+            1 => "unsupported_version",
+            2 => "invalid_opening_fee_params",
+            3 => "payment_size_too_small",
+            4 => "payment_size_too_large",
+            _ => map_json_rpc_error_code_to_str(code),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -461,8 +489,6 @@ mod test {
     fn parsing_error_when_opening_fee_menu_has_extra_fields() {
         // LSPS2 mentions
         // Clients MUST fail and abort the flow if a opening_fee_params object has unrecognized fields.
-        //
-        // If a new field is added the version number should be incremented
         let fee_menu_item = serde_json::json!(
             {
                 "min_fee_msat": "546000",
@@ -545,6 +571,9 @@ mod test {
     #[test]
     fn parse_too_long_promise_fails() {
         // Each a char correspond to 1 byte
+        // We refuse to parse the promise if it is too long
+        // LSPS2 requires us to ignore Promise that are too long
+        // so the client cannot be burdened with unneeded storage requirements
         let a_513_chars = "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"";
         let a_512_chars = "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"";
 
@@ -560,9 +589,12 @@ mod test {
             "lsp_cltv_expiry_delta" : 144
         });
 
-        let buy_response = serde_json::from_value::<Lsps2BuyResponse>(data).expect("The response can be parsed");
+        let buy_response =
+            serde_json::from_value::<Lsps2BuyResponse>(data).expect("The response can be parsed");
 
-        assert!(! buy_response.client_trusts_lsp, "If the field is absent it assumed the client should not trust the LSP")
-
+        assert!(
+            !buy_response.client_trusts_lsp,
+            "If the field is absent it assumed the client should not trust the LSP"
+        )
     }
 }
