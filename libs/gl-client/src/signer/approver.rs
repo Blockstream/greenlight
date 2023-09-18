@@ -33,7 +33,7 @@ impl<A: Approve> Approve for ReportingApprover<A> {
     fn approve_onchain(
         &self,
         tx: &lightning_signer::bitcoin::Transaction,
-        values_sat: &[u64],
+        values_sat: &[lightning_signer::bitcoin::TxOut],
         unknown_indices: &[usize],
     ) -> bool {
         log::warn!(
