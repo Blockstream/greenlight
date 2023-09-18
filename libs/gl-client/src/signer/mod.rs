@@ -23,7 +23,7 @@ use tonic::transport::{Endpoint, Uri};
 use tonic::Request;
 use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
 use vls_protocol::serde_bolt::Octets;
-use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApprover};
+use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 

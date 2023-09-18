@@ -99,7 +99,7 @@ impl Resolver {
             }
         }
 
-        let ser = vls_protocol::serde_bolt::to_vec(req).unwrap();
+        let ser = req.inner().as_vec();
         Err(Error::Resolver(ser, reqctx.to_vec()))
     }
 }
