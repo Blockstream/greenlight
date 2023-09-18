@@ -486,7 +486,7 @@ impl Node for PluginNodeServer {
                     })
                     .collect();
 
-                req.request.signer_state = state.into();
+                req.request.signer_state = dbg!(state.into());
                 req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
                 debug!(
                     "Sending signer requests with {} requests and {} state entries",
