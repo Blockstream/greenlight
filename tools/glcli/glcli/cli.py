@@ -229,15 +229,6 @@ def register(ctx, network, invite):
     # Reinitialize the Scheduler with the passed network for register.
     scheduler = Scheduler(node_id, network=network, tls=ctx.obj.scheduler.tls)
     res = scheduler.register(signer.inner, invite_code=invite)
-
-    with open("device-key.pem", "w") as f:
-        f.write(res.device_key)
-
-    with open("device.crt", "w") as f:
-        f.write(res.device_cert)
-
-    with open("ca.pem", "wb") as f:
-        f.write(env.ca_pem)
     
     with open("greenlight.auth", "wb") as f:
         f.write(res.auth)
@@ -254,15 +245,6 @@ def recover(ctx):
     scheduler = ctx.obj.scheduler
 
     res = scheduler.recover(signer.inner)
-
-    with open("device-key.pem", "w") as f:
-        f.write(res.device_key)
-
-    with open("device.crt", "w") as f:
-        f.write(res.device_cert)
-
-    with open("ca.pem", "wb") as f:
-        f.write(env.ca_pem)
 
     with open("greenlight.auth", "wb") as f:
         f.write(res.auth)
