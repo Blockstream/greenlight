@@ -145,7 +145,7 @@ RUN cd /tmp/ && \
     rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
+RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
 
 RUN mkdir /tmp/protoc && \
     cd /tmp/protoc && \

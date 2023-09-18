@@ -401,3 +401,38 @@ def test_node_reconnect(clients, scheduler, node_factory, bitcoind):
     peer = rpc.listpeers()['peers'][0]
     assert peer['connected']
     assert peer['id'] == l1.info['id']
+
+
+def test_vls_crash_repro(
+        clients: Clients,
+        scheduler: Scheduler,
+        node_factory,
+        bitcoind) -> None:
+    """Reproduce an overflow panic in VLS v0.10.0. """
+    l1, = node_factory.line_graph(1, opts={'experimental-anchors': None})
+    assert(l1.rpc.getinfo()['version'] == 'v23.08gl1')
+
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+
+    l1.fundwallet(10**7)
+    l1.rpc.fundchannel(c.node_id.hex(), 'all')
+    bitcoind.generate_block(1, wait_for_mempool=1)
+
+    wait_for(lambda: l1.rpc.listpeerchannels()['channels'][0]['state'] == 'CHANNELD_NORMAL')
+
+    # Roei reports that the issue can be triggered by sending n from
+    # l1 to n1 and then (n-1)msat back to l1
+
+    inv = gl1.invoice(
+        amount_msat=clnpb.AmountOrAny(amount=clnpb.Amount(msat=2500000)),
+        description="desc",
+        label="lbl"
+    ).bolt11
+
+    l1.rpc.pay(inv)
+    inv = l1.rpc.invoice(amount_msat=2499000, label="lbl", description="desc")
