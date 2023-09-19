@@ -222,7 +222,7 @@ impl State {
                     if v.0 == *newver {
                         continue;
                     } else if v.0 > *newver {
-                        warn!("Ignoring outdated state version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, newval, v.1);
+                        warn!("Ignoring outdated state version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, serde_json::to_string(newval), serde_json::to_string(&v.1));
                         continue;
                     } else {
                         trace!(
@@ -513,18 +513,7 @@ impl Persist for MemoryPersister {
                 state_e.velocity_control.into(),
                 state_e.fee_velocity_control.into(),
             );
-/*
-            let state = CoreNodeState {
-                invoices: Default::default(),
-                issued_invoices: Default::default(),
-                payments: Default::default(),
-                excess_amount: 0,
-                log_prefix: "".to_string(),
-                velocity_control: node_state.velocity_control.into(),
-                fee_velocity_control: node_state.fee_velocity_control.into(),
-                last_summary: None,
-            };
-*/
+
             let entry = lightning_signer::persist::model::NodeEntry {
                 key_derivation_style: node.key_derivation_style,
                 network: node.network,

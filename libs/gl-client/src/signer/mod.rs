@@ -317,11 +317,6 @@ impl Signer {
         let prestate = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().unwrap();
-            trace!(
-                "Applying diff between local and remote state: {:?}",
-                state.diff(&diff)
-            );
-
             state.merge(&diff).unwrap();
             trace!("Processing request {}", hex::encode(&req.raw));
             state.clone()
@@ -344,7 +339,8 @@ impl Signer {
         }
 
         let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e| Error::Signer(e))?;
-        log::trace!("Handling message {:?}", msg);
+        log::debug!("Handling message {:?}", msg);
+        log::trace!("Signer state {}", serde_json::to_string(&prestate).unwrap());
 
         let approver = Arc::new(MemoApprover::new(PositiveApprover()));
         approver.approve(approvals);
@@ -370,10 +366,6 @@ impl Signer {
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
             let state = self.state.lock().unwrap();
-            trace!(
-                "Diff to state pre-request: {:?}",
-                prestate.diff(&state).unwrap()
-            );
             state.clone().into()
         };
 
