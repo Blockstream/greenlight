@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::lsps::error::map_json_rpc_error_code_to_str;
 use crate::lsps::json_rpc::MapErrorCode;
-use crate::lsps::lsps0::common_schemas::{IsoDatetime, MsatAmount};
+use crate::lsps::lsps0::common_schemas::{IsoDatetime, MsatAmount, ShortChannelId};
 
 const MAX_PROMISE_LEN_BYTES: usize = 512;
 #[derive(Debug)]
@@ -41,8 +41,8 @@ impl<'de> Deserialize<'de> for Promise {
         let str_repr = String::deserialize(deserializer)?;
         let promise = Promise::new(str_repr.clone());
         format!("{:?}", &promise);
-        return Promise::new(str_repr.clone())
-            .map_err(|_| D::Error::custom("promise exceeds max length"));
+        Promise::new(str_repr.clone())
+            .map_err(|_| D::Error::custom("promise exceeds max length"))
     }
 }
 
@@ -82,7 +82,7 @@ impl MapErrorCode for Lsps2GetInfoError {
 pub struct OpeningFeeParamsMenuItem {
     min_fee_msat: MsatAmount,
     proportional: u64,
-    _valid_until: IsoDatetime,
+    valid_until: IsoDatetime,
     min_lifetime: u64,
     max_client_to_self_delay: u64,
     promise: Promise,
@@ -97,7 +97,7 @@ pub struct Lsps2BuyRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Lsps2BuyResponse {
-    jit_channel_scid: String,
+    jit_channel_scid: ShortChannelId,
     lsp_cltv_expiry_delta: u64,
     #[serde(default)]
     client_trusts_lsp: bool,
@@ -169,7 +169,7 @@ mod test {
     #[test]
     fn client_trust_lsp_defaults_to_false() {
         let data = serde_json::json!({
-            "jit_channel_scid" : "#scid#",
+            "jit_channel_scid" : "0x12x12",
             "lsp_cltv_expiry_delta" : 144
         });
 
