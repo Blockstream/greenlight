@@ -5,3 +5,4 @@ pub mod json_rpc_erased;
 pub mod message;
 pub mod client;
 pub mod lsps0;
+pub mod lsps1;
