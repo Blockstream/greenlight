@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use crate::lsps::lsps0::common_schemas::{IsoDatetime, SatAmount};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub type OnchainFeeRate = u64;
 
@@ -54,7 +54,6 @@ pub struct Lsps1GetOrderResponse {
     order_state: OrderState,
     payment: Payment,
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 enum OrderState {

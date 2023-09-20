@@ -1,11 +1,10 @@
-use serde::{Serialize, Deserialize};
 use serde::de::Error as SeError;
 use serde::ser::Error as DeError;
+use serde::{Deserialize, Serialize};
 
 use time::format_description::FormatItem;
 use time::macros::format_description;
 use time::{OffsetDateTime, PrimitiveDateTime};
-
 
 // Implements all the common schema's defined in LSPS0 common schema's
 
@@ -84,9 +83,9 @@ impl SatAmount {
         self.0
     }
 
-		pub fn new(value : u64) -> Self {
-				SatAmount(value)
-		}
+    pub fn new(value: u64) -> Self {
+        SatAmount(value)
+    }
 }
 
 impl MsatAmount {
@@ -94,10 +93,9 @@ impl MsatAmount {
         self.0
     }
 
-
-		pub fn new(value : u64) -> Self {
-				MsatAmount(value)
-		}
+    pub fn new(value: u64) -> Self {
+        MsatAmount(value)
+    }
 }
 
 impl Serialize for SatAmount {
@@ -148,8 +146,8 @@ impl<'de> Deserialize<'de> for MsatAmount {
 
 #[cfg(test)]
 mod test {
-		use super::*;
-		
+    use super::*;
+
     #[test]
     fn parsing_amount_sats() {
         // Pick a number which exceeds 2^32 to ensure internal representation exceeds 32 bits
