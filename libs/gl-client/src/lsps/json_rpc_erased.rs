@@ -33,7 +33,7 @@ pub type JsonRpcResponseFailureErased = JsonRpcResponseFailure<Vec<u8>>;
 pub type JsonRpcErrorDataErased = ErrorData<Vec<u8>>;
 
 pub trait JsonRpcMethodErased {
-    fn name<'a>(&'a self) -> &'a str;
+    fn name(&self) -> &str;
 
     fn create_request(
         &self,
@@ -59,7 +59,7 @@ where
     E: serde::de::DeserializeOwned + Serialize,
 {
     fn name(&self) -> &str {
-        &self.method
+        self.method
     }
 
     fn create_request(
@@ -68,9 +68,7 @@ where
         json_rpc_id: String,
     ) -> Result<JsonRpcRequestErased, serde_json::Error> {
         let typed_params: I = serde_json::from_slice(&params)?;
-        let typed_json_rpc_request: JsonRpcRequest<I> =
-            JsonRpcMethod::create_request(&self, typed_params, json_rpc_id);
-        typed_json_rpc_request.erase()
+        JsonRpcMethod::create_request(self, typed_params, json_rpc_id).erase()
     }
 
     fn parse_json_response_str(
@@ -78,18 +76,14 @@ where
         json_str: &str,
     ) -> Result<JsonRpcResponseErased, serde_json::Error> {
         // Check if the json-struct matches the expected type
-        let result: JsonRpcResponse<O, E> =
-            JsonRpcMethod::<I, O, E>::parse_json_response_str(&self, json_str)?;
-        return result.erase();
+        JsonRpcMethod::<I, O, E>::parse_json_response_str(self, json_str)?.erase()
     }
 
     fn parse_json_response_value(
         &self,
         json_value: serde_json::Value,
     ) -> Result<JsonRpcResponseErased, serde_json::Error> {
-        let result: JsonRpcResponse<O, E> =
-            JsonRpcMethod::<I, O, E>::parse_json_response_value(&self, json_value)?;
-        return result.erase();
+        JsonRpcMethod::<I, O, E>::parse_json_response_value(self, json_value)?.erase()
     }
 }
 
@@ -100,11 +94,11 @@ where
     E: serde::de::DeserializeOwned + Serialize + 'static,
 {
     pub fn erase_box(self) -> Box<dyn JsonRpcMethodErased> {
-        return Box::new(self);
+        Box::new(self)
     }
 
-    pub fn ref_erase<'a>(&'a self) -> &'a dyn JsonRpcMethodErased {
-        return self;
+    pub fn ref_erase(&self) -> &dyn JsonRpcMethodErased {
+        self
     }
 }
 
@@ -156,21 +150,21 @@ where
         params: I,
         json_rpc_id: String,
     ) -> Result<JsonRpcRequest<I>, serde_json::Error> {
-        Ok(JsonRpcMethod::create_request(&self, params, json_rpc_id))
+        Ok(JsonRpcMethod::create_request(self, params, json_rpc_id))
     }
 
     fn parse_json_response_str(
         &self,
         json_str: &str,
     ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
-        JsonRpcMethod::parse_json_response_str(&self, json_str)
+        JsonRpcMethod::parse_json_response_str(self, json_str)
     }
 
     fn parse_json_response_value(
         &self,
         json_value: serde_json::Value,
     ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
-        JsonRpcMethod::parse_json_response_value(&self, json_value)
+        JsonRpcMethod::parse_json_response_value(self, json_value)
     }
 }
 
@@ -209,7 +203,7 @@ impl<'a> JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> for UneraseWrapper
 impl dyn JsonRpcMethodErased {
     // The impl promises here we return a concrete type
     // However, we'd rather keep the implementation details private in this module and don't want users messing with it
-    pub fn unerase<'a>(&'a self) -> impl JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> {
+    pub fn unerase(&self) -> impl JsonRpcMethodUnerased<Vec<u8>, Vec<u8>, Vec<u8>> {
         UneraseWrapper { inner: self }
     }
 }

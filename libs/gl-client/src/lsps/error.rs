@@ -20,6 +20,6 @@ pub enum LspsError {
 
 impl From<std::io::Error> for LspsError {
     fn from(value: std::io::Error) -> Self {
-        return Self::Other(value.to_string());
+        Self::Other(value.to_string())
     }
 }

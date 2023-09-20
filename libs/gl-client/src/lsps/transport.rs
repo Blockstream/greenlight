@@ -28,8 +28,8 @@ pub struct JsonRpcTransport {
 impl JsonRpcTransport {
     pub fn new(client: Client, cln_client: ClnClient) -> Self {
         Self {
-            client: client,
-            cln_client: cln_client,
+						client,
+            cln_client,
         }
     }
 
@@ -52,9 +52,9 @@ impl JsonRpcTransport {
         O: serde::de::DeserializeOwned,
     {
         let json_rpc_id = generate_random_rpc_id();
-        return self
+        self
             .request_with_json_rpc_id(peer_id, method, param, json_rpc_id)
-            .await;
+            .await
     }
 
     /// Makes the jsonrpc request and returns the response
@@ -77,13 +77,13 @@ impl JsonRpcTransport {
         // Constructs the JsonRpcRequest
         let request = method
             .create_request(param, json_rpc_id)
-            .map_err(|x| LspsError::JsonParseRequestError(x))?;
+            .map_err(LspsError::JsonParseRequestError)?;
 
         // Core-lightning uses the convention that the first two bytes are the BOLT-8 message id
         let mut cursor: Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
         cursor.write_all(&LSPS_MESSAGE_ID)?;
         serde_json::to_writer(&mut cursor, &request)
-            .map_err(|x| LspsError::JsonParseRequestError(x))?;
+            .map_err(LspsError::JsonParseRequestError)?;
 
         let custom_message_request = SendcustommsgRequest {
             node_id: peer_id.to_vec(),
@@ -129,12 +129,12 @@ impl JsonRpcTransport {
             // Deserialize the JSON compare the json_rpc_id
             // If it matches we return a typed JsonRpcRequest
             let value: serde_json::Value = serde_json::from_reader(&mut msg_cursor)
-                .map_err(|x| LspsError::JsonParseResponseError(x))?;
+                .map_err(LspsError::JsonParseResponseError)?;
             if value.get("id").and_then(|x| x.as_str()) == Some(&request.id) {
                 // There is a bug here. We need to do the parsing in the underlying trait
                 let rpc_response = method
                     .parse_json_response_value(value)
-                    .map_err(|x| LspsError::JsonParseResponseError(x))?;
+                    .map_err(LspsError::JsonParseResponseError)?;
                 return Ok(rpc_response);
             }
 
@@ -151,6 +151,6 @@ impl JsonRpcTransport {
         }
 
         // If the stream was closed
-        return Err(LspsError::ConnectionClosed);
+        Err(LspsError::ConnectionClosed)
     }
 }
