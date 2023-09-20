@@ -6,3 +6,4 @@ pub mod message;
 pub mod client;
 pub mod lsps0;
 pub mod lsps1;
+pub mod lsps2;
