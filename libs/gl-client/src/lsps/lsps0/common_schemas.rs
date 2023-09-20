@@ -178,7 +178,7 @@ mod test {
     fn parse_and_serialize_datetime() {
         let datetime_str = "\"2023-01-01T23:59:59.999Z\"";
 
-        let dt = serde_json::from_str::<IsoDatetime>(&datetime_str).unwrap();
+        let dt = serde_json::from_str::<IsoDatetime>(datetime_str).unwrap();
 
         assert_eq!(dt.datetime.year(), 2023);
         assert_eq!(dt.datetime.month(), time::Month::January);
@@ -199,7 +199,7 @@ mod test {
         // However, in LSPS2 the datetime_str must be repeated verbatim
         let datetime_str = "\"2023-01-01T23:59:59.99Z\"";
 
-        let result = serde_json::from_str::<IsoDatetime>(&datetime_str);
+        let result = serde_json::from_str::<IsoDatetime>(datetime_str);
         result.expect_err("datetime_str should not be parsed if it doesn't follow spec");
     }
 }
