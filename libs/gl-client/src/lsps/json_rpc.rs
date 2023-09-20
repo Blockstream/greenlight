@@ -10,8 +10,7 @@ use serde::{Deserialize, Serialize};
 pub fn generate_random_rpc_id() -> String {
     // The specification requires an id using least 80 random bits of randomness
     let seed: [u8; 10] = rand::random();
-    let result = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(seed);
-    return result;
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(seed)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,12 +26,12 @@ pub struct JsonRpcMethod<I, O, E> {
 
 impl<I, O, E> JsonRpcMethod<I, O, E> {
     pub const fn new(method: &'static str) -> Self {
-        return Self {
-            method: method,
+        Self {
+						method,
             request: std::marker::PhantomData,
             return_type: std::marker::PhantomData,
             error_type: std::marker::PhantomData,
-        };
+        }
     }
 
     pub const fn name(&self) -> &'static str {
@@ -42,9 +41,9 @@ impl<I, O, E> JsonRpcMethod<I, O, E> {
     pub fn create_request(&self, params: I, json_rpc_id: String) -> JsonRpcRequest<I> {
         JsonRpcRequest::<I> {
             jsonrpc: String::from("2.0"),
-            id: String::from(json_rpc_id),
+            id: json_rpc_id,
             method: self.method.into(),
-            params: params,
+            params,
         }
     }
 }
@@ -55,9 +54,9 @@ impl<O, E> JsonRpcMethod<NoParams, O, E> {
     }
 }
 
-impl<'a, I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
+impl<I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
     fn from(value: &JsonRpcMethod<I, O, E>) -> Self {
-        return value.method.clone().into();
+        value.method.clone().into()
     }
 }
 
@@ -70,7 +69,7 @@ where
         &self,
         json_str: &'de str,
     ) -> Result<JsonRpcResponse<O, E>, serde_json::Error> {
-        serde_json::from_str(&json_str)
+        serde_json::from_str(json_str)
     }
 }
 
@@ -120,23 +119,23 @@ impl Serialize for NoParams {
 
 impl<I> JsonRpcRequest<I> {
     pub fn new<O, E>(method: JsonRpcMethod<I, O, E>, params: I) -> Self {
-        return Self {
+        Self {
             jsonrpc: String::from("2.0"),
             id: generate_random_rpc_id(),
             method: method.method.into(),
-            params: params,
-        };
+            params,
+        }
     }
 }
 
 impl JsonRpcRequest<NoParams> {
     pub fn new_no_params<O, E>(method: JsonRpcMethod<NoParams, O, E>) -> Self {
-        return Self {
+        Self {
             jsonrpc: String::from("2.0"),
             id: generate_random_rpc_id(),
             method: method.method.into(),
             params: NoParams::default(),
-        };
+        }
     }
 }
 

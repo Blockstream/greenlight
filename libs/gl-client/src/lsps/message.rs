@@ -46,7 +46,7 @@ impl JsonRpcMethodEnum {
 
     // Useful for language bindings.
     // The python code can
-    pub fn ref_erase<'a>(&'a self) -> &'a dyn JsonRpcMethodErased {
+    pub fn ref_erase(&self) -> &dyn JsonRpcMethodErased {
         match self {
             Self::Lsps0ListProtocols(list_protocol) => list_protocol.ref_erase(),
             Self::Lsps1Info(info) => info.ref_erase(),
