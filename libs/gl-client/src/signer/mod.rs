@@ -771,4 +771,57 @@ mod tests {
 
         assert_eq!(bip32, expected);
     }
+
+    use serde::Deserialize;
+    /// A struct to hold a reproduction test to be loaded from a JSON
+    /// file on disk.
+    #[derive(Debug, Deserialize)]
+    struct ReproTest {
+	comment: String,
+	error: String,
+	context: Option<ReproContext>,
+	#[serde(with = "hex::serde")]
+	raw: Vec<u8>,
+	state: crate::persist::State,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ReproContext {
+	#[serde(with = "hex::serde")]
+	node_id: [u8; 33],
+	dbid: u64,
+    }
+
+    #[test]
+    fn test_policy_routing_balanced() {
+	use std::path::PathBuf;
+	let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+	d.push("resources/test/003-signer-panic-overflow.json");
+	let test = std::fs::read_to_string(d).expect("reading test file");
+
+	let json: ReproTest =
+	    serde_json::from_str(&test).expect("JSON does not have correct format.");
+
+	let signer =
+	    Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+
+	let msg = vls_protocol::msgs::from_vec(json.raw.clone()).unwrap();
+
+	signer
+	    .state
+	    .lock()
+	    .expect("locking state")
+	    .merge(&json.state)
+	    .expect("Merging state");
+
+	let root_handler = signer.handler().expect("getting root handler");
+
+	let res = match json.context {
+	    Some(c) => root_handler
+		.for_new_client(2u64, vls_protocol::model::PubKey(c.node_id), c.dbid)
+		.handle(msg),
+	    None => root_handler.handle(msg),
+	};
+	res.expect("processing message");
+    }
 }

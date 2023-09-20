@@ -20,7 +20,7 @@ const CHANNEL_PREFIX: &str = "channels";
 const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct State {
     values: BTreeMap<String, (u64, serde_json::Value)>,
 }
