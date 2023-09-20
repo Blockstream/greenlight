@@ -5,7 +5,7 @@ use crate::lnurl::{
     utils::parse_invoice,
 };
 use anyhow::{anyhow, ensure, Result};
-use lightning_invoice::{Invoice, InvoiceDescription};
+use lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescription};
 use log::debug;
 use reqwest::Url;
 use sha256;
@@ -50,7 +50,7 @@ pub async fn resolve_lnurl_to_invoice<T: LnUrlHttpClient>(
 
 // Validates the invoice on the pay request's callback response
 pub fn validate_invoice_from_callback_response(
-    invoice: &Invoice,
+    invoice: &Bolt11Invoice,
     amount_msats: u64,
     metadata: &str,
 ) -> Result<()> {
@@ -59,8 +59,8 @@ pub fn validate_invoice_from_callback_response(
     );
 
     let description_hash: String = match invoice.description() {
-        InvoiceDescription::Direct(d) => sha256::digest(d.clone().into_inner()),
-        InvoiceDescription::Hash(h) => h.0.to_string(),
+        Bolt11InvoiceDescription::Direct(d) => sha256::digest(d.clone().into_inner()),
+        Bolt11InvoiceDescription::Hash(h) => h.0.to_string(),
     };
 
     ensure!(
