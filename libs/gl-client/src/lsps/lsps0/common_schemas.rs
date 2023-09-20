@@ -144,6 +144,94 @@ impl<'de> Deserialize<'de> for MsatAmount {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct ShortChannelId {
+    scid: u64,
+}
+
+// constants for parsing of short_channel_id in bits
+const SCID_BLOCK_HEIGHT_BITSHIFT: u64 = 24 + 16;
+const SCID_TXID_BITSHIFT: u64 = 16;
+
+impl ShortChannelId {
+    pub fn new_from_u64(scid: u64) -> Self {
+        Self { scid }
+    }
+
+    // The scid or short channel id consits out of 8 bytes
+    //
+    // It is
+    // - 3 bytes for block_height
+    // - 3 bytes for transaction index in the block
+    // - 2 bytes for output_index paying to that channel
+    //
+    // The string representation 812x10x2 refers to the
+    // channel that was funded by the 2nd output-index
+    // of the 10th transaction in block 812.
+    pub fn new_from_str(scid: &str) -> Option<Self> {
+        // TODO: Come up with a better error type
+        let splits: Vec<u64> = scid
+            .split('x')
+            .map(|x| x.parse::<u64>())
+            .collect::<Result<Vec<u64>, std::num::ParseIntError>>()
+            .ok()?;
+
+        if splits.len() != 3 {
+            return None;
+        };
+
+        const MAX_VALUE_3_BYTES: u64 = 0xFFFFFF;
+        const MAX_VALUE_2_BYTES: u64 = 0xFFFF;
+
+        let block_height = splits[0];
+        let txid = splits[1];
+        let v_out = splits[2];
+
+        if block_height > MAX_VALUE_3_BYTES || txid > MAX_VALUE_3_BYTES || v_out > MAX_VALUE_2_BYTES
+        {
+            return None;
+        }
+
+        let result: u64 =
+            (block_height << SCID_BLOCK_HEIGHT_BITSHIFT) | (txid << SCID_TXID_BITSHIFT) | (v_out);
+
+        Some(Self::new_from_u64(result))
+    }
+
+    pub fn value_as_u64(&self) -> u64 {
+        self.scid
+    }
+
+    pub fn value_as_string(&self) -> String {
+        let block_height = self.scid >> SCID_BLOCK_HEIGHT_BITSHIFT & 0xFFFFFF;
+        let txid = self.scid >> SCID_TXID_BITSHIFT & 0xFFFFFF;
+        let v_out = self.scid & 0xFFFF;
+
+        format!("{block_height}x{txid}x{v_out}")
+    }
+}
+
+impl Serialize for ShortChannelId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let str_repr = self.value_as_string();
+        serializer.serialize_str(&str_repr)
+    }
+}
+
+impl<'de> Deserialize<'de> for ShortChannelId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let scid_str: String = String::deserialize(deserializer)?;
+        ShortChannelId::new_from_str(&scid_str)
+            .ok_or_else(|| D::Error::custom(format!("Invalid scid: {}", scid_str)))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -199,5 +287,61 @@ mod test {
 
         let result = serde_json::from_str::<IsoDatetime>(datetime_str);
         result.expect_err("datetime_str should not be parsed if it doesn't follow spec");
+    }
+
+    #[test]
+    #[allow(clippy::unusual_byte_groupings)]
+    fn parse_scid_from_string() {
+        // How to read this test
+        //
+        // The shortchannel_id is 8 bytes long.
+        // The 3 first bytes are the blockheight, 3 next bytes are the txid and last 2 bytes are vout
+        // This explains the unusual byte groupings
+
+        // The string representation are the same numbers separated by the letter x
+
+        // Test the largest possible value
+        let scid_u64 = 0xFFFFFF_FFFFFF_FFFF;
+        let scid_str = "16777215x16777215x65535";
+
+        let scid = ShortChannelId::new_from_str(scid_str).expect("The scid is parseable");
+        assert_eq!(scid.value_as_string(), scid_str);
+        assert_eq!(scid.value_as_u64(), scid_u64);
+
+        // Test the smallest possible value
+        let scid_u64 = 0x000000_000000_0000;
+        let scid_str = "0x0x0";
+
+        let scid = ShortChannelId::new_from_str(scid_str).expect("The scid is parseable");
+        assert_eq!(scid.value_as_string(), scid_str);
+        assert_eq!(scid.value_as_u64(), scid_u64);
+
+        // A sorted value to check the ordering of the fields
+        let scid_u64 = 0x000001_000002_0003;
+        let scid_str = "1x2x3";
+
+        let scid = ShortChannelId::new_from_str(scid_str).expect("The scid is parseable");
+        assert_eq!(scid.value_as_string(), scid_str);
+        assert_eq!(scid.value_as_u64(), scid_u64);
+        // A couple of unparseable scids
+        assert!(ShortChannelId::new_from_str("xx").is_none());
+        assert!(ShortChannelId::new_from_str("0x0").is_none());
+        assert!(ShortChannelId::new_from_str("-2x-12x14").is_none());
+    }
+
+    #[test]
+    fn short_channel_id_is_serialized_as_str() {
+        let scid: ShortChannelId = ShortChannelId::new_from_str("10x5x8").unwrap();
+        let scid_json_obj = serde_json::to_string(&scid).expect("Can be serialized");
+        assert_eq!("\"10x5x8\"", scid_json_obj);
+    }
+
+    #[test]
+    fn short_channel_id_can_be_deserialized_from_str() {
+        let scid_json = "\"11x12x13\"";
+
+        let scid = serde_json::from_str::<ShortChannelId>(scid_json).expect("scid can be parsed");
+
+        assert_eq!(scid, ShortChannelId::new_from_str("11x12x13").unwrap());
     }
 }
