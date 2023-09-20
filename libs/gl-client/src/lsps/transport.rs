@@ -81,7 +81,7 @@ impl JsonRpcTransport {
 
         // Core-lightning uses the convention that the first two bytes are the BOLT-8 message id
         let mut cursor: Cursor<Vec<u8>> = std::io::Cursor::new(Vec::new());
-        cursor.write(&LSPS_MESSAGE_ID)?;
+        cursor.write_all(&LSPS_MESSAGE_ID)?;
         serde_json::to_writer(&mut cursor, &request)
             .map_err(|x| LspsError::JsonParseRequestError(x))?;
 
@@ -120,7 +120,7 @@ impl JsonRpcTransport {
             // Skip if LSPS_MESSAGE_ID (first 2 bytes) doesn't match
             let mut msg_cursor: Cursor<&mut [u8]> = std::io::Cursor::new(msg.payload.as_mut());
             let mut msg_bolt8_id: [u8; 2] = [0, 0];
-            msg_cursor.read(&mut msg_bolt8_id)?;
+            msg_cursor.read_exact(&mut msg_bolt8_id)?;
 
             if msg_bolt8_id != LSPS_MESSAGE_ID {
                 continue;
