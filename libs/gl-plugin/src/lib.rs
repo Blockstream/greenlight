@@ -104,6 +104,7 @@ pub async fn init(
         .hook("htlc_accepted", lsp::on_htlc_accepted)
         .hook("invoice_payment", on_invoice_payment)
         .hook("peer_connected", on_peer_connected)
+        .hook("openchannel", on_openchannel)
         .hook("custommsg", on_custommsg);
     Ok(Builder {
         state,
@@ -153,6 +154,66 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
     debug!("Got datastore response: {:?}", res);
     Ok(json!({"result": "continue"}))
 }
+
+async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
+    debug!("Received an openchannel request: {:?}", v);
+    let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
+    
+    let req = cln_rpc::model::requests::ListdatastoreRequest{
+        key: Some(vec![
+            "glconf".to_string(),
+            "request".to_string(),
+        ])
+    };
+
+    let res = rpc.call_typed(req).await;
+    debug!("ListdatastoreRequest response: {:?}", res);
+
+    match res {
+        Ok(res) => {
+            if !res.datastore.is_empty() {
+                match &res.datastore[0].string {
+                    Some(serialized_request) => {
+                        match _parse_gl_config_from_serialized_request(serialized_request.to_string()) {
+                            Some(gl_config) => {
+                                return Ok(json!({"result": "continue", "close_to":  gl_config.close_to_addr}));
+                            }
+                            None => {
+                                debug!("Failed to parse the GlConfig from the serialized request's payload");
+                            }  
+                        }
+                    }
+                    None => {
+                        debug!("Got empty response from datastore for key glconf.request");
+                    }
+                }
+            }
+
+            return Ok(json!({"result": "continue"}))
+        }
+        Err(e) => {
+            log::debug!("An error occurred while searching for a custom close_to address: {}", e);
+            Ok(json!({"result": "continue"}))
+        }
+    }
+}
+
+fn _parse_gl_config_from_serialized_request(request: String) -> Option<pb::GlConfig> {
+    use prost::Message;
+    let gl_conf_req: crate::context::Request = serde_json::from_str(&request).unwrap();
+    let gl_conf_req: crate::pb::PendingRequest = gl_conf_req.into();
+    let payload = &gl_conf_req.request[5..];
+    let glconfig = crate::pb::GlConfig::decode(payload);
+
+    match glconfig {
+        Ok(glconfig) => Some(glconfig),
+        Err(e) => {
+            debug!("Failed to parse glconfig from string: {:?}", e);
+            None
+        }
+    }
+}
+
 
 /// Notification handler that receives notifications on incoming
 /// payments, then looks up the invoice in the DB, and forwards the

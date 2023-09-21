@@ -1518,6 +1518,27 @@ class NodeConfig(google.protobuf.message.Message):
 global___NodeConfig = NodeConfig
 
 @typing_extensions.final
+class GlConfig(google.protobuf.message.Message):
+    """The `GlConfig` is used to pass greenlight-specific startup parameters
+    to the node. The `gl-plugin` will look for a serialized config object in 
+    the node's datastore to load these values from. Please refer to the 
+    individual fields to learn what they do.
+    """
+
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    CLOSE_TO_ADDR_FIELD_NUMBER: builtins.int
+    close_to_addr: builtins.str
+    def __init__(
+        self,
+        *,
+        close_to_addr: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["close_to_addr", b"close_to_addr"]) -> None: ...
+
+global___GlConfig = GlConfig
+
+@typing_extensions.final
 class StartupMessage(google.protobuf.message.Message):
     """A message that we know will be requested by `lightningd` at
     startup, and that we stash a response to on the scheduler. This

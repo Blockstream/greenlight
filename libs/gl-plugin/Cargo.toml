@@ -10,7 +10,7 @@ path = "src/bin/plugin.rs"
 [dependencies]
 anyhow = "*"
 async-stream = "*"
-bytes = "1"
+bytes = { version = "1", features = ["serde"] }
 clightningrpc = "*"
 cln-grpc = {git = "https://github.com/ElementsProject/lightning.git", branch = "master", features = ["server"] }
 cln-rpc = {git = "https://github.com/ElementsProject/lightning.git", branch = "master"}

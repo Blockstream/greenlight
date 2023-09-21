@@ -123,3 +123,26 @@ def test_reconnect_peers_on_startup(node_factory: NodeFactory, clients: Clients,
         return len(res.peers) == 1 and res.peers[0].connected
 
     wait_for(lambda: check(gl1))
+
+def test_configure_close_to_addr(node_factory, clients, bitcoind):
+    l1, l2 = node_factory.line_graph(2)
+    l2.fundwallet(sats=2*10**6)
+
+    c = clients.new()
+    c.register(configure=True)
+    gl1 = c.node()
+
+    s = c.signer().run_in_thread()
+    gl1.connect_peer(l2.info['id'], f'127.0.0.1:{l2.daemon.port}')
+    
+    close_to_addr = bitcoind.getnewaddress()
+    gl1.configure(close_to_addr)
+
+    l2.rpc.fundchannel(c.node_id.hex(), 'all')
+    bitcoind.generate_block(1, wait_for_mempool=1)
+
+    wait_for(lambda:
+        gl1.list_peers().peers[0].channels[0].state == 2
+    )
+    
+    assert gl1.list_peers().peers[0].channels[0].close_to_addr == close_to_addr

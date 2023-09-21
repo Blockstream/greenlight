@@ -11,7 +11,7 @@ PYDIR=${REPO}/libs/gl-client-py
 PROTODIR=${REPO}/libs/proto
 
 PYPROTOC_OPTS = \
-	-I${PROTODIR} \
+	-I ${PROTODIR} \
 	--python_out=${PYDIR}/glclient \
 	--grpc_python_out=${PYDIR}/glclient \
 	--experimental_allow_proto3_optional \
@@ -30,9 +30,7 @@ PROTOSRC = \
 
 GENALL += ${PYPROTOS}
 
-pygrpc: ${PYPROTOS}
-
-${PYPROTOS}: ${PROTOSRC}
+pygrpc: ${PROTOSRC}
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} scheduler.proto
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} greenlight.proto
 	sed -i 's/import scheduler_pb2 as scheduler__pb2/from . import scheduler_pb2 as scheduler__pb2/g' ${PYDIR}/glclient/scheduler_pb2_grpc.py
