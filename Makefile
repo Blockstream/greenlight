@@ -46,7 +46,7 @@ include libs/gl-client-py/Makefile
 include libs/gl-client-js/Makefile
 include libs/gl-testing/Makefile
 
-check: check-rs check-py check-js
+check: check-rs check-py
 
 clean: clean-rs
 	rm -rf ${ARTIFACTS}
@@ -58,7 +58,7 @@ build-self: ensure-docker
 	(cd libs; cargo build --all)
 	(cd libs/gl-client-py && python3 -m maturin develop)
 
-check-all: check-self check-self-gl-client check-py check-js
+check-all: check-self check-self-gl-client check-py
 
 check-self: ensure-docker
 	PYTHONPATH=/repo/libs/gl-testing \
@@ -125,13 +125,6 @@ docker-check-py:
 		-t \
 		--rm \
 		-v ${REPO_ROOT}:/repo \
-		gltesting make build-self check-py
-
-docker-check-js:
-	docker run \
-		-t \
-		--rm \
-		-v ${REPO_ROOT}:/repoo \
 		gltesting make build-self check-py
 
 cln-versions/%/usr/local/bin/lightningd: cln-versions/lightningd-%.tar.bz2

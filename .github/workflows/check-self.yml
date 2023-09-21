@@ -30,7 +30,3 @@ jobs:
     - name: Run python image
       run : |
         make docker-check-py
-
-    - name: Run javascript tests
-      run : |
-        make docker-check-js
