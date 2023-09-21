@@ -89,6 +89,16 @@ impl Node {
             self.cln_client.clone()
         )
     }
+
+    fn configure(&self, payload: &[u8]) -> PyResult<()> {
+        let req = pb::GlConfig::decode(payload).map_err(error_decoding_request)?;
+
+        exec(self.client.clone().configure(req))
+            .map(|x| x.into_inner())
+            .map_err(error_calling_remote_method)?;
+
+        return Ok(());
+    }
 }
 
 fn error_decoding_request<D: core::fmt::Display>(e: D) -> PyErr {

@@ -524,6 +524,12 @@ class Node(object):
         native_lsps = self.inner.get_lsp_client()
         return LspClient(native_lsps)
 
+    def configure(self, close_to_addr: str) -> None:
+        req = nodepb.GlConfig(
+            close_to_addr=close_to_addr
+        ).SerializeToString()
+
+        return self.inner.configure(bytes(req))
 
 def normalize_node_id(node_id, string=False):
     if len(node_id) == 66:

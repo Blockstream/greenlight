@@ -52,6 +52,8 @@ service Node {
 
 	rpc RespondHsmRequest(HsmResponse) returns (Empty) {}
 
+	rpc Configure(GlConfig) returns (Empty) {}
+
 }
 
 message HsmRequestContext {
@@ -511,6 +513,15 @@ message NodeConfig {
 	// from the signer. These are just request-response tuples
 	// that we use to match and reply against incoming requests.
 	repeated StartupMessage startupmsgs = 1;
+}
+
+
+// The `GlConfig` is used to pass greenlight-specific startup parameters
+// to the node. The `gl-plugin` will look for a serialized config object in 
+// the node's datastore to load these values from. Please refer to the 
+// individual fields to learn what they do.
+message GlConfig {
+	string close_to_addr = 1;
 }
 
 // A message that we know will be requested by `lightningd` at

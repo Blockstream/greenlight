@@ -26,6 +26,7 @@ use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
+use lightning_signer::bitcoin::secp256k1::PublicKey;
 
 mod approver;
 mod auth;
@@ -375,6 +376,25 @@ impl Signer {
             #[cfg(not(feature = "permissive"))]
             return Err(Error::Resolver(req.raw, ctxrequests));
         };
+
+        // If present, add the close_to_addr to the allowlist
+        for parsed_request in ctxrequests.iter() {
+            match parsed_request {
+                model::Request::GlConfig(gl_config) => {
+                    let pubkey = PublicKey::from_slice(&self.id);
+                    match pubkey {
+                        Ok(p) => {
+                            let _ = self
+                                .services
+                                .persister
+                                .update_node_allowlist(&p, vec![gl_config.close_to_addr.clone()]);
+                        }
+                        Err(e) => debug!("Could not parse public key {:?}: {:?}", self.id, e),
+                    }
+                }
+                _ => {}
+            }
+        }
 
         use auth::Authorizer;
         let auth = auth::GreenlightAuthorizer {};

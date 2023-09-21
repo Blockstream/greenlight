@@ -41,6 +41,9 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
         "/greenlight.Node/ConnectPeer" => {
             Request::GlConnectPeer(crate::pb::ConnectRequest::decode(p)?)
         }
+        "/greenlight.Node/Configure" => {
+            Request::GlConfig(crate::pb::GlConfig::decode(p)?)
+        }
         uri => return Err(anyhow!("Unknown URI {}, can't decode payload", uri)),
     })
 }

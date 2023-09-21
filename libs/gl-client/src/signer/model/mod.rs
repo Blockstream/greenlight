@@ -23,6 +23,7 @@ pub enum Request {
     GlListPayments(greenlight::ListPaymentsRequest),
     GlListInvoices(greenlight::ListInvoicesRequest),
     GlConnectPeer(greenlight::ConnectRequest),
+    GlConfig(greenlight::GlConfig),
     Getinfo(cln::GetinfoRequest),
     ListPeers(cln::ListpeersRequest),
     ListFunds(cln::ListfundsRequest),

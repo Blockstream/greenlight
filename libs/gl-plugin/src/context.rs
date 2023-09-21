@@ -12,8 +12,9 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Request {
     // The caller's mTLS public key
     pubkey: Vec<u8>,
