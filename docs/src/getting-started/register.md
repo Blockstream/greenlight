@@ -70,9 +70,6 @@ phrase and then convert it into a seed secret we can use:
 	# Store the seed on the filesystem, or secure configuration system
 	```
 
-=== "Javascript"
-	<!-- TODO -->
-	
 !!! important 
 	Remember to store the seed somewhere (file on disk, registry, etc)
 	because without it, you will not have access to the node, and any
@@ -103,13 +100,6 @@ to authenticate.
 	tls = TlsConfig()
 	```
 	
-=== "Javascript"
-	```js
-	const glclient = require('glclient');
-	
-	# Creating a new `TlsConfig` object will automatically load the dummy identity
-	var tls = new glclient.TlsConfig();
-	```
 
 Finally, we can create the [`Signer`][signer] which processes incoming signature
 requests, and is used when registering a node to prove ownership of
@@ -135,9 +125,6 @@ We'll pick `bitcoin`, because ... reckless 😉
 	signer = Signer(seed, network="bitcoin", tls=tls)
 	```
 	
-=== "Javascript"
-	<!-- TODO -->
-
 [bip39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
 
 
