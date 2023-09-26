@@ -34,6 +34,11 @@
    the scheduler, reducing the time required to start and connect to a
    node.
 
+### September
+ - Temporarily removed the JS bindings. We will the bindings over to
+   uniffi, and the JS bindings were outdated and unused. But they'll
+   be back.
+
 [pr204]: https://github.com/Blockstream/greenlight/pull/204
 [pr210]: https://github.com/Blockstream/greenlight/pull/210
 [pr220]: https://github.com/Blockstream/greenlight/pull/220

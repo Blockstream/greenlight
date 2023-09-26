@@ -14,7 +14,8 @@ sophisticated build process, it should just work out of the box.
 
 ## Platforms and Architectures
 
-Currently our CI builds prebuilt bindings for Javascript and Python for the following platform and architecture combinations:
+Currently our CI builds prebuilt bindings for Python for the following
+platform and architecture combinations:
 
 | OS      | Architecture   |
 |---------|----------------|
@@ -29,8 +30,8 @@ Currently our CI builds prebuilt bindings for Javascript and Python for the foll
 
 Should your platform and architecture not be in the list above, don't
 worry, you can still build them from the source by checking out the
-[repository][repo], and then either call `make build-js` or `make
-build-py` to build just the bindings you need.
+[repository][repo], and then either call `make build-py` to build just
+the bindings you need.
 
 Please let us know if we're missing a combination, so we can try to
 add it to our build system, and remove the need to manually compile

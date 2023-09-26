@@ -9,7 +9,6 @@ resolver = "2"
 members = [
   "gl-client",
   "gl-client-py",
-  "gl-client-js",
   "gl-plugin",
   "gl-signerproxy",
 ]

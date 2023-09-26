@@ -41,9 +41,3 @@ common ones:
 	If you use a different dependency management system please see its
 	documentation about how to specify `gl-client` as a dependency.
 
-=== "Javascript"
-	The JS library is available on the public npmjs.org repository:
-
-	```sh
-	npm install gl-client
-	```
