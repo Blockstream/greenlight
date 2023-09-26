@@ -1,6 +1,6 @@
 from binascii import hexlify, unhexlify
 from glcli import environment as env
-from glclient import TlsConfig, Scheduler, Amount, nodepb as pb
+from glclient import TlsConfig, Scheduler, Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
 from threading import Thread
@@ -107,13 +107,8 @@ class AmountType(click.ParamType):
     name = 'amount'
 
     def convert(self, value, param, ctx):
-        if isinstance(value, pb.Amount):
+        if isinstance(value, Amount):
             return value
-
-        if value.lower() == 'any':
-            return pb.Amount(any=True)
-        elif value.lower() == 'all':
-            return pb.Amount(all=True)
 
         g = re.match(r'([0-9\.]+)(btc|msat|sat)?', value)
         if g is None:
@@ -121,20 +116,69 @@ class AmountType(click.ParamType):
 
         num, suffix = g.groups()
 
-        suffix2unit = {
-            'btc': 'bitcoin',
-            'sat': 'satoshi',
-            'msat': 'millisatoshi',
-            None: 'millisatoshi',
+        unit = {
+            'btc': 10**8 * 10**3,
+            'sat': 1000,
+            'msat': 1,
         }
 
-        if suffix is None:
-            logger.warn(
-                "Unit-less amounts are deprecated to avoid implicit conversion to millisatoshi"
-            )
+        return Amount(msat=int(num) * unit[suffix])
 
-        args = {suffix2unit[suffix]: int(num)}
-        return pb.Amount(**args)
+    
+class AmountOrAnyType(click.ParamType):
+    name = 'amount'
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, AmountOrAny):
+            return value
+
+        if value.lower() == 'any':
+            return AmountOrAny(any=True)
+        
+        g = re.match(r'([0-9\.]+)(btc|msat|sat)?', value)
+
+        if g is None:
+            raise ValueError(f'Unable to parse {value} as an amount.')
+
+        num, suffix = g.groups()
+
+        unit = {
+            'btc': 10**8 * 10**3,
+            'sat': 1000,
+            'msat': 1,
+        }
+
+        return AmountOrAny(
+            amount=Amount(msat=int(num) * unit[suffix])
+        )
+
+
+class AmountOrAllType(click.ParamType):
+    name = 'amount'
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, AmountOrAll):
+            return value
+
+        if value.lower() == 'all':
+            return AmountOrAll(all=True)
+
+        g = re.match(r'([0-9\.]+)(btc|msat|sat)?', value)
+
+        if g is None:
+            raise ValueError(f'Unable to parse {value} as an amount.')
+
+        num, suffix = g.groups()
+
+        unit = {
+            'btc': 10**8 * 10**3,
+            'sat': 1000,
+            'msat': 1,
+        }
+
+        return AmountOrAll(
+            amount=Amount(msat=int(num) * unit[suffix])
+        )
 
 
 def pb2dict(p):
@@ -168,7 +212,7 @@ def pb2dict(p):
 
     return res
 
-
+from google.protobuf.pyext._message import RepeatedScalarContainer
 def dict2jsondict(d):
     """Hexlify all binary fields so they can be serialized with `json.dumps`
     """
@@ -178,12 +222,15 @@ def dict2jsondict(d):
         return hexlify(d).decode('ASCII')
     elif isinstance(d, dict):
         return {k: dict2jsondict(v) for k, v in d.items()}
+    elif isinstance(d, RepeatedScalarContainer):
+        return list(d)
     else:
         return d
 
 
 def pbprint(pb):
-    print(json.dumps(dict2jsondict(pb2dict(pb)), indent=2))
+    j = dict2jsondict(pb2dict(pb))
+    print(json.dumps(j, indent=2))
 
 
 @click.group()
@@ -367,7 +414,7 @@ def listfunds(ctx):
 
 @cli.command()
 @click.argument("destination")
-@click.argument("amount", type=AmountType())
+@click.argument("amount", type=AmountOrAllType())
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def withdraw(ctx, destination, amount, minconf=1):
@@ -378,13 +425,14 @@ def withdraw(ctx, destination, amount, minconf=1):
 
 @cli.command()
 @click.argument("nodeid")
-@click.argument("amount", type=AmountType())
+@click.argument("amount", type=AmountOrAllType())
 @click.option("--minconf", required=False, type=int, default=1)
 @click.pass_context
 def fundchannel(ctx, nodeid, amount, minconf):
     node = ctx.obj.get_node()
+    nodeid = bytes.fromhex(nodeid)
     res = node.fund_channel(
-        node_id=nodeid,
+        id=nodeid,
         amount=amount,
         announce=False,
         minconf=minconf,
@@ -405,7 +453,7 @@ def close(ctx, peer_id, timeout=None, address=None):
 
 @cli.command()
 @click.argument("label")
-@click.argument("amount", required=False, type=AmountType())
+@click.argument("amount", required=False, type=AmountOrAnyType())
 @click.option("--description", required=False, type=str)
 @click.pass_context
 def invoice(ctx, label, amount=None, description=None):
@@ -415,18 +463,18 @@ def invoice(ctx, label, amount=None, description=None):
 
     args = {
         "label": label,
-        "amount": amount,
+        "amount_msat": amount,
     }
     args["description"] = description if description is not None else ""
 
-    res = node.create_invoice(**args)
+    res = node.invoice(**args)
     pbprint(res)
 
 
 @cli.command()
 @click.argument("invoice")
 @click.pass_context
-@click.option("--amount", required=False, type=AmountType())
+@click.option("--amount", required=False, type=AmountOrAllType())
 @click.option("--timeout", required=False, type=int)
 def pay(ctx, invoice, amount=None, timeout=0):
     node = ctx.obj.get_node()
@@ -508,17 +556,10 @@ def log(ctx):
 
 
 @cli.command()
-@click.option('--payment-hash', '-h', required=False)
-@click.option('--label', '-l', required=False)
-@click.option('--invoice', '-i', required=False)
 @click.pass_context
-def listinvoices(ctx, payment_hash: str=None, label=None, invoice=None):
+def listinvoices(ctx):
     node = ctx.obj.get_node()
-    res = node.list_invoices(
-        payment_hash=payment_hash,
-        invstring=invoice,
-        label=label
-    )
+    res = node.list_invoices()
     pbprint(res)
 
 
