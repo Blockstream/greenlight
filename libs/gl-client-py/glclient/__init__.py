@@ -1,11 +1,11 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
 from pyln import grpc as clnpb  # type: ignore
+from pyln.grpc import Amount, AmountOrAny, AmountOrAll
 from . import glclient as native
 from .tls import TlsConfig
 from .glclient import backup_decrypt_with_seed
 from google.protobuf.message import Message as PbMessage
-from .greenlight_pb2 import Amount
 from binascii import hexlify, unhexlify
 from typing import Optional, List, Union, Iterable, Any, Type, TypeVar
 import logging
@@ -124,8 +124,8 @@ class Node(object):
         )
 
     def stop(self) -> None:
-        uri = "/greenlight.Node/Stop"
-        req = nodepb.StopRequest().SerializeToString()
+        uri = "/cln.Node/Stop"
+        req = clnpb.StopRequest().SerializeToString()
 
         try:
             # This fails, since we just get disconnected, but that's
@@ -136,27 +136,22 @@ class Node(object):
 
     def list_funds(
             self,
-            minconf: Union[nodepb.Confirmation, int]=1
-    ) -> nodepb.ListFundsResponse:
-        if isinstance(minconf, int):
-            minconf = nodepb.Confirmation(
-                blocks=minconf
-            )
-
-        uri = "/greenlight.Node/ListFunds"
-        res = nodepb.ListFundsResponse
-        req = nodepb.ListFundsRequest(
-            minconf=minconf,
+            spent: Optional[bool] = None,
+    ) -> clnpb.ListfundsResponse:
+        uri = "/cln.Node/ListFunds"
+        res = clnpb.ListfundsResponse
+        req = clnpb.ListfundsRequest(
+            spent=spent,
         ).SerializeToString()
 
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def list_peers(self) -> nodepb.ListPeersResponse:
-        uri = "/greenlight.Node/ListPeers"
-        req = nodepb.ListPeersRequest().SerializeToString()
-        res = nodepb.ListPeersResponse
+    def list_peers(self) -> clnpb.ListpeersResponse:
+        uri = "/cln.Node/ListPeers"
+        req = clnpb.ListpeersRequest().SerializeToString()
+        res = clnpb.ListpeersResponse
 
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
@@ -199,9 +194,9 @@ class Node(object):
         )
 
     def list_payments(self) -> nodepb.ListPaymentsResponse:
-        uri = "/greenlight.Node/ListPayments"
-        req = nodepb.ListPaymentsRequest().SerializeToString()
-        res = nodepb.ListPaymentsResponse
+        uri = "/cln.Node/ListPays"
+        req = clnpb.ListpaysRequest().SerializeToString()
+        res = clnpb.ListpaysResponse
 
         return res.FromString(
             bytes(self.inner.call(uri, req))
@@ -213,59 +208,44 @@ class Node(object):
             invstring: str = None,
             payment_hash: bytes = None
     ) -> nodepb.ListInvoicesResponse:
-        if sum([bool(a) for a in [label, invstring, payment_hash]]) >= 2:
-            hexhash = hexlify(payment_hash).decode('ASCII') if payment_hash else None
-            raise ValueError(
-                f"Cannot specify multiple filters for list_invoices: "
-                f"label={label}, invstring={invstring}, or "
-                f"paymen_hash={hexhash}"
-            )
-
-        if label is not None:
-            f = nodepb.InvoiceIdentifier(label=label)
-        elif invstring is not None:
-            f = nodepb.InvoiceIdentifier(invstring=invstring)
-        elif payment_hash is not None:
-            f = nodepb.InvoiceIdentifier(payment_hash=unhexlify(payment_hash))
-        else:
-            f = None
-
-        uri = "/greenlight.Node/ListInvoices"
-        res = nodepb.ListInvoicesResponse
-        req = nodepb.ListInvoicesRequest(
-            identifier=f
+        uri = "/cln.Node/ListInvoices"
+        res = clnpb.ListinvoicesResponse
+        req = clnpb.ListinvoicesRequest(
         ).SerializeToString()
 
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def connect_peer(self, node_id, addr=None) -> nodepb.ConnectResponse:
+    def connect_peer(
+            self,
+            node_id,
+            host: Optional[str]=None,
+            port: Optional[int]=None
+    ) -> clnpb.ConnectResponse:
         if len(node_id) == 33:
             node_id = hexlify(node_id)
-
-        if len(node_id) != 66:
-            raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
 
         if isinstance(node_id, bytes):
             node_id = node_id.decode('ASCII')
 
-        uri = "/greenlight.Node/ConnectPeer"
-        res = nodepb.ConnectResponse
-        req = nodepb.ConnectRequest(
-            node_id=node_id,
-            addr=addr,
+        uri = "/cln.Node/ConnectPeer"
+        res = clnpb.ConnectResponse
+        req = clnpb.ConnectRequest(
+            id=node_id,
+            host=host,
+            port=port,
         ).SerializeToString()
 
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def disconnect_peer(self, peer_id, force=False) -> nodepb.DisconnectResponse:
-        uri = "/greenlight.Node/Disconnect"
-        res = nodepb.DisconnectResponse
-        req = nodepb.DisconnectRequest(
-            node_id=peer_id,
+    def disconnect_peer(self, peer_id: str, force=False) -> clnpb.DisconnectResponse:
+        uri = "/cln.Node/Disconnect"
+        res = clnpb.DisconnectResponse
+        req = clnpb.DisconnectRequest(
+            id=bytes.fromhex(peer_id),
             force=force,
         ).SerializeToString()
 
@@ -273,10 +253,10 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def new_address(self) -> nodepb.NewAddrResponse:
-        uri = "/greenlight.Node/NewAddr"
-        req = nodepb.NewAddrRequest().SerializeToString()
-        res = nodepb.NewAddrResponse
+    def new_address(self) -> clnpb.NewaddrResponse:
+        uri = "/cln.Node/NewAddr"
+        req = clnpb.NewaddrRequest().SerializeToString()
+        res = clnpb.NewaddrResponse
 
         return res.FromString(
             bytes(self.inner.call(uri, req))
@@ -287,13 +267,13 @@ class Node(object):
             destination,
             amount: Amount,
             minconf: int=0
-    ) -> nodepb.WithdrawResponse:
-        uri = "/greenlight.Node/Withdraw"
-        res = nodepb.WithdrawResponse
-        req = nodepb.WithdrawRequest(
+    ) -> clnpb.WithdrawResponse:
+        uri = "/cln.Node/Withdraw"
+        res = clnpb.WithdrawResponse
+        req = clnpb.WithdrawRequest(
             destination=destination,
-            amount=amount,
-            minconf=nodepb.Confirmation(blocks=minconf),
+            satoshi=amount,
+            minconf=minconf
         ).SerializeToString()
 
         return res.FromString(
@@ -302,28 +282,19 @@ class Node(object):
 
     def fund_channel(
             self,
-            node_id,
+            id: bytes,
             amount,
-            announce=False,
-            minconf=1) -> nodepb.FundChannelResponse:
-        if len(node_id) == 66:
-            node_id = unhexlify(node_id)
+            announce: Optional[bool] = False,
+            minconf: Optional[int] = 1,
+    ) -> clnpb.FundchannelResponse:
 
-        if isinstance(minconf, int):
-            minconf = nodepb.Confirmation(blocks=minconf)
-        elif isinstance(minconf, nodepb.Confirmation):
-            pass
-        elif not isinstance(minconf, nodepb.Confirmation):
-            raise ValueError("'minconf' is neither an int nor a Confirmation")
+        if len(id) != 33:
+            raise ValueError("id is not 33 bytes long")
 
-
-        if len(node_id) != 33:
-            raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
-
-        uri = "/greenlight.Node/FundChannel"
-        res = nodepb.FundChannelResponse
-        req = nodepb.FundChannelRequest(
-            node_id=node_id,
+        uri = "/cln.Node/FundChannel"
+        res = clnpb.FundchannelResponse
+        req = clnpb.FundchannelRequest(
+            id=id,
             amount=amount,
             announce=announce,
             minconf=minconf,
@@ -333,25 +304,19 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def close_channel(
+    def close(
             self,
-            peer_id,
+            id: bytes,
             unilateraltimeout=None,
             destination=None
-    ) -> nodepb.CloseChannelResponse:
-        if len(peer_id) == 66:
-            peer_id = unhexlify(peer_id)
-
+    ) -> clnpb.CloseResponse:
         if len(peer_id) != 33:
-            raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
+            raise ValueError("node_id is not 33 bytes long")
 
-        if isinstance(peer_id, str):
-            node_id = peer_id.encode('ASCII')
-
-        uri = "/greenlight.Node/CloseChannel"
-        res = nodepb.CloseChannelResponse
-        req = nodepb.CloseChannelRequest(
-            node_id=peer_id,
+        uri = "/cln.Node/Close"
+        res = clnpb.CloseResponse
+        req = clnpb.CloseRequest(
+            id=id,
             unilateraltimeout=unilateraltimeout,
             destination=destination,
         ).SerializeToString()
@@ -391,36 +356,6 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def create_invoice(
-            self,
-            label: str,
-            amount=None,
-            description: Optional[str]=None,
-            preimage: Optional[Union[str,bytes]]=None
-    ) -> nodepb.Invoice:
-        if preimage is None:
-            preimage = b""
-        else:
-            if isinstance(preimage, str) and len(preimage) == 64:
-                preimage = bytes.fromhex(preimage)
-            elif isinstance(preimage, bytes) and len(preimage) == 32:
-                pass
-            elif isinstance(preimage, str):
-                raise ValueError("Preimage must be 32 bytes, either as bytes or as hex-encoded string.")
-
-        uri = "/greenlight.Node/CreateInvoice"
-        res = nodepb.Invoice
-        req = nodepb.InvoiceRequest(
-            amount=amount,
-            label=label,
-            description=description if description else "",
-            preimage=preimage
-        ).SerializeToString()
-
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
-
     def pay(
             self,
             bolt11: str,
@@ -428,7 +363,7 @@ class Node(object):
             retry_for: int=0,
             maxfee: Optional[Amount]=None,
             maxfeepercent: Optional[float]=None
-    ) -> nodepb.Payment:
+    ) -> clnpb.PayResponse:
         uri = "/cln.Node/Pay"
         res = clnpb.PayResponse
         req = clnpb.PayRequest(
@@ -445,17 +380,17 @@ class Node(object):
 
     def keysend(
             self,
-            node_id,
-            amount: nodepb.Amount,
+            destination: bytes,
+            amount: clnpb.Amount,
             label: Optional[str]=None,
-            routehints: Optional[List[nodepb.Routehint]]=None,
-            extratlvs: Optional[List[nodepb.TlvField]]=None
-    ) -> nodepb.Payment:
-        uri = "/greenlight.Node/Keysend"
-        res = nodepb.Payment
-        req = nodepb.KeysendRequest(
-            node_id=normalize_node_id(node_id),
-            amount=amount,
+            routehints: Optional[List[clnpb.RoutehintList]]=None,
+            extratlvs: Optional[List[clnpb.TlvStream]]=None
+    ) -> clnpb.KeysendResponse:
+        uri = "/cln.Node/KeySend"
+        res = clnpb.KeysendResponse
+        req = clnpb.KeysendRequest(
+            destination=normalize_node_id(destination, string=False),
+            amount_msat=amount,
             label=label if label else "",
             routehints=routehints,
             extratlvs=extratlvs,
@@ -491,7 +426,11 @@ class Node(object):
                 break
             yield nodepb.Custommsg.FromString(bytes(n))
 
-    def send_custommsg(self, node_id: str, msg: bytes) -> clnpb.SendcustommsgResponse:
+    def send_custommsg(
+            self,
+            node_id: str,
+            msg: bytes
+    ) -> clnpb.SendcustommsgResponse:
         uri = "/cln.Node/SendCustomMsg"
         res = clnpb.SendcustommsgResponse
         req = clnpb.SendcustommsgRequest(

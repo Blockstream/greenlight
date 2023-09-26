@@ -3,19 +3,17 @@ mod pay;
 mod utils;
 mod withdraw;
 
-use crate::node::Client;
-use crate::pb::{Amount, InvoiceRequest, PayRequest, Payment};
-use crate::pb::amount::Unit;
+use self::models::{
+    LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse, WithdrawRequestResponse,
+};
+use self::utils::{parse_invoice, parse_lnurl};
+use crate::node::ClnClient;
+use crate::pb::cln::{amount_or_any, Amount, AmountOrAny};
 use anyhow::{anyhow, Result};
 use models::LnUrlHttpClearnetClient;
 use pay::{resolve_lnurl_to_invoice, validate_invoice_from_callback_response};
 use url::Url;
 use withdraw::{build_withdraw_request_callback_url, parse_withdraw_request_response_from_url};
-use self::models::{
-    LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse, WithdrawRequestResponse,
-};
-use self::utils::{parse_invoice, parse_lnurl};
-
 
 pub struct LNURL<T: LnUrlHttpClient> {
     http_client: T,
@@ -68,11 +66,11 @@ impl<T: LnUrlHttpClient> LNURL<T> {
         &self,
         lnurl: &str,
         amount_msats: u64,
-        node: &mut Client,
-    ) -> Result<tonic::Response<Payment>> {
+        node: &mut ClnClient,
+    ) -> Result<tonic::Response<crate::pb::cln::PayResponse>> {
         let invoice = resolve_lnurl_to_invoice(&self.http_client, lnurl, amount_msats).await?;
 
-        node.pay(PayRequest {
+        node.pay(crate::pb::cln::PayRequest {
             bolt11: invoice.to_string(),
             ..Default::default()
         })
@@ -100,15 +98,20 @@ impl<T: LnUrlHttpClient> LNURL<T> {
         Ok(withdrawal_request_response)
     }
 
-    pub async fn withdraw(&self, lnurl: &str, amount_msats: u64, node: &mut Client) -> Result<()> {
+    pub async fn withdraw(
+        &self,
+        lnurl: &str,
+        amount_msats: u64,
+        node: &mut ClnClient,
+    ) -> Result<()> {
         let withdraw_request_response = self.get_withdraw_request_response(lnurl).await?;
 
-        let amount = Amount {
-            unit: Some(Unit::Millisatoshi(amount_msats))
+        let amount = AmountOrAny {
+            value: Some(amount_or_any::Value::Amount(Amount { msat: amount_msats })),
         };
         let invoice = node
-            .create_invoice(InvoiceRequest {
-                amount: Some(amount),
+            .invoice(crate::pb::cln::InvoiceRequest {
+                amount_msat: Some(amount),
                 description: withdraw_request_response.default_description.clone(),
                 ..Default::default()
             })
@@ -119,7 +122,8 @@ impl<T: LnUrlHttpClient> LNURL<T> {
         let callback_url =
             build_withdraw_request_callback_url(&withdraw_request_response, invoice.bolt11)?;
 
-        let _ =self.http_client
+        let _ = self
+            .http_client
             .send_invoice_for_withdraw_request(&callback_url);
 
         Ok(())
