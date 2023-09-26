@@ -16,6 +16,7 @@ import struct
 import sys
 import threading
 import time
+import signal
 
 
 logger = logging.getLogger("glcli")
@@ -283,7 +284,16 @@ def schedule(ctx):
 def hsmd(ctx):
     """Run the hsmd against the scheduler."""
     signer = Signer(Tls())
-    hsm = signer.inner.run_in_foreground()
+    signer_handle = signer.inner.run_in_thread()
+    
+    def signal_handler(_signal, _frame):
+        signer_handle.shutdown()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    while True:
+        signal.pause()
 
 
 @cli.command()
