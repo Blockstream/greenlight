@@ -40,7 +40,15 @@ def test_node_signer(clients, executor):
 
     # Running the `invoice` invocation in a separate thread since
     # it'll block until the signer connects.
-    fi = executor.submit(n.create_invoice, 'test', nodepb.Amount(millisatoshi=42000))
+    fi = executor.submit(
+        n.invoice,
+        label='test',
+        amount_msat=clnpb.AmountOrAny(
+            amount=clnpb.Amount(msat=42000)
+        ),
+        description="desc",
+        
+    )
 
     # Now attach the signer and the above call should return
     h = c.signer().run_in_thread()
@@ -97,12 +105,14 @@ def test_node_invoice_preimage(clients):
     s = c.signer().run_in_thread()
     gl1 = c.node()
 
-    preimage = "00"*32
+    preimage = bytes.fromhex("00" * 32)
     expected = '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925'
 
-    i = gl1.create_invoice(
+    i = gl1.invoice(
         label='lbl',
-        amount=nodepb.Amount(millisatoshi=21000000),
+        amount_msat=clnpb.AmountOrAny(
+            amount=clnpb.Amount(msat=21000000)
+        ),
         description="desc",
         preimage=preimage,
     )
@@ -173,13 +183,16 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
 
     # Now open a channel from l2 <- gl1 (this could be easier...)
     gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
-    addr = gl1.new_address().address
+    addr = gl1.new_address().bech32
     txid = bitcoind.rpc.sendtoaddress(addr, 1)
     bitcoind.generate_block(1, wait_for_mempool=[txid])
     wait_for(lambda: len(gl1.list_funds().outputs) == 1)
-    gl1.fund_channel(node_id=l1.info['id'], amount=nodepb.Amount(satoshi=10**6))
+    gl1.fund_channel(
+        id=bytes.fromhex(l1.info['id']),
+        amount=clnpb.AmountOrAll(amount=clnpb.Amount(msat=10**9))
+    )
     bitcoind.generate_block(6, wait_for_mempool=1)
-    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == "CHANNELD_NORMAL")
+    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 2)  # CHANNELD_NORMAL
 
     # Generate an invoice without amount:
     inv = l1.rpc.call('invoice', payload={
@@ -208,13 +221,16 @@ def test_node_listpays_preimage(clients, node_factory, bitcoind):
     gl1 = c.node()
     l1 = node_factory.get_node()
     gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
-    addr = gl1.new_address().address
+    addr = gl1.new_address().bech32
     txid = bitcoind.rpc.sendtoaddress(addr, 1)
     bitcoind.generate_block(1, wait_for_mempool=[txid])
     wait_for(lambda: len(gl1.list_funds().outputs) == 1)
-    gl1.fund_channel(node_id=l1.info['id'], amount=nodepb.Amount(satoshi=10**6))
+    gl1.fund_channel(
+        id=bytes.fromhex(l1.info['id']),
+        amount=clnpb.AmountOrAll(amount=clnpb.Amount(msat=10**9))
+    )
     bitcoind.generate_block(6, wait_for_mempool=1)
-    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == "CHANNELD_NORMAL")
+    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 2)  # CHANNELD_NORMAL
 
     preimage = "00"*32
 
@@ -272,11 +288,13 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     parts = 2
     p1, p2 = 300000, 700000  # The two parts we're going to use
     fee = 100000  # Fee leverage on each part
-    inv = gl1.create_invoice(
+    inv = gl1.invoice(
         label='lbl',
-        amount=nodepb.Amount(millisatoshi=p1 + p2 - parts * fee),
+        amount_msat=clnpb.AmountOrAny(
+            amount=clnpb.Amount(msat=p1 + p2 - parts * fee)
+        ),
         description="desc",
-        preimage=preimage,
+        preimage=bytes.fromhex(preimage),
     ).bolt11
 
     decoded = l1.rpc.decodepay(inv)

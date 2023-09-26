@@ -73,7 +73,7 @@ def test_lsps_list_protocol(
     # Connect our greenlight node (client ot the LSP)
     lsp_ip = n1.info["binding"][0]["address"]
     lsp_port = n1.info["binding"][0]["port"]
-    gl1.connect_peer(n1.info["id"], addr=f"{lsp_ip}:{lsp_port}")
+    gl1.connect_peer(n1.info['id'], host=f"{lsp_ip}:{lsp_port}")
 
     # Get the lsp-client and do list-protocols
     lsp_client = gl1.get_lsp_client()
@@ -143,3 +143,4 @@ def test_list_lsp_server(
     assert n1.info["id"] in lsp_servers
     assert n2.info["id"] in lsp_servers
     assert n3.info["id"] not in lsp_servers
+
