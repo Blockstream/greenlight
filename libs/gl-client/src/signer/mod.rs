@@ -3,6 +3,7 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
+use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::anyhow;
@@ -11,6 +12,7 @@ use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
+use lightning_signer::policy::filter::FilterRule;
 use log::{debug, info, trace, warn};
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -21,12 +23,15 @@ use tonic::transport::{Endpoint, Uri};
 use tonic::Request;
 use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
 use vls_protocol::serde_bolt::Octets;
-use vls_protocol_signer::approver::{Approval, Approve, MemoApprover, PositiveApprover};
+use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
 
+mod approver;
 mod auth;
 pub mod model;
+mod report;
+mod resolve;
 
 const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
@@ -65,8 +70,14 @@ pub enum Error {
     #[error("scheduler returned faulty URI: {0}")]
     InvalidUri(#[from] InvalidUri),
 
-    #[error("signer refused a request: {0}")]
-    Signer(#[from] vls_protocol::Error),
+    #[error("resolver error: request {0:?}, context: {1:?}")]
+    Resolver(Vec<u8>, Vec<crate::signer::model::Request>),
+
+    #[error("error asking node to be upgraded: {0}")]
+    Upgrade(tonic::Status),
+
+    #[error("protocol error: {0}")]
+    Protocol(#[from] vls_protocol::Error),
 
     #[error("other: {0}")]
     Other(anyhow::Error),
@@ -89,14 +100,11 @@ impl Signer {
         let persister = Arc::new(crate::persist::MemoryPersister::new());
         let mut policy = lightning_signer::policy::simple_validator::make_simple_policy(network);
 
-        #[cfg(feature = "permissive")]
-        {
-            policy.filter = PolicyFilter::new_permissive();
-        }
-        #[cfg(not(feature = "permissive"))]
-        {
-            policy.filter = PolicyFilter::default();
-        }
+        policy.filter = PolicyFilter::default();
+        policy.filter.merge(PolicyFilter {
+            // TODO: Remove once we have fully switched over to zero-fee anchors
+            rules: vec![FilterRule::new_warn("policy-channel-safe-type-anchors")],
+        });
 
         let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(policy));
         let starting_time_factory = ClockStartingTimeFactory::new();
@@ -288,31 +296,25 @@ impl Signer {
         }
     }
 
-    fn authenticate_request(&self, req: &HsmRequest) -> Result<Vec<Approval>, Error> {
-        let ctxrequests: Vec<model::Request> = self
-            .check_request_auth(req.requests.clone())
-            .into_iter()
-            .filter_map(|r| r.ok())
-            .map(|r| decode_request(r))
-            .filter_map(|r| match r {
-                Ok(r) => Some(r),
-                Err(e) => {
-                    log::error!("Unable to decode request in context: {}", e);
-                    None
-                }
-            })
-            .collect::<Vec<model::Request>>();
+    fn authenticate_request(
+        &self,
+        msg: &vls_protocol::msgs::Message,
+        reqs: &Vec<model::Request>,
+    ) -> Result<(), Error> {
+        log::trace!(
+            "Resolving signature request against pending grpc commands: {:?}",
+            reqs
+        );
 
-        use auth::Authorizer;
-        let auth = auth::GreenlightAuthorizer {};
-        let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
-        debug!("Current approvals: {:?}", approvals);
-        Ok(approvals)
+        // Quick path out of here: we can't find a resolution for a
+        // request, then abort!
+        Resolver::try_resolve(msg, &reqs)?;
+
+        Ok(())
     }
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
-        let approvals = self.authenticate_request(&req)?;
-        let diff: crate::persist::State = req.signer_state.into();
+        let diff: crate::persist::State = req.signer_state.clone().into();
 
         let prestate = {
             debug!("Updating local signer state with state from node");
@@ -338,11 +340,46 @@ impl Signer {
             _ => {}
         }
 
-        let msg = vls_protocol::msgs::from_vec(req.raw).map_err(|e| Error::Signer(e))?;
+        let ctxrequests: Vec<model::Request> = self
+            .check_request_auth(req.requests.clone())
+            .into_iter()
+            .filter_map(|r| r.ok())
+            .map(|r| decode_request(r))
+            .filter_map(|r| match r {
+                Ok(r) => Some(r),
+                Err(e) => {
+                    log::error!("Unable to decode request in context: {}", e);
+                    None
+                }
+            })
+            .collect::<Vec<model::Request>>();
+
+        let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", serde_json::to_string(&prestate).unwrap());
 
-        let approver = Arc::new(MemoApprover::new(PositiveApprover()));
+        if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
+            report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                msg: e.to_string(),
+                request: Some(req.clone()),
+		git_version: GITHASH.to_string(),
+            })
+            .await;
+            #[cfg(not(feature = "permissive"))]
+            return Err(Error::Resolver(req.raw, ctxrequests));
+        };
+
+        use auth::Authorizer;
+        let auth = auth::GreenlightAuthorizer {};
+        let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
+        debug!("Current approvals: {:?}", approvals);
+
+        let approver = Arc::new(MemoApprover::new(approver::ReportingApprover::new(
+            #[cfg(feature = "permissive")]
+            vls_protocol_signer::approver::PositiveApprover(),
+            #[cfg(not(feature = "permissive"))]
+            vls_protocol_signer::approver::NegativeApprover(),
+        )));
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver)?;
 
@@ -499,7 +536,7 @@ impl Signer {
                     .collect(),
             })
             .await
-            .map_err(|e| anyhow!("error asking scheduler to upgrade: {}", e))?;
+            .map_err(|s| Error::Upgrade(s))?;
 
         loop {
             debug!("Calling scheduler.get_node_info");
@@ -700,7 +737,7 @@ mod tests {
                 requests: Vec::new(),
             },)
             .await
-            .is_err())
+            .is_err());
     }
 
     /// We should reject a signing request with an empty message.
@@ -725,7 +762,7 @@ mod tests {
                 .await
                 .unwrap_err()
                 .to_string(),
-            *"signer refused a request: ShortRead"
+            *"protocol error: ShortRead"
         )
     }
 

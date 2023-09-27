@@ -57,6 +57,7 @@ gen: ${GENALL}
 build-self: ensure-docker
 	(cd libs; cargo build --all)
 	(cd libs/gl-client-py && python3 -m maturin develop)
+	pip install -e libs/gl-testing
 
 check-all: check-self check-self-gl-client check-py
 
@@ -64,7 +65,6 @@ check-self: ensure-docker
 	PYTHONPATH=/repo/libs/gl-testing \
 	pytest -vvv \
 	  /repo/libs/gl-testing \
-	  --force-flaky \
 	  ${PYTEST_OPTS}
 
 ensure-docker:

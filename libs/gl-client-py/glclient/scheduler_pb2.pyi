@@ -8,6 +8,7 @@ import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
+import greenlight_pb2
 import sys
 import typing
 
@@ -427,3 +428,24 @@ class ExportNodeResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing_extensions.Literal["url", b"url"]) -> None: ...
 
 global___ExportNodeResponse = ExportNodeResponse
+
+@typing_extensions.final
+class SignerRejection(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    MSG_FIELD_NUMBER: builtins.int
+    REQUEST_FIELD_NUMBER: builtins.int
+    msg: builtins.str
+    """A human-readable description of what went wrong"""
+    @property
+    def request(self) -> greenlight_pb2.HsmRequest: ...
+    def __init__(
+        self,
+        *,
+        msg: builtins.str = ...,
+        request: greenlight_pb2.HsmRequest | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["request", b"request"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["msg", b"msg", "request", b"request"]) -> None: ...
+
+global___SignerRejection = SignerRejection

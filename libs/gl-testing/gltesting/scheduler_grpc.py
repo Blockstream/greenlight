@@ -1,5 +1,6 @@
 import purerpc
 from glclient import scheduler_pb2 as scheduler__pb2
+from glclient import greenlight_pb2 as greenlight__pb2
 
 
 class SchedulerServicer(purerpc.Servicer):
@@ -175,5 +176,42 @@ class SchedulerStub:
                 purerpc.Cardinality.UNARY_UNARY,
                 scheduler__pb2.ExportNodeRequest,
                 scheduler__pb2.ExportNodeResponse,
+            )
+        )
+
+
+class DebugServicer(purerpc.Servicer):
+    async def ReportSignerRejection(self, input_message):
+        raise NotImplementedError()
+
+    @property
+    def service(self) -> purerpc.Service:
+        service_obj = purerpc.Service(
+            "scheduler.Debug"
+        )
+        service_obj.add_method(
+            "ReportSignerRejection",
+            self.ReportSignerRejection,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.SignerRejection,
+                greenlight__pb2.Empty,
+            )
+        )
+        return service_obj
+
+
+class DebugStub:
+    def __init__(self, channel):
+        self._client = purerpc.Client(
+            "scheduler.Debug",
+            channel
+        )
+        self.ReportSignerRejection = self._client.get_method_stub(
+            "ReportSignerRejection",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.SignerRejection,
+                greenlight__pb2.Empty,
             )
         )

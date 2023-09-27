@@ -54,7 +54,7 @@ RUN mkdir /tmp/protoc && \
 RUN python3 -m pip install -U \
       pip tomli &&\
       python3 -m pip install \
-      maturin \
+      maturin[patchelf] \
       mrkd \
       mako
 ADD . /repo
@@ -84,6 +84,9 @@ ENV RUST_VERSION=1.70.0
 
 RUN groupadd -g $GID -o $DOCKER_USER &&\
     useradd -m -u $UID -g $GID -o -s /bin/bash $DOCKER_USER
+
+# Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
+ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
 
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0
@@ -142,7 +145,7 @@ RUN cd /tmp/ && \
     rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.05gl1 /opt/cln-latest
+RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
 
 RUN mkdir /tmp/protoc && \
     cd /tmp/protoc && \

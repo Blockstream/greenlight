@@ -121,6 +121,15 @@ def scheduler(scheduler_id, bitcoind):
     del os.environ["GL_SCHEDULER_GRPC_URI"]
     s.stop()
 
+    # Check the reporting server to see if there were any failed
+    # request resolutions or policies. When testing we bail the test
+    # here.
+
+    if s.debugger.reports != []:
+        raise ValueError(
+            f"Some signer reported an error: {s.debugger.reports}"
+        )
+
 
 @pytest.fixture()
 def clients(directory, scheduler, nobody_id):

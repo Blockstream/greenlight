@@ -1,6 +1,8 @@
 syntax = "proto3";
 package scheduler;
 
+import "greenlight.proto";
+
 // The scheduler service is the endpoint which allows users to
 // register a new node with greenlight, recover access to an existing
 // node if the owner lost its credentials, schedule the node to be run
@@ -147,6 +149,18 @@ service Scheduler {
 	// documentation for more information)
 	rpc ExportNode(ExportNodeRequest) returns (ExportNodeResponse) {}
 };
+
+// A service to collect debugging information from clients.
+service Debug {
+  // The signer is designed to fail closed, i.e., we reject requests
+  // that do not resolve or that go against one of its policies. This
+  // comes with some issues, such as false negatives, where we reject
+  // despite the request being valid. As more apps use the API we need
+  // to debug these false negatives, hence why we report rejections,
+  // so we can investigate the validity of the rejection, and to
+  // fine-tine the signer's ruleset.
+  rpc ReportSignerRejection(SignerRejection) returns (greenlight.Empty) {}  
+}
 
 message ChallengeRequest {
 	ChallengeScope scope = 1;
@@ -310,4 +324,11 @@ message ExportNodeRequest {}
 message ExportNodeResponse {
 	// URL where the encrypted backup can be retrieved from.
 	string url = 1;
+}
+
+message SignerRejection {
+  // A human-readable description of what went wrong
+  string msg = 1;
+  greenlight.HsmRequest request = 2;
+  string git_version = 3;
 }
