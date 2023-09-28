@@ -131,7 +131,7 @@ def test_list_lsp_server(
     n1_full_address = (
         f"{n1.info['binding'][0]['address']}:{n1.info['binding'][0]['port']}"
     )
-    _ = gl1.connect_peer(node_id=n1.info["id"], addr=n1_full_address)
+    _ = gl1.connect_peer(node_id=n1.info["id"], host=n1_full_address)
 
     # Await gossip
     time.sleep(1.0)
