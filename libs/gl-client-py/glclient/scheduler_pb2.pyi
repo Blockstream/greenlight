@@ -435,17 +435,20 @@ class SignerRejection(google.protobuf.message.Message):
 
     MSG_FIELD_NUMBER: builtins.int
     REQUEST_FIELD_NUMBER: builtins.int
+    GIT_VERSION_FIELD_NUMBER: builtins.int
     msg: builtins.str
     """A human-readable description of what went wrong"""
     @property
     def request(self) -> greenlight_pb2.HsmRequest: ...
+    git_version: builtins.str
     def __init__(
         self,
         *,
         msg: builtins.str = ...,
         request: greenlight_pb2.HsmRequest | None = ...,
+        git_version: builtins.str = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["request", b"request"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["msg", b"msg", "request", b"request"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["git_version", b"git_version", "msg", b"msg", "request", b"request"]) -> None: ...
 
 global___SignerRejection = SignerRejection
