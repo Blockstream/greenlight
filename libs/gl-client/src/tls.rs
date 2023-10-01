@@ -153,10 +153,13 @@ fn x509_certificate_from_pem_or_none(pem: impl AsRef<[u8]>) -> Option<X509Certif
 /// common name (CN) field is "/users/{node_id}/{device}". This certificate is
 /// self signed and needs to be signed off by the users certificate authority to
 /// be valid. This certificate can not act as a ca and sign sub certificates.
+/// It can take an optional key pair to create the certificate from instead of
+/// generating a key pair from scratch.
 pub fn generate_self_signed_device_cert(
     node_id: &str,
     device: &str,
     subject_alt_names: Vec<String>,
+    key_pair: Option<rcgen::KeyPair>,
 ) -> rcgen::Certificate {
     // Configure the certificate.
     let mut params = cert_params_from_template(subject_alt_names);
@@ -169,13 +172,15 @@ pub fn generate_self_signed_device_cert(
         format!("/users/{}/{}", node_id, device),
     );
 
+    // Start from an empty key pair.
+    params.key_pair = key_pair;
+    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+
     rcgen::Certificate::from_params(params).unwrap()
 }
 
 fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::CertificateParams {
     let mut params = rcgen::CertificateParams::new(subject_alt_names);
-    params.key_pair = None;
-    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
 
     // Certificate can be used to issue unlimited sub certificates for devices.
     params
@@ -195,17 +200,23 @@ fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::Certifica
         "CertificateAuthority",
     );
 
-    return params;
+    params
+}
+
+pub fn generate_ecdsa_key_pair() -> rcgen::KeyPair {
+    rcgen::KeyPair::generate(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap()
 }
 
 #[cfg(test)]
 pub mod tests {
+    use rcgen::KeyPair;
+
     use super::*;
 
     #[test]
     fn test_generate_self_signed_device_cert() {
         let device_cert =
-            generate_self_signed_device_cert("mynodeid", "device", vec!["localhost".into()]);
+            generate_self_signed_device_cert("mynodeid", "device", vec!["localhost".into()], None);
         assert!(device_cert
             .serialize_pem()
             .unwrap()
@@ -213,5 +224,18 @@ pub mod tests {
         assert!(device_cert
             .serialize_private_key_pem()
             .starts_with("-----BEGIN PRIVATE KEY-----"));
+    }
+
+    #[test]
+    fn test_generate_self_signed_device_cert_from_pem() {
+        let kp = generate_ecdsa_key_pair();
+        let keys = KeyPair::from_der(kp.serialized_der()).unwrap();
+        let cert = generate_self_signed_device_cert(
+            "mynodeid",
+            "device",
+            vec!["localhost".into()],
+            Some(keys),
+        );
+        assert!(kp.serialize_pem() == cert.get_key_pair().serialize_pem());
     }
 }
