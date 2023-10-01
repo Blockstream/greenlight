@@ -138,13 +138,15 @@ pub fn generate_self_signed_device_cert(
         format!("/users/{}/{}", node_id, device),
     );
 
+    // Start from an empty key pair.
+    params.key_pair = None;
+    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+
     rcgen::Certificate::from_params(params).unwrap()
 }
 
 fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::CertificateParams {
     let mut params = rcgen::CertificateParams::new(subject_alt_names);
-    params.key_pair = None;
-    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
 
     // Certificate can be used to issue unlimited sub certificates for devices.
     params
@@ -164,9 +166,36 @@ fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::Certifica
         "CertificateAuthority",
     );
 
-    return params;
+    params
 }
 
+pub fn generate_ecdsa_key_pair() -> rcgen::KeyPair {
+    rcgen::KeyPair::generate(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap()
+}
+
+pub fn generate_self_signed_device_cert_from_pem(
+    pem: &str,
+    node_id: &str,
+    device: &str,
+    subject_alt_names: Vec<String>,
+) -> rcgen::Certificate {
+    // Configure the certificate.
+    let mut params = cert_params_from_template(subject_alt_names);
+
+    // Is a leaf certificate only so it is not allowed to sign child
+    // certificates.
+    params.is_ca = rcgen::IsCa::ExplicitNoCa;
+    params.distinguished_name.push(
+        rcgen::DnType::CommonName,
+        format!("/users/{}/{}", node_id, device),
+    );
+
+    // Start from an given key pair.
+    params.key_pair = Some(rcgen::KeyPair::from_pem(pem).unwrap());
+    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+
+    rcgen::Certificate::from_params(params).unwrap()
+}
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -182,5 +211,17 @@ pub mod tests {
         assert!(device_cert
             .serialize_private_key_pem()
             .starts_with("-----BEGIN PRIVATE KEY-----"));
+    }
+
+    #[test]
+    fn test_generate_self_signed_device_cert_from_pem() {
+        let kp = generate_ecdsa_key_pair();
+        let cert = generate_self_signed_device_cert_from_pem(
+            &kp.serialize_pem(),
+            "mynodeid",
+            "device",
+            vec!["localhost".into()],
+        );
+        assert!(kp.serialize_pem() == cert.get_key_pair().serialize_pem());
     }
 }
