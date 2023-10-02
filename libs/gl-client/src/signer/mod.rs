@@ -103,8 +103,14 @@ impl Signer {
         policy.filter = PolicyFilter::default();
         policy.filter.merge(PolicyFilter {
             // TODO: Remove once we have fully switched over to zero-fee anchors
-            rules: vec![FilterRule::new_warn("policy-channel-safe-type-anchors")],
+            rules: vec![
+                FilterRule::new_warn("policy-channel-safe-type-anchors"),
+                FilterRule::new_warn("policy-routing-balanced"),
+            ],
         });
+        // Relaxed max_routing_fee since we no longer have the
+        // presplitter which was causing the HTLCs to be smaller.
+        policy.max_routing_fee_msat = 1_000_000;
 
         let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(policy));
         let starting_time_factory = ClockStartingTimeFactory::new();
@@ -358,7 +364,7 @@ impl Signer {
             report::Reporter::report(crate::pb::scheduler::SignerRejection {
                 msg: e.to_string(),
                 request: Some(req.clone()),
-		git_version: GITHASH.to_string(),
+                git_version: GITHASH.to_string(),
             })
             .await;
             #[cfg(not(feature = "permissive"))]
