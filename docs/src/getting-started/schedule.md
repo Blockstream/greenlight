@@ -120,7 +120,7 @@ in the last chapter, instantiate the signer with it and then start it.
 	seed = ... # Load from wherever you stored it
 	cert, key = ... // Load the cert and key you got from the `register` call
 	
-	tls = TlsConfig().with_identity(res.device_cert, res.device_key)
+	tls = TlsConfig().identity(cert, key)
 	signer = Signer::new(secret, Network::Bitcoin, tls)
 	signer.run_in_thread()
 	```

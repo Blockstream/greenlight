@@ -1,7 +1,7 @@
 # Introduction
 
 ## Summary
-Greenlight is a [Blockstream](https://blockstream.com) project offering
+[Greenlight](https://blockstream.com/lightning/greenlight) is a [Blockstream](https://blockstream.com) service offering
 hosted, non-custodial, Lightning Network nodes to developers and 
 end-users. We take care of the infrastructure, while you are in 
 control of the keys.

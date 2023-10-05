@@ -60,6 +60,7 @@ nav:
   - Getting Started:
     - Overview: getting-started/index.md
     - Installation: getting-started/installation.md
+    - Using the Certificate: getting-started/certs.md
     - Registering a node: getting-started/register.md
     - Starting a node: getting-started/schedule.md
     - Recover access: getting-started/recover.md
@@ -71,7 +72,6 @@ nav:
     - Overview: reference/index.md
     - Client Libraries: reference/client-libraries.md
     - Security: reference/security.md
-    - reference/partner-certs.md
     - LSP Integration: reference/lsp.md
   - About:
     - About: about/index.md

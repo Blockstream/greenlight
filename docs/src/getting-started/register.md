@@ -148,7 +148,7 @@ to the [`Scheduler`][scheduler]:
 
 	// Passing in the signer is required because the client needs to prove
 	// ownership of the `node_id`
-	scheduler.register(&signer, Some(invite_code)).await.unwrap();
+	scheduler.register(&signer).await.unwrap();
 
 	```
 
@@ -164,7 +164,7 @@ to the [`Scheduler`][scheduler]:
 	
 	# Passing in the signer is required because the client needs to prove
 	# ownership of the `node_id`
-	res = scheduler.register(signer, invite_code=invite_code)
+	res = scheduler.register(signer)
 	```
 
 The result of `register` contains the credentials that can be used
@@ -173,13 +173,6 @@ going forward to talk to the scheduler and the node itself.
 !!! important 
 	Please make sure to store them somewhere safe, since anyone with 
 	these credentials can access your node.
-
-!!! Info
-	While we are spinning up and gradually extending our services
-	you will need a [partner certificate][partner-cert] or an invite code
-	in order to register a new node on the Greenlight service. Head over
-	to this [form][invite-tokens] to request an invite code. Please note
-	that the invite codes are limited. 
 
 === "Rust"
 	```
@@ -209,8 +202,6 @@ authorization work under the hood.
 
 
 [security]: ../reference/security.md
-[partner-cert]: ../reference/partner-certs.md
-[invite-tokens]: https://docs.google.com/forms/d/e/1FAIpQLSf_YaUJt8lKIDwS893Uk2mBiW6BUcoQkvO_g8EFZc9XqQfkqw/viewform
 [signer]: ./index.md#signer
 [scheduler]: ./index.md#scheduler
 [auth]: ./index.md#authentication
