@@ -19,8 +19,7 @@ have not yet received their own private key and certificate specific
 to their node. As such the private key and certificate are compiled
 into `gl-client` at build time.
 
-The certificate is ditributed as two `x509` PEM files bundled into an
-encrypted zip file:
+The certificate is ditributed as two `x509` PEM files bundled into a zip file:
 
  - `partner-{NAME}.pem`: this is the certificate that the client will
    present when connecting to the Scheduler in order to either
@@ -28,9 +27,6 @@ encrypted zip file:
  - `partner-{NAME}-key.pem`: this is the private key matching the
    above certificate and is used to encrypt the transport and
    authenticate as a partner to the Scheduler.
-
-Alongside the encrypted zip file, you will also receive the password
-to decrypt the zip file.
 
 Ideally the two files are then stored, securely, alongside the code,
 in encrypted form, or instrument your CI system to have access to them
