@@ -57,6 +57,8 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
 	"/cln.Node/SetChannel" => Request::SetChannel(SetchannelRequest::decode(p)?),
 	"/cln.Node/SignMessage" => Request::SignMessage(SignmessageRequest::decode(p)?),
 	"/cln.Node/Stop" => Request::Stop(StopRequest::decode(p)?),
+	"/cln.Node/ListClosedChannels" => Request::ListClosedChannels(ListclosedchannelsRequest::decode(p)?),
+	"/cln.Node/StaticBackup" => Request::StaticBackup(StaticbackupRequest::decode(p)?),
         uri => return Err(anyhow!("Unknown URI {}, can't decode payload", uri)),
     })
 }
