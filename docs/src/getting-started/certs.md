@@ -36,7 +36,7 @@ an API key, as they fulfill identical roles in this scenario.
 In order to tell the build to use the certificate you'll have
 to set two environment variables in the build environment. Please
 consult your build system and/or shell environment about how to ensure
-teh build sees the variables.
+the build sees the variables.
 
  - `GL_CUSTOM_NOBODY_KEY` should have the absolute path to `partner-{NAME}-key.pem`
  - `GL_CUSTOM_NOBODY_CERT` should have the absolute path to `partner-{NAME}.pem`

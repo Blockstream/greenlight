@@ -148,7 +148,7 @@ to the [`Scheduler`][scheduler]:
 
 	// Passing in the signer is required because the client needs to prove
 	// ownership of the `node_id`
-	scheduler.register(&signer).await.unwrap();
+	scheduler.register(&signer, None).await.unwrap();
 
 	```
 
