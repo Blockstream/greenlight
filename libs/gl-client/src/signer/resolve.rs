@@ -65,7 +65,7 @@ impl Resolver {
         }
 
         for cr in reqctx {
-            let accept = match (dbg!(req), dbg!(cr)) {
+            let accept = match (req, cr) {
                 (Message::SignMessage(m1), Request::SignMessage(m2)) => {
                     m1.message.0.clone() == m2.message.as_bytes()
                 }
