@@ -1,7 +1,7 @@
 use crate::tls::TlsConfig;
 use gl_client::bitcoin::Network;
 use log::warn;
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyValueError, prelude::*};
 use tokio::sync::mpsc;
 
 #[pyclass]
@@ -89,6 +89,12 @@ impl Signer {
 
     fn version(&self) -> PyResult<&'static str> {
         Ok(self.inner.version())
+    }
+
+    fn create_rune(&self, restrictions: Vec<Vec<&str>>, rune: Option<&str>) -> PyResult<String> {
+        self.inner
+            .create_rune(rune, restrictions)
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 }
 

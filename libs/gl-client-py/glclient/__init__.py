@@ -53,6 +53,9 @@ class Signer(object):
         self.handle.shutdown()
         self.handle = None
 
+    def create_rune(self, restrictions: List[List[str]], rune: Optional[str] = None) -> str:
+        self.inner.create_rune(restrictions, rune)
+
     def is_running(self) -> bool:
         return self.handle is not None
 
