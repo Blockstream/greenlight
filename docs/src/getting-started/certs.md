@@ -21,10 +21,10 @@ into `gl-client` at build time.
 
 The certificate is ditributed as two `x509` PEM files bundled into a zip file:
 
- - `partner-{NAME}.pem`: this is the certificate that the client will
+ - `client.crt`: this is the certificate that the client will
    present when connecting to the Scheduler in order to either
    `register()` or `recover()`.
- - `partner-{NAME}-key.pem`: this is the private key matching the
+ - `client-key.pem`: this is the private key matching the
    above certificate and is used to encrypt the transport and
    authenticate as a partner to the Scheduler.
 
@@ -38,11 +38,11 @@ to set two environment variables in the build environment. Please
 consult your build system and/or shell environment about how to ensure
 the build sees the variables.
 
- - `GL_CUSTOM_NOBODY_KEY` should have the absolute path to `partner-{NAME}-key.pem`
- - `GL_CUSTOM_NOBODY_CERT` should have the absolute path to `partner-{NAME}.pem`
+ - `GL_CUSTOM_NOBODY_KEY` should have the absolute path to `client-key.pem`
+ - `GL_CUSTOM_NOBODY_CERT` should have the absolute path to `client.crt`
  
-If either of these is not set you'll get a warning that this is an
-invite-based client:
+If either of these is not set you'll get a warning. This warning
+can be ignored if you are using an invite-code.
 
 ```
 warning: Using default NOBODY cert.
