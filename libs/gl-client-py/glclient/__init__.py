@@ -386,9 +386,9 @@ class Node(object):
     def pay(
             self,
             bolt11: str,
-            amount_msat: Optional[Amount]=None,
+            amount_msat: Optional[clnpb.Amount]=None,
             retry_for: int=0,
-            maxfee: Optional[Amount]=None,
+            maxfee: Optional[clnpb.Amount]=None,
             maxfeepercent: Optional[float]=None
     ) -> clnpb.PayResponse:
         uri = "/cln.Node/Pay"

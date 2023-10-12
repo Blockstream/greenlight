@@ -436,7 +436,7 @@ def listfunds(ctx):
 
 @cli.command()
 @click.argument("destination")
-@click.argument("amount", type=AmountOrAllType())
+@click.argument("amount", type=AmountType())
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def withdraw(ctx, destination, amount, minconf=1):
@@ -496,7 +496,7 @@ def invoice(ctx, label, amount=None, description=None):
 @cli.command()
 @click.argument("invoice")
 @click.pass_context
-@click.option("--amount", required=False, type=AmountOrAllType())
+@click.option("--amount", required=False, type=AmountType())
 @click.option("--timeout", required=False, type=int)
 def pay(ctx, invoice, amount=None, timeout=0):
     node = ctx.obj.get_node()
