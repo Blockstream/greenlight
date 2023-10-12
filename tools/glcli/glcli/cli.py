@@ -4,6 +4,7 @@ from glclient import TlsConfig, Scheduler, Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
 from threading import Thread
+from typing import Optional
 import click
 import functools
 import json
@@ -17,6 +18,7 @@ import sys
 import threading
 import time
 import signal
+
 
 
 logger = logging.getLogger("glcli")
@@ -360,12 +362,13 @@ def stop(ctx) -> None:
 
 
 @cli.command()
-@click.argument("node_id")
-@click.argument("addr", required=False)
+@click.argument("id", type=str)
+@click.argument("host", required=False, type=str)
+@click.argument("port", required=False, type=int)
 @click.pass_context
-def connect(ctx, node_id, addr):
+def connect(ctx, id: str, host: Optional[str], port: Optional[int]):
     node = ctx.obj.get_node()
-    res = node.connect_peer(node_id=node_id, addr=addr)
+    res = node.connect_peer(node_id=id, host=host, port=port)
     pbprint(res)
 
 
