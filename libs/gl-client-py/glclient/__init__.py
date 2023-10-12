@@ -251,6 +251,22 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
+    
+    def decodepay (
+            self,
+            bolt11: str,
+            description: Optional[str]
+    ) -> clnpb.DecodepayResponse:
+        uri = "/cln.Node/DecodePay"
+        res = clnpb.DecodepayResponse
+        req = clnpb.DecodepayRequest(
+            bolt11=bolt11,
+            description=description,
+        ).SerializeToString()
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
 
     def disconnect_peer(self, peer_id: str, force=False) -> clnpb.DisconnectResponse:
         uri = "/cln.Node/Disconnect"

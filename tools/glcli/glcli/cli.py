@@ -399,6 +399,16 @@ def decode(ctx, string: str):
 
 
 @cli.command()
+@click.argument("bolt11", type=str)
+@click.argument("description", required=False, type=str)
+@click.pass_context
+def decodepay(ctx, bolt11: str, description: Optional[str] = None):
+    node = ctx.obj.get_node()
+    res = node.decodepay(bolt11=bolt11, description=description)
+    pbprint(res)
+
+
+@cli.command()
 @click.argument("node_id")
 @click.pass_context
 def disconnect(ctx, node_id):
