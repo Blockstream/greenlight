@@ -241,6 +241,17 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
+    def decode (self, string: str) -> clnpb.DecodeResponse:
+        uri = "/cln.Node/Decode"
+        res = clnpb.DecodeResponse
+        req = clnpb.DecodeRequest(
+            string=string,
+        ).SerializeToString()
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
     def disconnect_peer(self, peer_id: str, force=False) -> clnpb.DisconnectResponse:
         uri = "/cln.Node/Disconnect"
         res = clnpb.DisconnectResponse
