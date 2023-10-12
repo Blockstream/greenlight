@@ -390,6 +390,15 @@ def listclosedchannels(ctx):
 
 
 @cli.command()
+@click.argument("string", type=str)
+@click.pass_context
+def decode(ctx, string: str):
+    node = ctx.obj.get_node()
+    res = node.decode(string)
+    pbprint(res)
+
+
+@cli.command()
 @click.argument("node_id")
 @click.pass_context
 def disconnect(ctx, node_id):
