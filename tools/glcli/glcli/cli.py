@@ -4,6 +4,7 @@ from glclient import TlsConfig, Scheduler, Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
 from threading import Thread
+from typing import Optional
 import click
 import functools
 import json
@@ -17,6 +18,7 @@ import sys
 import threading
 import time
 import signal
+
 
 
 logger = logging.getLogger("glcli")
@@ -360,12 +362,13 @@ def stop(ctx) -> None:
 
 
 @cli.command()
-@click.argument("node_id")
-@click.argument("addr", required=False)
+@click.argument("id", type=str)
+@click.argument("host", required=False, type=str)
+@click.argument("port", required=False, type=int)
 @click.pass_context
-def connect(ctx, node_id, addr):
+def connect(ctx, id: str, host: Optional[str], port: Optional[int]):
     node = ctx.obj.get_node()
-    res = node.connect_peer(node_id=node_id, addr=addr)
+    res = node.connect_peer(node_id=id, host=host, port=port)
     pbprint(res)
 
 
@@ -383,6 +386,25 @@ def listpeers(ctx):
 def listclosedchannels(ctx):
     node = ctx.obj.get_node()
     res = node.list_closed_channels()
+    pbprint(res)
+
+
+@cli.command()
+@click.argument("string", type=str)
+@click.pass_context
+def decode(ctx, string: str):
+    node = ctx.obj.get_node()
+    res = node.decode(string)
+    pbprint(res)
+
+
+@cli.command()
+@click.argument("bolt11", type=str)
+@click.argument("description", required=False, type=str)
+@click.pass_context
+def decodepay(ctx, bolt11: str, description: Optional[str] = None):
+    node = ctx.obj.get_node()
+    res = node.decodepay(bolt11=bolt11, description=description)
     pbprint(res)
 
 
@@ -414,7 +436,7 @@ def listfunds(ctx):
 
 @cli.command()
 @click.argument("destination")
-@click.argument("amount", type=AmountOrAllType())
+@click.argument("amount", type=AmountType())
 @click.option("--minconf", required=False, type=int)
 @click.pass_context
 def withdraw(ctx, destination, amount, minconf=1):
@@ -474,7 +496,7 @@ def invoice(ctx, label, amount=None, description=None):
 @cli.command()
 @click.argument("invoice")
 @click.pass_context
-@click.option("--amount", required=False, type=AmountOrAllType())
+@click.option("--amount", required=False, type=AmountType())
 @click.option("--timeout", required=False, type=int)
 def pay(ctx, invoice, amount=None, timeout=0):
     node = ctx.obj.get_node()

@@ -241,6 +241,33 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
+    def decode (self, string: str) -> clnpb.DecodeResponse:
+        uri = "/cln.Node/Decode"
+        res = clnpb.DecodeResponse
+        req = clnpb.DecodeRequest(
+            string=string,
+        ).SerializeToString()
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+    
+    def decodepay (
+            self,
+            bolt11: str,
+            description: Optional[str]
+    ) -> clnpb.DecodepayResponse:
+        uri = "/cln.Node/DecodePay"
+        res = clnpb.DecodepayResponse
+        req = clnpb.DecodepayRequest(
+            bolt11=bolt11,
+            description=description,
+        ).SerializeToString()
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
     def disconnect_peer(self, peer_id: str, force=False) -> clnpb.DisconnectResponse:
         uri = "/cln.Node/Disconnect"
         res = clnpb.DisconnectResponse
@@ -359,9 +386,9 @@ class Node(object):
     def pay(
             self,
             bolt11: str,
-            amount_msat: Optional[Amount]=None,
+            amount_msat: Optional[clnpb.Amount]=None,
             retry_for: int=0,
-            maxfee: Optional[Amount]=None,
+            maxfee: Optional[clnpb.Amount]=None,
             maxfeepercent: Optional[float]=None
     ) -> clnpb.PayResponse:
         uri = "/cln.Node/Pay"
