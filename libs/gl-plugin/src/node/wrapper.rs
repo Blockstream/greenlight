@@ -75,6 +75,11 @@ impl Node for WrappedNodeServer {
                 .collect()
         });
 
+        pbreq.cltv = match pbreq.cltv {
+            Some(c) => Some(c), // Keep any set value
+            None => Some(144),  // Use a day if not set
+        };
+
         let res: Result<crate::responses::Invoice, crate::rpc::Error> =
             rpc.call("invoice", pbreq).await;
 
