@@ -516,13 +516,13 @@ def stream_incoming(ctx):
 
 
 @cli.command()
-@click.argument('node_id')
+@click.argument('destination')
 @click.argument('amount', type=AmountType())
 @click.option("--label", required=False)
 @click.option("--routehints", required=False)
 @click.option("--extratlvs", required=False)
 @click.pass_context
-def keysend(ctx, node_id, amount, label, routehints, extratlvs):
+def keysend(ctx, destination, amount, label, routehints, extratlvs):
     """Send a spontaneous payment to the specified node.
     """
     # Convert the advanced arguments.
@@ -558,8 +558,13 @@ def keysend(ctx, node_id, amount, label, routehints, extratlvs):
 
     print(extratlvs)
     node = ctx.obj.get_node()
-    res = node.keysend(node_id=node_id, amount=amount, label=label,
-                       routehints=routehints, extratlvs=extratlvs)
+    res = node.keysend(
+        destination=destination,
+        amount=amount,
+        label=label,
+        routehints=routehints,
+        extratlvs=extratlvs
+    )
     pbprint(res)
 
 
