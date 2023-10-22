@@ -298,7 +298,6 @@ impl Node for WrappedNodeServer {
     }
 
     async fn pay(&self, r: Request<pb::PayRequest>) -> Result<Response<pb::PayResponse>, Status> {
-        let _ = self.node_server.reconnect_peers().await;
         self.inner.pay(r).await
     }
 
