@@ -329,6 +329,13 @@ impl Node for WrappedNodeServer {
         self.inner.wait_send_pay(r).await
     }
 
+    async fn wait_block_height(
+        &self,
+        r: Request<pb::WaitblockheightRequest>,
+    ) -> Result<Response<pb::WaitblockheightResponse>, Status> {
+        self.inner.wait_block_height(r).await
+    }
+
     async fn new_addr(
         &self,
         r: Request<pb::NewaddrRequest>,
