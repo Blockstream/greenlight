@@ -13,7 +13,10 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 	```rust
 	use gl_client::{Signer, TlsConfig, Scheduler, Bitcoin};
 	
-	let tls = TlsConfig();
+	let cert = ...; // Your developer certificate (client.crt)
+	let key = ...; // Your developer key (client-key.pem)
+
+	let tls = TlsConfig().identity(cert, key);
 	let signer = Signer(seed, Network::Bitcoin, tls);
 	let scheduler = Scheduler::new(signer.node_id(), Network::Bitcoin).await;
 	
@@ -24,7 +27,10 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 	```python
 	from glclient import Scheduler, Signer, TlsConfig
 	
-	tls = TlsConfig()
+	cert = ... // Your developer certificate
+	key = ... // Your developer key
+
+	tls = TlsConfig().identity(cert, key);
 	signer = Signer(seed, network="bitcoin", tls=tls)
 	scheduler = Scheduler(
 	    node_id=signer.node_id(),
