@@ -1,13 +1,18 @@
 # Register a node
-## Preparing a node identity
 
-We start by creating a node identity, consisting of a node's seed
-secret, and it's mTLS certificates we'll later use to authenticate
-against Greenlight. Let's start with the seed secret: the seed secret
+In this section we'll use a developer certificate to register a node.
+
+A node identity has a seed and the mTLS-certificates we will later use
+to authenticate against greenlight.
+
+## Creating a seed
+
+Let's start with the seed secret: the seed secret
 is a 32 byte secret that all other secrets and private keys are
 derived from, as such it is paramount that this secret never leaves
-your device and is only handled by the _Signer_. It is suggested to
-derive the seed secret from a [BIP 39][bip39] seed phrase, so the user
+your users device and is only handled by the _Signer_.
+
+We suggest to derive the seed secret from a [BIP 39][bip39] seed phrase, so the user
 can back it up on a physical piece of paper, steel plate, or whatever
 creative way of storing it they can think of.
 
@@ -70,25 +75,26 @@ phrase and then convert it into a seed secret we can use:
 	# Store the seed on the filesystem, or secure configuration system
 	```
 
-!!! important 
+!!! important
 	Remember to store the seed somewhere (file on disk, registry, etc)
 	because without it, you will not have access to the node, and any
 	funds on the node will be lost forever! We mean it when we say _you're
 	the only one with access to the seed_!
 
+## Registering the node
 
-Next we instantiate an mTLS identity we will use to authenticate with
-Greenlight. Since we haven't registered our node with the service yet,
-we will use a [dummy key][auth], that allows us to talk to the 
-[`Scheduler`][scheduler] but will not allow us to talk to any other service.
-No worries, once we register the node we will get a valid certificate 
-to authenticate.
+In the next we configure mTLS using our developer identity. Any connection using
+the `TlsConfig`-object specified below will allow you to register new Greenlight
+nodes.
 
 === "Rust"
 	```rust
 	use gl_client::tls::TlsConfig;
 
-	let tls = TlsConfig::new();
+	# Creating a new `TlsConfig` object using your developer certificate
+	# - cert: contains the content of `client.crt`
+	# - key: contains the content of `client-key.pem`
+	let tls = TlsConfig::new().identity(cert, key);
 	```
 	
 === "Python"
@@ -96,12 +102,14 @@ to authenticate.
 	```python
 	from glclient import TlsConfig
 	
-	# Creating a new `TlsConfig` object will automatically load the dummy identity
-	tls = TlsConfig()
+	# Creating a new `TlsConfig` object using your developer certificate
+	# - cert: contains the content of `client.crt`
+	# - key: contains the content of `client-key.pem`
+	tls = TlsConfig().identity(cert, key)
 	```
 	
 
-Finally, we can create the [`Signer`][signer] which processes incoming signature
+The next step is to create the [`Signer`][signer] which processes incoming signature
 requests, and is used when registering a node to prove ownership of
 the private key. The last thing to decide is which network we want the
 node to run on. You can chose between the following networks:
@@ -205,3 +213,4 @@ authorization work under the hood.
 [signer]: ./index.md#signer
 [scheduler]: ./index.md#scheduler
 [auth]: ./index.md#authentication
+[certs]: ./certs.md
