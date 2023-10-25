@@ -37,7 +37,7 @@ jobs:
         path: libs/gl-client-py/dist/gl_client-*.tar.gz
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.10
     strategy:
       fail-fast: false
       matrix:
