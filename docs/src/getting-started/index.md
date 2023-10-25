@@ -18,10 +18,10 @@ were a local Core Lightning node.
 ## Authentication
 
 All communication channels in Greenlight are authenticated and
-encrypted via mTLS (mutual Transport Layer Security), similar to HTTPS
-in the browser. Each client receives its own identity in the form of a
-private key and matching certificate, which can then be used to
-authenticate and encrypt communication when talking with Greenlight.
+encrypted via mTLS (mutual Transport Layer Security). Each client
+receives its own identity in the form of a private key and matching
+certificate, which can then be used to authenticate and encrypt
+communication when talking with Greenlight.
 
 In this guide we will be using two identities:
 
