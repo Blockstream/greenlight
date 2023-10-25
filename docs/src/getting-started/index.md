@@ -23,14 +23,17 @@ receives its own identity in the form of a private key and matching
 certificate, which can then be used to authenticate and encrypt
 communication when talking with Greenlight.
 
-In this guide we will be using two identities:
+This guide uses two types of identities
 
- - `nobody`: An identity that is shipped with the library, used to
-   communicate with services that don't require authentication.
- - A Device Identity: A unique identity used by the application to
-   authenticate with the Greenlight. The private key is generated and
-   kept locally, and certified by Greenlight to belong to a given
-   node.
+ - Developer identities can be used to register or recover Greenlight nodes.
+ - Device identities are used by applications to authenticate to single Greenlight
+   nodes. The private key must be generated locally and stay on your users
+   device.
+
+You can obtain a developer identity using the [Greenlight Developer
+Console][gdc]. When you register a node Greenlight will return
+a device identity. Alternatively, you can use request a new
+device identity for a node using the recover functionality.
 
 See the [security][sec] page for more details about how the
 authentication works.
@@ -52,12 +55,6 @@ Greenlight nodes are scheduled on-demand when a client needs to talk
 to it. The Scheduler tracks which nodes are running where, and starts
 them if they aren't running yet. You can think of it as just a
 mechanism to register new nodes and look up where they are running.
-
-## Certificate
-
-You will need a secret certificate to register nodes on the Greenlight 
-service. Create an account on the [Greenlight Developer Console][gdc], 
-download the zip file and follow the [instructions][cert] on how to use it in your application.
 
 <!-- Chose a language -->
 
