@@ -1,5 +1,5 @@
 from . import glclient as native
-from typing import Optional, List, Union, Tuple, Iterable, Type, Any, TypeVar
+from typing import Optional, Union
 import logging
 
 logger = logging.getLogger("glclientpy.tls.TlsConfig")
@@ -11,7 +11,6 @@ class TlsConfig(object):
         # through the rust library (streaming calls)
         self.inner = native.TlsConfig()
         self.ca: Optional[bytes] = None
-        self.id: Tuple[Optional[bytes], Optional[bytes]] = (None, None)
         self.authenticated = False
 
     def identity(self, cert_pem: Union[str, bytes], key_pem: Union[str, bytes]) -> "TlsConfig":
@@ -24,7 +23,14 @@ class TlsConfig(object):
         c = TlsConfig()  # Create a copy of ourselves
         c.inner = self.inner.identity(cert_pem, key_pem)
         c.ca = self.ca
-        c.id = (cert_pem, key_pem)
+        logger.debug("Authenticating TLS identity")
+        c.authenticated = True
+        return c
+
+    def identity_from_path(self, path : str) -> "TlsConfig":
+        c = TlsConfig()
+        c.inner = self.inner.identity_from_path(path)
+        c.ca = self.ca
         logger.debug("Authenticating TLS identity")
         c.authenticated = True
         return c
@@ -37,6 +43,5 @@ class TlsConfig(object):
         c = TlsConfig()
         c.inner = self.inner.with_ca_certificate(ca)
         c.ca = ca
-        c.id = self.id
         c.authenticated = self.authenticated
         return c
