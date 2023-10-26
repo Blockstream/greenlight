@@ -108,6 +108,11 @@ impl Signer {
                 FilterRule::new_warn("policy-routing-balanced"),
             ],
         });
+
+        // Increase the invoices limit. Results in a larger state, but
+        // bumping into this is rather annoying.
+        policy.max_invoices = 10_000usize;
+
         // Relaxed max_routing_fee since we no longer have the
         // presplitter which was causing the HTLCs to be smaller.
         policy.max_routing_fee_msat = 1_000_000;
