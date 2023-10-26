@@ -37,14 +37,16 @@ jobs:
         path: libs/gl-client-py/dist/gl_client-*.tar.gz
 
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
         target:
         - x86_64
         - i686
-        - aarch64
+# aarch64 does not compile due to an old(-ish) compiler with the error
+#  `ARM assembler must define __ARM_ARCH`
+#        - aarch64
         - armv7
     steps:
     - uses: actions/checkout@v3
