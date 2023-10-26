@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use log::debug;
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
+use std::path::Path;
 
 const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
 const NOBODY_CRT: &[u8] = include_str!(env!("GL_NOBODY_CRT")).as_bytes();
@@ -71,6 +72,22 @@ impl TlsConfig {
             private_key: Some(key_pem),
             ..self
         }
+    }
+
+    /// Upgrades the connection using an identity based on a certificate
+    /// and key from a path.
+    ///
+    /// The path is a directory that contains a `client.crt` and
+    /// a `client-key.pem`-file which contain respectively the certificate
+    /// and private key.
+    pub fn identity_from_path<P : AsRef<Path>>(self, path: P) -> Result<Self> {
+        let cert_path = path.as_ref().join("client.crt");
+        let key_path = path.as_ref().join("client-key.pem");
+
+        let cert_pem = std::fs::read(cert_path.clone()).with_context(|| format!("Failed to read '{}'", cert_path.display()))?;
+        let key_pem = std::fs::read(key_path.clone()).with_context(|| format!("Failed to read '{}", key_path.display()))?;
+
+        Ok(self.identity(cert_pem, key_pem))
     }
 
     /// This function is mostly used to allow running integration
