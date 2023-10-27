@@ -509,6 +509,13 @@ impl Node for WrappedNodeServer {
     ) -> Result<Response<pb::ListhtlcsResponse>, Status> {
         self.inner.list_htlcs(r).await
     }
+
+    async fn datastore_usage(
+        &self,
+        r : Request<pb::DatastoreusageRequest>,
+    ) -> Result<Response<pb::DatastoreusageResponse>, Status> {
+        self.inner.datastore_usage(r).await
+    }
 }
 
 impl WrappedNodeServer {
