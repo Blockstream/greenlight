@@ -56,7 +56,7 @@ impl<O, E> JsonRpcMethod<NoParams, O, E> {
 
 impl<I, O, E> std::convert::From<&JsonRpcMethod<I, O, E>> for String {
     fn from(value: &JsonRpcMethod<I, O, E>) -> Self {
-        value.method.clone().into()
+        value.method.into()
     }
 }
 
