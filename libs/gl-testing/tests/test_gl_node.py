@@ -57,20 +57,10 @@ def test_peerlist_datastore_add(node_factory: NodeFactory, clients: Clients):
     # We need the signer for the handshake
     s = c.signer().run_in_thread()
 
-    # Setup grpc channel
-    cred = grpc.ssl_channel_credentials(
-        root_certificates=gl1.tls.ca,
-        private_key=gl1.tls.id[1],
-        certificate_chain=gl1.tls.id[0]
-    )
-    grpc_uri = gl1.grpc_uri[8:]  # Strip the `https://` prefix
-    chan = grpc.secure_channel(grpc_uri, cred)
-    client = clngrpc.NodeStub(chan)
-
     # Connect from the gl node to a peer node.
     gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
     # Check that the peer id and address is written to the database
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
+    res = gl1.list_datastore(key=["greenlight", "peerlist"])
     assert l1.info['id'] in res.datastore[0].key
 
 
@@ -85,47 +75,18 @@ def test_peerlist_datastore_remove(node_factory: NodeFactory, clients: Clients):
 
     # We need the signer for the handshake
     s = c.signer().run_in_thread()
-
-    # Setup grpc channel
-    cred = grpc.ssl_channel_credentials(
-        root_certificates=gl1.tls.ca,
-        private_key=gl1.tls.id[1],
-        certificate_chain=gl1.tls.id[0]
-    )
-    grpc_uri = gl1.grpc_uri[8:]  # Strip the `https://` prefix
-    chan = grpc.secure_channel(grpc_uri, cred)
-    client = clngrpc.NodeStub(chan)
-
-    # This tests the legacy call of disconnect_peer
-    # from the greenlight.proto instead of using the cln_grpc interface.
-    #
+    
     # Connect from the gl node to a peer node.
     gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
     # Check that the peerlist has expected len.
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
+    res = gl1.list_datastore(key=["greenlight", "peerlist"])
     assert len(res.datastore) == 1
 
     # Disconnect
     gl1.disconnect_peer(l1.info['id'])
 
     # Check that the peer entry is removed
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
-    assert len(res.datastore) == 0
-
-    # This tests the legacy call of disconnect_peer using the cln_grpc
-    # interface.
-    #
-    # Connect from the gl node to a peer node.
-    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
-    # Check that the peerlist has expected len.
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
-    assert len(res.datastore) == 1
-
-    # Disconnect
-    res = client.Disconnect(clnpb.DisconnectRequest(id=bytes.fromhex(l1.info['id'])))
-
-    # Check that the peer entry is removed
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
+    res = gl1.list_datastore(key=["greenlight", "peerlist"])
     assert len(res.datastore) == 0
 
 
@@ -141,20 +102,10 @@ def test_reconnect_peers_on_startup(node_factory: NodeFactory, clients: Clients,
     # We need the signer for the handshake
     s = c.signer().run_in_thread()
 
-    # Setup grpc channel
-    cred = grpc.ssl_channel_credentials(
-        root_certificates=gl1.tls.ca,
-        private_key=gl1.tls.id[1],
-        certificate_chain=gl1.tls.id[0]
-    )
-    grpc_uri = gl1.grpc_uri[8:]  # Strip the `https://` prefix
-    chan = grpc.secure_channel(grpc_uri, cred)
-    client = clngrpc.NodeStub(chan)
-
     # Connect from the gl node to a peer node.
     gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
     # Check that the peerlist has expected len.
-    res = client.ListDatastore(clnpb.ListdatastoreRequest(key=["greenlight", "peerlist"]))    
+    res = gl1.list_datastore(key=["greenlight", "peerlist"])
     assert len(res.datastore) == 1
 
     # Stop node to disconnect from peer.
