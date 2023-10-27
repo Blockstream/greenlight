@@ -223,7 +223,9 @@ async fn on_invoice_payment(plugin: Plugin, v: serde_json::Value) -> Result<serd
 #[derive(Clone, Debug)]
 pub enum Event {
     Stop(Arc<stager::Stage>),
-    RpcCall,
+
+    /// A grpc call. The first element is the URI of the request.
+    RpcCall(String),
     IncomingPayment(pb::IncomingPayment),
     CustomMsg(pb::Custommsg),
 }

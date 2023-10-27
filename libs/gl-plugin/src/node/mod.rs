@@ -561,10 +561,12 @@ where
 
         Box::pin(async move {
             use tonic::codegen::Body;
-            let _ = RPC_BCAST.clone().send(super::Event::RpcCall);
             let (parts, mut body) = request.into_parts();
 
             let uri = parts.uri.path_and_query().unwrap();
+            let _ = RPC_BCAST
+                .clone()
+                .send(super::Event::RpcCall(uri.to_string()));
 
             let pubkey = parts
                 .headers
