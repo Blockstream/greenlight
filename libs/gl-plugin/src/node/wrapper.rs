@@ -11,6 +11,7 @@ use super::PluginNodeServer;
 /// implements the guarding against RPC commands that'd require a
 /// signature if no HSM is attached (that'd lock up our node) and
 /// providing RouteHints for disconnected and zeroconf channels too.
+#[derive(Clone)]
 pub struct WrappedNodeServer {
     inner: cln_grpc::Server,
     node_server: PluginNodeServer,
