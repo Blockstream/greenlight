@@ -10,7 +10,7 @@ to authenticate against greenlight.
 Let's start with the seed secret: the seed secret
 is a 32 byte secret that all other secrets and private keys are
 derived from, as such it is paramount that this secret never leaves
-your users device and is only handled by the _Signer_.
+your user's device and is only handled by the _Signer_.
 
 We suggest to derive the seed secret from a [BIP 39][bip39] seed phrase, so the user
 can back it up on a physical piece of paper, steel plate, or whatever
