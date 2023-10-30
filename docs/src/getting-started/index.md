@@ -27,7 +27,7 @@ This guide uses two types of identities
 
  - Developer identities can be used to register or recover Greenlight nodes.
  - Device identities are used by applications to authenticate to single Greenlight
-   nodes. The private key must be generated locally and stay on your users
+   nodes. The private key is generated locally and will stay on your users
    device.
 
 You can obtain a developer identity using the [Greenlight Developer
