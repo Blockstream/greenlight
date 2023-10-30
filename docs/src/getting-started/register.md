@@ -2,8 +2,14 @@
 
 In this section we'll use a developer certificate to register a node.
 
-A node identity has a seed and the mTLS-certificates we will later use
-to authenticate against greenlight.
+We'll start with creating a seed that is used to derive node-secrets from. Each
+node on the lightning network is identified by a public key and the
+corresponding private key is one of these secrets. In the next step, we'll
+connect to the _Scheduler_ using a developer identity and register the node.
+This requires you to proof that you own the private key mentioned previously.
+
+At the end of this section your node will be registered on Greenlight and you
+will have a device-identity that can be used to connect the node.
 
 ## Creating a seed
 
@@ -138,14 +144,13 @@ We'll pick `bitcoin`, because ... reckless 😉
 
 ## Registering a new node
 
-Registering a node with the [`Scheduler`][scheduler] creates the node metadata on
-the Greenlight service, including the node's identity and the public
-key, and ensures everything is setup to start the node. 
+Registering a node with the [`Scheduler`][scheduler] creates the node on the
+Greenlight service and ensures everything is setup to start the node.
 
-In order to register a node, the client needs to prove it has access
-to the corresponding private key. Since the private key is managed
-exclusively by the [`Signer`][signer] we need to pass the [`Signer`][signer]
-to the [`Scheduler`][scheduler]:
+In order to register a node, the client needs to prove it has access to the
+node's private key. Since the private key is managed exclusively by the
+[`Signer`][signer] we need to pass the [`Signer`][signer] to the
+[`Scheduler`][scheduler]:
 
 === "Rust"
 	```rust
