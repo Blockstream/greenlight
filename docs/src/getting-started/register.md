@@ -89,8 +89,8 @@ phrase and then convert it into a seed secret we can use:
 
 ## Registering the node
 
-In the next we configure mTLS using our developer identity. Any connection using
-the `TlsConfig`-object specified below will allow you to register new Greenlight
+We'll configure mTLS using our developer identity. Any connection using the
+`TlsConfig`-object specified below will allow you to register new Greenlight
 nodes.
 
 === "Rust"
