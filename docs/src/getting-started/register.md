@@ -6,7 +6,7 @@ We'll start with creating a seed that is used to derive node-secrets from. Each
 node on the lightning network is identified by a public key and the
 corresponding private key is one of these secrets. In the next step, we'll
 connect to the _Scheduler_ using a developer identity and register the node.
-This requires you to proof that you own the private key mentioned previously.
+This requires you to prove that you own the private key mentioned previously.
 
 At the end of this section your node will be registered on Greenlight and you
 will have a device-identity that can be used to connect the node.
