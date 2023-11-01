@@ -47,7 +47,7 @@ def test_node_signer(clients, executor):
             amount=clnpb.Amount(msat=42000)
         ),
         description="desc",
-        
+
     )
 
     # Now attach the signer and the above call should return
@@ -138,7 +138,7 @@ def test_node_invoice_expiration(clients):
         expiry=100,
     )
     assert now <= res.expires_at <= now + 160
-    
+
 
 def test_node_invoice_amountless(bitcoind, node_factory, clients):
     """Test that the request is being mapped correctly.
@@ -425,3 +425,67 @@ def test_vls_crash_repro(
 
     l1.rpc.pay(inv)
     inv = l1.rpc.invoice(amount_msat=2499000, label="lbl", description="desc")
+
+
+def test_sendpay_signer(
+        clients: Clients,
+        scheduler: Scheduler,
+        node_factory,
+        bitcoind
+) -> None:
+    """Ensure that `sendpay` works with the signer.
+
+    `sendpay` injects HTLCs outside of the context of a payment, and
+    as such there is no indication that the HTLC was intended by the
+    user. By extracting invoices from `sendpay` commands in the
+    context, we should be able to tell VLS about a payment before it
+    gets the `commitment_signed` message with a spurious HTLC (from
+    its PoV).
+    """
+    l1 = node_factory.get_node()
+    c = clients.new()
+    c.register(configure=True)
+    s = c.signer().run_in_thread()
+    gl1 = c.node()
+
+    gl1.connect_peer(l1.info['id'], f'127.0.0.1:{l1.daemon.port}')
+    addr = gl1.new_address().bech32
+    txid = bitcoind.rpc.sendtoaddress(addr, 1)
+    bitcoind.generate_block(1, wait_for_mempool=[txid])
+    wait_for(lambda: len(gl1.list_funds().outputs) == 1)
+    gl1.fund_channel(
+        id=bytes.fromhex(l1.info['id']),
+        amount=clnpb.AmountOrAll(amount=clnpb.Amount(msat=10**10))
+    )
+    bitcoind.generate_block(1, wait_for_mempool=1)
+
+    wait_for(lambda: l1.rpc.listpeerchannels()['channels'][0]['state'] == 'CHANNELD_NORMAL')
+    amount = 10**9
+    chan = l1.rpc.listpeerchannels()['channels'][0]
+    inv = l1.rpc.invoice(amount, 'lbl', 'desc')
+    payment_hash = bytes.fromhex(inv['payment_hash'])
+    payment_secret = bytes.fromhex(inv['payment_secret'])
+
+    route = [clnpb.SendpayRoute(
+        id=bytes.fromhex(l1.info['id']),
+        channel=chan['short_channel_id'],
+        amount_msat=clnpb.Amount(msat=amount),
+        delay=18,
+    ),]
+
+    req = clnpb.SendpayRequest(
+        route=route,
+        payment_hash=payment_hash,
+        bolt11=inv['bolt11'],
+        payment_secret=payment_secret,
+    )
+
+    res = clnpb.SendpayResponse.FromString(
+        bytes(gl1.inner.call("/cln.Node/SendPay", req.SerializeToString()))
+    )
+
+    req = clnpb.WaitsendpayRequest(payment_hash=payment_hash)
+    res = clnpb.WaitsendpayResponse.FromString(
+        bytes(gl1.inner.call("/cln.Node/WaitSendPay", req.SerializeToString()))
+    )
+    print(res)
