@@ -410,8 +410,12 @@ impl Signer {
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver)?;
 
-        // Match over root and client handler.
+        log::trace!("Updating state from context");
+        update_state_from_context(&ctxrequests, &root_handler)
+            .expect("Updating state from context requests");
+        log::trace!("State updated");
 
+        // Match over root and client handler.
         let response = match req.context {
             Some(HsmRequestContext { dbid: 0, .. }) | None => {
                 // This is the main daemon talking to us.
@@ -699,6 +703,29 @@ impl Signer {
     pub fn version(&self) -> &'static str {
         VERSION
     }
+}
+
+/// Look through the context requests and update the state
+/// accordingly. This is useful to modify allowlists and invoice lists
+/// extracted from the authenticated requests.
+fn update_state_from_context(
+    requests: &Vec<model::Request>,
+    handler: &handler::RootHandler,
+) -> Result<(), Error> {
+    log::debug!("Updating state from {} context request", requests.len());
+    let node = handler.node();
+
+    requests
+        .iter()
+        .for_each(|r| update_state_from_request(r, &node).unwrap());
+    Ok(())
+}
+
+fn update_state_from_request(
+    request: &model::Request,
+    node: &lightning_signer::node::Node,
+) -> Result<(), Error> {
+    Ok(())
 }
 
 /// Used to decode incoming requests into their corresponding protobuf
