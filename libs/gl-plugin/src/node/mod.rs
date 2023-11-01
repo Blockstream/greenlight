@@ -128,7 +128,6 @@ impl PluginNodeServer {
                     }
                 }
             }
-            drop(rpc);
 
             tokio::spawn(async move {
                 // Now piggyback the reconnection on top of the RPC
@@ -138,6 +137,34 @@ impl PluginNodeServer {
                     log::warn!("Could not reconnect to peers: {:?}", e);
                 }
             });
+
+            let list_datastore_req = cln_rpc::model::requests::ListdatastoreRequest{
+                key: Some(vec![
+                    "glconf".to_string(),
+                    "request".to_string()
+                ])
+            };
+
+            let res: Result<cln_rpc::model::responses::ListdatastoreResponse, crate::rpc::Error> =
+                rpc.call("listdatastore", list_datastore_req).await;
+
+            match res {
+                Ok(list_datastore_res) => {
+                    if list_datastore_res.datastore.len() > 0 {
+                        let serialized_configure_request = list_datastore_res.datastore[0].string.clone();
+                        match serialized_configure_request {
+                            Some(serialized_configure_request) => {
+                                let mut cached_serialized_configure_request = SERIALIZED_CONFIGURE_REQUEST.lock().await;
+                                *cached_serialized_configure_request = Some(serialized_configure_request);
+                            }
+                            None => {}
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
+            
+            drop(rpc);
         });
 
         Ok(s)
