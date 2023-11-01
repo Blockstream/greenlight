@@ -82,9 +82,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_DIR=/tmp/target/
 ENV RUST_VERSION=1.70.0
 
-RUN groupadd -g $GID -o $DOCKER_USER &&\
-    useradd -m -u $UID -g $GID -o -s /bin/bash $DOCKER_USER
-
 # Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
 ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
 
@@ -109,11 +106,16 @@ RUN apt-get update && apt-get install -qqy \
     python3-venv \
     nodejs \
     npm \
+    sudo \
     socat \
     unzip \
     wget \
     jq \
     && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g $GID -o $DOCKER_USER &&\
+    useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
+    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Enumerate all CLN version we want `gl-testing` to find.
 ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/
