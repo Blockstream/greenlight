@@ -1028,7 +1028,7 @@ checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 [[package]]
 name = "futhark"
 version = "0.1.0"
-source = "git+https://github.com/nepet/futhark.git#fb6128a37e14dbff34664ad213c2dd592e9b1e40"
+source = "git+https://github.com/nepet/futhark.git?branch=main#fb6128a37e14dbff34664ad213c2dd592e9b1e40"
 dependencies = [
  "anyhow",
  "base64 0.21.5",

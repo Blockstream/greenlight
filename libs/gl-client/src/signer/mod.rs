@@ -284,24 +284,18 @@ impl Signer {
             return Err(anyhow!("rune is missing pubkey field"));
         }
 
-        let mut checks: HashMap<String, Box<dyn futhark::Tester>> = HashMap::new();
-        checks.insert(
-            "pubkey".to_string(),
-            Box::new(futhark::ConditionTester {
-                value: hex::encode(request.pubkey),
-            }),
-        );
+        let mut checks: HashMap<String, String> = HashMap::new();
+        checks.insert("pubkey".to_string(), hex::encode(request.pubkey));
+
         // Runes only check on the version if the unique id field is set. The id
         // and the version are part of the empty field.
         if let Some(device_id) = rune.get_id() {
-            checks.insert(
-                "".to_string(),
-                Box::new(futhark::ConditionTester {
-                    value: format!("{}-{}", device_id, RUNE_VERSION),
-                }),
-            );
+            checks.insert("".to_string(), format!("{}-{}", device_id, RUNE_VERSION));
         }
-        match self.master_rune.check_with_reason(&rune64, &checks) {
+        match self
+            .master_rune
+            .check_with_reason(&rune64, futhark::MapChecker { map: checks })
+        {
             Ok(_) => Ok(()),
             Err(e) => Err(e.into()),
         }
