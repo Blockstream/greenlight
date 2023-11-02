@@ -725,6 +725,23 @@ fn update_state_from_request(
     request: &model::Request,
     node: &lightning_signer::node::Node,
 ) -> Result<(), Error> {
+    use lightning_signer::invoice::Invoice;
+    use std::str::FromStr;
+    match request {
+        model::Request::SendPay(model::cln::SendpayRequest {
+            bolt11: Some(inv), ..
+        }) => {
+            let invoice = Invoice::from_str(inv).unwrap();
+            log::debug!(
+                "Adding invoice {:?} as side-effect of this sendpay {:?}",
+                invoice,
+                request
+            );
+            node.add_invoice(invoice).unwrap();
+        }
+        _ => {}
+    }
+
     Ok(())
 }
 
