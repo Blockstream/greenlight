@@ -8,7 +8,7 @@ use crate::Error;
 pub trait Authorizer {
     fn authorize(
         &self,
-        requests: Vec<Request>,
+        requests: &Vec<Request>,
     ) -> Result<Vec<Approval>, Error>;
 }
 
@@ -17,7 +17,7 @@ pub struct DummyAuthorizer {}
 impl Authorizer for DummyAuthorizer {
     fn authorize(
         &self,
-        _requests: Vec<Request>,
+        _requests: &Vec<Request>,
     ) -> Result<Vec<Approval>, Error> {
         Ok(vec![])
     }
@@ -28,7 +28,7 @@ pub struct GreenlightAuthorizer {}
 impl Authorizer for GreenlightAuthorizer {
     fn authorize(
         &self,
-        requests: Vec<Request>,
+        requests: &Vec<Request>,
     ) -> Result<Vec<Approval>, Error> {
         let approvals : Vec<_> = requests.iter().flat_map(|request| {
             match request {

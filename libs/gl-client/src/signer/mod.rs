@@ -398,7 +398,7 @@ impl Signer {
 
         use auth::Authorizer;
         let auth = auth::GreenlightAuthorizer {};
-        let approvals = auth.authorize(ctxrequests).map_err(|e| Error::Auth(e))?;
+        let approvals = auth.authorize(&ctxrequests).map_err(|e| Error::Auth(e))?;
         debug!("Current approvals: {:?}", approvals);
 
         let approver = Arc::new(MemoApprover::new(approver::ReportingApprover::new(
