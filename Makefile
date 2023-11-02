@@ -1,3 +1,5 @@
+.PHONY: check-rustfmt
+
 ifdef GL_DOCKER
 REPO_ROOT=/repo
 else
@@ -22,6 +24,8 @@ endif
 
 ARTIFACTS = \
 	.coverage
+
+CHANGED_RUST_SOURCES=$(shell git diff --name-only origin/main | grep '\.rs')
 
 # Variable to collect all generated files into, so we can clean and
 # rebuild them easily.
@@ -65,6 +69,12 @@ check-self: ensure-docker
 	pytest -vvv \
 	  /repo/libs/gl-testing \
 	  ${PYTEST_OPTS}
+
+check-rustfmt:
+	@if [ -n "${CHANGED_RUST_SOURCES}" ]; then \
+		rustfmt --edition 2021 --check ${CHANGED_RUST_SOURCES}; else \
+		echo "skip rustfmt check no changes detected ${CHANGED_RUST_SOURCES}"; \
+	fi
 
 ensure-docker:
 	@if [ "x${GL_DOCKER}" != "x1" ]; then \
