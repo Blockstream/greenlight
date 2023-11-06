@@ -21,18 +21,15 @@ packages = [
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
 mypy-protobuf = "^3.5"
+maturin = ">=0.11,<0.12"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
 grpcio = ">=1.56"
 pyln-grpc-proto = "^0.1"
-
-# Yes, this is pinned to an older version. 1.53 and 1.54 appear to
-# have an issue with TLS (TSI corruption).
-grpcio-tools = ">=1.56"
 protobuf = ">=3"
-mypy-protobuf = "^3.5.0"
+maturin = "^1.3"
 
 [build-system]
-requires = ["maturin>=0.11,<0.12"]
+requires = ["maturin"]
 build-backend = "maturin"
