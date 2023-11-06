@@ -2,6 +2,13 @@
 name = "gl-client"
 version = "0.1.9"
 edition = "2018"
+authors = [
+        "Christian Decker",
+        "The Greenlight Team"
+]
+description = "Client library for Greenlight, and basis for language bindings."
+repository = "https://github.com/Blockstream/greenlight"
+license = "MIT"
 
 [features]
 default = ["permissive", "export"]
