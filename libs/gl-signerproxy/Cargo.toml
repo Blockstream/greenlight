@@ -2,6 +2,13 @@
 name = "gl-signerproxy"
 version = "0.1.0"
 edition = "2021"
+authors = [
+        "Christian Decker",
+        "The Greenlight Team"
+]
+description = "Python bindings for the Greenlight client library."
+repository = "https://github.com/Blockstream/greenlight"
+license = "MIT"
 
 [[bin]]
 name = "gl-signerproxy"
