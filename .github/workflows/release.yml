@@ -112,6 +112,8 @@ jobs:
         with:
           submodules: recursive
       - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "libs"
       - name: Install cargo-dist
         run: ${{ matrix.install_dist }}
       - name: Install dependencies
