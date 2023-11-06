@@ -1,7 +1,7 @@
 use libc::{self, c_int, c_uchar, c_void, msghdr};
-use std::mem;
 use log::trace;
 use std::io::{Error, ErrorKind};
+use std::mem;
 use std::os::unix::io::RawFd;
 
 pub trait SyncFdPassingExt {
@@ -80,15 +80,16 @@ impl SyncFdPassingExt for RawFd {
                 0 => Err(Error::new(ErrorKind::UnexpectedEof, "0 bytes read")),
                 rv if rv < 0 => Err(Error::last_os_error()),
                 rv if rv == mem::size_of::<c_uchar>() as isize => {
-                    let hdr: *mut libc::cmsghdr =
-                        if msg.msg_controllen >= mem::size_of::<libc::cmsghdr>() as _ {
-                            msg.msg_control as *mut libc::cmsghdr
-                        } else {
-                            return Err(Error::new(
-                                ErrorKind::InvalidData,
-                                "bad control msg (header)",
-                            ));
-                        };
+                    let hdr: *mut libc::cmsghdr = if msg.msg_controllen as usize
+                        >= mem::size_of::<libc::cmsghdr>() as usize
+                    {
+                        msg.msg_control as *mut libc::cmsghdr
+                    } else {
+                        return Err(Error::new(
+                            ErrorKind::InvalidData,
+                            "bad control msg (header)",
+                        ));
+                    };
                     if (*hdr).cmsg_level != libc::SOL_SOCKET || (*hdr).cmsg_type != libc::SCM_RIGHTS
                     {
                         return Err(Error::new(
@@ -96,7 +97,7 @@ impl SyncFdPassingExt for RawFd {
                             "bad control msg (level)",
                         ));
                     }
-                    if msg.msg_controllen
+                    if msg.msg_controllen as usize
                         != libc::CMSG_SPACE(mem::size_of::<c_int>() as u32) as usize
                     {
                         return Err(Error::new(ErrorKind::InvalidData, "bad control msg (len)"));
