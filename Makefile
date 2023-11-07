@@ -58,7 +58,7 @@ clean: clean-rs
 gen: ${GENALL}
 
 build-self: ensure-docker
-	(cd libs; cargo build --all)
+	cargo build --all
 	(cd libs/gl-client-py && python3 -m maturin develop)
 	pip install -e libs/gl-testing
 
