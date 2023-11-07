@@ -101,8 +101,8 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
       - name: Install dependencies (MacOS)
         run: |
-          brew install python3.10
-        if: ${{ matrix.runner == 'macOS' }}
+          brew install python@3.10
+        if: ${{ runner.os == 'macOS' }}
       - name: Install Protoc    
         uses: arduino/setup-protoc@v2
         with:
@@ -121,6 +121,7 @@ jobs:
           ${{ matrix.packages_install }}
       - name: Build artifacts
         run: |
+          echo ${{ runner.os }}
           # Actually do builds and make zips and whatnot
           cargo dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
           echo "cargo dist ran successfully"
