@@ -69,8 +69,8 @@ RUN cd /repo/libs/gl-plugin && cargo build --release && \
 # the binaries and we switch from release to debug, simply to keep the
 # docker image size in check
 RUN mkdir -p /tmp/target/debug && \
-    mv /repo/libs/target/release/gl-plugin /tmp/target/debug/ && \
-    mv /repo/libs/target/release/gl-signerproxy /tmp/target/debug/
+    mv /repo/target/release/gl-plugin /tmp/target/debug/ && \
+    mv /repo/target/release/gl-signerproxy /tmp/target/debug/
 
 FROM ubuntu:20.04 as tester
 ARG BITCOIN_VERSION=25.0

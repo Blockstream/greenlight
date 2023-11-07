@@ -5,10 +5,11 @@ device-key.pem
 hsm_secret
 *.so
 .coverage
-libs/Cargo.lock
 *~
 site
 .DS_Store
+target
+Cargo.lock
 
 # These files are auto generated and may contain sensible data that
 # we do not want to check-in!
