@@ -53,24 +53,24 @@ section.
 ## Client &rlarr; Signer authentication
 
 The signer cannot rely on the mTLS CA structure, since that is under
-control of the Greenlight team. As such it uses an attestation scheme
-in which the signer-identity attests to itself (and other signers)
-that a given client is permitted to perform some operations.
+control of the Greenlight team. Instead, Greenlight employs an 
+attestation scheme in which the signer identity attests to itself and 
+other signers that a particular client is authorized to perform 
+certain operations.
 
-Upon registering a new client, the signer will provide an attestation
-signature. This attestation signature is what tells other signers that
-commands originating from that client are to be accepted. This is
-important because it allows multiple signers to recognize which
-clients are authorized, even if the attesting signer is not the signer
-that is currently verifying the authorization.
+When registering a new client, the signer will submit a [`rune`][rune]
+as an access token. The rune serves as both an authentication and 
+authorization token, and is tied to the client's identity; it is 
+presented to the signer on each request. This will allow multiple 
+signers to recognize which clients are authorized, even if the signer
+who carved the rune is not the signer verifying the authorization.
 
 Before signing a request the signer independently verifies that:
 
  1. The operations that it is asked to sign off on match pending RPC
     commands, and are safe to perform.
  2. The pending RPC commands are all signed by a valid client-identity
- 3. The client-identities all have a matching attestation signature
-    from the signer
+ 3. The client-identities all have a valid rune from a signer.
  4. None of the pending RPC commands is a replay of a previously
     completed RPC command.
 
@@ -82,10 +82,28 @@ preventing read-access that doesn't involve the signer, while the
 latter ensures funds are not moved without a client authorizing it.
 
 The client-identity pubkey, its signature of the command payload, and
-the signer-attestation are all passed to the node via grpc
-headers. The node extracts them, alongside the call itself, and adds
-it to a request context which will itself be attached to requests that
-are sent to the signer, so it can verify the validity and authenticity
-of the operations. An attacker that gains access to the node is unable
-to provide either these signatures and will therefore fail to convince
+the rune are all passed to the node via grpc headers. The node 
+extracts them, alongside the call itself, and adds it to a request 
+context which will itself be attached to requests that are sent to the
+signer, so it can verify the validity and authenticity of the 
+operations. An attacker that gains access to the node is unable to 
+provide either these signatures and will therefore fail to convince
 the signer of its injected commands.
+
+## Client &rlarr; Signer Authorization
+
+The [`rune`][rune]-based signer authentication verifies a client's 
+identity and their authorization to execute commands. To achieve more 
+granular control over command authorization for individual clients, a 
+rune can be created with specific restrictions. When verifying client 
+identity, the signer additionally ensures that specific conditions, 
+such as the requested command, align with the limitations of the given
+rune.
+
+This enables a user to share access to the signer across multiple 
+clients that are restricted to a subset of commands, for example 
+read-only clients, or invoice-only clients, or clients that can only
+create on-chain addresses and so on.
+
+<!-- FIXME: Should I point to the library that we use here (which is futhark, that has a link to rusty's library)? Maybe we should give runes a Wikipedia article ^^ -->
+[rune]: https://github.com/rustyrussell/runes 
