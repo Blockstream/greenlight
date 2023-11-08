@@ -133,7 +133,6 @@ jobs:
         # inconsistent syntax between shell and powershell.
         shell: bash
         run: |
-          cd libs
           # Parse out what we just built and upload it to the Github Release™
           echo "paths<<EOF" >> "$GITHUB_OUTPUT"
           jq --raw-output ".artifacts[]?.path | select( . != null )" dist-manifest.json >> "$GITHUB_OUTPUT"
