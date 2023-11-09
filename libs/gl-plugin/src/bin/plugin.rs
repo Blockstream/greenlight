@@ -77,7 +77,9 @@ async fn start_node_server(
             node_server.ctx.clone(),
         ))
         .add_service(gl_plugin::node::RpcWaitService::new(cln_node, rpc_path))
-        .add_service(gl_plugin::pb::node_server::NodeServer::new(node_server));
+        .add_service(gl_plugin::pb::node_server::NodeServer::new(
+            gl_plugin::node::WrappedNodeServer::new(node_server).await?,
+        ));
 
     tokio::spawn(async move {
         router

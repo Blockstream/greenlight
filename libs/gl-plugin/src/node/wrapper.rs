@@ -602,3 +602,172 @@ impl WrappedNodeServer {
             .collect())
     }
 }
+
+use crate::pb::{
+    node_server::Node as GlNode, Custommsg, Empty, HsmRequest, HsmResponse, IncomingPayment,
+    LogEntry, StreamCustommsgRequest, StreamIncomingFilter, StreamLogRequest,
+};
+use tokio_stream::wrappers::ReceiverStream;
+
+#[tonic::async_trait]
+impl GlNode for WrappedNodeServer {
+    type StreamCustommsgStream = ReceiverStream<Result<Custommsg, Status>>;
+    type StreamHsmRequestsStream = ReceiverStream<Result<HsmRequest, Status>>;
+    type StreamLogStream = ReceiverStream<Result<LogEntry, Status>>;
+    type StreamIncomingStream = ReceiverStream<Result<IncomingPayment, Status>>;
+
+    async fn stream_incoming(
+        &self,
+        req: tonic::Request<StreamIncomingFilter>,
+    ) -> Result<Response<Self::StreamIncomingStream>, Status> {
+        self.node_server.stream_incoming(req).await
+    }
+
+    async fn respond_hsm_request(
+        &self,
+        req: Request<HsmResponse>,
+    ) -> Result<Response<Empty>, Status> {
+        self.node_server.respond_hsm_request(req).await
+    }
+
+    async fn stream_hsm_requests(
+        &self,
+        req: Request<Empty>,
+    ) -> Result<Response<Self::StreamHsmRequestsStream>, Status> {
+        // Best Effort reconnection logic
+        let s = self.node_server.clone();
+
+	// First though call the `node_server` which records the
+	// signer being present.
+        let res = self.node_server.stream_hsm_requests(req).await;
+        tokio::spawn(async move { s.reconnect_peers().await });
+
+        res
+    }
+
+    async fn stream_log(
+        &self,
+        req: Request<StreamLogRequest>,
+    ) -> Result<Response<Self::StreamLogStream>, Status> {
+        self.node_server.stream_log(req).await
+    }
+
+    async fn stream_custommsg(
+        &self,
+        req: Request<StreamCustommsgRequest>,
+    ) -> Result<Response<Self::StreamCustommsgStream>, Status> {
+        self.node_server.stream_custommsg(req).await
+    }
+
+    async fn get_info(
+        &self,
+        req: Request<crate::pb::GetInfoRequest>,
+    ) -> Result<Response<crate::pb::GetInfoResponse>, Status> {
+        self.get_info(req).await
+    }
+
+    async fn stop(
+        &self,
+        req: Request<crate::pb::StopRequest>,
+    ) -> Result<Response<crate::pb::StopResponse>, Status> {
+        self.node_server.stop(req).await
+    }
+
+    async fn connect_peer(
+        &self,
+        r: Request<crate::pb::ConnectRequest>,
+    ) -> Result<Response<crate::pb::ConnectResponse>, Status> {
+        self.node_server.connect_peer(r).await
+    }
+
+    async fn list_peers(
+        &self,
+        r: Request<crate::pb::ListPeersRequest>,
+    ) -> Result<Response<crate::pb::ListPeersResponse>, Status> {
+        self.node_server.list_peers(r).await
+    }
+
+    async fn disconnect(
+        &self,
+        r: Request<crate::pb::DisconnectRequest>,
+    ) -> Result<Response<crate::pb::DisconnectResponse>, Status> {
+        self.node_server.disconnect(r).await
+    }
+
+    async fn new_addr(
+        &self,
+        r: Request<crate::pb::NewAddrRequest>,
+    ) -> Result<Response<crate::pb::NewAddrResponse>, Status> {
+        self.node_server.new_addr(r).await
+    }
+
+    async fn list_funds(
+        &self,
+        r: Request<crate::pb::ListFundsRequest>,
+    ) -> Result<Response<crate::pb::ListFundsResponse>, Status> {
+        self.node_server.list_funds(r).await
+    }
+
+    async fn withdraw(
+        &self,
+        r: Request<crate::pb::WithdrawRequest>,
+    ) -> Result<Response<crate::pb::WithdrawResponse>, Status> {
+        self.node_server.withdraw(r).await
+    }
+
+    async fn fund_channel(
+        &self,
+        req: Request<crate::pb::FundChannelRequest>,
+    ) -> Result<Response<crate::pb::FundChannelResponse>, Status> {
+        self.node_server.fund_channel(req).await
+    }
+
+    async fn close_channel(
+        &self,
+        req: Request<crate::pb::CloseChannelRequest>,
+    ) -> Result<Response<crate::pb::CloseChannelResponse>, Status> {
+        self.node_server.close_channel(req).await
+    }
+
+    async fn create_invoice(
+        &self,
+        req: Request<crate::pb::InvoiceRequest>,
+    ) -> Result<Response<crate::pb::Invoice>, Status> {
+        self.node_server.create_invoice(req).await
+    }
+
+    async fn pay(
+        &self,
+        req: Request<crate::pb::PayRequest>,
+    ) -> Result<Response<crate::pb::Payment>, Status> {
+        self.node_server.pay(req).await
+    }
+
+    async fn list_payments(
+        &self,
+        req: tonic::Request<crate::pb::ListPaymentsRequest>,
+    ) -> Result<tonic::Response<crate::pb::ListPaymentsResponse>, tonic::Status> {
+        self.node_server.list_payments(req).await
+    }
+
+    async fn list_invoices(
+        &self,
+        req: tonic::Request<crate::pb::ListInvoicesRequest>,
+    ) -> Result<tonic::Response<crate::pb::ListInvoicesResponse>, tonic::Status> {
+        self.node_server.list_invoices(req).await
+    }
+
+    async fn keysend(
+        &self,
+        request: tonic::Request<crate::pb::KeysendRequest>,
+    ) -> Result<tonic::Response<crate::pb::Payment>, tonic::Status> {
+        self.node_server.keysend(request).await
+    }
+
+    async fn configure(
+        &self,
+        request: tonic::Request<crate::pb::GlConfig>,
+    ) -> Result<tonic::Response<crate::pb::Empty>, tonic::Status> {
+        self.node_server.configure(request).await
+    }
+}
