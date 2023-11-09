@@ -15,6 +15,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
 use serde_json::json;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -41,6 +42,8 @@ lazy_static! {
     static ref RPC_BCAST: broadcast::Sender<super::Event> = broadcast::channel(4).0;
 
     static ref SERIALIZED_CONFIGURE_REQUEST: Mutex<Option<String>> = Mutex::new(None);
+
+    static ref RPC_READY: AtomicBool = AtomicBool::new(false);
 }
 
 /// The PluginNodeServer is the interface that is exposed to client devices
@@ -107,7 +110,6 @@ impl PluginNodeServer {
             grpc_binding: config.node_grpc_binding,
         };
 
-        let c = s.clone();
         tokio::spawn(async move {
             debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
             use tokio::time::{sleep, Duration};
@@ -129,14 +131,8 @@ impl PluginNodeServer {
                 }
             }
 
-            tokio::spawn(async move {
-                // Now piggyback the reconnection on top of the RPC
-                // reachability test
-                log::info!("Reconnecting peers after RPC became available.");
-                if let Err(e) = c.reconnect_peers().await {
-                    log::warn!("Could not reconnect to peers: {:?}", e);
-                }
-            });
+	    // Signal that the RPC is ready now.
+	    RPC_READY.store(true, Ordering::SeqCst);
 
             let list_datastore_req = cln_rpc::model::requests::ListdatastoreRequest{
                 key: Some(vec![
@@ -350,13 +346,6 @@ impl Node for PluginNodeServer {
             SIGNER_COUNT.fetch_sub(1, Ordering::SeqCst);
         });
 
-        let c = self.clone();
-        tokio::spawn(async move {
-            if let Err(e) = c.reconnect_peers().await {
-                log::warn!("Could not reconnect peers: {:?}", e);
-            }
-        });
-
         trace!("Returning stream_hsm_request channel");
         Ok(Response::new(ReceiverStream::new(rx)))
     }
@@ -538,7 +527,7 @@ impl PluginNodeServer {
 
     /// Reconnect all peers with whom we have a channel or previously
     /// connected explicitly to.
-    async fn reconnect_peers(&self) -> Result<(), Error> {
+    pub async fn reconnect_peers(&self) -> Result<(), Error> {
         if SIGNER_COUNT.load(Ordering::SeqCst) < 1 {
             use anyhow::anyhow;
             return Err(anyhow!(
