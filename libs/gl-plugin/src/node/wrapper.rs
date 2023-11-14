@@ -513,9 +513,23 @@ impl Node for WrappedNodeServer {
 
     async fn datastore_usage(
         &self,
-        r : Request<pb::DatastoreusageRequest>,
+        r: Request<pb::DatastoreusageRequest>,
     ) -> Result<Response<pb::DatastoreusageResponse>, Status> {
         self.inner.datastore_usage(r).await
+    }
+
+    async fn fetch_invoice(
+        &self,
+        request: tonic::Request<pb::FetchinvoiceRequest>,
+    ) -> Result<tonic::Response<pb::FetchinvoiceResponse>, tonic::Status> {
+        self.inner.fetch_invoice(request).await
+    }
+
+    async fn wait(
+        &self,
+        request: tonic::Request<pb::WaitRequest>,
+    ) -> Result<tonic::Response<pb::WaitResponse>, tonic::Status> {
+        self.inner.wait(request).await
     }
 }
 
@@ -637,8 +651,8 @@ impl GlNode for WrappedNodeServer {
         // Best Effort reconnection logic
         let s = self.node_server.clone();
 
-	// First though call the `node_server` which records the
-	// signer being present.
+        // First though call the `node_server` which records the
+        // signer being present.
         let res = self.node_server.stream_hsm_requests(req).await;
         tokio::spawn(async move { s.reconnect_peers().await });
 

@@ -19,8 +19,8 @@ anyhow = "*"
 async-stream = "*"
 bytes = { version = "1", features = ["serde"] }
 clightningrpc = "*"
-cln-grpc = {git = "https://github.com/ElementsProject/lightning.git", branch = "master", features = ["server"] }
-cln-rpc = {git = "https://github.com/ElementsProject/lightning.git", branch = "master"}
+cln-grpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113", features = ["server"] }
+cln-rpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113"}
 cln-plugin = "0.1.4"
 env_logger = "^0.7.0"
 futures = "0.3"
