@@ -529,7 +529,7 @@ dependencies = [
 [[package]]
 name = "cln-grpc"
 version = "0.1.7"
-source = "git+https://github.com/ElementsProject/lightning.git?branch=master#34692ec3c81f6c445468b1b1047157ecbfe530ff"
+source = "git+https://github.com/cdecker/lightning.git?tag=gl-20231113#075927b2c5f38fdbde4c0764135be58340b0ce08"
 dependencies = [
  "anyhow",
  "bitcoin 0.30.1",
@@ -562,7 +562,7 @@ dependencies = [
 [[package]]
 name = "cln-rpc"
 version = "0.1.6"
-source = "git+https://github.com/ElementsProject/lightning.git?branch=master#34692ec3c81f6c445468b1b1047157ecbfe530ff"
+source = "git+https://github.com/cdecker/lightning.git?tag=gl-20231113#075927b2c5f38fdbde4c0764135be58340b0ce08"
 dependencies = [
  "anyhow",
  "bitcoin 0.30.1",
