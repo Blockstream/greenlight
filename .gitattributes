@@ -1,0 +1,6 @@
+# Protobuf files should not be merged and show in diffs
+*_pb2.py       linguist-generated=true -diff -merge
+*_pb2.pyi      linguist-generated=true -diff -merge
+*_pb2_grpc.pyi linguist-generated=true -diff -merge
+*_pb2_grpc.py  linguist-generated=true -diff -merge
+
