@@ -5,4 +5,5 @@
 *_pb2_grpc.py  linguist-generated=true -diff -merge
 
 poetry.lock    linguist-generated=true -diff -merge
+Cargo.lock     linguist-generated=true -diff -merge
 
