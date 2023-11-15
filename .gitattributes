@@ -4,3 +4,5 @@
 *_pb2_grpc.pyi linguist-generated=true -diff -merge
 *_pb2_grpc.py  linguist-generated=true -diff -merge
 
+poetry.lock    linguist-generated=true -diff -merge
+
