@@ -102,10 +102,16 @@ async fn process_requests(
                         requests: Vec::new(),
                         signer_state: Vec::new(),
                     });
+                    let start_time = tokio::time::Instant::now();
                     debug!("Got a message from node: {:?}", &req);
                     let res = server.request(req).await?.into_inner();
                     let msg = Message::from_raw(res.raw);
-                    debug!("Got respone from hsmd: {:?}", &msg);
+                    let delta = start_time.elapsed();
+                    debug!(
+                        "Got respone from hsmd: {:?} after {}ms",
+                        &msg,
+                        delta.as_millis()
+                    );
                     conn.write(msg).await?
                 }
             }
