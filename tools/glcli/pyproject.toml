@@ -6,11 +6,17 @@ authors = ["Christian Decker <decker@blockstream.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 click = "^8"
-grpcio = "^1.46.1"
-protobuf = "^3.20.1"
+grpcio = "^1"
+protobuf = "^4"
 gl-client = "^0.1"
+
+[tool.poetry.group.dev.dependencies]
+mypy-protobuf = "^3.5.0"
+mypy = "^1.7.0"
+typed-ast = "^1.5.5"
+types-protobuf = "^4.24.0.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -18,3 +24,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 glcli = 'glcli.cli:cli'
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = 'glcli'
