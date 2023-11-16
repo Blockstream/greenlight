@@ -1,10 +1,9 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
 from pyln import grpc as clnpb  # type: ignore
-from pyln.grpc import Amount, AmountOrAny, AmountOrAll
+from pyln.grpc import Amount, AmountOrAll
 from . import glclient as native
 from .tls import TlsConfig
-from .glclient import backup_decrypt_with_seed
 from google.protobuf.message import Message as PbMessage
 from binascii import hexlify, unhexlify
 from typing import Optional, List, Union, Iterable, Any, Type, TypeVar
@@ -81,12 +80,8 @@ class Scheduler(object):
         return schedpb.RecoveryResponse.FromString(bytes(res))
 
     def export_node(self) -> schedpb.ExportNodeResponse:
-        uri = "/scheduler.Scheduler/ExportNode"
-        req = schedpb.ExportNodeRequest().SerializeToString()
         res = schedpb.ExportNodeResponse
-        return res.FromString(
-            bytes(self.inner.export_node())
-        )
+        return self.inner.export_node()
 
     def node(self) -> "Node":
         res = self.schedule()
@@ -99,7 +94,7 @@ class Scheduler(object):
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
         res = self.inner.get_invite_codes()
-        return schedpb.ListInviteCodesResponse.FromString(bytes(res))
+        return res
 
 
 class Node(object):
@@ -114,7 +109,7 @@ class Node(object):
         )
         self.logger = logging.getLogger("glclient.Node")
 
-    def get_info(self) -> nodepb.GetInfoResponse:
+    def get_info(self) -> clnpb.GetinfoResponse:
         uri = "/cln.Node/Getinfo"
         req = clnpb.GetinfoRequest().SerializeToString()
         res = clnpb.GetinfoResponse
@@ -168,9 +163,9 @@ class Node(object):
     
     def list_channels(
             self,
-            short_channel_id: str = None,
-            source: bytes = None,
-            destination: bytes = None 
+            short_channel_id: Optional[str] = None,
+            source: Optional[bytes] = None,
+            destination: Optional[bytes] = None 
     ) -> clnpb.ListchannelsResponse:
         uri = "/cln.Node/ListChannels"
         req = clnpb.ListchannelsRequest(
@@ -193,26 +188,16 @@ class Node(object):
             bytes(self.inner.call(uri, req))
         )
 
-    def list_payments(self) -> nodepb.ListPaymentsResponse:
-        uri = "/cln.Node/ListPays"
-        req = clnpb.ListpaysRequest().SerializeToString()
-        res = clnpb.ListpaysResponse
-
-        return res.FromString(
-            bytes(self.inner.call(uri, req))
-        )
-
     def list_invoices(
             self,
-            label: str = None,
-            invstring: str = None,
-            payment_hash: bytes = None
-    ) -> nodepb.ListInvoicesResponse:
+            label: Optional[str] = None,
+            invstring: Optional[str] = None,
+            payment_hash: Optional[bytes] = None
+    ) -> clnpb.ListinvoicesResponse:
         uri = "/cln.Node/ListInvoices"
         res = clnpb.ListinvoicesResponse
         req = clnpb.ListinvoicesRequest(
         ).SerializeToString()
-
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
@@ -292,7 +277,7 @@ class Node(object):
     def withdraw(
             self,
             destination,
-            amount: Amount,
+            amount: AmountOrAll,
             minconf: int=0
     ) -> clnpb.WithdrawResponse:
         uri = "/cln.Node/Withdraw"
@@ -337,13 +322,13 @@ class Node(object):
             unilateraltimeout=None,
             destination=None
     ) -> clnpb.CloseResponse:
-        if len(peer_id) != 33:
+        if len(id) != 33:
             raise ValueError("node_id is not 33 bytes long")
 
         uri = "/cln.Node/Close"
         res = clnpb.CloseResponse
         req = clnpb.CloseRequest(
-            id=id,
+            id=id.hex(),
             unilateraltimeout=unilateraltimeout,
             destination=destination,
         ).SerializeToString()
@@ -410,8 +395,8 @@ class Node(object):
             destination: bytes,
             amount: clnpb.Amount,
             label: Optional[str]=None,
-            routehints: Optional[List[clnpb.RoutehintList]]=None,
-            extratlvs: Optional[List[clnpb.TlvStream]]=None
+            routehints: Optional[clnpb.RoutehintList]=None,
+            extratlvs: Optional[clnpb.TlvStream]=None
     ) -> clnpb.KeysendResponse:
         uri = "/cln.Node/KeySend"
         res = clnpb.KeysendResponse
@@ -529,7 +514,81 @@ class Node(object):
             close_to_addr=close_to_addr
         ).SerializeToString()
 
-        return self.inner.configure(bytes(req))
+        return self.inner.configure(req)
+
+    def wait_blockheight(
+            self,
+            blockheight: int,
+            timeout: Optional[int] = None,
+    ):
+        """Wait until the blockchain has reached the specified blockheight."""
+        uri = "/cln.Node/WaitBlockheight"
+        req = clnpb.WaitblockheightRequest(
+            blockheight=blockheight,
+            timeout=timeout
+        ).SerializeToString()
+        res = clnpb.WaitblockheightResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
+    def fetch_invoice(
+            self,
+            offer: str,
+            amount_msat: Optional[Amount] = None,
+            quantity: Optional[int] = None,
+            recurrence_counter: Optional[int] = None,
+            recurrence_start: Optional[int] = None,
+            recurrence_label: Optional[str] = None,
+            timeout: Optional[int] = None,
+            payer_note: Optional[str] = None,
+    ) -> clnpb.FetchinvoiceResponse:
+        """Fetch an invoice based on an offer.
+
+        Contact the issuer of an offer to get an actual invoice that
+        can be paid. It highlights any changes between the offer and
+        the returned invoice.
+
+        """
+        uri = "/cln.Node/FetchInvoice"
+        req = clnpb.FetchinvoiceRequest(
+            offer=offer,
+            amount_msat=amount_msat,
+            quantity=quantity,
+            recurrence_counter=recurrence_counter,
+            recurrence_start=recurrence_start,
+            recurrence_label=recurrence_label,
+            timeout=timeout,
+            payer_note=payer_note,
+        ).SerializeToString()
+        res = clnpb.FetchinvoiceResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
+    def wait(
+            self,
+            subsystem,
+            indexname,
+            nextvalue: int
+    ) -> clnpb.WaitResponse:
+        """Wait for the next event in the provided subsystem.
+
+        Returns once the index given by indexname in subsystem reaches
+        or exceeds nextvalue.
+
+        """
+        uri = "/cln.Node/Wait"
+        req = clnpb.WaitRequest(
+            subsystem=subsystem,
+            indexname=indexname,
+            nextvalue=nextvalue,
+        ).SerializeToString()
+        res = clnpb.WaitResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
 
 def normalize_node_id(node_id, string=False):
     if len(node_id) == 66:
