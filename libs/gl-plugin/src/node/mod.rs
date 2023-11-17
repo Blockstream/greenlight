@@ -282,9 +282,48 @@ impl Node for PluginNodeServer {
         let mut stream = self.stage.mystream().await;
         let signer_state = self.signer_state.clone();
         let ctx = self.ctx.clone();
-        
+
         tokio::spawn(async move {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
+
+            {
+                // We start by immediately injecting a
+                // vls_protocol::Message::GetHeartbeat. This serves two
+                // purposes: already send the initial snapshot of the
+                // signer state to the signer as early as possible, and
+                // triggering a pruning on the signer, if enabled. In
+                // incremental mode this ensures that any subsequent,
+                // presumably time-critical messages, do not have to carry
+                // the large state with them.
+
+                let state = signer_state.lock().await.clone();
+                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
+                let state: Vec<pb::SignerStateEntry> = state
+                    .into_iter()
+                    .map(|s| pb::SignerStateEntry {
+                        key: s.key,
+                        version: s.version,
+                        value: s.value,
+                    })
+                    .collect();
+
+                let msg = vls_protocol::msgs::GetHeartbeat {};
+                use vls_protocol::msgs::SerBolt;
+                let req = crate::pb::HsmRequest {
+                    // Notice that the request_counter starts at 1000, to
+                    // avoid collisions.
+                    request_id: 0,
+                    signer_state: state,
+                    raw: msg.as_vec(),
+                    requests: vec![], // No pending requests yet, nothing to authorize.
+                    context: None,
+                };
+
+                if let Err(e) = tx.send(Ok(req)).await {
+                    log::warn!("Failed to send heartbeat message to signer: {}", e);
+                }
+            }
+
             loop {
                 let mut req = match stream.next().await {
                     Err(e) => {

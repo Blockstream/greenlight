@@ -148,7 +148,10 @@ async fn grpc_connect() -> Result<GrpcClient, Error> {
 
 pub async fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
-    let request_counter = Arc::new(atomic::AtomicUsize::new(0));
+
+    // Start the counter at 1000 so we can inject some message before
+    // real requests if we want to.
+    let request_counter = Arc::new(atomic::AtomicUsize::new(1000));
     if args.len() == 2 && args[1] == "--version" {
         println!("{}", version());
         return Ok(());
