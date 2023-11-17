@@ -489,6 +489,23 @@ message SignerStateEntry {
 	bytes value = 3;
 }
 
+// A SignerStateSketch is a summary of the signer state, not including
+// the values, but containing the metadata. It is used by the signer
+// to tell the plugin about its current status, so the plugin doesn't
+// send us an entire snapshot. In addition it can be used in the
+// incremental mode to communicate the latest state, in order to allow
+// asserting that we're not missing any state in the diff.
+message SignerStateSketch {
+  repeated SketchEntry entries = 1;
+}
+
+// The metadata of a single state entry. Does not include the value,
+// and is used to communicate the version current state.
+message SketchEntry {
+  uint64 version = 1;
+  string key = 2;
+}
+
 // This represents a grpc request that is currently pending, along
 // with the pubkey of the client issuing the request and a matching
 // signature. This allows the signer to verify that the state changes
