@@ -20,6 +20,7 @@ impl Resolver {
         // we do an early pass:
         let accept = match req {
             // Commands that simply have no context to check against
+	    Message::GetHeartbeat(_) => true,
             Message::Ecdh(_) => true,
             Message::Ping(_) => true,
             Message::Pong(_) => true,
