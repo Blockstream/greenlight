@@ -39,10 +39,10 @@ tempfile = "3.3.0"
 url = "2.4.0"
 bitcoin = "^0"
 serde = { version = "1", features = [ "derive" ] }
-vls-core = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
-vls-persist = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
-vls-protocol-signer = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
-vls-protocol = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
+vls-core = { workspace = true }
+vls-persist = { workspace = true }
+vls-protocol-signer = { workspace = true }
+vls-protocol = { workspace = true }
 serde_json = "^1.0"
 thiserror = "1"
 cln-grpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113" }
