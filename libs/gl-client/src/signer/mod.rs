@@ -13,6 +13,7 @@ use bytes::BufMut;
 use futhark::{Restriction, Rune};
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
+use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
@@ -31,7 +32,6 @@ use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
-use lightning_signer::bitcoin::secp256k1::PublicKey;
 
 mod approver;
 mod auth;
@@ -743,14 +743,14 @@ impl Signer {
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
     pub async fn node(&self) -> Result<Client, anyhow::Error> {
-        node::Node::new(
+        let node = node::Node::builder_from_parts(
             self.node_id(),
             self.network,
             self.tls.clone(),
-            self.master_rune.to_base64(),
+            &self.master_rune.to_base64(),
         )
-        .schedule()
-        .await
+        .build();
+        node.schedule().await
     }
 
     pub fn version(&self) -> &'static str {
