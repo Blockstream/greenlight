@@ -20,6 +20,7 @@ use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, info, trace, warn};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -757,37 +758,87 @@ impl Signer {
         VERSION
     }
 
-    /// Create a base64 encoded rune from the master rune of this signer. The
-    /// method enforces a restriction that contains an alternative with a
-    /// `pubkey` field and an equal condition set, e.g. `pubkey=02ea2d....`.
-    /// This is enforced to ensure that a developer does not hand out
-    /// unrestricted runes by accident.
+    /// Creates a base64 string called a rune which is used to authorize
+    /// commands on the node and to issue signatures from the signer. Each new
+    /// rune must contain a `pubkey` field that equals the public key that is
+    /// used to sign-off signature requests. Nobody can remove restrictions from
+    /// a rune.
+    ///
+    /// If a `rune` is supplied the restrictions are added to this rune. This
+    /// way one can invoke a rune that only allows for a subset of commands.
+    ///
+    /// `restrictions` is a vector of restrictions where each restriction itself
+    /// is a vector of one ore more alternatives.
+    ///
+    /// - =: passes if equal ie. identical. e.g. method=withdraw
+    /// - /: not equals, e.g. method/withdraw
+    /// - ^: starts with, e.g. id^024b9a1fa8e006f1e3937f
+    /// - $: ends with, e.g. id$381df1cc449605.
+    /// - ~: contains, e.g. id~006f1e3937f65f66c40.
+    /// - <: is a decimal integer, and is less than. e.g. time<1656759180
+    /// - \>: is a decimal integer, and is greater than. e.g. time>1656759180
+    /// - {: preceeds in alphabetical order (or matches but is shorter), e.g. id{02ff.
+    /// - }: follows in alphabetical order (or matches but is longer), e.g. id}02ff.
+    /// - #: a comment, ignored, e.g. dumb example#.
+    /// - !: only passes if the name does not exist. e.g. something!.  Every other operator except # fails if name does not exist!
+    ///
+    /// # Examples
+    /// This creates a fresh rune that is only restricted to a pubkey:
+    ///
+    /// `create_rune(None, vec![vec!["pubkey=000000"]])`
+    ///
+    /// "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA"
+    ///
+    /// This adds a restriction to the rune, in this case a restriction that only
+    /// allows to call methods that start with "list" or "get", basically a
+    /// read-only rune:
+    ///
+    /// `create_rune("wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA", vec![vec!["method^list", "method^get"]])`
+    ///
     pub fn create_rune(
         &self,
-        unique_id: &str,
-        res: Vec<Restriction>,
+        rune: Option<&str>,
+        restrictions: Vec<Vec<&str>>,
     ) -> Result<String, anyhow::Error> {
-        if unique_id.is_empty() {
-            return Err(anyhow!("Missing unique device id"));
-        }
+        if let Some(rune) = rune {
+            // We got a rune, add restrictions to it!
+            let mut rune: Rune = Rune::from_base64(rune)?;
+            restrictions.into_iter().for_each(|alts| {
+                let joined = alts.join("|");
+                _ = rune.add_restriction(joined.as_str())
+            });
+            return Ok(rune.to_base64());
+        } else {
+            let res: Vec<Restriction> = restrictions
+                .into_iter()
+                .map(|alts| {
+                    let joined = alts.join("|");
+                    Restriction::try_from(joined.as_str())
+                })
+                .collect::<Result<Vec<Restriction>, futhark::RuneError>>()?;
 
-        // Check that at least one restriction has a `pubkey` field set.
-        let has_pubkey_field = res.iter().any(|r| {
-            r.alternatives.iter().any(|a| {
-                a.get_field() == *"pubkey" && a.get_condition() == futhark::Condition::Equal
-            })
-        });
-        if !has_pubkey_field {
-            return Err(anyhow!("Missing a restriction on the pubkey"));
-        }
+            // New rune, we need a unique id.
+            // FIXME: Add a counter that persists in SSS.
+            let unique_id = 0;
 
-        let rune = Rune::new(
-            self.master_rune.authcode(),
-            res,
-            Some(unique_id.to_string()),
-            Some(RUNE_VERSION.to_string()),
-        )?;
-        Ok(rune.to_base64())
+            // Check that at least one restriction has a `pubkey` field set.
+            let has_pubkey_field = res.iter().any(|r: &Restriction| {
+                r.alternatives.iter().any(|a| {
+                    a.get_field() == *"pubkey" && a.get_condition() == futhark::Condition::Equal
+                })
+            });
+            if !has_pubkey_field {
+                return Err(anyhow!("Missing a restriction on the pubkey"));
+            }
+
+            let rune = Rune::new(
+                self.master_rune.authcode(),
+                res,
+                Some(unique_id.to_string()),
+                Some(RUNE_VERSION.to_string()),
+            )?;
+            Ok(rune.to_base64())
+        }
     }
 }
 
@@ -869,7 +920,6 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futhark::Alternative;
 
     /// We should not sign messages that we get from the node, since
     /// we're using the sign_message RPC message to create TLS
@@ -966,39 +1016,34 @@ mod tests {
         let signer =
             Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
 
-        let alt = Alternative::new(
-            "pubkey".to_string(),
-            futhark::Condition::Equal,
-            "33aabb".to_string(),
-            false,
-        )
-        .unwrap();
-        let wrong_alt = Alternative::new(
-            "pubkey".to_string(),
-            futhark::Condition::BeginsWith,
-            "hello".to_string(),
-            false,
-        )
-        .unwrap();
+        let alt = "pubkey=112233";
+        let wrong_alt = "pubkey^112233";
 
         // Check empty restrictions.
-        assert!(signer.create_rune("my_id", vec![]).is_err());
+        assert!(signer.create_rune(None, vec![]).is_err());
 
         // Check wrong restriction.
-        let res = Restriction::new(vec![wrong_alt.clone()]).unwrap();
-        assert!(signer.create_rune("my_id", vec![res]).is_err());
+        assert!(signer.create_rune(None, vec![vec![wrong_alt]]).is_err());
 
         // Check good restriction.
-        let res = Restriction::new(vec![alt.clone()]).unwrap();
-        assert!(signer.create_rune("my_id", vec![res]).is_ok());
+        assert!(signer.create_rune(None, vec![vec![alt]]).is_ok());
 
         // Check at least one alternative in one restriction.
-        let res = Restriction::new(vec![wrong_alt.clone()]).unwrap();
-        let sec_res = Restriction::new(vec![wrong_alt, alt.clone()]).unwrap();
-        assert!(signer.create_rune("my_id", vec![res, sec_res]).is_ok());
+        assert!(signer
+            .create_rune(None, vec![vec![wrong_alt], vec![wrong_alt, alt]])
+            .is_ok());
+    }
 
-        // Check missing device id.
-        let res = Restriction::new(vec![alt]).unwrap();
-        assert!(signer.create_rune("", vec![res]).is_err());
+    #[test]
+    fn test_rune_expansion() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+        let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
+
+        let new_rune = signer
+            .create_rune(Some(rune), vec![vec!["method^get"]])
+            .unwrap();
+        let rs = Rune::from_base64(&new_rune).unwrap().to_string();
+        assert!(rs.contains("0-gl0&pubkey=000000&method^get"))
     }
 }
