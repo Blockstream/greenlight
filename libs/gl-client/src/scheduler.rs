@@ -141,8 +141,7 @@ impl Scheduler {
             hex::encode(public_key),
             false,
         )?;
-        let restriction = futhark::Restriction::new(vec![alt])?;
-        res.rune = signer.create_rune("device", vec![restriction])?;
+        res.rune = signer.create_rune(None, vec![vec![&alt.encode()]])?;
 
         // Serialize an auth blob that can be used to store the device cert,
         // the device key and the rune on the device.
@@ -217,8 +216,7 @@ impl Scheduler {
             hex::encode(public_key),
             false,
         )?;
-        let restriction = futhark::Restriction::new(vec![alt])?;
-        res.rune = signer.create_rune("device", vec![restriction])?;
+        res.rune = signer.create_rune(None, vec![vec![&alt.encode()]])?;
 
         // Serialize an auth blob that can be used to store the device cert,
         // the device key and the rune on the device.
