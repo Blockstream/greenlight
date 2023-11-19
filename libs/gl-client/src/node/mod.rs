@@ -1,8 +1,9 @@
 use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
+use crate::serialize;
 use crate::tls::TlsConfig;
-use crate::{serialize::AuthBlob, utils};
+use crate::utils;
 use anyhow::{anyhow, Result};
 use lightning_signer::bitcoin::Network;
 use log::{debug, info, trace};
@@ -21,6 +22,75 @@ pub type ClnClient = cln_client::NodeClient<service::AuthService>;
 
 pub trait GrpcClient {
     fn new_with_inner(inner: service::AuthService) -> Self;
+}
+
+/// A builder to set up and configure a `Node`. The builder is mainly
+/// there to override the `TlsConfig` or the `rune` before
+/// constructing a `Node`.
+pub struct NodeBuilder {
+    node_id: Vec<u8>,
+    network: Network,
+    tls: TlsConfig,
+    rune: String,
+}
+
+impl NodeBuilder {
+    /// Returns a new builder from a `tlsConfig` and a `rune`.
+    pub fn from_parts(node_id: Vec<u8>, network: Network, tls: TlsConfig, rune: &str) -> Self {
+        let rune = rune.to_string();
+        Self {
+            node_id,
+            network,
+            tls,
+            rune,
+        }
+    }
+
+    /// Returns a new builder from an `auth` blob.
+    pub fn from_auth(node_id: Vec<u8>, network: Network, auth: &[u8]) -> Result<Self> {
+        let blob = serialize::AuthBlob::deserialize(&auth[..])?;
+        let tls = TlsConfig::new()?.identity(blob.cert, blob.key);
+        let rune: String = blob.rune;
+        Ok(Self {
+            node_id,
+            network,
+            tls,
+            rune,
+        })
+    }
+
+    /// Sets a `TlsConfig` for the `Node`. Overrides a `TlsConfig` created from
+    /// the auth blob using `with_auth`.
+    pub fn with_tls(mut self, tls: TlsConfig) -> Self {
+        self.tls = tls;
+        self
+    }
+
+    /// Sets a `futhark::Rune` for the `Node`. Overrides a `futhark::Rune` that
+    /// is extracted from the auth blob via `with_auth`.
+    pub fn with_rune(mut self, rune: &str) -> Self {
+        self.rune = rune.to_string();
+        self
+    }
+
+    /// Use the auth blob to create the `TlsConfig` and the `futhark::Rune` for
+    /// the `Node`. Will be overridden by `with_rune()` and `with_tls`.
+    pub fn with_auth(mut self, auth: &[u8]) -> Result<Self> {
+        let blob = serialize::AuthBlob::deserialize(&auth[..])?;
+        self.tls = TlsConfig::new()?.identity(blob.cert, blob.key);
+        self.rune = blob.rune;
+        Ok(self)
+    }
+
+    /// Build the `Node` from set parameters.
+    pub fn build(self) -> Node {
+        Node {
+            node_id: self.node_id,
+            network: self.network,
+            tls: self.tls,
+            rune: self.rune,
+        }
+    }
 }
 
 /// A builder to configure a [`Client`] that can either connect to a
@@ -56,23 +126,32 @@ impl GrpcClient for ClnClient {
 }
 
 impl Node {
-    pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig, rune: String) -> Node {
+    pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig) -> Node {
         Node {
             node_id,
             network,
             tls,
-            rune,
+            rune: "".to_string(),
         }
     }
 
-    pub fn new_from_auth(
+    /// Returns a new `NodeBuilder` from a `TlsConfig` and a rune.
+    pub fn builder_from_parts(
         node_id: Vec<u8>,
         network: Network,
         tls: TlsConfig,
+        rune: &str,
+    ) -> NodeBuilder {
+        NodeBuilder::from_parts(node_id, network, tls, rune)
+    }
+
+    /// Returns a new `NodeBuilder` from an `auth` blob.
+    pub fn builder_from_auth(
+        node_id: Vec<u8>,
+        network: Network,
         auth: &[u8],
-    ) -> Result<Self> {
-        let blob = AuthBlob::deserialize(auth)?;
-        Ok(Self::new(node_id, network, tls, blob.rune))
+    ) -> Result<NodeBuilder> {
+        NodeBuilder::from_auth(node_id, network, auth)
     }
 
     pub async fn connect<C>(&self, node_uri: String) -> Result<C>
