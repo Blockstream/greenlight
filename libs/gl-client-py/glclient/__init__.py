@@ -85,7 +85,7 @@ class Scheduler(object):
 
     def export_node(self) -> schedpb.ExportNodeResponse:
         res = schedpb.ExportNodeResponse
-        return self.inner.export_node()
+        return res.FromString(bytes(self.inner.export_node()))
 
     def node(self) -> "Node":
         res = self.schedule()
