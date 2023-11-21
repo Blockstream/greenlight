@@ -1,24 +1,20 @@
 from binascii import hexlify, unhexlify
 from glcli import environment as env
-from glclient import TlsConfig, Scheduler, Amount, AmountOrAll, AmountOrAny
+from glclient import TlsConfig, Scheduler
+from pyln.grpc import Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
-from threading import Thread
 from typing import Optional
 import click
-import functools
 import json
 import logging
 import os
 import glclient
 import re
 import secrets
-import struct
 import sys
 import threading
-import time
 import signal
-
 
 
 logger = logging.getLogger("glcli")
@@ -31,9 +27,10 @@ logger.addHandler(handler)
 
 
 class Tls:
-    """Encapsulation of the fs convention followed by glcli
-    """
+    """Encapsulation of the fs convention followed by glcli."""
+
     def __init__(self):
+        """Initialize an mTLS identity."""
         self.tls = TlsConfig()
         cert_path = Path('device.crt')
         key_path = Path('device-key.pem')
@@ -196,6 +193,8 @@ def pb2dict(p):
                 val = [pb2dict(v) for v in val]
             else:
                 val = pb2dict(val)
+        if isinstance(val, bytes):
+            val = val.hex()
         res[desc.name] = val
 
     # Fill in the default variables so we don't end up with changing
@@ -214,25 +213,21 @@ def pb2dict(p):
 
     return res
 
-from google.protobuf.pyext._message import RepeatedScalarContainer
 def dict2jsondict(d):
     """Hexlify all binary fields so they can be serialized with `json.dumps`
     """
     if isinstance(d, list):
         return [dict2jsondict(e) for e in d]
-    elif isinstance(d, bytes):
-        return hexlify(d).decode('ASCII')
     elif isinstance(d, dict):
         return {k: dict2jsondict(v) for k, v in d.items()}
-    elif isinstance(d, RepeatedScalarContainer):
-        return list(d)
     else:
         return d
 
 
 def pbprint(pb):
-    j = dict2jsondict(pb2dict(pb))
-    print(json.dumps(j, indent=2))
+    dta = pb2dict(pb)
+    dta = dict2jsondict(dta)
+    print(json.dumps(dta))
 
 
 @click.group()

@@ -23,10 +23,11 @@ anyhow = "1"
 env_logger = "0.10"
 cln-grpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113" }
 cln-rpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113" }
-vls-core = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
-vls-persist = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
-vls-protocol-signer = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
-vls-protocol = { git="https://gitlab.com/cdecker/vls", tag="snapshot-20230920" }
+
+vls-core = "=0.10.1"
+vls-persist = "=0.10.0"
+vls-protocol-signer = "=0.10.0"
+vls-protocol = "=0.10.0"
 
 
 # Config for 'cargo dist'
