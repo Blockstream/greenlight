@@ -293,6 +293,37 @@ impl Signer {
         if let Some(device_id) = rune.get_id() {
             checks.insert("".to_string(), format!("{}-{}", device_id, RUNE_VERSION));
         }
+
+        // Check that the request points to `cln.Node`.
+        let mut parts = request.uri.split('/');
+        parts.next();
+        match parts.next() {
+            Some(service) => {
+                // Fixme: We skip this for now as we also have /greenlight.Node
+                // services that need signature e.g. the `close_to_addr`.
+                // We may want to be more strict about this in the future.
+                if service != "cln.Node" && service != "greenlight.Node" {
+                    debug!("request from unknown service {}.", service);
+                    return Err(anyhow!("service {} is not valid", service));
+                }
+            }
+            None => {
+                debug!("could not extract service from the uri while verifying rune.");
+                return Err(anyhow!("can not extract service from uri"));
+            }
+        };
+
+        // Extract the method from the request uri: eg. `/cln.Node/CreateInvoice`
+        // becomes `createinvoice`.
+        let method = match parts.next() {
+            Some(m) => m.to_lowercase(),
+            None => {
+                debug!("could not extract method from uri while verifying rune.");
+                return Err(anyhow!("can not extract uri form request"));
+            }
+        };
+        checks.insert("method".to_string(), method.to_string());
+
         match self
             .master_rune
             .check_with_reason(&rune64, futhark::MapChecker { map: checks })
@@ -919,6 +950,8 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 
 #[cfg(test)]
 mod tests {
+    use crate::pb;
+
     use super::*;
 
     /// We should not sign messages that we get from the node, since
@@ -1045,5 +1078,56 @@ mod tests {
             .unwrap();
         let rs = Rune::from_base64(&new_rune).unwrap().to_string();
         assert!(rs.contains("0-gl0&pubkey=000000&method^get"))
+    }
+
+    #[test]
+    fn test_rune_checks_method() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+
+        // This is just a placeholder public key, could also be a different one;
+        let pubkey = signer.node_id();
+        let pubkey_rest = format!("pubkey={}", hex::encode(&pubkey));
+
+        // Create a rune that allows methods that start with `create`.
+        let rune = signer
+            .create_rune(None, vec![vec![&pubkey_rest], vec!["method^create"]])
+            .unwrap();
+
+        // A method/uri that starts with `create` is ok.
+        let uri = "/cln.Node/CreateInvoice".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey: pubkey.clone(),
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_ok());
+
+        // method/uri `Pay` is not allowed by the rune.
+        let uri = "/cln.Node/Pay".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey: pubkey.clone(),
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_err());
+
+        // A service other than cln.Node is not allowed.
+        let uri = "/cln.Greenlight/Pay".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey,
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_err());
     }
 }
