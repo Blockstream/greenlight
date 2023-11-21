@@ -1,12 +1,12 @@
 from . import scheduler_pb2 as schedpb
 from . import greenlight_pb2 as nodepb
 from pyln import grpc as clnpb  # type: ignore
-from pyln.grpc import Amount, AmountOrAll
+from pyln.grpc import Amount, AmountOrAll, AmountOrAny  # noqa: F401
 from . import glclient as native
 from .tls import TlsConfig
 from google.protobuf.message import Message as PbMessage
 from binascii import hexlify, unhexlify
-from typing import Optional, List, Union, Iterable, Any, Type, TypeVar
+from typing import Optional, List, Iterable, Any, Type, TypeVar
 import logging
 from glclient.lsps import LspClient
 
