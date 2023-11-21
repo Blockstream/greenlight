@@ -75,25 +75,23 @@ class Client:
             .identity(certpath.open(mode="r").read(), keypath.open(mode="r").read())
         )
     
-    def rune(self) -> str:
-        """Load the devices rune
+    def auth(self) -> str:
+        """Load the auth blob
         
-        Returns the devices rune if it is available or an empty string
-        if the rune can not be found.
+        Returns the devices auth blob
         """
-        self.log.info("Trying to find a rune")
-        runepath = self.directory / "device.rune"    
-        if runepath.exists():
-            self.log.info(f"Loading rune from {runepath}")
-            rune = runepath.open(mode="r").read()
-            return rune
+        self.log.info("Trying to find greenlight.auth")
+        authpath = self.directory / "greenlight.auth"    
+        if authpath.exists():
+            self.log.info(f"Loading auth blob from {authpath}")
+            auth = authpath.open(mode="rb").read()
+            return auth
         else:
-            self.log.info(f"No rune loaded expecting nobody identity")
-            return ""
+            raise ValueError()
 
     def scheduler(self) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        return glclient.Scheduler(self.node_id, network=NETWORK, tls=self.tls(), rune=self.rune())
+        return glclient.Scheduler(self.node_id, network=NETWORK, tls=self.tls())
 
     def signer(self) -> glclient.Signer:
         secret = (self.directory / "hsm_secret").open(mode="rb").read()
@@ -106,7 +104,7 @@ class Client:
         return signer
 
     def node(self):
-        return self.scheduler().node()
+        return self.scheduler().node(auth=self.auth())
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node
@@ -120,8 +118,8 @@ class Client:
                 f.write(r.device_cert)
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
-            with (self.directory / "device.rune").open("w") as f:
-                f.write(r.rune)
+            with (self.directory / "greenlight.auth").open("wb") as f:
+                f.write(r.auth)
 
     def recover(self, configure: bool = True) -> None:
         r = self.scheduler().recover(self.signer())
@@ -130,8 +128,8 @@ class Client:
                 f.write(r.device_cert)
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
-            with (self.directory / "device.rune").open("w") as f:
-                f.write(r.rune)
+            with (self.directory / "greenlight.auth").open("wb") as f:
+                f.write(r.auth)
 
     def find_node(self):
         """If we registered find the matching node in the scheduler

@@ -22,46 +22,37 @@ impl Node {
     fn new(
         node_id: Vec<u8>,
         network: String,
-        tls: TlsConfig,
         grpc_uri: String,
-        rune: String,
+        tls: Option<TlsConfig>,
+        rune: Option<String>,
+        auth: Option<Vec<u8>>,
     ) -> PyResult<Self> {
         let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("unknown network")),
         };
 
-        let inner = gl::node::Node::builder_from_parts(node_id, network, tls.inner, &rune).build();
-        // Connect to both interfaces in parallel to avoid doubling the startup time:
-
-        // TODO: Could be massively simplified by using a scoped task
-        // from tokio_scoped to a
-        let (client, gclient, cln_client) = exec(async {
-            let i = inner.clone();
-            let u = grpc_uri.clone();
-            let h1 = tokio::spawn(async move { i.connect(u).await });
-            let i = inner.clone();
-            let u = grpc_uri.clone();
-            let h2 = tokio::spawn(async move { i.connect(u).await });
-            let i = inner.clone();
-            let u = grpc_uri.clone();
-            let h3 = tokio::spawn(async move { i.connect(u).await });
-
-            Ok::<(gl::node::Client, gl::node::GClient, gl::node::ClnClient), anyhow::Error>((
-                h1.await??,
-                h2.await??,
-                h3.await??,
-            ))
-        })
-        .map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
-        })?;
-
-        Ok(Node {
-            client,
-            gclient,
-            cln_client,
-        })
+        match auth {
+            Some(auth) => {
+                let mut node_builder = gl::node::Node::builder_from_auth(node_id, network, &auth)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                if let Some(tls) = tls {
+                    node_builder = node_builder.with_tls(tls.inner);
+                }
+                if let Some(rune) = rune {
+                    node_builder = node_builder.with_rune(&rune);
+                }
+                let inner = node_builder.build();
+                return node_from_inner(inner, grpc_uri);
+            }
+            None => {
+                let tls = tls.ok_or(PyValueError::new_err("TLS configuration is missing"))?;
+                let rune = rune.ok_or(PyValueError::new_err("Rune is missing"))?;
+                let inner =
+                    gl::node::Node::builder_from_parts(node_id, network, tls.inner, &rune).build();
+                return node_from_inner(inner, grpc_uri);
+            }
+        };
     }
 
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {
@@ -179,4 +170,36 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(Some(buf))
+}
+
+fn node_from_inner(inner: gl::node::Node, grpc_uri: String) -> PyResult<Node> {
+    // Connect to both interfaces in parallel to avoid doubling the startup time:
+    // TODO: Could be massively simplified by using a scoped task
+    // from tokio_scoped to a
+    let (client, gclient, cln_client) = exec(async {
+        let i = inner.clone();
+        let u = grpc_uri.clone();
+        let h1 = tokio::spawn(async move { i.connect(u).await });
+        let i = inner.clone();
+        let u = grpc_uri.clone();
+        let h2 = tokio::spawn(async move { i.connect(u).await });
+        let i = inner.clone();
+        let u = grpc_uri.clone();
+        let h3 = tokio::spawn(async move { i.connect(u).await });
+
+        Ok::<(gl::node::Client, gl::node::GClient, gl::node::ClnClient), anyhow::Error>((
+            h1.await??,
+            h2.await??,
+            h3.await??,
+        ))
+    })
+    .map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
+    })?;
+
+    Ok(Node {
+        client,
+        gclient,
+        cln_client,
+    })
 }

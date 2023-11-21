@@ -37,7 +37,13 @@ class Scheduler:
 
 class Node:
     def __init__(
-        self, node_id: bytes, network: str, tls: TlsConfig, grpc_uri: str, rune: str
+        self,
+        node_id: bytes,
+        network: str,
+        grpc_uri: str,
+        tls: t.Optional[TlsConfig] = None,
+        rune: t.Optional[str] = None,
+        auth: t.Optional[bytes] = None
     ) -> None: ...
     def stop(self) -> None: ...
     def call(self, method: str, request: bytes) -> bytes: ...

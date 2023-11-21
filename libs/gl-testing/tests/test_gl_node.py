@@ -8,6 +8,7 @@ from pyln import grpc as clnpb
 import grpc
 from glclient import scheduler_pb2 as schedpb
 import time
+import unittest
 
 
 def test_node_network_gl_fund(node_factory, clients, bitcoind):
