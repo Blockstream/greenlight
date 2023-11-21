@@ -66,8 +66,7 @@ def test_recover(sclient, signer):
 def test_schedule_call(sclient, signer, tls):
     req = sclient.register(signer)
     res = sclient.schedule()
-    tls = tls.identity(req.device_cert, req.device_key)
-    node = Node(signer.node_id(), 'regtest', tls, res.grpc_uri)
+    node = Node(signer.node_id(), 'regtest', res.grpc_uri, auth=req.auth)
     info = node.get_info()
 
 
@@ -92,10 +91,9 @@ def test_register_with_invite_code(scheduler, sclient, signer):
     sclient.register(signer, "some-invite-code")
     assert scheduler.received_invite_code == "some-invite-code"
 
-def test_identity_from_auth_blob(sclient, signer, tls):
+def test_node_from_auth_blob(sclient, signer, tls):
     req = sclient.register(signer)
     res = sclient.schedule()
-    tls = tls.identity_from_auth(req.auth)
-    node = Node(signer.node_id(), 'regtest', tls, res.grpc_uri, req.rune)
+    node = Node(signer.node_id(), 'regtest', res.grpc_uri, auth=req.auth)
     info = node.get_info()
     assert(info)
