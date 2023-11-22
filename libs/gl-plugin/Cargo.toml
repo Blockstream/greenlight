@@ -17,19 +17,18 @@ path = "src/bin/plugin.rs"
 [dependencies]
 anyhow = "*"
 async-stream = "*"
+base64 = "0.21.2"
 bytes = { version = "1", features = ["serde"] }
 clightningrpc = "*"
 cln-grpc = { workspace = true, features = ["server"] }
-cln-rpc = { workspace = true }
-#cln-grpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113", features = ["server"] }
-#cln-rpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113"}
-vls-protocol = { workspace = true }
 cln-plugin = "^0.1"
+cln-rpc = { workspace = true }
 env_logger = "^0.7.0"
 futures = "0.3"
 gl-client = { version = "^0.1", path = "../gl-client" }
 governor = { version = "0.5", default-features = false, features = ["std"] }
 hex = "0.4"
+hyper = "0.14.23"
 lazy_static = "^1.4.0"
 linemux = "0.2"
 log = "0.4"
@@ -37,15 +36,14 @@ nix = "^0"
 prost = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
+sled = "*"
 thiserror = "*"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 tonic = { version = "^0.8", features = ["tls", "transport"] }
 tower = { version = "0.4" }
-sled = "*"
-hyper = "0.14.23"
-base64 = "0.21.2"
+vls-protocol = { workspace = true }
 
 [build-dependencies]
 tonic-build = "^0.8"

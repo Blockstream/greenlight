@@ -21,8 +21,9 @@ members = [
 [workspace.dependencies]
 anyhow = "1"
 env_logger = "0.10"
-cln-grpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113" }
-cln-rpc = {git = "https://github.com/cdecker/lightning.git", tag = "gl-20231113" }
+cln-grpc = "0.1.7"
+cln-rpc = "0.1.7"
+cln-plugin = "0.1.7"
 
 vls-core = "=0.10.1"
 vls-persist = "=0.10.0"
