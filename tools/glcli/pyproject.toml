@@ -1,9 +1,13 @@
 [tool.poetry]
-name = "glcli"
-version = "0.1.8"
+name = "greenlight-cli"
+version = "0.1.0"
 description = ""
 authors = ["Christian Decker <decker@blockstream.com>"]
 license = "MIT"
+
+packages = [
+    { include = "glcli" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
