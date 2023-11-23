@@ -12,8 +12,12 @@ import logging
 from glclient.lsps import LspClient
 
 
+backup_decrypt_with_seed = native.backup_decrypt_with_seed
+
+
 # Keep in sync with the libhsmd version, this is tested in unit tests.
 __version__ = "v23.08"
+
 
 E = TypeVar('E', bound=PbMessage)
 def _convert(cls: Type[E], res: Iterable[Any]) -> E:
@@ -82,7 +86,7 @@ class Scheduler(object):
 
     def export_node(self) -> schedpb.ExportNodeResponse:
         res = schedpb.ExportNodeResponse
-        return self.inner.export_node()
+        return res.FromString(bytes(self.inner.export_node()))
 
     def node(self) -> "Node":
         res = self.schedule()
