@@ -3,6 +3,7 @@ from . import greenlight_pb2 as nodepb
 from pyln import grpc as clnpb  # type: ignore
 from pyln.grpc import Amount, AmountOrAll, AmountOrAny  # noqa: F401
 from . import glclient as native
+from glclient.glclient import backup_decrypt_with_seed  # noqa: F401
 from .tls import TlsConfig
 from google.protobuf.message import Message as PbMessage
 from binascii import hexlify, unhexlify
