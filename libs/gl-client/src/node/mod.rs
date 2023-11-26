@@ -66,14 +66,14 @@ impl NodeBuilder {
         self
     }
 
-    /// Sets a `futhark::Rune` for the `Node`. Overrides a `futhark::Rune` that
+    /// Sets a `runeauth::Rune` for the `Node`. Overrides a `runeauth::Rune` that
     /// is extracted from the auth blob via `with_auth`.
     pub fn with_rune(mut self, rune: &str) -> Self {
         self.rune = rune.to_string();
         self
     }
 
-    /// Use the auth blob to create the `TlsConfig` and the `futhark::Rune` for
+    /// Use the auth blob to create the `TlsConfig` and the `runeauth::Rune` for
     /// the `Node`. Will be overridden by `with_rune()` and `with_tls`.
     pub fn with_auth(mut self, auth: &[u8]) -> Result<Self> {
         let blob = serialize::AuthBlob::deserialize(&auth[..])?;

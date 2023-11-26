@@ -135,9 +135,9 @@ impl Scheduler {
         // Create a new rune for the tls certs public key and append it to the
         // grpc response. Restricts the rune to the public key used for mTLS
         // authentication.
-        let alt = futhark::Alternative::new(
+        let alt = runeauth::Alternative::new(
             "pubkey".to_string(),
-            futhark::Condition::Equal,
+            runeauth::Condition::Equal,
             hex::encode(public_key),
             false,
         )?;
@@ -210,9 +210,9 @@ impl Scheduler {
         // Create a new rune for the tls certs public key and append it to the
         // grpc response. Restricts the rune to the public key used for mTLS
         // authentication.
-        let alt = futhark::Alternative::new(
+        let alt = runeauth::Alternative::new(
             "pubkey".to_string(),
-            futhark::Condition::Equal,
+            runeauth::Condition::Equal,
             hex::encode(public_key),
             false,
         )?;

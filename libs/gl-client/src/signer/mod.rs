@@ -10,7 +10,6 @@ use anyhow::anyhow;
 use base64::engine::general_purpose;
 use base64::Engine;
 use bytes::BufMut;
-use futhark::{Restriction, Rune};
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
 use lightning_signer::bitcoin::secp256k1::PublicKey;
@@ -19,6 +18,7 @@ use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, info, trace, warn};
+use runeauth::{Condition, MapChecker, Restriction, Rune, RuneError};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -326,7 +326,7 @@ impl Signer {
 
         match self
             .master_rune
-            .check_with_reason(&rune64, futhark::MapChecker { map: checks })
+            .check_with_reason(&rune64, MapChecker { map: checks })
         {
             Ok(_) => Ok(()),
             Err(e) => Err(e.into()),
@@ -846,7 +846,7 @@ impl Signer {
                     let joined = alts.join("|");
                     Restriction::try_from(joined.as_str())
                 })
-                .collect::<Result<Vec<Restriction>, futhark::RuneError>>()?;
+                .collect::<Result<Vec<Restriction>, RuneError>>()?;
 
             // New rune, we need a unique id.
             // FIXME: Add a counter that persists in SSS.
@@ -854,9 +854,9 @@ impl Signer {
 
             // Check that at least one restriction has a `pubkey` field set.
             let has_pubkey_field = res.iter().any(|r: &Restriction| {
-                r.alternatives.iter().any(|a| {
-                    a.get_field() == *"pubkey" && a.get_condition() == futhark::Condition::Equal
-                })
+                r.alternatives
+                    .iter()
+                    .any(|a| a.get_field() == *"pubkey" && a.get_condition() == Condition::Equal)
             });
             if !has_pubkey_field {
                 return Err(anyhow!("Missing a restriction on the pubkey"));

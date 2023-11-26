@@ -628,6 +628,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crypto"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf1e6e5492f8f0830c37f301f6349e0dac8b2466e4fe89eef90e9eef906cd046"
+dependencies = [
+ "crypto-common",
+]
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1045,10 +1054,12 @@ dependencies = [
  "mockall",
  "pin-project 1.1.3",
  "prost 0.11.9",
+ "prost-derive 0.11.9",
  "rand 0.8.5",
  "rcgen",
  "reqwest",
  "ring 0.16.20",
+ "runeauth",
  "rustls-pemfile",
  "secp256k1 0.26.0",
  "serde",
@@ -1072,7 +1083,7 @@ dependencies = [
 
 [[package]]
 name = "gl-client-py"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "anyhow",
  "bytes 1.5.0",
@@ -2589,6 +2600,22 @@ dependencies = [
  "spin 0.9.8",
  "untrusted 0.9.0",
  "windows-sys",
+]
+
+[[package]]
+name = "runeauth"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b8cf56aa3c9bcafc184853e8b356df61728a6f41da65fe2f0cc9e2a3f9f2318"
+dependencies = [
+ "anyhow",
+ "base64 0.21.5",
+ "crypto",
+ "env_logger 0.10.1",
+ "hex",
+ "indexmap 2.1.0",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]
