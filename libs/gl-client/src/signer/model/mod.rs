@@ -70,6 +70,7 @@ pub enum Request {
     Ping(cln::PingRequest),
     SetChannel(cln::SetchannelRequest),
     SignMessage(cln::SignmessageRequest),
+    FetchInvoice(cln::FetchinvoiceRequest),
     Stop(cln::StopRequest),
     ListClosedChannels(cln::ListclosedchannelsRequest),
     StaticBackup(cln::StaticbackupRequest),
