@@ -88,6 +88,26 @@ class SchedulerStub(object):
                 request_serializer=scheduler__pb2.ExportNodeRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.ExportNodeResponse.FromString,
                 )
+        self.AddOutgoingWebhook = channel.unary_unary(
+                '/scheduler.Scheduler/AddOutgoingWebhook',
+                request_serializer=scheduler__pb2.AddOutgoingWebhookRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.AddOutgoingWebhookResponse.FromString,
+                )
+        self.ListOutgoingWebhooks = channel.unary_unary(
+                '/scheduler.Scheduler/ListOutgoingWebhooks',
+                request_serializer=scheduler__pb2.ListOutgoingWebhooksRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.ListOutgoingWebhooksResponse.FromString,
+                )
+        self.DeleteWebhooks = channel.unary_unary(
+                '/scheduler.Scheduler/DeleteWebhooks',
+                request_serializer=scheduler__pb2.DeleteOutgoingWebhooksRequest.SerializeToString,
+                response_deserializer=greenlight__pb2.Empty.FromString,
+                )
+        self.RotateOutgoingWebhookSecret = channel.unary_unary(
+                '/scheduler.Scheduler/RotateOutgoingWebhookSecret',
+                request_serializer=scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.WebhookSecretResponse.FromString,
+                )
 
 
 class SchedulerServicer(object):
@@ -270,6 +290,30 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AddOutgoingWebhook(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListOutgoingWebhooks(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteWebhooks(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RotateOutgoingWebhookSecret(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -312,6 +356,26 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.ExportNode,
                     request_deserializer=scheduler__pb2.ExportNodeRequest.FromString,
                     response_serializer=scheduler__pb2.ExportNodeResponse.SerializeToString,
+            ),
+            'AddOutgoingWebhook': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddOutgoingWebhook,
+                    request_deserializer=scheduler__pb2.AddOutgoingWebhookRequest.FromString,
+                    response_serializer=scheduler__pb2.AddOutgoingWebhookResponse.SerializeToString,
+            ),
+            'ListOutgoingWebhooks': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListOutgoingWebhooks,
+                    request_deserializer=scheduler__pb2.ListOutgoingWebhooksRequest.FromString,
+                    response_serializer=scheduler__pb2.ListOutgoingWebhooksResponse.SerializeToString,
+            ),
+            'DeleteWebhooks': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteWebhooks,
+                    request_deserializer=scheduler__pb2.DeleteOutgoingWebhooksRequest.FromString,
+                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+            ),
+            'RotateOutgoingWebhookSecret': grpc.unary_unary_rpc_method_handler(
+                    servicer.RotateOutgoingWebhookSecret,
+                    request_deserializer=scheduler__pb2.RotateOutgoingWebhookSecretRequest.FromString,
+                    response_serializer=scheduler__pb2.WebhookSecretResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -489,6 +553,74 @@ class Scheduler(object):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ExportNode',
             scheduler__pb2.ExportNodeRequest.SerializeToString,
             scheduler__pb2.ExportNodeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AddOutgoingWebhook(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/AddOutgoingWebhook',
+            scheduler__pb2.AddOutgoingWebhookRequest.SerializeToString,
+            scheduler__pb2.AddOutgoingWebhookResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ListOutgoingWebhooks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ListOutgoingWebhooks',
+            scheduler__pb2.ListOutgoingWebhooksRequest.SerializeToString,
+            scheduler__pb2.ListOutgoingWebhooksResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DeleteWebhooks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/DeleteWebhooks',
+            scheduler__pb2.DeleteOutgoingWebhooksRequest.SerializeToString,
+            greenlight__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RotateOutgoingWebhookSecret(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/RotateOutgoingWebhookSecret',
+            scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
+            scheduler__pb2.WebhookSecretResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

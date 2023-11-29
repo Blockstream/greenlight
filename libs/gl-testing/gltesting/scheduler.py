@@ -1,8 +1,10 @@
 import logging
 import os
+import random
 import shutil
 import socket
 import subprocess
+import string
 import tempfile
 import threading
 import time
@@ -78,6 +80,8 @@ def enumerate_cln_versions():
     logging.info(f"Found {len(versions)} versions: {versions}")
     return versions
 
+def generate_secret(len=5):
+    return "".join(random.choices(string.ascii_uppercase, k=len))
 
 class AsyncScheduler(schedgrpc.SchedulerServicer):
     """A mock scheduler to test against."""
@@ -95,8 +99,10 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.versions = enumerate_cln_versions()
         self.bitcoind = bitcoind
         self.invite_codes: List[str] = []
+        self.next_webhook_id: int = 1
         self.received_invite_code = None
         self.debugger = DebugServicer()
+        self.webhooks = []
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -122,7 +128,6 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.server.add_service(self.debugger.service)
 
         threading.Thread(target=anyio.run, args=(self.run,), daemon=True).start()
-        print("Hello")
         logging.info(f"Scheduler started on port {self.grpc_port}")
 
     def stop(self):
@@ -358,6 +363,43 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         codes = [schedpb.InviteCode(**c) for c in self.invite_codes]
         return schedpb.ListInviteCodesResponse(invite_code_list=codes)
 
+    async def add_outgoing_webhook(self, req) -> schedpb.AddOutgoingWebhookResponse:
+        n = self.get_node(req.node_id)
+        secret = generate_secret()
+        id = self.next_webhook_id
+        
+        self.webhooks.append({
+            "id": id,
+            "node_id": n.node_id,
+            "uri": req.uri,
+            "secret": secret
+        })
+        
+        self.next_webhook_id = self.next_webhook_id + 1
+        return schedpb.AddOutgoingWebhookResponse(id=id, secret=secret)
+    
+    async def list_outgoing_webhooks(self, req) -> schedpb.ListOutgoingWebhooksResponse:
+        n = self.get_node(req.node_id)
+        webhooks = [schedpb.Webhook(**{"id": w["id"], "uri": w["uri"]}) for w in self.webhooks if w["node_id"] == n.node_id]
+        return schedpb.ListOutgoingWebhooksResponse(outgoing_webhooks=webhooks)
+    
+    async def delete_outgoing_webhooks(self, req) -> greenlightpb.Empty:
+        n = self.get_node(req.node_id)
+        self.webhooks = [w for w in self.webhooks if not (w["id"] in req.ids and w["node_id"] == n.node_id)]
+        return greenlightpb.Empty()
+    
+    async def rotate_outgoing_webhook_secret(self, req) -> schedpb.WebhookSecretResponse:
+        n = self.get_node(req.node_id)
+        webhook = next((w for w in self.webhooks if w["id"] == req.webhook_id and w["node_id"] == n.node_id), None)
+        
+        if webhook is None:
+            raise ValueError(
+                f"No webhook with id={webhook_id} found in gltesting scheduler"
+            )
+        
+        secret = generate_secret()
+        webhook["secret"] = secret
+        return schedpb.WebhookSecretResponse(secret=secret)
 
 class DebugServicer(schedgrpc.DebugServicer):
     """Collects and analyzes rejected signer requests."""

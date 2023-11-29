@@ -148,7 +148,52 @@ service Scheduler {
 	// being replayed) and loss of funds (see CLN Backups
 	// documentation for more information)
 	rpc ExportNode(ExportNodeRequest) returns (ExportNodeResponse) {}
+
+	rpc AddOutgoingWebhook(AddOutgoingWebhookRequest) returns (AddOutgoingWebhookResponse) {}
+
+	rpc ListOutgoingWebhooks(ListOutgoingWebhooksRequest) returns (ListOutgoingWebhooksResponse) {}
+
+	rpc DeleteWebhooks(DeleteOutgoingWebhooksRequest) returns (greenlight.Empty) {}
+
+	rpc RotateOutgoingWebhookSecret(RotateOutgoingWebhookSecretRequest) returns (WebhookSecretResponse) {}
 };
+
+message AddOutgoingWebhookRequest {
+	bytes node_id = 1;
+	string uri = 2;
+}
+
+message AddOutgoingWebhookResponse {
+	int64 id = 1;
+	string secret = 2;
+}
+
+message ListOutgoingWebhooksRequest {
+	bytes node_id = 1;
+}
+
+message Webhook {
+	int64 id = 1;
+	string uri = 2;
+}
+
+message ListOutgoingWebhooksResponse {
+	repeated Webhook outgoing_webhooks = 1;
+}
+
+message DeleteOutgoingWebhooksRequest {
+	bytes node_id = 1;
+	repeated int64 ids = 2;
+}
+
+message RotateOutgoingWebhookSecretRequest {
+	bytes node_id = 1;
+	int64 webhook_id = 2;
+}
+
+message WebhookSecretResponse {
+	string secret = 1;
+}
 
 // A service to collect debugging information from clients.
 service Debug {

@@ -98,6 +98,41 @@ impl Scheduler {
     fn get_invite_codes(&self) -> PyResult<Vec<u8>> {
         convert(exec(async move { self.inner.get_invite_codes().await }))
     }
+
+    fn add_outgoing_webhook(&self, uri: String) -> PyResult<Vec<u8>> {
+        let outgoing_webhook_request = pb::scheduler::AddOutgoingWebhookRequest {
+            node_id: self.node_id.clone(),
+            uri
+        };
+
+        convert(exec(async move { self.inner.add_outgoing_webhook(outgoing_webhook_request).await }))
+    }
+
+    fn list_outgoing_webhooks(&self) -> PyResult<Vec<u8>>{
+        let list_outgoing_webhooks_request = pb::scheduler::ListOutgoingWebhooksRequest {
+            node_id: self.node_id.clone()
+        };
+
+        convert(exec(async move { self.inner.list_outgoing_webhooks(list_outgoing_webhooks_request).await }))
+    }
+
+    fn delete_outgoing_webhooks(&self, webhook_ids: Vec<i64>) -> PyResult<Vec<u8>> {
+        let delete_outgoing_webhooks_request = pb::scheduler::DeleteOutgoingWebhooksRequest {
+            node_id: self.node_id.clone(),
+            ids: webhook_ids
+        };
+
+        convert(exec(async move { self.inner.delete_webhooks(delete_outgoing_webhooks_request).await }))
+    }
+
+    fn rotate_outgoing_webhook_secret(&self, webhook_id: i64) -> PyResult<Vec<u8>> {
+        let rotate_outgoing_webhook_secret_request = pb::scheduler::RotateOutgoingWebhookSecretRequest {
+            node_id: self.node_id.clone(),
+            webhook_id
+        };
+
+        convert(exec(async move { self.inner.rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request).await }))
+    }
 }
 
 pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
