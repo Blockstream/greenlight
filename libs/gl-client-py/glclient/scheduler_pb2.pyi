@@ -36,6 +36,143 @@ RECOVER: ChallengeScope.ValueType  # 1
 global___ChallengeScope = ChallengeScope
 
 @typing_extensions.final
+class AddOutgoingWebhookRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NODE_ID_FIELD_NUMBER: builtins.int
+    URI_FIELD_NUMBER: builtins.int
+    node_id: builtins.bytes
+    uri: builtins.str
+    def __init__(
+        self,
+        *,
+        node_id: builtins.bytes = ...,
+        uri: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["node_id", b"node_id", "uri", b"uri"]) -> None: ...
+
+global___AddOutgoingWebhookRequest = AddOutgoingWebhookRequest
+
+@typing_extensions.final
+class AddOutgoingWebhookResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    ID_FIELD_NUMBER: builtins.int
+    SECRET_FIELD_NUMBER: builtins.int
+    id: builtins.int
+    secret: builtins.str
+    def __init__(
+        self,
+        *,
+        id: builtins.int = ...,
+        secret: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["id", b"id", "secret", b"secret"]) -> None: ...
+
+global___AddOutgoingWebhookResponse = AddOutgoingWebhookResponse
+
+@typing_extensions.final
+class ListOutgoingWebhooksRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NODE_ID_FIELD_NUMBER: builtins.int
+    node_id: builtins.bytes
+    def __init__(
+        self,
+        *,
+        node_id: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["node_id", b"node_id"]) -> None: ...
+
+global___ListOutgoingWebhooksRequest = ListOutgoingWebhooksRequest
+
+@typing_extensions.final
+class Webhook(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    ID_FIELD_NUMBER: builtins.int
+    URI_FIELD_NUMBER: builtins.int
+    id: builtins.int
+    uri: builtins.str
+    def __init__(
+        self,
+        *,
+        id: builtins.int = ...,
+        uri: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["id", b"id", "uri", b"uri"]) -> None: ...
+
+global___Webhook = Webhook
+
+@typing_extensions.final
+class ListOutgoingWebhooksResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    OUTGOING_WEBHOOKS_FIELD_NUMBER: builtins.int
+    @property
+    def outgoing_webhooks(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___Webhook]: ...
+    def __init__(
+        self,
+        *,
+        outgoing_webhooks: collections.abc.Iterable[global___Webhook] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["outgoing_webhooks", b"outgoing_webhooks"]) -> None: ...
+
+global___ListOutgoingWebhooksResponse = ListOutgoingWebhooksResponse
+
+@typing_extensions.final
+class DeleteOutgoingWebhooksRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NODE_ID_FIELD_NUMBER: builtins.int
+    IDS_FIELD_NUMBER: builtins.int
+    node_id: builtins.bytes
+    @property
+    def ids(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def __init__(
+        self,
+        *,
+        node_id: builtins.bytes = ...,
+        ids: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["ids", b"ids", "node_id", b"node_id"]) -> None: ...
+
+global___DeleteOutgoingWebhooksRequest = DeleteOutgoingWebhooksRequest
+
+@typing_extensions.final
+class RotateOutgoingWebhookSecretRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    NODE_ID_FIELD_NUMBER: builtins.int
+    WEBHOOK_ID_FIELD_NUMBER: builtins.int
+    node_id: builtins.bytes
+    webhook_id: builtins.int
+    def __init__(
+        self,
+        *,
+        node_id: builtins.bytes = ...,
+        webhook_id: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["node_id", b"node_id", "webhook_id", b"webhook_id"]) -> None: ...
+
+global___RotateOutgoingWebhookSecretRequest = RotateOutgoingWebhookSecretRequest
+
+@typing_extensions.final
+class WebhookSecretResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SECRET_FIELD_NUMBER: builtins.int
+    secret: builtins.str
+    def __init__(
+        self,
+        *,
+        secret: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["secret", b"secret"]) -> None: ...
+
+global___WebhookSecretResponse = WebhookSecretResponse
+
+@typing_extensions.final
 class ChallengeRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -224,15 +361,18 @@ class NodeInfoResponse(google.protobuf.message.Message):
 
     NODE_ID_FIELD_NUMBER: builtins.int
     GRPC_URI_FIELD_NUMBER: builtins.int
+    SESSION_ID_FIELD_NUMBER: builtins.int
     node_id: builtins.bytes
     grpc_uri: builtins.str
+    session_id: builtins.int
     def __init__(
         self,
         *,
         node_id: builtins.bytes = ...,
         grpc_uri: builtins.str = ...,
+        session_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["grpc_uri", b"grpc_uri", "node_id", b"node_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["grpc_uri", b"grpc_uri", "node_id", b"node_id", "session_id", b"session_id"]) -> None: ...
 
 global___NodeInfoResponse = NodeInfoResponse
 
