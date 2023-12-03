@@ -16,10 +16,18 @@ pub enum Error {
     GrpcError(#[from] tonic::Status),
     #[error(transparent)]
     CredentialsError(#[from] credentials::Error),
+    #[error(transparent)]
+    RuneError(#[from] runeauth::RuneError),
+    #[error("could not approve pairing: {0}")]
+    ApprovePairingError(String),
 }
 
 pub enum PairingSessionData {
     PairingResponse(PairDeviceResponse),
     PairingQr(String),
     PairingError(tonic::Status),
+}
+
+fn into_approve_pairing_error<T: ToString>(v: T) -> Error {
+    Error::ApprovePairingError(v.to_string())
 }
