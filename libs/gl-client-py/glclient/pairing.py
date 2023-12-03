@@ -55,3 +55,6 @@ class AttestationDeviceClient(object):
     def get_pairing_data(self, device_id: str) -> schedpb.GetPairingDataResponse:
         res = self.inner.get_pairing_data(device_id=device_id)
         return schedpb.GetPairingDataResponse.FromString(bytes(res))
+
+    def approve_pairing(self, device_id: str, node_id: bytes, device_name: str, restrs: str):
+        self.inner.approve_pairing(device_id, node_id, device_name, restrs)
