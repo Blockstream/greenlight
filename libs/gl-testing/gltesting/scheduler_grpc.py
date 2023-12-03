@@ -304,6 +304,9 @@ class PairingServicer(purerpc.Servicer):
     async def GetPairingData(self, input_message):
         raise NotImplementedError()
 
+    async def ApproveSession(self, input_message):
+        raise NotImplementedError()
+
     @property
     def service(self) -> purerpc.Service:
         service_obj = purerpc.Service(
@@ -325,6 +328,15 @@ class PairingServicer(purerpc.Servicer):
                 purerpc.Cardinality.UNARY_UNARY,
                 glclient_dot_scheduler__pb2.GetPairingDataRequest,
                 glclient_dot_scheduler__pb2.GetPairingDataResponse,
+            )
+        )
+        service_obj.add_method(
+            "ApprovePairing",
+            self.ApprovePairing,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.ApprovePairingRequest,
+                glclient_dot_greenlight__pb2.Empty,
             )
         )
         return service_obj
@@ -350,5 +362,13 @@ class PairingStub:
                 purerpc.Cardinality.UNARY_UNARY,
                 glclient_dot_scheduler__pb2.GetPairingDataRequest,
                 glclient_dot_scheduler__pb2.GetPairingDataResponse,
+            )
+        )
+        self.ApprovePairing = self._client.get_method_stub(
+            "ApprovePairing",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.ApprovePairingRequest,
+                glclient_dot_scheduler__pb2.Empty,
             )
         )

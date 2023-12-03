@@ -60,6 +60,20 @@ impl AttestationDeviceClient {
             self.inner.get_pairing_data(device_id).await
         }))?)
     }
+
+    fn approve_pairing(
+        &self,
+        session_id: &str,
+        node_id: &[u8],
+        device_name: &str,
+        restrs: &str,
+    ) -> Result<Vec<u8>> {
+        Ok(convert(exec(async move {
+            self.inner
+                .approve_pairing(session_id, node_id, device_name, restrs)
+                .await
+        }))?)
+    }
 }
 
 /// A wrapper class to return an iterable from a mpsc channel.
