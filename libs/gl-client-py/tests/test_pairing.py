@@ -19,6 +19,10 @@ def test_pairing_session(attestation_device, creds):
     m = next(session_iter)
     assert(m.data)
 
+    # # register an "attestation device"
+    # res = sclient.register(signer)
+    # ac = AttestationDevicePairingClient(auth=res.auth)
+
     # check for pairing data.
     session_id = m.data.split(':')[1]
     ac = AttestationDeviceClient(creds=attestation_device.creds())
@@ -28,8 +32,20 @@ def test_pairing_session(attestation_device, creds):
     assert(m.device_name == name)
     assert(m.desc == desc)
     assert(restrs in m.restrs)
-    
+
+    # We are happy with the pairing_data and want to approve the 
+    # request. Therefor we need a PairingService with our tls cert
+    # and with our rune.
+    ac.approve_pairing(
+        m.session_id,
+        attestation_device.node_id,
+        m.device_name,
+        m.restrs
+    )
+
+    # check that response is returned.
     m = next(session_iter)
+    assert(m.session_id)
     assert(m.device_cert)
     assert(m.device_key)
     # assert(m.rune) fixme: enable once we pass back a rune during the tests.

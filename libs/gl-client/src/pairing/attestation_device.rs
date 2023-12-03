@@ -1,14 +1,24 @@
-use tonic::transport::Channel;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::{into_approve_pairing_error, Error};
 use crate::{
     credentials::Credentials,
-    pb::scheduler::{pairing_client::PairingClient, GetPairingDataRequest, GetPairingDataResponse},
+    pb::scheduler::{
+        pairing_client::PairingClient, ApprovePairingRequest, Empty, GetPairingDataRequest,
+        GetPairingDataResponse,
+    },
     tls::TlsConfig,
 };
+use bytes::BufMut as _;
+use ring::{
+    rand,
+    signature::{self, EcdsaKeyPair},
+};
+
+use rustls_pemfile as pemfile;
+use tonic::transport::Channel;
 
 type Result<T, E = super::Error> = core::result::Result<T, E>;
-
-
 
 pub struct Connected(PairingClient<Channel>);
 pub struct Unconnected();
@@ -17,16 +27,24 @@ pub struct Client<T> {
     inner: T,
     tls: TlsConfig,
     uri: String,
+    rune: String,
+    key: Vec<u8>,
 }
 
 impl Client<Unconnected> {
     pub fn new(creds: Credentials) -> Result<Client<Unconnected>> {
         creds.is_device()?;
         let tls = creds.tls_config()?;
+        let rune = creds.rune()?;
+        let key = tls.clone()
+            .private_key
+            .ok_or(Error::BuildClientError("empty tls private key".to_string()))?;
         Ok(Self {
             inner: Unconnected(),
             tls,
             uri: crate::utils::scheduler_uri(),
+            rune,
+            key,
         })
     }
 
@@ -50,6 +68,8 @@ impl Client<Unconnected> {
             inner: Connected(inner),
             tls: self.tls,
             uri: self.uri,
+            rune: self.rune,
+            key: self.key,
         })
     }
 }
@@ -57,10 +77,66 @@ impl Client<Unconnected> {
 impl Client<Connected> {
     pub async fn get_pairing_data(&self, session_id: &str) -> Result<GetPairingDataResponse> {
         Ok(self
-            .inner.0
+            .inner
+            .0
             .clone()
             .get_pairing_data(GetPairingDataRequest {
                 session_id: session_id.to_string(),
+            })
+            .await?
+            .into_inner())
+    }
+
+    pub async fn approve_pairing(
+        &self,
+        session_id: &str,
+        node_id: &[u8],
+        device_name: &str,
+        restrs: &str,
+    ) -> Result<Empty> {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(into_approve_pairing_error)?
+            .as_secs();
+
+        // Gather data to sign over.
+        let mut buf = vec![];
+        buf.put(session_id.as_bytes());
+        buf.put_u64(timestamp);
+        buf.put(&node_id[..]);
+        buf.put(device_name.as_bytes());
+        buf.put(restrs.as_bytes());
+
+        // Sign data.
+        let key = {
+            let mut key = std::io::Cursor::new(&self.key);
+            pemfile::pkcs8_private_keys(&mut key)
+                .map_err(into_approve_pairing_error)?
+                .remove(0)
+        };
+        let kp =
+            EcdsaKeyPair::from_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key.as_ref())
+                .map_err(into_approve_pairing_error)?;
+        let rng = rand::SystemRandom::new();
+        let sig = kp
+            .sign(&rng, &buf)
+            .map_err(into_approve_pairing_error)?
+            .as_ref()
+            .to_vec();
+
+        // Send approval.
+        Ok(self
+            .inner
+            .0
+            .clone()
+            .approve_pairing(ApprovePairingRequest {
+                session_id: session_id.to_string(),
+                timestamp,
+                node_id: node_id.to_vec(),
+                device_name: device_name.to_string(),
+                restrs: restrs.to_string(),
+                sig: sig,
+                rune: self.rune.clone(),
             })
             .await?
             .into_inner())

@@ -10,10 +10,10 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
-import anyio
 import purerpc
+import anyio
 from glclient import greenlight_pb2 as greenlightpb
 from glclient import scheduler_pb2 as schedpb
 from pyln.client import LightningRpc
@@ -376,6 +376,12 @@ class PairingServicer(schedgrpc.PairingServicer):
     """Mocks a pairing backend for local testing"""
     def __init__(self):
         self.sessions: Dict[int, Dict[str, str | bytes]] = {}
+        self.send_stream, self.recv_stream = anyio.create_memory_object_stream()
+
+    async def recv_once(self, stream: anyio.streams.memory.MemoryObjectReceiveStream[Any]):
+        async with stream:
+            data = await stream.receive()
+            return data
         
     async def PairDevice(self, req: schedpb.PairDeviceRequest):
         data = {
@@ -385,11 +391,15 @@ class PairingServicer(schedgrpc.PairingServicer):
             "restrs": req.restrs
         }
         self.sessions[req.session_id] = data
+
+        # Wait for the Approval of an old device.
+        await self.recv_once(self.recv_stream)
         
         device_cert = certs.gencert_from_csr(req.csr, recover=False, pairing=True)
         return schedpb.PairDeviceResponse(
             session_id=req.session_id,
-            device_cert=device_cert)    
+            device_cert=device_cert)  
+    
     
     async def GetPairingData(self, req: schedpb.GetPairingDataRequest):
         data = self.sessions[req.session_id]
@@ -400,6 +410,12 @@ class PairingServicer(schedgrpc.PairingServicer):
             desc=data["desc"],
             restrs=data["restrs"]
         )
+    
+    async def ApprovePairing(self, req):
+        async with self.send_stream as send_stream:
+            await send_stream.send(req)
+        
+        return schedpb.Empty()
     
 
 Scheduler = AsyncScheduler
