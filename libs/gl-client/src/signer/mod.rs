@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::sync::Mutex;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Endpoint, Uri};
 use tonic::{Code, Request};
@@ -615,7 +615,7 @@ impl Signer {
 
     pub async fn run_forever_with_uri(
         &self,
-        mut shutdown: mpsc::Receiver<()>,
+        shutdown: mpsc::Receiver<()>,
         scheduler_uri: String,
     ) -> Result<(), anyhow::Error> {
         debug!(
@@ -664,6 +664,29 @@ impl Signer {
             break;
         }
 
+        let (tx, _) = broadcast::channel::<()>(1);
+
+        let shutdown = self.shutdown_connector(shutdown, tx.clone());
+        let node_runner = self.run_forever_node(tx.subscribe(), scheduler.clone());
+
+        let _ = tokio::join!(node_runner, shutdown);
+        todo!()
+    }
+
+    async fn shutdown_connector(
+        &self,
+        mut rx: mpsc::Receiver<()>,
+        tx: broadcast::Sender<()>,
+    ) -> () {
+        let _ = rx.recv().await;
+        let _ = tx.send(());
+    }
+
+    async fn run_forever_node(
+        &self,
+        mut shutdown: broadcast::Receiver<()>,
+        mut scheduler: SchedulerClient<tonic::transport::Channel>,
+    ) -> Result<(), anyhow::Error> {
         loop {
             debug!("Calling scheduler.get_node_info");
             let get_node = scheduler.get_node_info(NodeInfoRequest {
