@@ -316,7 +316,7 @@ impl Signer {
         }
 
         // Currently we only use a 0 unique_id and a pubkey field to allow
-        // for delegation in the future but we could also set the public 
+        // for delegation in the future but we could also set the public
         // key as the unique_id in the future and add a method that allows
         // to create new empty runes.
         let unique_id = rune.get_id();
