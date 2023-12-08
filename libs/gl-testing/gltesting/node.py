@@ -84,6 +84,7 @@ class NodeProcess(TailableProc):
             '--bitcoin-rpcpassword=rpcpass',
             f'--bitcoin-rpcconnect=localhost:{self.bitcoind.rpcport}',
             "--disable-plugin=commando",
+            "--disable-plugin=clnrest.py",
             '--rescan=1',
             "--log-timestamps=false",
             "--cltv-final=6",
