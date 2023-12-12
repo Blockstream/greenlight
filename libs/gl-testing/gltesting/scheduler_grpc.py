@@ -221,6 +221,9 @@ class PairingServicer(purerpc.Servicer):
     async def PairDevice(self, input_messages):
         raise NotImplementedError()
 
+    async def GetPairingData(self, input_message):
+        raise NotImplementedError()
+
     @property
     def service(self) -> purerpc.Service:
         service_obj = purerpc.Service(
@@ -233,6 +236,15 @@ class PairingServicer(purerpc.Servicer):
                 purerpc.Cardinality.UNARY_UNARY,
                 scheduler__pb2.PairDeviceRequest,
                 scheduler__pb2.PairDeviceResponse,
+            )
+        )
+        service_obj.add_method(
+            "GetPairingData",
+            self.GetPairingData,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.GetPairingDataRequest,
+                scheduler__pb2.GetPairingDataResponse,
             )
         )
         return service_obj
@@ -250,5 +262,13 @@ class PairingStub:
                 purerpc.Cardinality.UNARY_UNARY,
                 scheduler__pb2.PairDeviceRequest,
                 scheduler__pb2.PairDeviceResponse,
+            )
+        )
+        self.GetPairingData = self._client.get_method_stub(
+            "GetPairingData",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.GetPairingDataRequest,
+                scheduler__pb2.GetPairingDataResponse,
             )
         )

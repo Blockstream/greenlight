@@ -47,6 +47,7 @@ fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<DeviceBuilder>()?;
     m.add_class::<NobodyBuilder>()?;
     m.add_class::<pairing::NewDeviceClient>()?;
+    m.add_class::<pairing::AttestationDeviceClient>()?;
 
     m.add_function(wrap_pyfunction!(backup_decrypt_with_seed, m)?)?;
 
