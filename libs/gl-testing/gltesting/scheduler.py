@@ -418,5 +418,16 @@ class PairingServicer(schedgrpc.PairingServicer):
         return schedpb.PairDeviceResponse(
             device_id=req.device_id,
             device_cert=device_cert)    
+    
+    async def GetPairingData(self, req: schedpb.GetPairingDataRequest):
+        data = self.sessions[req.device_id]
+        return schedpb.GetPairingDataResponse(
+            device_id=req.device_id,
+            csr=data["csr"],
+            device_name=data["device_name"],
+            description=data["description"],
+            restrictions=data["restrictions"]
+        )
+    
 
 Scheduler = AsyncScheduler
