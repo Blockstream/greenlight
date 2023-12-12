@@ -64,14 +64,14 @@ impl AttestationDeviceClient {
 
     fn approve_pairing(
         &self,
-        session_id: &str,
+        device_id: &str,
         node_id: &[u8],
         device_name: &str,
         restrs: &str,
     ) -> Result<Vec<u8>> {
         Ok(convert(exec(async move {
             self.inner
-                .approve_pairing(session_id, node_id, device_name, restrs)
+                .approve_pairing(device_id, node_id, device_name, restrs)
                 .await
         }))?)
     }

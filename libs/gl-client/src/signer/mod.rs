@@ -1,5 +1,9 @@
 use crate::credentials::{RuneProvider, TlsConfigProvider};
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
+use crate::pb::scheduler::{
+    signer_request, signer_response, ApprovePairingRequest, ApprovePairingResponse, SignerResponse,
+};
+use crate::pb::PendingRequest;
 /// The core signer system. It runs in a dedicated thread or using the
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
@@ -20,6 +24,7 @@ use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, error, info, trace, warn};
+use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
 use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
@@ -27,6 +32,7 @@ use std::sync::Mutex;
 use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::{Endpoint, Uri};
 use tonic::{Code, Request};
 use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
@@ -276,7 +282,6 @@ impl Signer {
         requests: Vec<crate::pb::PendingRequest>,
     ) -> Vec<Result<crate::pb::PendingRequest, anyhow::Error>> {
         // Filter out requests lacking a required field. They are unverifiable anyway.
-        use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
         // Todo: partition results to provide more detailed errors.
         requests
             .into_iter()
@@ -683,7 +688,7 @@ impl Signer {
     ) -> Result<SchedulerClient<tonic::transport::channel::Channel>> {
         debug!("Connecting to scheduler at {scheduler_uri}");
 
-        let channel = Endpoint::from_shared(scheduler_uri)?
+        let channel = Endpoint::from_shared(scheduler_uri.clone())?
             .tls_config(self.tls.inner.clone())?
             .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
             .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
@@ -782,14 +787,146 @@ impl Signer {
     ) -> Result<(), anyhow::Error> {
         let scheduler = self.init_scheduler(scheduler_uri).await?;
         tokio::select! {
-            run_forever_inner_res = self.run_forever_inner(scheduler) => {
+            run_forever_inner_res = self.run_forever_inner(scheduler.clone()) => {
                 error!("Inner signer loop exited unexpectedly: {run_forever_inner_res:?}");
             },
+            run_forever_scheduler_res = self.run_forever_scheduler(scheduler) => {
+                error!("Scheduler signer loop exited unexpectedly: {run_forever_scheduler_res:?}")
+            }
             _ = shutdown.recv() => debug!("Received the signal to exit the signer loop")
         };
 
         info!("Exiting the signer loop");
         Ok(())
+    }
+
+    async fn run_forever_scheduler(
+        &self,
+        mut scheduler: SchedulerClient<tonic::transport::Channel>,
+    ) -> Result<(), anyhow::Error> {
+        let (sender, rx) = mpsc::channel(1);
+        let outbound = ReceiverStream::new(rx);
+        // let inbound_future = scheduler.signer_requests_stream(outbound);
+
+        let mut stream = scheduler
+            .signer_requests_stream(outbound)
+            .await?
+            .into_inner();
+
+        trace!("Starting to stream signer requests from scheduler");
+
+        loop {
+            match stream.message().await {
+                Ok(Some(msg)) => {
+                    let req_id = msg.request_id;
+                    trace!("Processing scheduler request {}", req_id);
+                    match msg.request {
+                        Some(signer_request::Request::ApprovePairing(req)) => {
+                            self.process_pairing_approval(req_id, req, sender.clone())
+                                .await
+                        }
+                        None => {
+                            debug!("Received an empty signing request");
+                        }
+                    };
+                }
+                Ok(None) => {
+                    debug!("End of stream, this should not happen by the server");
+                    return Err(anyhow!("Scheduler closed the stream"));
+                }
+                Err(e) => {
+                    debug!("Got an error from the scheduler {}", e);
+                    return Err(anyhow!("Scheduler stream error {e:?}"));
+                }
+            };
+        }
+    }
+
+    async fn process_pairing_approval(
+        &self,
+        req_id: u32,
+        req: ApprovePairingRequest,
+        stream: mpsc::Sender<SignerResponse>,
+    ) -> () {
+        // Can only sign for it's own id!
+        let node_id = self.node_id();
+
+        let mut data = vec![];
+        data.put(req.device_id.as_bytes());
+        data.put_u64(req.timestamp);
+        data.put(&node_id[..]);
+        data.put(req.device_name.as_bytes());
+        data.put(req.restrictions.as_bytes());
+
+        // Check that the signature matches
+        let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, req.pubkey.clone());
+        if pk.verify(&data, &req.sig).is_err() {
+            debug!("Got an invalid signature processing pairing approval");
+            return;
+        }
+
+        // Decode rune as we expect it to be in byte format in the pending request.
+        let rune = match general_purpose::URL_SAFE.decode(req.rune.clone()) {
+            Ok(r) => r,
+            Err(e) => {
+                debug!("Could not decode rune processing pairing approval {}", e);
+                return;
+            }
+        };
+
+        // Check that the rune matches
+        match self.verify_rune(PendingRequest {
+            request: vec![],
+            uri: "/cln.Node/ApprovePairing".to_string(),
+            signature: req.sig,
+            pubkey: req.pubkey,
+            timestamp: req.timestamp,
+            rune,
+        }) {
+            Ok(_) => (),
+            Err(e) => {
+                debug!(
+                    "Got an invalid rune {} processing pairing approval {}",
+                    req.rune, e
+                );
+                return;
+            }
+        };
+
+        let restrs: Vec<Vec<&str>> = req
+            .restrictions
+            .split('&')
+            .map(|s| s.split('|').collect::<Vec<&str>>())
+            .collect();
+
+        // Create the rune that approves pairing
+        let rune = match self.create_rune(None, restrs) {
+            Ok(r) => r,
+            Err(e) => {
+                debug!("Could not create rune during pairing approval {}", e);
+                return;
+            }
+        };
+
+        match stream
+            .send(SignerResponse {
+                request_id: req_id,
+                response: Some(signer_response::Response::ApprovePairing(
+                    ApprovePairingResponse {
+                        device_id: req.device_id,
+                        node_id,
+                        rune,
+                    },
+                )),
+            })
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => debug!(
+                "Could not respond to stream during pairing approval {:?}",
+                e
+            ),
+        };
     }
 
     // TODO See comment on `sign_device_key`.
@@ -1176,8 +1313,8 @@ mod tests {
         let new_rune = signer
             .create_rune(Some(rune), vec![vec!["method^get"]])
             .unwrap();
-        let rs = Rune::from_base64(&new_rune).unwrap().to_string();
-        assert!(rs.contains("0-gl0&pubkey=000000&method^get"))
+        let stream = Rune::from_base64(&new_rune).unwrap().to_string();
+        assert!(stream.contains("0-gl0&pubkey=000000&method^get"))
     }
 
     #[test]
