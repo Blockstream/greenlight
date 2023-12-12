@@ -47,5 +47,14 @@ class AttestationDeviceClient(object):
         res = self.inner.get_pairing_data(session_id=session_id)
         return schedpb.GetPairingDataResponse.FromString(bytes(res))
 
-    def approve_pairing(self, session_id: str, node_id: bytes, device_name: str, restrs: str):
+    def approve_pairing(
+        self, session_id: str, node_id: bytes, device_name: str, restrs: str
+    ):
         self.inner.approve_pairing(session_id, node_id, device_name, restrs)
+
+    def verify_pairing_data(self, data: schedpb.GetPairingDataRequest) -> Optional[str]:
+        try:
+            self.inner.verify_pairing_data(data.SerializeToString())
+            return None
+        except Exception as e:
+            return str(e)
