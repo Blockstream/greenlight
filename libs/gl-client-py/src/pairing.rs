@@ -3,6 +3,7 @@ use crate::runtime::exec;
 use crate::tls::TlsConfig;
 use bytes::BufMut;
 use gl_client::pairing::{attestation_device, new_device, PairingSessionData};
+use gl_client::pb::scheduler::GetPairingDataResponse;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -74,6 +75,11 @@ impl AttestationDeviceClient {
                 .await
         }))?)
     }
+
+    fn verify_pairing_data(&self, data: Vec<u8>) -> Result<()> {
+        let pd = GetPairingDataResponse::decode(&data[..])?;
+        Ok(attestation_device::Client::verify_pairing_data(pd)?)
+    }
 }
 
 /// A wrapper class to return an iterable from a mpsc channel.
@@ -132,6 +138,8 @@ type Result<T, E = ErrorWrapper> = std::result::Result<T, E>;
 pub enum ErrorWrapper {
     #[error("{}", .0)]
     PairingError(#[from] gl_client::pairing::Error),
+    #[error("{}", .0)]
+    ProtoError(#[from] prost::DecodeError),
 }
 
 impl From<ErrorWrapper> for pyo3::PyErr {

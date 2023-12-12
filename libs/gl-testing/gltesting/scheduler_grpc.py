@@ -369,6 +369,6 @@ class PairingStub:
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
                 glclient_dot_scheduler__pb2.ApprovePairingRequest,
-                glclient_dot_scheduler__pb2.Empty,
+                glclient_dot_greenlight__pb2.Empty,
             )
         )

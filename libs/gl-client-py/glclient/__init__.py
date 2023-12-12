@@ -20,7 +20,9 @@ backup_decrypt_with_seed = native.backup_decrypt_with_seed
 __version__ = "v24.02"
 
 
-E = TypeVar('E', bound=PbMessage)
+E = TypeVar("E", bound=PbMessage)
+
+
 def _convert(cls: Type[E], res: Iterable[Any]) -> E:
     return cls.FromString(bytes(res))
 
@@ -33,7 +35,9 @@ class Signer(object):
 
     def run_in_thread(self) -> "native.SignerHandle":
         if self.handle is not None:
-            raise ValueError("This signer is already running, please shut it down before starting it again")
+            raise ValueError(
+                "This signer is already running, please shut it down before starting it again"
+            )
         self.handle = self.inner.run_in_thread()
         return self.handle
 
@@ -55,7 +59,9 @@ class Signer(object):
         self.handle.shutdown()
         self.handle = None
 
-    def create_rune(self, restrictions: List[List[str]], rune: Optional[str] = None) -> str:
+    def create_rune(
+        self, restrictions: List[List[str]], rune: Optional[str] = None
+    ) -> str:
         return self.inner.create_rune(restrictions, rune)
 
     def is_running(self) -> bool:
@@ -143,9 +149,7 @@ class Node(object):
         req = clnpb.GetinfoRequest().SerializeToString()
         res = clnpb.GetinfoResponse
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def stop(self) -> None:
         uri = "/cln.Node/Stop"
@@ -156,11 +160,13 @@ class Node(object):
             # on purpose, so drop the error silently.
             self.inner.call(uri, bytes(req))
         except ValueError as e:
-            self.logger.debug(f"Caught an expected exception: {e}. Don't worry it's expected.")
+            self.logger.debug(
+                f"Caught an expected exception: {e}. Don't worry it's expected."
+            )
 
     def list_funds(
-            self,
-            spent: Optional[bool] = None,
+        self,
+        spent: Optional[bool] = None,
     ) -> clnpb.ListfundsResponse:
         uri = "/cln.Node/ListFunds"
         res = clnpb.ListfundsResponse
@@ -168,9 +174,7 @@ class Node(object):
             spent=spent,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def list_peers(self) -> clnpb.ListpeersResponse:
         uri = "/cln.Node/ListPeers"
@@ -199,33 +203,27 @@ class Node(object):
         req = clnpb.ListclosedchannelsRequest().SerializeToString()
         res = clnpb.ListclosedchannelsResponse
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def list_channels(
-            self,
-            short_channel_id: Optional[str] = None,
-            source: Optional[bytes] = None,
-            destination: Optional[bytes] = None 
+        self,
+        short_channel_id: Optional[str] = None,
+        source: Optional[bytes] = None,
+        destination: Optional[bytes] = None,
     ) -> clnpb.ListchannelsResponse:
         uri = "/cln.Node/ListChannels"
         req = clnpb.ListchannelsRequest(
-            short_channel_id=short_channel_id,
-            source=source,
-            destination=destination
+            short_channel_id=short_channel_id, source=source, destination=destination
         ).SerializeToString()
         res = clnpb.ListchannelsResponse
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def listpays(
-            self,
-            bolt11: Optional[str] = None,
-            payment_hash: Optional[bytes] = None,
-            status: Optional[clnpb.ListpaysRequest.ListpaysStatus.ValueType] = None,
+        self,
+        bolt11: Optional[str] = None,
+        payment_hash: Optional[bytes] = None,
+        status: Optional[clnpb.ListpaysRequest.ListpaysStatus.ValueType] = None,
     ) -> clnpb.ListpaysResponse:
         uri = "/cln.Node/ListPays"
         req = clnpb.ListpaysRequest(
@@ -235,19 +233,17 @@ class Node(object):
         ).SerializeToString()
         res = clnpb.ListpaysResponse
 
-        return res.FromString(
-            bytes(self.inner.call(uri, req))
-        )
+        return res.FromString(bytes(self.inner.call(uri, req)))
 
     def list_invoices(
-            self,
-            label: Optional[str] = None,
-            invstring: Optional[str] = None,
-            payment_hash: Optional[bytes] = None,
-            offer_id: Optional[str] = None,
-            index: Optional[clnpb.ListinvoicesRequest.ListinvoicesIndex.ValueType] = None,
-            start: Optional[int] = None,
-            limit: Optional[int] = None,
+        self,
+        label: Optional[str] = None,
+        invstring: Optional[str] = None,
+        payment_hash: Optional[bytes] = None,
+        offer_id: Optional[str] = None,
+        index: Optional[clnpb.ListinvoicesRequest.ListinvoicesIndex.ValueType] = None,
+        start: Optional[int] = None,
+        limit: Optional[int] = None,
     ) -> clnpb.ListinvoicesResponse:
         uri = "/cln.Node/ListInvoices"
         res = clnpb.ListinvoicesResponse
@@ -260,21 +256,16 @@ class Node(object):
             start=start,
             limit=limit,
         ).SerializeToString()
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def connect_peer(
-            self,
-            node_id,
-            host: Optional[str]=None,
-            port: Optional[int]=None
+        self, node_id, host: Optional[str] = None, port: Optional[int] = None
     ) -> clnpb.ConnectResponse:
         if len(node_id) == 33:
             node_id = hexlify(node_id)
 
         if isinstance(node_id, bytes):
-            node_id = node_id.decode('ASCII')
+            node_id = node_id.decode("ASCII")
 
         uri = "/cln.Node/ConnectPeer"
         res = clnpb.ConnectResponse
@@ -284,25 +275,19 @@ class Node(object):
             port=port,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def decode (self, string: str) -> clnpb.DecodeResponse:
+    def decode(self, string: str) -> clnpb.DecodeResponse:
         uri = "/cln.Node/Decode"
         res = clnpb.DecodeResponse
         req = clnpb.DecodeRequest(
             string=string,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def decodepay (
-            self,
-            bolt11: str,
-            description: Optional[str]
+    def decodepay(
+        self, bolt11: str, description: Optional[str]
     ) -> clnpb.DecodepayResponse:
         uri = "/cln.Node/DecodePay"
         res = clnpb.DecodepayResponse
@@ -311,9 +296,7 @@ class Node(object):
             description=description,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def disconnect_peer(self, peer_id: str, force=False) -> clnpb.DisconnectResponse:
         uri = "/cln.Node/Disconnect"
@@ -323,43 +306,32 @@ class Node(object):
             force=force,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def new_address(self) -> clnpb.NewaddrResponse:
         uri = "/cln.Node/NewAddr"
         req = clnpb.NewaddrRequest().SerializeToString()
         res = clnpb.NewaddrResponse
 
-        return res.FromString(
-            bytes(self.inner.call(uri, req))
-        )
+        return res.FromString(bytes(self.inner.call(uri, req)))
 
     def withdraw(
-            self,
-            destination,
-            amount: AmountOrAll,
-            minconf: int=0
+        self, destination, amount: AmountOrAll, minconf: int = 0
     ) -> clnpb.WithdrawResponse:
         uri = "/cln.Node/Withdraw"
         res = clnpb.WithdrawResponse
         req = clnpb.WithdrawRequest(
-            destination=destination,
-            satoshi=amount,
-            minconf=minconf
+            destination=destination, satoshi=amount, minconf=minconf
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def fund_channel(
-            self,
-            id: bytes,
-            amount,
-            announce: Optional[bool] = False,
-            minconf: Optional[int] = 1,
+        self,
+        id: bytes,
+        amount,
+        announce: Optional[bool] = False,
+        minconf: Optional[int] = 1,
     ) -> clnpb.FundchannelResponse:
 
         if len(id) != 33:
@@ -374,15 +346,10 @@ class Node(object):
             minconf=minconf,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def close(
-            self,
-            id: bytes,
-            unilateraltimeout=None,
-            destination=None
+        self, id: bytes, unilateraltimeout=None, destination=None
     ) -> clnpb.CloseResponse:
         if len(id) != 33:
             raise ValueError("node_id is not 33 bytes long")
@@ -395,20 +362,18 @@ class Node(object):
             destination=destination,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def invoice(
-            self,
-            amount_msat: clnpb.AmountOrAny,
-            label: str,
-            description: str,
-            expiry: Optional[int]=None,
-            fallbacks: Optional[List[str]]=None,
-            preimage: Optional[bytes]=None,
-            cltv: Optional[int]=None,
-            deschashonly: Optional[bool]=None
+        self,
+        amount_msat: clnpb.AmountOrAny,
+        label: str,
+        description: str,
+        expiry: Optional[int] = None,
+        fallbacks: Optional[List[str]] = None,
+        preimage: Optional[bytes] = None,
+        cltv: Optional[int] = None,
+        deschashonly: Optional[bool] = None,
     ) -> clnpb.InvoiceResponse:
         if preimage and len(preimage) != 32:
             raise ValueError("Preimage must be 32 bytes in length")
@@ -426,17 +391,15 @@ class Node(object):
             deschashonly=deschashonly,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def pay(
-            self,
-            bolt11: str,
-            amount_msat: Optional[clnpb.Amount]=None,
-            retry_for: int=0,
-            maxfee: Optional[clnpb.Amount]=None,
-            maxfeepercent: Optional[float]=None
+        self,
+        bolt11: str,
+        amount_msat: Optional[clnpb.Amount] = None,
+        retry_for: int = 0,
+        maxfee: Optional[clnpb.Amount] = None,
+        maxfeepercent: Optional[float] = None,
     ) -> clnpb.PayResponse:
         uri = "/cln.Node/Pay"
         res = clnpb.PayResponse
@@ -448,9 +411,7 @@ class Node(object):
             maxfee=maxfee,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def trampoline_pay(self, bolt11: str, trampoline_node_id: bytes, amount_msat: Optional[int] = None, label: Optional[str] = None):
         res = self.inner.trampoline_pay(
@@ -462,12 +423,12 @@ class Node(object):
         return nodepb.TrampolinePayResponse.FromString(bytes(res))
 
     def keysend(
-            self,
-            destination: bytes,
-            amount: clnpb.Amount,
-            label: Optional[str]=None,
-            routehints: Optional[clnpb.RoutehintList]=None,
-            extratlvs: Optional[clnpb.TlvStream]=None
+        self,
+        destination: bytes,
+        amount: clnpb.Amount,
+        label: Optional[str] = None,
+        routehints: Optional[clnpb.RoutehintList] = None,
+        extratlvs: Optional[clnpb.TlvStream] = None,
     ) -> clnpb.KeysendResponse:
         uri = "/cln.Node/KeySend"
         res = clnpb.KeysendResponse
@@ -479,13 +440,10 @@ class Node(object):
             extratlvs=extratlvs,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def stream_log(self):
-        """Stream logs as they get generated on the server side.
-        """
+        """Stream logs as they get generated on the server side."""
         stream = self.inner.stream_log(b"")
         while True:
             n = stream.next()
@@ -509,11 +467,7 @@ class Node(object):
                 break
             yield nodepb.Custommsg.FromString(bytes(n))
 
-    def send_custommsg(
-            self,
-            node_id: str,
-            msg: bytes
-    ) -> clnpb.SendcustommsgResponse:
+    def send_custommsg(self, node_id: str, msg: bytes) -> clnpb.SendcustommsgResponse:
         uri = "/cln.Node/SendCustomMsg"
         res = clnpb.SendcustommsgResponse
         req = clnpb.SendcustommsgRequest(
@@ -521,58 +475,29 @@ class Node(object):
             msg=msg,
         ).SerializeToString()
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def datastore(
-            self,
-            key,
-            string=None,
-            hex=None,
-            mode=None,
-            generation=None
-    ):
+    def datastore(self, key, string=None, hex=None, mode=None, generation=None):
         uri = "/cln.Node/Datastore"
         req = clnpb.DatastoreRequest(
-            key=key,
-            string=string,
-            hex=hex,
-            mode=mode,
-            generation=generation
+            key=key, string=string, hex=hex, mode=mode, generation=generation
         ).SerializeToString()
         res = clnpb.DatastoreResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def del_datastore(
-            self,
-            key,
-            generation=None
-    ):
+    def del_datastore(self, key, generation=None):
         uri = "/cln.Node/DelDatastore"
         req = clnpb.DeldatastoreRequest(
-            key=key,
-            generation=generation
+            key=key, generation=generation
         ).SerializeToString()
         res = clnpb.DeldatastoreResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def list_datastore(
-            self,
-            key=None
-    ):
+    def list_datastore(self, key=None):
         uri = "/cln.Node/ListDatastore"
-        req = clnpb.ListdatastoreRequest(
-            key=key
-        ).SerializeToString()
+        req = clnpb.ListdatastoreRequest(key=key).SerializeToString()
         res = clnpb.ListdatastoreResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def get_lsp_client(
         self,
@@ -581,38 +506,33 @@ class Node(object):
         return LspClient(native_lsps)
 
     def configure(self, close_to_addr: str) -> None:
-        req = nodepb.GlConfig(
-            close_to_addr=close_to_addr
-        ).SerializeToString()
+        req = nodepb.GlConfig(close_to_addr=close_to_addr).SerializeToString()
 
         return self.inner.configure(req)
 
     def wait_blockheight(
-            self,
-            blockheight: int,
-            timeout: Optional[int] = None,
+        self,
+        blockheight: int,
+        timeout: Optional[int] = None,
     ):
         """Wait until the blockchain has reached the specified blockheight."""
         uri = "/cln.Node/WaitBlockheight"
         req = clnpb.WaitblockheightRequest(
-            blockheight=blockheight,
-            timeout=timeout
+            blockheight=blockheight, timeout=timeout
         ).SerializeToString()
         res = clnpb.WaitblockheightResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def fetch_invoice(
-            self,
-            offer: str,
-            amount_msat: Optional[Amount] = None,
-            quantity: Optional[int] = None,
-            recurrence_counter: Optional[int] = None,
-            recurrence_start: Optional[int] = None,
-            recurrence_label: Optional[str] = None,
-            timeout: Optional[int] = None,
-            payer_note: Optional[str] = None,
+        self,
+        offer: str,
+        amount_msat: Optional[Amount] = None,
+        quantity: Optional[int] = None,
+        recurrence_counter: Optional[int] = None,
+        recurrence_start: Optional[int] = None,
+        recurrence_label: Optional[str] = None,
+        timeout: Optional[int] = None,
+        payer_note: Optional[str] = None,
     ) -> clnpb.FetchinvoiceResponse:
         """Fetch an invoice based on an offer.
 
@@ -633,16 +553,9 @@ class Node(object):
             payer_note=payer_note,
         ).SerializeToString()
         res = clnpb.FetchinvoiceResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def wait(
-            self,
-            subsystem,
-            indexname,
-            nextvalue: int
-    ) -> clnpb.WaitResponse:
+    def wait(self, subsystem, indexname, nextvalue: int) -> clnpb.WaitResponse:
         """Wait for the next event in the provided subsystem.
 
         Returns once the index given by indexname in subsystem reaches
@@ -656,9 +569,7 @@ class Node(object):
             nextvalue=nextvalue,
         ).SerializeToString()
         res = clnpb.WaitResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
 
 def normalize_node_id(node_id, string=False):
@@ -669,5 +580,5 @@ def normalize_node_id(node_id, string=False):
         raise ValueError("node_id is not 33 (binary) or 66 (hex) bytes long")
 
     if isinstance(node_id, str):
-        node_id = node_id.encode('ASCII')
-    return node_id if not string else hexlify(node_id).encode('ASCII')
+        node_id = node_id.encode("ASCII")
+    return node_id if not string else hexlify(node_id).encode("ASCII")
