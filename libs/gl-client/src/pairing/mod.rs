@@ -20,8 +20,9 @@ pub enum Error {
     RuneError(#[from] runeauth::RuneError),
     #[error("could not approve pairing: {0}")]
     ApprovePairingError(String),
+    #[error("could not verify pairing data: {0}")]
+    VerifyPairingDataError(String),
 }
-
 pub enum PairingSessionData {
     PairingResponse(PairDeviceResponse),
     PairingQr(String),
@@ -30,4 +31,8 @@ pub enum PairingSessionData {
 
 fn into_approve_pairing_error<T: ToString>(v: T) -> Error {
     Error::ApprovePairingError(v.to_string())
+}
+
+fn into_verify_pairing_data_error<T: ToString>(v: T) -> Error {
+    Error::VerifyPairingDataError(v.to_string())
 }
