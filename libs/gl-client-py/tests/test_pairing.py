@@ -1,8 +1,9 @@
+import time
 from fixtures import *
 from glclient.pairing import NewDeviceClient, AttestationDeviceClient
 from glclient.tls import TlsConfig
+from glclient import Credentials
 import pytest
-
 
 @pytest.fixture
 def attestation_device(clients):
@@ -10,8 +11,10 @@ def attestation_device(clients):
     c.register()
     yield c
 
+def test_pairing_session(sclient, signer, creds):
+    # Run the signer in the background
+    signer.run_in_thread()
 
-def test_pairing_session(attestation_device):
     name = "new_device"
     desc = "my_description"
     restrs = "method^list"
@@ -23,9 +26,15 @@ def test_pairing_session(attestation_device):
     m = next(session_iter)
     assert m
 
+    # register attestation device.
+    res = sclient.register(signer)
+    creds = Credentials.from_bytes(res.creds)
+    scheduler = Scheduler(network="regtest", creds=creds)
+    scheduler.schedule()
+
     # check for pairing data.
-    device_id = m.split(":")[1]
-    ac = AttestationDeviceClient(creds=attestation_device.creds())
+    device_id = m.split(':')[1]
+    ac = AttestationDeviceClient(creds=creds)
     m = ac.get_pairing_data(device_id)
     assert m.device_id
     assert m.csr
@@ -37,7 +46,9 @@ def test_pairing_session(attestation_device):
     # request. Therefor we need a PairingService with our tls cert
     # and with our rune.
     ac.approve_pairing(
-        m.device_id, attestation_device.node_id, m.device_name, m.restrictions
+        m.device_id,
+        m.device_name,
+        m.restrictions
     )
 
     # check that response is returned.
@@ -48,6 +59,9 @@ def test_pairing_session(attestation_device):
     # assert(m.rune) fixme: enable once we pass back a rune during the tests.
     assert m.creds
 
+    signer.shutdown()
+    # FIXME: add a blocking shutdown call that waits for the signer to shutdown.
+    time.sleep(2)
 
 def test_paring_data_validation(attestation_device):
     """A simple test to ensure that data validation works as intended.

@@ -56,18 +56,10 @@ class AttestationDeviceClient(object):
         res = self.inner.get_pairing_data(device_id=device_id)
         return schedpb.GetPairingDataResponse.FromString(bytes(res))
 
-<<<<<<< HEAD
-    def approve_pairing(self, device_id: str, node_id: bytes, device_name: str, restrs: str):
-        self.inner.approve_pairing(device_id, node_id, device_name, restrs)
-||||||| parent of 4e880d7 (pairing: Add check for the PairingDataResponse)
-    def approve_pairing(self, session_id: str, node_id: bytes, device_name: str, restrs: str):
-        self.inner.approve_pairing(session_id, node_id, device_name, restrs)
-=======
     def approve_pairing(
-        self, session_id: str, node_id: bytes, device_name: str, restrs: str
+        self, device_id: str, node_id: bytes, device_name: str, restrs: str
     ):
-        self.inner.approve_pairing(session_id, node_id, device_name, restrs)
+        self.inner.approve_pairing(device_id, node_id, device_name, restrs)
 
     def verify_pairing_data(self, data: schedpb.GetPairingDataRequest):
         self.inner.verify_pairing_data(data.SerializeToString())
->>>>>>> 4e880d7 (pairing: Add check for the PairingDataResponse)

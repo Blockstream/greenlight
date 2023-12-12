@@ -11,10 +11,12 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 import purerpc
 import anyio
+import asyncio
+from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from glclient import greenlight_pb2 as greenlightpb
 from glclient import scheduler_pb2 as schedpb
 from pyln.client import LightningRpc
@@ -90,6 +92,9 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.debugger = DebugServicer()
         self.webhooks = []
         self.pairings = PairingServicer()
+        self.pairing_tx_in, self.pairing_rx_in = anyio.create_memory_object_stream()
+        self.pairing_tx_out, self.paring_rx_out = anyio.create_memory_object_stream()
+        self.pairings = PairingServicer(stream_out=self.pairing_tx_in, stream_in=self.paring_rx_out)
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -389,6 +394,25 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         webhook["secret"] = secret
         return schedpb.WebhookSecretResponse(secret=secret)
     
+    async def _read_from_signer(self, req):
+        async for message in req:
+            await self.pairing_tx_out.send(message)
+
+    async def SignerRequestsStream(self, request):
+        print(f"Signer attached to schedulers signer_request_stream")
+        asyncio.create_task(self._read_from_signer(request))
+
+        async with self.pairing_rx_in:
+            async for data in self.pairing_rx_in:
+                yield schedpb.SignerRequest(request_id=1, approve_pairing=schedpb.ApprovePairingRequest(
+                    device_id=data.device_id,
+                    timestamp=data.timestamp,
+                    device_name=data.device_name,
+                    restrictions=data.restrictions,
+                    sig=data.sig,
+                    pubkey=data.pubkey,
+                    rune=data.rune))
+
 
 class DebugServicer(schedgrpc.DebugServicer):
     """Collects and analyzes rejected signer requests."""
@@ -402,11 +426,12 @@ class DebugServicer(schedgrpc.DebugServicer):
 
 class PairingServicer(schedgrpc.PairingServicer):
     """Mocks a pairing backend for local testing"""
-    def __init__(self):
+    def __init__(self, stream_out: MemoryObjectSendStream[Any]=None, stream_in: MemoryObjectReceiveStream[Any]=None):
         self.sessions: Dict[int, Dict[str, str | bytes]] = {}
-        self.send_stream, self.recv_stream = anyio.create_memory_object_stream()
+        self.stream_out = stream_out
+        self.stream_in = stream_in
 
-    async def recv_once(self, stream: anyio.streams.memory.MemoryObjectReceiveStream[Any]):
+    async def recv_once(self, stream: MemoryObjectReceiveStream[Any]):
         async with stream:
             data = await stream.receive()
             return data
@@ -420,14 +445,13 @@ class PairingServicer(schedgrpc.PairingServicer):
         }
         self.sessions[req.device_id] = data
 
-        # Wait for the Approval of an old device.
-        await self.recv_once(self.recv_stream)
+        # Wait for the Approval from the signer.
+        await self.recv_once(self.stream_in)
         
         device_cert = certs.gencert_from_csr(req.csr, recover=False, pairing=True)
         return schedpb.PairDeviceResponse(
             device_id=req.device_id,
             device_cert=device_cert)  
-    
     
     async def GetPairingData(self, req: schedpb.GetPairingDataRequest):
         data = self.sessions[req.device_id]
@@ -440,9 +464,7 @@ class PairingServicer(schedgrpc.PairingServicer):
         )
     
     async def ApprovePairing(self, req):
-        async with self.send_stream as send_stream:
-            await send_stream.send(req)
-            
+        await self.stream_out.send(req)
         return greenlightpb.Empty()
 
 

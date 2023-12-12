@@ -27,6 +27,9 @@ class SchedulerServicer(purerpc.Servicer):
 
     async def ExportNode(self, input_message):
         raise NotImplementedError()
+    
+    async def SignerRequestsStream(self, input_message):
+        raise NotImplementedError
 
     async def AddOutgoingWebhook(self, input_message):
         raise NotImplementedError()
@@ -153,6 +156,15 @@ class SchedulerServicer(purerpc.Servicer):
                 glclient_dot_scheduler__pb2.WebhookSecretResponse,
             )
         )
+        service_obj.add_method(
+            "SignerRequestsStream",
+            self.SignerRequestsStream,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.STREAM_STREAM,
+                glclient_dot_scheduler__pb2.SignerResponse,
+                glclient_dot_scheduler__pb2.SignerRequest,
+            )
+        )
         return service_obj
 
 
@@ -258,6 +270,14 @@ class SchedulerStub:
                 glclient_dot_scheduler__pb2.WebhookSecretResponse,
             )
         )
+        self.SignerRequestsStream = self._client.get_method_stub(
+            "SignerRequestsStream",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.STREAM_STEAM,
+                glclient_dot_scheduler__pb2.SignerResponse,
+                glclient_dot_scheduler__pb2.SignerRequest,
+            )
+        )
 
 
 class DebugServicer(purerpc.Servicer):
@@ -306,7 +326,7 @@ class PairingServicer(purerpc.Servicer):
 
     async def ApproveSession(self, input_message):
         raise NotImplementedError()
-
+    
     @property
     def service(self) -> purerpc.Service:
         service_obj = purerpc.Service(
