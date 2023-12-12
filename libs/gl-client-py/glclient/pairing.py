@@ -1,6 +1,7 @@
 from . import TlsConfig
 from . import scheduler_pb2 as schedpb
 import glclient.glclient as native
+from glclient.glclient import Credentials
 from typing import Optional, Generator
 
 
@@ -36,3 +37,12 @@ class NewDeviceClient(object):
         """
         for m in self._inner.pair_device(name, desc, restrs):
             yield from self._recv(m)
+
+
+class AttestationDeviceClient(object):
+    def __init__(self, creds: Credentials, uri: Optional[str] = None):
+        self.inner = native.AttestationDeviceClient(creds=creds, uri=uri)
+
+    def get_pairing_data(self, session_id: str) -> schedpb.GetPairingDataResponse:
+        res = self.inner.get_pairing_data(session_id=session_id)
+        return schedpb.GetPairingDataResponse.FromString(bytes(res))
