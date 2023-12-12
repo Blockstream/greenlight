@@ -14,7 +14,7 @@ use picky::{pem::Pem, x509::Csr};
 use picky_asn1_x509::{PublicKey, SubjectPublicKeyInfo};
 use ring::{
     rand,
-    signature::{self, EcdsaKeyPair},
+    signature::{self, EcdsaKeyPair, KeyPair},
 };
 
 use rustls_pemfile as pemfile;
@@ -139,6 +139,7 @@ impl Client<Connected> {
                 restrs: restrs.to_string(),
                 sig: sig,
                 rune: self.rune.clone(),
+                pubkey: kp.public_key().as_ref().to_vec(),
             })
             .await?
             .into_inner())

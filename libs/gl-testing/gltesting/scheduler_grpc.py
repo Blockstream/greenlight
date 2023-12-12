@@ -27,6 +27,9 @@ class SchedulerServicer(purerpc.Servicer):
 
     async def ExportNode(self, input_message):
         raise NotImplementedError()
+    
+    async def SignerRequestsStream(self, input_message):
+        raise NotImplementedError
 
     @property
     def service(self) -> purerpc.Service:
@@ -105,6 +108,15 @@ class SchedulerServicer(purerpc.Servicer):
                 scheduler__pb2.ExportNodeResponse,
             )
         )
+        service_obj.add_method(
+            "SignerRequestsStream",
+            self.SignerRequestsStream,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.STREAM_STREAM,
+                scheduler__pb2.SignerResponse,
+                scheduler__pb2.SignerRequest,
+            )
+        )
         return service_obj
 
 
@@ -178,6 +190,14 @@ class SchedulerStub:
                 scheduler__pb2.ExportNodeResponse,
             )
         )
+        self.SignerRequestsStream = self._client.get_method_stub(
+            "SignerRequestsStream",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.STREAM_STEAM,
+                scheduler__pb2.SignerResponse,
+                scheduler__pb2.SignerRequest,
+            )
+        )
 
 
 class DebugServicer(purerpc.Servicer):
@@ -226,7 +246,7 @@ class PairingServicer(purerpc.Servicer):
 
     async def ApproveSession(self, input_message):
         raise NotImplementedError()
-
+    
     @property
     def service(self) -> purerpc.Service:
         service_obj = purerpc.Service(
