@@ -1,5 +1,7 @@
+import time
 from fixtures import *
 from glclient.pairing import NewDeviceClient, AttestationDeviceClient
+from glclient import Credentials
 
 @pytest.fixture
 def attestation_device(clients):
@@ -7,7 +9,10 @@ def attestation_device(clients):
     c.register()
     yield c
 
-def test_pairing_session(attestation_device, creds):
+def test_pairing_session(sclient, signer, creds):
+    # Run the signer in the background
+    signer.run_in_thread()
+
     name = "new_device"
     desc = "my_description"
     restrs = "method^list"
@@ -19,13 +24,15 @@ def test_pairing_session(attestation_device, creds):
     m = next(session_iter)
     assert(m.data)
 
-    # # register an "attestation device"
-    # res = sclient.register(signer)
-    # ac = AttestationDevicePairingClient(auth=res.auth)
+    # register attestation device.
+    res = sclient.register(signer)
+    creds = Credentials.from_bytes(res.creds)
+    scheduler = Scheduler(network="regtest", creds=creds)
+    scheduler.schedule()
+    ac = AttestationDeviceClient(creds=creds)
 
     # check for pairing data.
     session_id = m.data.split(':')[1]
-    ac = AttestationDeviceClient(creds=attestation_device.creds())
     m = ac.get_pairing_data(session_id)
     assert(m.session_id)
     assert(m.csr)
@@ -38,7 +45,7 @@ def test_pairing_session(attestation_device, creds):
     # and with our rune.
     ac.approve_pairing(
         m.session_id,
-        attestation_device.node_id,
+        signer.node_id(),
         m.device_name,
         m.restrs
     )
@@ -51,6 +58,9 @@ def test_pairing_session(attestation_device, creds):
     # assert(m.rune) fixme: enable once we pass back a rune during the tests.
     assert(m.creds)
 
+    signer.shutdown()
+    # FIXME: add a blocking shutdown call that waits for the signer to shutdown.
+    time.sleep(2)
 
 def test_paring_data_validation(attestation_device, creds):
     """A simple test to ensure that data validation works as intended.
