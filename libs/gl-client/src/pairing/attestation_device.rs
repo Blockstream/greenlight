@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::{into_approve_pairing_error, Error};
+use super::{into_approve_pairing_error, into_verify_pairing_data_error, Error};
 use crate::{
     credentials::{RuneProvider, TlsConfigProvider},
     pb::{
@@ -13,6 +13,8 @@ use crate::{
     tls::TlsConfig,
 };
 use bytes::BufMut as _;
+use picky::{pem::Pem, x509::Csr};
+use picky_asn1_x509::{PublicKey, SubjectPublicKeyInfo};
 use ring::{
     rand,
     signature::{self, EcdsaKeyPair, KeyPair},
@@ -146,5 +148,123 @@ impl Client<Connected> {
             })
             .await?
             .into_inner())
+    }
+
+    pub fn verify_pairing_data(data: GetPairingDataResponse) -> Result<()> {
+        let mut crs = std::io::Cursor::new(&data.csr);
+        let pem = Pem::read_from(&mut crs).map_err(into_verify_pairing_data_error)?;
+        let csr = Csr::from_pem(&pem).map_err(into_verify_pairing_data_error)?;
+        let sub_pk_der = csr
+            .public_key()
+            .to_der()
+            .map_err(into_verify_pairing_data_error)?;
+        let sub_pk_info: SubjectPublicKeyInfo =
+            picky_asn1_der::from_bytes(&sub_pk_der).map_err(into_verify_pairing_data_error)?;
+
+        if let PublicKey::Ec(bs) = sub_pk_info.subject_public_key {
+            let pk = hex::encode(bs.0.payload_view());
+
+            if pk == data.session_id
+                && Self::restriction_contains_pubkey_exactly_once(
+                    &data.restrictions,
+                    &data.session_id,
+                )
+            {
+                Ok(())
+            } else {
+                Err(Error::VerifyPairingDataError(format!(
+                    "public key {} does not match pk {}",
+                    data.session_id, pk
+                )))
+            }
+        } else {
+            Err(Error::VerifyPairingDataError(format!(
+                "public key is not ecdsa"
+            )))
+        }
+    }
+
+    /// Checks that a restriction string only contains a pubkey field exactly
+    /// once that is not preceded or followed by a '|' to ensure that it is
+    /// not part of an alternative but a restriction by itself.
+    fn restriction_contains_pubkey_exactly_once(s: &str, pubkey: &str) -> bool {
+        let search_field = format!("pubkey={}", pubkey);
+        match s.find(&search_field) {
+            Some(index) => {
+                // Check if 'pubkey=<pubkey>' is not preceded by '|'
+                if index > 0 && s.chars().nth(index - 1) == Some('|') {
+                    return false;
+                }
+
+                // Check if 'pubkey=<pubkey>' is not followed by '|'
+                let end_index = index + search_field.len();
+                if end_index < s.len() && s.chars().nth(end_index) == Some('|') {
+                    return false;
+                }
+
+                // Check if 'pubkey=<pubkey>' appears exactly once
+                s.matches(&search_field).count() == 1
+            }
+            None => false,
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::tls;
+
+    #[test]
+    fn test_verify_pairing_data() {
+        let kp = tls::generate_ecdsa_key_pair();
+        let device_cert = tls::generate_self_signed_device_cert(
+            &hex::encode("00"),
+            "my-device",
+            vec!["localhost".into()],
+            Some(kp),
+        );
+        let csr = device_cert.serialize_request_pem().unwrap();
+        let pk = hex::encode(device_cert.get_key_pair().public_key_raw());
+
+        // Check with public key as session id.
+        let pd = GetPairingDataResponse {
+            session_id: pk.clone(),
+            csr: csr.clone().into_bytes(),
+            device_name: "my-device".to_string(),
+            description: "".to_string(),
+            restrictions: format!("pubkey={}", pk.clone()),
+        };
+        assert!(Client::verify_pairing_data(pd).is_ok());
+
+        // Check with different "pubkey" restriction than session id.
+        let pd = GetPairingDataResponse {
+            session_id: pk.clone(),
+            csr: csr.clone().into_bytes(),
+            device_name: "my-device".to_string(),
+            description: "".to_string(),
+            restrictions: format!("pubkey={}", "02000000"),
+        };
+        assert!(Client::verify_pairing_data(pd).is_err());
+
+        // Check with second "pubkey" in same alternative.
+        let pd = GetPairingDataResponse {
+            session_id: pk.clone(),
+            csr: csr.clone().into_bytes(),
+            device_name: "my-device".to_string(),
+            description: "".to_string(),
+            restrictions: format!("pubkey={}|pubkey=02000000", pk),
+        };
+        assert!(Client::verify_pairing_data(pd).is_err());
+
+        // Check with different public key as session id.
+        let pd = GetPairingDataResponse {
+            session_id: "00".to_string(),
+            csr: csr.into_bytes(),
+            device_name: "my-device".to_string(),
+            description: "".to_string(),
+            restrictions: format!("pubkey={}", pk.clone()),
+        };
+        assert!(Client::verify_pairing_data(pd).is_err());
     }
 }
