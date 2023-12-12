@@ -1,7 +1,8 @@
+use crate::credentials::Credentials;
 use crate::runtime::exec;
 use crate::tls::TlsConfig;
 use bytes::BufMut;
-use gl_client::pairing::{new_device, PairingSessionData};
+use gl_client::pairing::{attestation_device, new_device, PairingSessionData};
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -34,6 +35,30 @@ impl NewDeviceClient {
     ) -> Result<PyPairingChannelWrapper> {
         let inner = exec(self.inner.pair_device(name, description, restrictions))?;
         Ok(PyPairingChannelWrapper { inner })
+    }
+}
+
+#[pyclass]
+pub struct AttestationDeviceClient {
+    inner: attestation_device::Client<attestation_device::Connected>,
+}
+
+#[pymethods]
+impl AttestationDeviceClient {
+    #[new]
+    fn new(creds: Credentials, uri: Option<String>) -> Result<Self> {
+        let mut client = attestation_device::Client::new(creds.inner)?;
+        if let Some(uri) = uri {
+            client = client.with_uri(uri);
+        }
+        let inner = exec(client.connect())?;
+        Ok(AttestationDeviceClient { inner })
+    }
+
+    fn get_pairing_data(&self, session_id: &str) -> Result<Vec<u8>> {
+        Ok(convert(exec(async move {
+            self.inner.get_pairing_data(session_id).await
+        }))?)
     }
 }
 
@@ -76,6 +101,14 @@ pub fn convert_pairing<T: Message>(msg: T, typ: u8) -> PyResult<Vec<u8>> {
     buf.put_u8(typ);
     msg.encode(&mut buf)
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(buf)
+}
+
+// Converts a the message into bytes
+fn convert<T: Message, E>(r: Result<T, E>) -> Result<Vec<u8>, E> {
+    let res = r?;
+    let mut buf = Vec::with_capacity(res.encoded_len());
+    res.encode(&mut buf).unwrap();
     Ok(buf)
 }
 
