@@ -259,6 +259,7 @@ message NodeInfoRequest {
 message NodeInfoResponse {
 	bytes node_id = 1;
 	string grpc_uri = 2;
+	uint64 session_id = 3;
 };
 
 
