@@ -220,6 +220,8 @@ def dict2jsondict(d):
         return [dict2jsondict(e) for e in d]
     elif isinstance(d, dict):
         return {k: dict2jsondict(v) for k, v in d.items()}
+    elif isinstance(d, (bytes, bytearray)):
+        return d.hex()
     else:
         return d
 
