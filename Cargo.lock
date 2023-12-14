@@ -1040,7 +1040,7 @@ dependencies = [
  "hex",
  "http",
  "http-body 0.4.5",
- "lightning-invoice 0.24.0",
+ "lightning-invoice 0.26.0",
  "log",
  "mockall",
  "pin-project 1.1.3",
@@ -1072,7 +1072,7 @@ dependencies = [
 
 [[package]]
 name = "gl-client-py"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "anyhow",
  "bytes 1.5.0",
@@ -1613,9 +1613,9 @@ dependencies = [
 
 [[package]]
 name = "lightning"
-version = "0.0.116"
+version = "0.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90a0f2155316f1570446a0447c993480673f840748c8ed25bbc59dfc442ac770"
+checksum = "d52cec5fa9382154fe9671e8df93095b800c7d77abc66e2a5ef839d672521c5e"
 dependencies = [
  "bitcoin 0.29.2",
 ]
@@ -1636,14 +1636,14 @@ dependencies = [
 
 [[package]]
 name = "lightning-invoice"
-version = "0.24.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1788c0158526ec27a502043c2911ea6ea58fdc656bdf8749484942c07b790d23"
+checksum = "3eb24878b0f4ef75f020976c886d9ad1503867802329cc963e0ab4623ea3b25c"
 dependencies = [
  "bech32 0.9.1",
  "bitcoin 0.29.2",
  "bitcoin_hashes 0.11.0",
- "lightning 0.0.116",
+ "lightning 0.0.118",
  "num-traits",
  "secp256k1 0.24.3",
 ]
