@@ -20,7 +20,7 @@ use std::sync::Mutex;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Endpoint, Uri};
-use tonic::Request;
+use tonic::{Code, Request};
 use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
 use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
@@ -555,19 +555,37 @@ impl Signer {
             .connect_lazy();
         let mut scheduler = SchedulerClient::new(channel);
 
-        #[allow(deprecated)]
-        scheduler
-            .maybe_upgrade(UpgradeRequest {
-                initmsg: self.init.clone(),
-                signer_version: self.version().to_owned(),
-                startupmsgs: self
-                    .get_startup_messages()
-                    .into_iter()
-                    .map(|s| s.into())
-                    .collect(),
-            })
-            .await
-            .map_err(|s| Error::Upgrade(s))?;
+        // Upgrade node if necessary.
+        // If it fails due to connection error, sleep and retry. Re-throw all other errors.
+        loop {
+            #[allow(deprecated)]
+            let maybe_upgrade_res = scheduler
+                .maybe_upgrade(UpgradeRequest {
+                    initmsg: self.init.clone(),
+                    signer_version: self.version().to_owned(),
+                    startupmsgs: self
+                        .get_startup_messages()
+                        .into_iter()
+                        .map(|s| s.into())
+                        .collect(),
+                })
+                .await;
+
+            if let Err(err_status) = maybe_upgrade_res {
+                match err_status.code() {
+                    Code::Unavailable => {
+                        debug!("Cannot connect to scheduler, sleeping and retrying");
+                        sleep(Duration::from_secs(3)).await;
+                        continue;
+                    }
+                    _ => {
+                        return Err(Error::Upgrade(err_status))?;
+                    }
+                }
+            }
+
+            break;
+        }
 
         loop {
             debug!("Calling scheduler.get_node_info");
