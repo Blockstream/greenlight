@@ -59,6 +59,7 @@ gen: ${GENALL}
 
 build-self: ensure-docker
 	cargo build --all
+	(cd libs/gl-client-py && poetry install --with=dev)
 	(cd libs/gl-client-py && python3 -m maturin develop)
 	pip install -e libs/gl-testing
 
