@@ -206,11 +206,22 @@ class Node(object):
             self,
             label: Optional[str] = None,
             invstring: Optional[str] = None,
-            payment_hash: Optional[bytes] = None
+            payment_hash: Optional[bytes] = None,
+            offer_id: Optional[str] = None,
+            index: Optional[clnpb.ListinvoicesRequest.ListinvoicesIndex.ValueType] = None,
+            start: Optional[int] = None,
+            limit: Optional[int] = None,
     ) -> clnpb.ListinvoicesResponse:
         uri = "/cln.Node/ListInvoices"
         res = clnpb.ListinvoicesResponse
         req = clnpb.ListinvoicesRequest(
+            label=label,
+            invstring=invstring,
+            payment_hash=payment_hash,
+            offer_id=offer_id,
+            index=index,
+            start=start,
+            limit=limit,
         ).SerializeToString()
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
