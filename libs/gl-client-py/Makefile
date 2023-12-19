@@ -39,6 +39,7 @@ pygrpc: ${PROTOSRC}
 	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/greenlight_pb2_grpc.py
 
 check-py:
+	cd ${PYDIR}; mypy glclient
 	cd libs/gl-client-py; pytest tests -n $(shell nproc)
 
 clean-py:
