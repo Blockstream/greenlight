@@ -184,9 +184,18 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
-    def listpays(self) -> clnpb.ListpaysResponse:
+    def listpays(
+            self,
+            bolt11: Optional[str] = None,
+            payment_hash: Optional[bytes] = None,
+            status: Optional[clnpb.ListpaysRequest.ListpaysStatus.ValueType] = None,
+    ) -> clnpb.ListpaysResponse:
         uri = "/cln.Node/ListPays"
-        req = clnpb.ListpaysRequest().SerializeToString()
+        req = clnpb.ListpaysRequest(
+            bolt11=bolt11,
+            payment_hash=payment_hash,
+            status=status,
+        ).SerializeToString()
         res = clnpb.ListpaysResponse
 
         return res.FromString(
