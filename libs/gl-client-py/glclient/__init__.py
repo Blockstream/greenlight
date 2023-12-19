@@ -98,8 +98,8 @@ class Scheduler(object):
         )
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
-        res = self.inner.get_invite_codes()
-        return res
+        cls = schedpb.ListInviteCodesResponse
+        return cls.FromString(bytes(self.inner.get_invite_codes()))
 
 
 class Node(object):
