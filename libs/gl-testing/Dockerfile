@@ -53,7 +53,7 @@ RUN mkdir /tmp/protoc && \
 
 RUN python3 -m pip install -U \
       pip tomli &&\
-      python3 -m pip install \
+    python3 -m pip install \
       maturin[patchelf] \
       mrkd \
       mako
@@ -189,6 +189,7 @@ RUN python3 -m pip install -U pip tomli && \
     protobuf \
     ephemeral-port-reserve \
     sh \
+    poetry \
     pytest-timeout \
     pytest-xdist \
     rich \
