@@ -1602,9 +1602,9 @@ checksum = "89d92a4743f9a61002fae18374ed11e7973f530cb3a3255fb354818118b2203c"
 
 [[package]]
 name = "lightning"
-version = "0.0.115"
+version = "0.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e009e1c0c21f66378b491bb40f548682138c63e09db6f3a05af59f8804bb9f4a"
+checksum = "90a0f2155316f1570446a0447c993480673f840748c8ed25bbc59dfc442ac770"
 dependencies = [
  "bitcoin 0.29.2",
  "hex",
@@ -1622,14 +1622,14 @@ dependencies = [
 
 [[package]]
 name = "lightning-invoice"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4e44b0e2822c8811470137d2339fdfe67a699b3248bb1606d1d02eb6a1e9f0a"
+checksum = "1788c0158526ec27a502043c2911ea6ea58fdc656bdf8749484942c07b790d23"
 dependencies = [
  "bech32 0.9.1",
  "bitcoin 0.29.2",
  "bitcoin_hashes 0.11.0",
- "lightning 0.0.115",
+ "lightning 0.0.116",
  "num-traits",
  "secp256k1 0.24.3",
 ]
@@ -2902,11 +2902,11 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "2.3.3"
+version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07ff71d2c147a7b57362cead5e22f772cd52f6ab31cfcd9edcd7f6aeb2a0afbe"
+checksum = "64cd236ccc1b7a29e7e2739f27c0b2dd199804abc4290e32f59f3b68d6405c23"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.5",
  "chrono",
  "hex",
  "serde",
@@ -2917,9 +2917,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "2.3.3"
+version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
+checksum = "93634eb5f75a2323b16de4748022ac4297f9e76b6dced2be287a099f41b5e788"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -3688,9 +3688,9 @@ checksum = "3528ecfd12c466c6f163363caf2d02a71161dd5e1cc6ae7b34207ea2d42d81ed"
 
 [[package]]
 name = "txoo"
-version = "0.6.1"
+version = "0.6.2-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b35482e5bf458fa43996535afbca884b2562ab6419e20686340bb19f5305b30"
+checksum = "74fb0ae52e565a5e1364ed50933a2a884f2e6330e8ffe9ac32ec6c4084bd3a3a"
 dependencies = [
  "bitcoin 0.29.2",
  "log",
@@ -3792,9 +3792,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vls-core"
-version = "0.10.1"
+version = "0.11.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7465dd7f8cc004b67c52c6610ebf157695a93daf33f6a69c1b06b0f4e1fecbc0"
+checksum = "71c9571f43c1d63d301e4f88892cc7bd570b28fb6d44e8af3fac86bce210d8f0"
 dependencies = [
  "anyhow",
  "backtrace",
@@ -3806,8 +3806,8 @@ dependencies = [
  "hashbrown 0.8.2",
  "hex",
  "itertools 0.10.5",
- "lightning 0.0.115",
- "lightning-invoice 0.23.0",
+ "lightning 0.0.116",
+ "lightning-invoice 0.24.0",
  "log",
  "scopeguard",
  "serde",
@@ -3819,23 +3819,24 @@ dependencies = [
 
 [[package]]
 name = "vls-persist"
-version = "0.10.0"
+version = "0.11.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86279e60e9dcdd3bcc135b7979655f1c80c6b99c38fee25d390725bfc5a24994"
+checksum = "2bad8154243b9db47c8cd0efc3513f07499faa7e31f25c8e7027a13241362605"
 dependencies = [
  "hex",
  "log",
  "serde",
  "serde_json",
  "serde_with",
+ "tempfile",
  "vls-core",
 ]
 
 [[package]]
 name = "vls-protocol"
-version = "0.10.0"
+version = "0.11.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55e525ef3cb95a27b240662fb518ea283d25b1f51afe899f0f253747acc284f4"
+checksum = "9c2b2f877b5ee624f38a61fb37fad38678514176a01da925aa265a70a977df70"
 dependencies = [
  "as-any",
  "bitcoin-consensus-derive",
@@ -3843,13 +3844,14 @@ dependencies = [
  "hex",
  "log",
  "serde_bolt 0.3.1",
+ "txoo",
 ]
 
 [[package]]
 name = "vls-protocol-signer"
-version = "0.10.0"
+version = "0.11.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a766ac452520406eed1e7d8ad1c744156fc3ceaf6bdcefe3f3a44bd5f5ea0b29"
+checksum = "98a720d79fa6a2da1c5ed528312eacd15fa1b7af1d8dc4caa8775222e817ac21"
 dependencies = [
  "bit-vec",
  "log",

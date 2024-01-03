@@ -32,7 +32,7 @@ impl Resolver {
             Message::GetChannelBasepoints(_) => true,
             Message::ValidateCommitmentTx(_) => true,
             Message::SignWithdrawal(_) => true,
-            Message::ReadyChannel(_) => true,
+            Message::SetupChannel(_) => true,
             Message::GetPerCommitmentPoint(_) => true,
             Message::ValidateRevocation(_) => true,
             Message::NewChannel(_) => true,

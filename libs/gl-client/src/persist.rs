@@ -5,7 +5,7 @@ use lightning_signer::channel::ChannelStub;
 use lightning_signer::node::NodeConfig;
 use lightning_signer::node::NodeState;
 use lightning_signer::persist::ChainTrackerListenerEntry;
-use lightning_signer::persist::{Error, Persist};
+use lightning_signer::persist::{Error, Persist, SignerId};
 use lightning_signer::policy::validator::ValidatorFactory;
 use lightning_signer::SendSync;
 use log::{trace, warn};
@@ -529,5 +529,12 @@ impl Persist for MemoryPersister {
     }
     fn clear_database(&self) -> Result<(), Error> {
         self.state.lock().unwrap().clear()
+    }
+
+    fn signer_id(&self) -> SignerId {
+        // The signers are clones of each other in Greenlight, and as
+        // such we should not need to differentiate them. We therefore
+        // just return a static dummy ID.
+        [0u8; 16]
     }
 }
