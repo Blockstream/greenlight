@@ -1,5 +1,6 @@
-use runeauth::{Alternative, Condition, Restriction, Rune, RuneError};
+use runeauth::{Alternative, Check, Condition, ConditionChecker, Restriction, Rune, RuneError};
 use std::fmt::Display;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Represents an entity that can provide restrictions.
 ///
@@ -152,11 +153,55 @@ fn alternative(field: &str, cond: Condition, value: &str) -> Result<Alternative,
     Alternative::new(field.to_string(), cond, value.to_string(), false)
 }
 
+/// A context struct that holds information relevant to check a command against
+/// a rune.
+#[derive(Clone)]
+pub struct Context {
+    // The rpc method associated with the request.
+    pub method: String,
+    // The public key associated with the request.
+    pub pubkey: String,
+    // The timestamp associated with the request.
+    pub time: SystemTime,
+    // Todo (nepet): Add param field that uses enum or serde to store the params  of a call.
+}
+
+/// Implementation of the `Check` trait for the `Context` struct, allowing it to
+/// perform checks on rune alternatives.
+impl Check for Context {
+    /// Performs a check on an alternative based on the context's fields.
+    ///
+    /// # Arguments
+    ///
+    /// * `alt` - The alternative to check against the context.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the check is successful, an `Err` containing a `RuneError` otherwise.
+    fn check_alternative(&self, alt: &Alternative) -> anyhow::Result<(), RuneError> {
+        let value = match alt.get_field().as_str() {
+            "method" => self.method.clone(),
+            "pubkey" => self.pubkey.clone(),
+            "time" => self
+                .time
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| {
+                    RuneError::Unknown(format!("Can not extract seconds from timestamp {:?}", e))
+                })?
+                .as_secs()
+                .to_string(),
+            _ => String::new(), // If we don't know the field we can not set it!
+        };
+        ConditionChecker { value }.check_alternative(alt)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{DefRules, RuneFactory};
+    use super::{Context, DefRules, RuneFactory};
     use base64::{engine::general_purpose, Engine as _};
-    use runeauth::Rune;
+    use runeauth::{Alternative, Condition, Restriction, Rune};
+    use std::time::SystemTime;
 
     #[test]
     fn test_carve_readonly_rune() {
@@ -200,5 +245,149 @@ mod tests {
         assert_eq!(format!("{}", r), "pay");
         let r = DefRules::Add(&[DefRules::Pay, DefRules::ReadOnly]);
         assert_eq!(format!("{}", r), "pay|readonly");
+    }
+
+    #[test]
+    fn test_context_check() {
+        let seedsecret = &[0; 32];
+        let mr = Rune::new_master_rune(seedsecret, vec![], None, None).unwrap();
+
+        // r1 restrictions: "pubkey=020000000000000000"
+        let r1 = Rune::new(
+            mr.authcode(),
+            vec![Restriction::new(vec![Alternative::new(
+                String::from("pubkey"),
+                Condition::Equal,
+                String::from("020000000000000000"),
+                false,
+            )
+            .unwrap()])
+            .unwrap()],
+            None,
+            None,
+        )
+        .unwrap();
+
+        // r2 restrictions: "method=GetInfo"
+        let r2 = Rune::new(
+            mr.authcode(),
+            vec![Restriction::new(vec![Alternative::new(
+                String::from("method"),
+                Condition::Equal,
+                String::from("GetInfo"),
+                false,
+            )
+            .unwrap()])
+            .unwrap()],
+            None,
+            None,
+        )
+        .unwrap();
+
+        // r3 restrictions: "pubkey!"
+        let r3 = Rune::new(
+            mr.authcode(),
+            vec![Restriction::new(vec![Alternative::new(
+                String::from("pubkey"),
+                Condition::Missing,
+                String::new(),
+                false,
+            )
+            .unwrap()])
+            .unwrap()],
+            None,
+            None,
+        )
+        .unwrap();
+
+        // r4 restriction: "method!"
+        let r4 = Rune::new(
+            mr.authcode(),
+            vec![Restriction::new(vec![Alternative::new(
+                String::from("method"),
+                Condition::Missing,
+                String::new(),
+                false,
+            )
+            .unwrap()])
+            .unwrap()],
+            None,
+            None,
+        )
+        .unwrap();
+
+        // These should succeed.
+        // Check with method="", pubkey=020000000000000000
+        let ctx = Context {
+            method: String::new(),
+            pubkey: String::from("020000000000000000"),
+            time: SystemTime::now(),
+        };
+        assert!(r1.are_restrictions_met(ctx).is_ok());
+        // Check with method="ListFunds", pubkey=020000000000000000
+        let ctx = Context {
+            method: String::from("ListFunds"),
+            pubkey: String::from("020000000000000000"),
+            time: SystemTime::now(),
+        };
+        assert!(r1.are_restrictions_met(ctx).is_ok());
+        // Check with method="GetInfo", pubkey=""
+        let ctx = Context {
+            method: String::from("GetInfo"),
+            pubkey: String::new(),
+            time: SystemTime::now(),
+        };
+        assert!(r2.are_restrictions_met(ctx).is_ok());
+        // Check with method="GetInfo", pubkey="020000000000000000"
+        let ctx = Context {
+            method: String::from("GetInfo"),
+            pubkey: String::from("020000000000000000"),
+            time: SystemTime::now(),
+        };
+        assert!(r2.are_restrictions_met(ctx).is_ok());
+        // Check with method="GetInfo", pubkey=""
+        let ctx = Context {
+            method: String::from("GetInfo"),
+            pubkey: String::new(),
+            time: SystemTime::now(),
+        };
+        assert!(r3.are_restrictions_met(ctx).is_ok());
+        // Check with method="", pubkey="020000"
+        let ctx = Context {
+            method: String::new(),
+            pubkey: String::from("020000000000000000"),
+            time: SystemTime::now(),
+        };
+        assert!(r4.are_restrictions_met(ctx).is_ok());
+
+        // These should fail.
+        // Check with method="ListFunds", pubkey=030000, wrong pubkey.
+        let ctx = Context {
+            method: String::from("ListFunds"),
+            pubkey: String::from("030000"),
+            time: SystemTime::now(),
+        };
+        assert!(r1.are_restrictions_met(ctx).is_err());
+        // Check with method="ListFunds", pubkey=030000, wrong method.
+        let ctx = Context {
+            method: String::from("ListFunds"),
+            pubkey: String::from("030000"),
+            time: SystemTime::now(),
+        };
+        assert!(r2.are_restrictions_met(ctx).is_err());
+        // Check with pubkey=030000, pubkey present.
+        let ctx = Context {
+            method: String::new(),
+            pubkey: String::from("030000"),
+            time: SystemTime::now(),
+        };
+        assert!(r3.are_restrictions_met(ctx).is_err());
+        // Check with method="GetInfo", method present.
+        let ctx = Context {
+            method: String::from("GetInfo"),
+            pubkey: String::new(),
+            time: SystemTime::now(),
+        };
+        assert!(r4.are_restrictions_met(ctx).is_err());
     }
 }
