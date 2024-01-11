@@ -4,6 +4,7 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
+use crate::runes;
 use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
@@ -18,12 +19,12 @@ use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
-use log::{debug, info, trace, warn, error};
-use runeauth::{Condition, MapChecker, Restriction, Rune, RuneError};
-use std::collections::HashMap;
+use log::{debug, error, info, trace, warn};
+use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Endpoint, Uri};
@@ -314,14 +315,15 @@ impl Signer {
             return Err(anyhow!("rune is missing pubkey field"));
         }
 
-        let mut checks: HashMap<String, String> = HashMap::new();
-        checks.insert("pubkey".to_string(), hex::encode(request.pubkey));
-
-        // Runes only check on the version if the unique id field is set. The id
-        // and the version are part of the empty field.
-        if let Some(device_id) = rune.get_id() {
-            checks.insert("".to_string(), format!("{}-{}", device_id, RUNE_VERSION));
-        }
+        // Currently we only use a 0 unique_id and a pubkey field to allow
+        // for delegation in the future but we could also set the public 
+        // key as the unique_id in the future and add a method that allows
+        // to create new empty runes.
+        let unique_id = rune.get_id();
+        let ver_id = match unique_id {
+            Some(id) => format!("{}-{}", id, RUNE_VERSION),
+            None => String::default(),
+        };
 
         // Check that the request points to `cln.Node`.
         let mut parts = request.uri.split('/');
@@ -348,12 +350,15 @@ impl Signer {
                 return Err(anyhow!("can not extract uri form request"));
             }
         };
-        checks.insert("method".to_string(), method.to_string());
 
-        match self
-            .master_rune
-            .check_with_reason(&rune64, MapChecker { map: checks })
-        {
+        let ctx = runes::Context {
+            method,
+            pubkey: hex::encode(request.pubkey),
+            time: SystemTime::now(),
+            unique_id: ver_id,
+        };
+
+        match self.master_rune.check_with_reason(&rune64, ctx) {
             Ok(_) => Ok(()),
             Err(e) => Err(e.into()),
         }
@@ -840,9 +845,7 @@ impl Signer {
     where
         Creds: TlsConfigProvider + RuneProvider,
     {
-        node::Node::new(self.node_id(), creds)?
-            .schedule()
-            .await
+        node::Node::new(self.node_id(), creds)?.schedule().await
     }
 
     pub fn version(&self) -> &'static str {
@@ -1021,7 +1024,12 @@ mod tests {
     /// attestations.
     #[tokio::test]
     async fn test_sign_message_rejection() {
-        let signer = Signer::new(vec![0 as u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0 as u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
@@ -1039,7 +1047,12 @@ mod tests {
     /// We should reject a signing request with an empty message.
     #[tokio::test]
     async fn test_empty_message() {
-        let signer = Signer::new(vec![0 as u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0 as u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
 
         assert_eq!(
             signer
@@ -1059,7 +1072,12 @@ mod tests {
 
     #[test]
     fn test_sign_message_max_size() {
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
 
         // We test if we reject a message that is too long.
         let msg = [0u8; u16::MAX as usize + 1];
@@ -1075,7 +1093,12 @@ mod tests {
     /// remain.
     #[test]
     fn test_legacy_bip32_key() {
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
 
         let bip32 = signer.legacy_bip32_ext_key();
         let expected: Vec<u8> = vec![
@@ -1094,7 +1117,12 @@ mod tests {
     /// on the public key "pubkey=<public-key-of-devices-tls-cert>".
     #[test]
     fn test_rune_expects_pubkey() {
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
 
         let alt = "pubkey=112233";
         let wrong_alt = "pubkey^112233";
@@ -1116,7 +1144,12 @@ mod tests {
 
     #[test]
     fn test_rune_expansion() {
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
         let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
 
         let new_rune = signer
@@ -1128,7 +1161,12 @@ mod tests {
 
     #[test]
     fn test_rune_checks_method() {
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();
@@ -1188,5 +1226,51 @@ mod tests {
             rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
         };
         assert!(signer.verify_rune(r).is_err());
+    }
+
+    #[test]
+    fn test_empty_rune_is_valid() {
+        let creds = credentials::Nobody::default();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, creds).unwrap();
+
+        // This is just a placeholder public key, could also be a different one;
+        let pubkey = signer.node_id();
+        let pubkey_rest = format!("pubkey={}", hex::encode(&pubkey));
+
+        let rune = signer.create_rune(None, vec![vec![&pubkey_rest]]).unwrap();
+        let uri = "/cln.Node/Pay".to_string();
+        assert!(signer
+            .verify_rune(crate::pb::PendingRequest {
+                request: vec![],
+                uri,
+                signature: vec![],
+                pubkey,
+                timestamp: 0,
+                rune: general_purpose::URL_SAFE.decode(rune).unwrap(),
+            })
+            .is_ok());
+    }
+
+    #[test]
+    fn test_empty_rune_checks_pubkey() {
+        let creds = credentials::Nobody::default();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, creds).unwrap();
+
+        // This is just a placeholder public key, could also be a different one;
+        let pubkey = signer.node_id();
+        let pubkey_rest = format!("pubkey={}", hex::encode(&pubkey));
+
+        let rune = signer.create_rune(None, vec![vec![&pubkey_rest]]).unwrap();
+        let uri = "/cln.Node/Pay".to_string();
+        assert!(signer
+            .verify_rune(crate::pb::PendingRequest {
+                request: vec![],
+                uri,
+                signature: vec![],
+                pubkey: hex::decode("33aabb").unwrap(),
+                timestamp: 0,
+                rune: general_purpose::URL_SAFE.decode(rune).unwrap(),
+            })
+            .is_err());
     }
 }

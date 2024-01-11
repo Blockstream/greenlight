@@ -161,6 +161,8 @@ pub struct Context {
     pub method: String,
     // The public key associated with the request.
     pub pubkey: String,
+    // The unique id.
+    pub unique_id: String,
     // The timestamp associated with the request.
     pub time: SystemTime,
     // Todo (nepet): Add param field that uses enum or serde to store the params  of a call.
@@ -180,6 +182,7 @@ impl Check for Context {
     /// * `Ok(())` if the check is successful, an `Err` containing a `RuneError` otherwise.
     fn check_alternative(&self, alt: &Alternative) -> anyhow::Result<(), RuneError> {
         let value = match alt.get_field().as_str() {
+            "" => self.unique_id.clone(),
             "method" => self.method.clone(),
             "pubkey" => self.pubkey.clone(),
             "time" => self
@@ -322,6 +325,7 @@ mod tests {
             method: String::new(),
             pubkey: String::from("020000000000000000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r1.are_restrictions_met(ctx).is_ok());
         // Check with method="ListFunds", pubkey=020000000000000000
@@ -329,6 +333,7 @@ mod tests {
             method: String::from("ListFunds"),
             pubkey: String::from("020000000000000000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r1.are_restrictions_met(ctx).is_ok());
         // Check with method="GetInfo", pubkey=""
@@ -336,6 +341,7 @@ mod tests {
             method: String::from("GetInfo"),
             pubkey: String::new(),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r2.are_restrictions_met(ctx).is_ok());
         // Check with method="GetInfo", pubkey="020000000000000000"
@@ -343,6 +349,7 @@ mod tests {
             method: String::from("GetInfo"),
             pubkey: String::from("020000000000000000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r2.are_restrictions_met(ctx).is_ok());
         // Check with method="GetInfo", pubkey=""
@@ -350,6 +357,7 @@ mod tests {
             method: String::from("GetInfo"),
             pubkey: String::new(),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r3.are_restrictions_met(ctx).is_ok());
         // Check with method="", pubkey="020000"
@@ -357,6 +365,7 @@ mod tests {
             method: String::new(),
             pubkey: String::from("020000000000000000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r4.are_restrictions_met(ctx).is_ok());
 
@@ -366,6 +375,7 @@ mod tests {
             method: String::from("ListFunds"),
             pubkey: String::from("030000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r1.are_restrictions_met(ctx).is_err());
         // Check with method="ListFunds", pubkey=030000, wrong method.
@@ -373,6 +383,7 @@ mod tests {
             method: String::from("ListFunds"),
             pubkey: String::from("030000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r2.are_restrictions_met(ctx).is_err());
         // Check with pubkey=030000, pubkey present.
@@ -380,6 +391,7 @@ mod tests {
             method: String::new(),
             pubkey: String::from("030000"),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r3.are_restrictions_met(ctx).is_err());
         // Check with method="GetInfo", method present.
@@ -387,6 +399,7 @@ mod tests {
             method: String::from("GetInfo"),
             pubkey: String::new(),
             time: SystemTime::now(),
+            unique_id: String::new(),
         };
         assert!(r4.are_restrictions_met(ctx).is_err());
     }
