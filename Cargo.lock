@@ -2605,9 +2605,9 @@ dependencies = [
 
 [[package]]
 name = "runeauth"
-version = "0.1.1"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b8cf56aa3c9bcafc184853e8b356df61728a6f41da65fe2f0cc9e2a3f9f2318"
+checksum = "ef37d2c452a17120641e4180b6360268a6d2e842169febe791d21316c9107c84"
 dependencies = [
  "anyhow",
  "base64 0.21.5",
