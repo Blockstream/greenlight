@@ -9,6 +9,7 @@ pub enum Network {
     Bitcoin = 0,
     Testnet = 1,
     Regtest = 2,
+    Signet = 3,
 }
 
 impl TryFrom<i16> for Network {
@@ -19,6 +20,7 @@ impl TryFrom<i16> for Network {
             0 => Ok(Network::Bitcoin),
             1 => Ok(Network::Testnet),
             2 => Ok(Network::Regtest),
+	    3 => Ok(Network::Signet),
             e => Err(anyhow!("Unknown numeric network {}", e)),
         }
     }
@@ -32,6 +34,7 @@ impl TryFrom<String> for Network {
             "bitcoin" => Ok(Network::Bitcoin),
             "testnet" => Ok(Network::Testnet),
             "regtest" => Ok(Network::Regtest),
+	    "signet" => Ok(Network::Signet),
             o => Err(anyhow!("Unknown network {}", o)),
         }
     }
@@ -45,6 +48,7 @@ impl std::fmt::Display for Network {
                 Network::Bitcoin => "bitcoin",
                 Network::Testnet => "testnet",
                 Network::Regtest => "regtest",
+		Network::Signet => "signet",
             }
         )
     }
