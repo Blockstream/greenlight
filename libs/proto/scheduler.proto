@@ -185,7 +185,7 @@ message RegistrationRequest {
         bytes bip32_key = 2;
 
 	// Which network is this node going to run on? Options are
-	// bitcoin, testnet, and regtest.
+	// bitcoin, signet, testnet, and regtest.
 	string network = 4;
 
 	// An previously unused challenge as retrieved from
