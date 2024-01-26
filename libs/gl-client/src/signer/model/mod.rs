@@ -47,6 +47,7 @@ pub enum Request {
     ListSendPays(cln::ListsendpaysRequest),
     ListTransactions(cln::ListtransactionsRequest),
     Pay(cln::PayRequest),
+    PreApproveInvoice(cln::PreapproveinvoiceRequest),
     ListNodes(cln::ListnodesRequest),
     WaitAnyInvoice(cln::WaitanyinvoiceRequest),
     WaitInvoice(cln::WaitinvoiceRequest),

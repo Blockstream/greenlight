@@ -20,7 +20,7 @@ impl Resolver {
         // we do an early pass:
         let accept = match req {
             // Commands that simply have no context to check against
-	    Message::GetHeartbeat(_) => true,
+            Message::GetHeartbeat(_) => true,
             Message::Ecdh(_) => true,
             Message::Ping(_) => true,
             Message::Pong(_) => true,
@@ -89,6 +89,12 @@ impl Resolver {
                 }
                 (Message::PreapproveInvoice(l), Request::Pay(r)) => {
                     l.invstring.0 == r.bolt11.as_bytes()
+                }
+                (Message::PreapproveInvoice(l), Request::PreApproveInvoice(r)) => {
+                    // Manually calling preapproveinvoice should
+                    // always be allowed. The bolt11 string have to
+                    // match.
+                    l.invstring.0 == r.bolt11().as_bytes()
                 }
                 (_, _) => false,
             };
