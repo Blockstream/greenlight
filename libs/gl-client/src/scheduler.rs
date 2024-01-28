@@ -56,7 +56,7 @@ impl Scheduler {
         invite_code: Option<String>,
     ) -> Result<pb::scheduler::RegistrationResponse> {
         let code = invite_code.unwrap_or_default();
-        return self.inner_register(signer, code).await;
+        self.inner_register(signer, code).await
     }
 
     /// We split the register method into one with an invite code and one
@@ -84,7 +84,7 @@ impl Scheduler {
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let device_cert = tls::generate_self_signed_device_cert(
             &hex::encode(self.node_id.clone()),
-            "default".into(),
+            "default",
             vec!["localhost".into()],
         );
         let device_csr = device_cert.serialize_request_pem()?;
