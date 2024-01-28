@@ -136,6 +136,14 @@ impl Scheduler {
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
 
+        // Fixme[@nepet]: Dummy placeholder values for the `rune` and `creds`
+        // field of the proto message. This will be replaced by something 
+        // meaningful in a future commit.
+        // This is not strictly necessary (is already set to default values)
+        // but this makes it easier to remember that we need to fix this.
+        res.rune = String::new();
+        res.creds = vec![];
+
         Ok(res)
     }
 
@@ -193,6 +201,14 @@ impl Scheduler {
         );
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
+
+        // Fixme[@nepet]: Dummy placeholder values for the `rune` and `creds`
+        // field of the proto message. This will be replaced by something 
+        // meaningful in a future commit.
+        // This is not strictly necessary (is already set to default values)
+        // but this makes it easier to remember that we need to fix this.
+        res.rune = String::new();
+        res.creds = vec![];
 
         Ok(res)
     }
