@@ -290,6 +290,8 @@ class RegistrationResponse(google.protobuf.message.Message):
 
     DEVICE_CERT_FIELD_NUMBER: builtins.int
     DEVICE_KEY_FIELD_NUMBER: builtins.int
+    RUNE_FIELD_NUMBER: builtins.int
+    CREDS_FIELD_NUMBER: builtins.int
     device_cert: builtins.str
     """Upon registering the user receives back the signed certificate that
     belongs to the certificate signing request the that was sent in the
@@ -299,13 +301,25 @@ class RegistrationResponse(google.protobuf.message.Message):
     """The private key that was used to create the certificate with. This key
     is used to sign the requests to the node.
     """
+    rune: builtins.str
+    """A master rune that is returned if the device that is registered has its
+    own signer. The signer is necessary as the response is intercepted on the
+    client side and appends the rune to the registratrion response.
+    """
+    creds: builtins.bytes
+    """Creds contains a serialized version of the device_cert, the device_key 
+    and the rune that are used to authenticate a device at the backend, 
+    and to authorize a request at the signer.
+    """
     def __init__(
         self,
         *,
         device_cert: builtins.str = ...,
         device_key: builtins.str = ...,
+        rune: builtins.str = ...,
+        creds: builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["device_cert", b"device_cert", "device_key", b"device_key"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune"]) -> None: ...
 
 global___RegistrationResponse = RegistrationResponse
 
@@ -410,15 +424,29 @@ class RecoveryResponse(google.protobuf.message.Message):
 
     DEVICE_CERT_FIELD_NUMBER: builtins.int
     DEVICE_KEY_FIELD_NUMBER: builtins.int
+    RUNE_FIELD_NUMBER: builtins.int
+    CREDS_FIELD_NUMBER: builtins.int
     device_cert: builtins.str
     device_key: builtins.str
+    rune: builtins.str
+    """A master rune that is returned if the device that is registered has its
+    own signer. The signer is necessary as the response is intercepted on the
+    client side and appends the rune to the registratrion response.
+    """
+    creds: builtins.bytes
+    """Creds contains a serialized version of the device_cert, the device_key 
+    and the rune that are used to authenticate a device at the backend, 
+    and to authorize a request at the signer.
+    """
     def __init__(
         self,
         *,
         device_cert: builtins.str = ...,
         device_key: builtins.str = ...,
+        rune: builtins.str = ...,
+        creds: builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["device_cert", b"device_cert", "device_key", b"device_key"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune"]) -> None: ...
 
 global___RecoveryResponse = RecoveryResponse
 

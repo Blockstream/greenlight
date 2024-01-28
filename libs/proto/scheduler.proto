@@ -281,6 +281,16 @@ message RegistrationResponse {
 	// The private key that was used to create the certificate with. This key
 	// is used to sign the requests to the node.
 	string device_key = 2;
+
+	// A master rune that is returned if the device that is registered has its
+	// own signer. The signer is necessary as the response is intercepted on the
+	// client side and appends the rune to the registratrion response.
+	string rune = 3;
+
+	// Creds contains a serialized version of the device_cert, the device_key 
+	// and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes creds = 4;
 };
 
 // Ask the scheduler to schedule the node to be run on an available nodelet.
@@ -321,6 +331,16 @@ message RecoveryRequest {
 message RecoveryResponse {
 	string device_cert = 1;
 	string device_key = 2;
+	
+	// A master rune that is returned if the device that is registered has its
+	// own signer. The signer is necessary as the response is intercepted on the
+	// client side and appends the rune to the registratrion response.
+	string rune = 3;
+
+	// Creds contains a serialized version of the device_cert, the device_key 
+	// and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes creds = 4;
 };
 
 message UpgradeRequest {
