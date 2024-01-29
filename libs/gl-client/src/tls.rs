@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use log::debug;
-use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 use std::path::Path;
+use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
 const NOBODY_CRT: &[u8] = include_str!(env!("GL_NOBODY_CRT")).as_bytes();
@@ -39,21 +39,18 @@ fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
 impl TlsConfig {
     pub fn new() -> Result<Self> {
         debug!("Configuring TlsConfig with nobody identity");
-        // Allow overriding the defaults through the environment variables
-        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
-        let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
-        let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW)?;
-
+        let (nobody_crt, nobody_key) = default_nobody_identity()?;
+        let ca_crt = default_ca()?;
         Self::with(nobody_crt, nobody_key, ca_crt)
     }
     pub fn with<V: AsRef<[u8]>>(crt: V, key: V, ca_crt: V) -> Result<Self> {
         let config = ClientTlsConfig::new()
             .ca_certificate(Certificate::from_pem(ca_crt.as_ref()))
-            .identity(Identity::from_pem(crt, key));
+            .identity(Identity::from_pem(crt, key.as_ref()));
 
         Ok(TlsConfig {
             inner: config,
-            private_key: None,
+            private_key: Some(key.as_ref().to_vec()),
             ca: ca_crt.as_ref().to_vec(),
         })
     }
@@ -80,12 +77,14 @@ impl TlsConfig {
     /// The path is a directory that contains a `client.crt` and
     /// a `client-key.pem`-file which contain respectively the certificate
     /// and private key.
-    pub fn identity_from_path<P : AsRef<Path>>(self, path: P) -> Result<Self> {
+    pub fn identity_from_path<P: AsRef<Path>>(self, path: P) -> Result<Self> {
         let cert_path = path.as_ref().join("client.crt");
         let key_path = path.as_ref().join("client-key.pem");
 
-        let cert_pem = std::fs::read(cert_path.clone()).with_context(|| format!("Failed to read '{}'", cert_path.display()))?;
-        let key_pem = std::fs::read(key_path.clone()).with_context(|| format!("Failed to read '{}", key_path.display()))?;
+        let cert_pem = std::fs::read(cert_path.clone())
+            .with_context(|| format!("Failed to read '{}'", cert_path.display()))?;
+        let key_pem = std::fs::read(key_path.clone())
+            .with_context(|| format!("Failed to read '{}", key_path.display()))?;
 
         Ok(self.identity(cert_pem, key_pem))
     }
@@ -106,6 +105,17 @@ impl TlsConfig {
     pub fn client_tls_config(&self) -> ClientTlsConfig {
         self.inner.clone()
     }
+}
+
+pub fn default_ca() -> Result<Vec<u8>> {
+    load_file_or_default("GL_CA_CRT", CA_RAW)
+}
+
+pub fn default_nobody_identity() -> Result<(Vec<u8>, Vec<u8>)> {
+    // Allow overriding the defaults through the environment variables
+    let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
+    let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
+    Ok((nobody_crt, nobody_key))
 }
 
 /// Generate a new device certificate from a fresh set of keys. The path in the

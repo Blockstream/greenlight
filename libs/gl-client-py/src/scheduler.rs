@@ -15,7 +15,7 @@ type Client = SchedulerClient<Channel>;
 #[derive(Clone)]
 pub struct Scheduler {
     node_id: Vec<u8>,
-    inner: gl_client::scheduler::Scheduler,
+    pub inner: gl_client::scheduler::Scheduler,
     tls: crate::tls::TlsConfig,
 }
 
