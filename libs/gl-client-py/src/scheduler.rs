@@ -32,7 +32,14 @@ impl Scheduler {
 
         let ctls = tls.clone();
         let res = exec(async move {
-            gl_client::scheduler::Scheduler::with(id, network, uri, &ctls.inner).await
+            gl_client::scheduler::Scheduler::builder(
+                id,
+                network,
+                ctls.inner
+            )?
+            .with_uri(uri)
+            .build()
+            .await
         });
 
         let inner = match res {

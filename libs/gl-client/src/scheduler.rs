@@ -6,9 +6,84 @@ use crate::{pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
+use std::convert::TryInto;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
+
+/// Represents a builder for creating a `Scheduler` instance.
+///
+/// This struct is used to configure and build a `Scheduler` with various
+/// options, such as network settings, credentials, and a URI.
+pub struct Builder {
+    node_id: Vec<u8>,
+    network: Network,
+    tls: TlsConfig,
+    uri: Option<String>,
+}
+
+impl Builder {
+    /// Constructs a new `Builder` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `node_id` - A unique identifier for the node as a byte vector.
+    /// * `network` - Network settings for the Scheduler.
+    /// * `tls` - A value that can be converted into `TlsConfig`.
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the new instance of `Builder` or an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `tls` fails to convert into `TlsConfig`.
+    pub fn new<T>(node_id: Vec<u8>, network: Network, tls: T) -> Result<Self>
+    where
+        T: TryInto<TlsConfig>,
+        anyhow::Error: From<T::Error>,
+    {
+        let tls = tls.try_into()?;
+        Ok(Self {
+            node_id,
+            network,
+            uri: None,
+            tls,
+        })
+    }
+
+    /// Sets the URI for the Scheduler.
+    ///
+    /// # Arguments
+    ///
+    /// * `uri` - URI that the scheduler connects to.
+    ///
+    /// # Returns
+    ///
+    /// The updated Builder instance.
+    pub fn with_uri(mut self, uri: String) -> Self {
+        self.uri = Some(uri);
+        self
+    }
+
+    /// Builds a Scheduler instance based on the configured parameters.
+    ///
+    /// This method finalizes the configuration and creates a new `Scheduler`
+    /// instance with the provided settings.
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the Scheduler or an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `Scheduler` creation fails.
+    pub async fn build(&self) -> Result<Scheduler> {
+        let uri = self.uri.clone().unwrap_or_else(|| utils::scheduler_uri());
+        let node_id = self.node_id.clone();
+        Scheduler::with(node_id, self.network, uri, &self.tls).await
+    }
+}
 
 #[derive(Clone)]
 pub struct Scheduler {
@@ -21,6 +96,14 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
+    pub fn builder<T>(node_id: Vec<u8>, network: Network, tls: T) -> Result<Builder>
+    where
+        T: TryInto<TlsConfig>,
+        anyhow::Error: From<T::Error>,
+    {
+        Builder::new(node_id, network, tls)
+    }
+
     pub async fn with(
         node_id: Vec<u8>,
         network: Network,
