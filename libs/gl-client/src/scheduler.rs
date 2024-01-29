@@ -17,6 +17,7 @@ pub struct Scheduler {
     node_id: Vec<u8>,
     client: Client,
     network: Network,
+    tls: TlsConfig,
 }
 
 impl Scheduler {
@@ -41,6 +42,7 @@ impl Scheduler {
             client,
             node_id,
             network,
+            tls: tls.clone(),
         })
     }
 
@@ -213,23 +215,24 @@ impl Scheduler {
         Ok(res)
     }
 
-    pub async fn schedule<T>(&self, tls: TlsConfig) -> Result<T>
-    where
-        T: GrpcClient,
-    {
-        let sched = self
+    pub async fn schedule(&self) -> Result<pb::scheduler::NodeInfoResponse> {
+        let res = self
             .client
             .clone()
             .schedule(pb::scheduler::ScheduleRequest {
                 node_id: self.node_id.clone(),
             })
-            .await?
-            .into_inner();
+            .await?;
+        Ok(res.into_inner())
+    }
 
-        let uri = sched.grpc_uri;
-
-        node::Node::new(self.node_id.clone(), self.network, tls)
-            .connect(uri)
+    pub async fn node<T>(&self) -> Result<T>
+    where
+        T: GrpcClient,
+    {
+        let res = self.schedule().await?;
+        node::Node::new(self.node_id.clone(), self.network, self.tls.clone())
+            .connect(res.grpc_uri)
             .await
     }
 
