@@ -75,9 +75,40 @@ class Client:
             .identity(certpath.open(mode="r").read(), keypath.open(mode="r").read())
         )
 
+    def creds(self) -> glclient.Credentials:
+        """Load the credentials data
+
+        Returns the devices credentials data
+        """
+        self.log.info("Trying to find greenlight.auth")
+        credspath = self.directory / "greenlight.auth"
+        if credspath.exists():
+            self.log.info(f"Loading credentials data from {credspath}")
+            creds = (
+                glclient.Credentials.as_device()
+                .from_path(str(credspath.absolute()))
+                .build()
+            )
+            return creds
+        else:
+            certpath = self.directory / "nobody.crt"
+            keypath = self.directory / "nobody-key.pem"
+            capath = self.directory / "ca.crt"
+            self.log.info(f"Loading generic nobody credentials from {self.directory}")
+            creds = (
+                glclient.Credentials.as_nobody()
+                .with_identity(
+                    certpath.open(mode="rb").read(),
+                    keypath.open(mode="rb").read(),
+                )
+                .with_ca(capath.open(mode="rb").read())
+                .build()
+            )
+            return creds
+
     def scheduler(self) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        return glclient.Scheduler(self.node_id, network=NETWORK, tls=self.tls())
+        return glclient.Scheduler(self.node_id, network=NETWORK, tls=glclient.TlsConfig(self.creds()))
 
     def signer(self) -> glclient.Signer:
         secret = (self.directory / "hsm_secret").open(mode="rb").read()
@@ -85,12 +116,12 @@ class Client:
         have_certs = keypath.exists()
 
         self.directory.mkdir(exist_ok=True)
-        signer = glclient.Signer(secret, NETWORK, self.tls())
+        signer = glclient.Signer(secret, NETWORK, glclient.TlsConfig(self.creds()))
 
         return signer
 
     def node(self):
-        return self.scheduler().node()
+        return self.scheduler().node(self.creds())
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node
@@ -104,6 +135,8 @@ class Client:
                 f.write(r.device_cert)
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
+            with (self.directory / "greenlight.auth").open("wb") as f:
+                f.write(r.creds)
 
     def recover(self, configure: bool = True) -> None:
         r = self.scheduler().recover(self.signer())
@@ -112,10 +145,11 @@ class Client:
                 f.write(r.device_cert)
             with (self.directory / "device-key.pem").open("w") as f:
                 f.write(r.device_key)
+            with (self.directory / "greenlight.auth").open("wb") as f:
+                f.write(r.creds)
 
     def find_node(self):
-        """If we registered find the matching node in the scheduler
-        """
+        """If we registered find the matching node in the scheduler"""
         for n in self.schedsvc.nodes:
             if n.node_id == self.node_id:
                 return n
@@ -159,7 +193,7 @@ class Clients:
             scheduler=self.scheduler,
             directory=directory,
             secret=secret,
-            name=f"Client-{id}"
+            name=f"Client-{id}",
         )
         return c
 
