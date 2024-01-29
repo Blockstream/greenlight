@@ -1,6 +1,6 @@
-use crate::runtime::exec;
-use crate::tls::TlsConfig;
 use crate::lsps::LspClient;
+use crate::runtime::exec;
+use crate::Credentials;
 use gl_client as gl;
 use gl_client::bitcoin::Network;
 use gl_client::pb;
@@ -13,42 +13,25 @@ use tonic::{Code, Status};
 pub struct Node {
     client: gl::node::Client,
     gclient: gl::node::GClient,
-    cln_client : gl::node::ClnClient
+    cln_client: gl::node::ClnClient,
 }
 
 #[pymethods]
 impl Node {
     #[new]
-    fn new(node_id: Vec<u8>, network: String, tls: TlsConfig, grpc_uri: String) -> PyResult<Self> {
+    fn new(
+        node_id: Vec<u8>,
+        network: String,
+        grpc_uri: String,
+        creds: Credentials,
+    ) -> PyResult<Self> {
         let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("unknown network")),
         };
-
-        let inner = gl::node::Node::new(node_id.clone(), network, tls.inner);
-
-        // Connect to both interfaces in parallel to avoid doubling the startup time:
-
-        // TODO: Could be massively simplified by using a scoped task
-        // from tokio_scoped to a
-        let (client, gclient, cln_client, ) = exec(async {
-            let i = inner.clone();
-            let u = grpc_uri.clone();
-            let h1 = tokio::spawn(async move { i.connect(u).await });
-            let i = inner.clone();
-            let u = grpc_uri.clone();
-            let h2 = tokio::spawn(async move { i.connect(u).await });
-            let i = inner.clone();
-            let u = grpc_uri.clone();
-            let h3 = tokio::spawn(async move { i.connect(u).await });
-
-            Ok::<(gl::node::Client, gl::node::GClient, gl::node::ClnClient), anyhow::Error>((h1.await??, h2.await??, h3.await??))
-        })
-        .map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
-        })?;
-
-        Ok(Node { client, gclient, cln_client })
+        let inner = gl::node::Node::new(node_id, network, creds.inner)
+            .map_err(|s| PyValueError::new_err(s.to_string()))?;
+        return node_from_inner(inner, grpc_uri);
     }
 
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {
@@ -84,10 +67,7 @@ impl Node {
     }
 
     fn get_lsp_client(&self) -> LspClient {
-        LspClient::new(
-            self.client.clone(),
-            self.cln_client.clone()
-        )
+        LspClient::new(self.client.clone(), self.cln_client.clone())
     }
 
     fn configure(&self, payload: &[u8]) -> PyResult<()> {
@@ -169,4 +149,36 @@ fn convert_stream_entry<T: Message>(r: Result<Option<T>, Status>) -> PyResult<Op
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(Some(buf))
+}
+
+fn node_from_inner(inner: gl::node::Node, grpc_uri: String) -> PyResult<Node> {
+    // Connect to both interfaces in parallel to avoid doubling the startup time:
+    // TODO: Could be massively simplified by using a scoped task
+    // from tokio_scoped to a
+    let (client, gclient, cln_client) = exec(async {
+        let i = inner.clone();
+        let u = grpc_uri.clone();
+        let h1 = tokio::spawn(async move { i.connect(u).await });
+        let i = inner.clone();
+        let u = grpc_uri.clone();
+        let h2 = tokio::spawn(async move { i.connect(u).await });
+        let i = inner.clone();
+        let u = grpc_uri.clone();
+        let h3 = tokio::spawn(async move { i.connect(u).await });
+
+        Ok::<(gl::node::Client, gl::node::GClient, gl::node::ClnClient), anyhow::Error>((
+            h1.await??,
+            h2.await??,
+            h3.await??,
+        ))
+    })
+    .map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!("could not connect to node: {}", e))
+    })?;
+
+    Ok(Node {
+        client,
+        gclient,
+        cln_client,
+    })
 }
