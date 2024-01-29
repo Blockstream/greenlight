@@ -1472,11 +1472,13 @@ class PendingRequest(google.protobuf.message.Message):
     SIGNATURE_FIELD_NUMBER: builtins.int
     PUBKEY_FIELD_NUMBER: builtins.int
     TIMESTAMP_FIELD_NUMBER: builtins.int
+    RUNE_FIELD_NUMBER: builtins.int
     request: builtins.bytes
     uri: builtins.str
     signature: builtins.bytes
     pubkey: builtins.bytes
     timestamp: builtins.int
+    rune: builtins.bytes
     def __init__(
         self,
         *,
@@ -1485,8 +1487,9 @@ class PendingRequest(google.protobuf.message.Message):
         signature: builtins.bytes = ...,
         pubkey: builtins.bytes = ...,
         timestamp: builtins.int = ...,
+        rune: builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["pubkey", b"pubkey", "request", b"request", "signature", b"signature", "timestamp", b"timestamp", "uri", b"uri"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["pubkey", b"pubkey", "request", b"request", "rune", b"rune", "signature", b"signature", "timestamp", b"timestamp", "uri", b"uri"]) -> None: ...
 
 global___PendingRequest = PendingRequest
 
