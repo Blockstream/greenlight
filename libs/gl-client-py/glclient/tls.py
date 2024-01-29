@@ -5,11 +5,11 @@ import logging
 logger = logging.getLogger("glclientpy.tls.TlsConfig")
 
 class TlsConfig(object):
-    def __init__(self):
+    def __init__(self, creds: Optional[native.Credentials] = None):
         logger.debug("Constructing nobody identity")
         # We wrap the TlsConfig since some calls cannot yet be routed
         # through the rust library (streaming calls)
-        self.inner = native.TlsConfig()
+        self.inner = creds.tls_config() if creds is not None else native.TlsConfig()
         self.ca: Optional[bytes] = None
         self.authenticated = False
 
@@ -35,7 +35,7 @@ class TlsConfig(object):
         logger.debug("Authenticating TLS identity")
         c.authenticated = True
         return c
-
+    
     def with_ca_certificate(self, ca: Union[str, bytes]) -> "TlsConfig":
         logger.debug("Customizing greenlight CA")
         if isinstance(ca, str):

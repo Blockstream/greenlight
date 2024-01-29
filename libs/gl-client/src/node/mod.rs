@@ -1,3 +1,4 @@
+use crate::credentials::Credentials;
 use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
@@ -55,12 +56,13 @@ impl GrpcClient for ClnClient {
 }
 
 impl Node {
-    pub fn new(node_id: Vec<u8>, network: Network, tls: TlsConfig) -> Node {
-        Node {
+    pub fn new(node_id: Vec<u8>, network: Network, creds: Credentials) -> Result<Node> {
+        let tls = creds.tls_config()?;
+        Ok(Node {
             node_id,
             network,
             tls,
-        }
+        })
     }
 
     pub async fn connect<C>(&self, node_uri: String) -> Result<C>

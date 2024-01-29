@@ -1,3 +1,4 @@
+use crate::credentials::Credentials;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 /// The core signer system. It runs in a dedicated thread or using the
 /// caller thread, streaming incoming requests, verifying them,
@@ -736,8 +737,8 @@ impl Signer {
 
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
-    pub async fn node(&self) -> Result<Client, anyhow::Error> {
-        node::Node::new(self.node_id(), self.network, self.tls.clone())
+    pub async fn node(&self, creds: Credentials) -> Result<Client, anyhow::Error> {
+        node::Node::new(self.node_id(), self.network, creds)?
             .schedule()
             .await
     }

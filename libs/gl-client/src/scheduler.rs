@@ -1,8 +1,8 @@
+use crate::credentials::{self, Credentials};
+use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self, TlsConfig};
-
-use crate::node::GrpcClient;
-use crate::{node, pb, signer::Signer, utils};
+use crate::{pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
@@ -50,6 +50,17 @@ impl Scheduler {
         let tls = crate::tls::TlsConfig::new()?;
         let uri = utils::scheduler_uri();
         Self::with(node_id, network, uri, &tls).await
+    }
+
+    pub async fn with_credentials(
+        node_id: Vec<u8>,
+        network: Network,
+        uri: String,
+        creds: Credentials,
+    ) -> Result<Scheduler> {
+        let tls: TlsConfig = creds.tls_config()?;
+        let scheduler = Self::with(node_id, network, uri, &tls).await?;
+        Ok(scheduler)
     }
 
     pub async fn register(
@@ -138,13 +149,14 @@ impl Scheduler {
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
 
-        // Fixme[@nepet]: Dummy placeholder values for the `rune` and `creds`
-        // field of the proto message. This will be replaced by something 
-        // meaningful in a future commit.
-        // This is not strictly necessary (is already set to default values)
-        // but this makes it easier to remember that we need to fix this.
-        res.rune = String::new();
-        res.creds = vec![];
+        // Create a `credentials::Device` struct and serialize it into byte format to
+        // return. This can than be stored on the device.
+        let creds = credentials::Device {
+            cert: res.device_cert.clone().into_bytes(),
+            key: res.device_key.clone().into_bytes(),
+            ca: self.tls.ca.clone(),
+        };
+        res.creds = creds.into();
 
         Ok(res)
     }
@@ -204,13 +216,14 @@ impl Scheduler {
         let r = signer.sign_device_key(public_key)?;
         debug!("Got signature: {}", hex::encode(r));
 
-        // Fixme[@nepet]: Dummy placeholder values for the `rune` and `creds`
-        // field of the proto message. This will be replaced by something 
-        // meaningful in a future commit.
-        // This is not strictly necessary (is already set to default values)
-        // but this makes it easier to remember that we need to fix this.
-        res.rune = String::new();
-        res.creds = vec![];
+        // Create a `credentials::Device` struct and serialize it into byte format to
+        // return. This can than be stored on the device.
+        let creds = credentials::Device {
+            cert: res.device_cert.clone().into_bytes(),
+            key: res.device_key.clone().into_bytes(),
+            ca: self.tls.ca.clone(),
+        };
+        res.creds = creds.into();
 
         Ok(res)
     }
@@ -226,12 +239,12 @@ impl Scheduler {
         Ok(res.into_inner())
     }
 
-    pub async fn node<T>(&self) -> Result<T>
+    pub async fn node<T>(&self, creds: Credentials) -> Result<T>
     where
         T: GrpcClient,
     {
         let res = self.schedule().await?;
-        node::Node::new(self.node_id.clone(), self.network, self.tls.clone())
+        node::Node::new(self.node_id.clone(), self.network, creds)?
             .connect(res.grpc_uri)
             .await
     }

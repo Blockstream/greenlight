@@ -10,6 +10,7 @@ from binascii import hexlify, unhexlify
 from typing import Optional, List, Iterable, Any, Type, TypeVar
 import logging
 from glclient.lsps import LspClient
+from glclient.glclient import Credentials, DeviceBuilder, NobodyBuilder
 
 
 backup_decrypt_with_seed = native.backup_decrypt_with_seed
@@ -88,13 +89,13 @@ class Scheduler(object):
         res = schedpb.ExportNodeResponse
         return res.FromString(bytes(self.inner.export_node()))
 
-    def node(self) -> "Node":
+    def node(self, creds: Credentials) -> "Node":
         res = self.schedule()
         return Node(
             node_id=self.node_id,
             network=self.network,
-            tls=self.tls,
-            grpc_uri=res.grpc_uri
+            grpc_uri=res.grpc_uri,
+            creds=creds,
         )
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
@@ -121,14 +122,14 @@ class Scheduler(object):
 
 
 class Node(object):
-    def __init__(self, node_id: bytes, network: str, tls: TlsConfig, grpc_uri: str) -> None:
-        self.tls = tls
+
+    def __init__(
+        self, node_id: bytes, network: str, grpc_uri: str, creds: Credentials
+    ) -> None:
+        self.creds = creds
         self.grpc_uri = grpc_uri
         self.inner = native.Node(
-            node_id=node_id,
-            network=network,
-            tls=tls.inner,
-            grpc_uri=grpc_uri
+            node_id=node_id, network=network, grpc_uri=grpc_uri, creds=creds
         )
         self.logger = logging.getLogger("glclient.Node")
 
@@ -183,7 +184,7 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
-    
+
     def list_channels(
             self,
             short_channel_id: Optional[str] = None,
@@ -279,7 +280,7 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
-    
+
     def decodepay (
             self,
             bolt11: str,
