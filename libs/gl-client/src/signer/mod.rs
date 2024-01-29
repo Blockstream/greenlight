@@ -1,3 +1,4 @@
+use crate::credentials::Credentials;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 /// The core signer system. It runs in a dedicated thread or using the
 /// caller thread, streaming incoming requests, verifying them,
@@ -10,6 +11,7 @@ use anyhow::anyhow;
 use bytes::BufMut;
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
+use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
@@ -26,7 +28,6 @@ use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
-use lightning_signer::bitcoin::secp256k1::PublicKey;
 
 mod approver;
 mod auth;
@@ -712,8 +713,8 @@ impl Signer {
 
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
-    pub async fn node(&self) -> Result<Client, anyhow::Error> {
-        node::Node::new(self.node_id(), self.network, self.tls.clone())
+    pub async fn node(&self, creds: Credentials) -> Result<Client, anyhow::Error> {
+        node::Node::new(self.node_id(), self.network, creds)?
             .schedule()
             .await
     }
