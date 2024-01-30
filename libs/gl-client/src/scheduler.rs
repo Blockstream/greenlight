@@ -246,6 +246,7 @@ impl Scheduler {
             cert: res.device_cert.clone().into_bytes(),
             key: res.device_key.clone().into_bytes(),
             ca: self.tls.ca.clone(),
+            rune: res.rune.clone(),
         };
         res.creds = creds.into();
 
@@ -320,6 +321,7 @@ impl Scheduler {
             cert: res.device_cert.clone().into_bytes(),
             key: res.device_key.clone().into_bytes(),
             ca: self.tls.ca.clone(),
+            rune: res.rune.clone(),
         };
         res.creds = creds.into();
 
