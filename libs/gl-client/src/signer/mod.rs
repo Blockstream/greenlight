@@ -8,6 +8,8 @@ use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::anyhow;
+use base64::engine::general_purpose;
+use base64::Engine;
 use bytes::BufMut;
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
@@ -17,7 +19,8 @@ use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, info, trace, warn};
-use runeauth::{Condition, Restriction, Rune, RuneError};
+use runeauth::{Condition, MapChecker, Restriction, Rune, RuneError};
+use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -236,16 +239,18 @@ impl Signer {
     /// remainder is the minimal set to reconcile state changes
     /// against.
     ///
-    /// Returns an error if a signature failed verification.
+    /// Returns an error if a signature failed verification or if the
+    /// rune verification failed.
     fn check_request_auth(
         &self,
         requests: Vec<crate::pb::PendingRequest>,
     ) -> Vec<Result<crate::pb::PendingRequest, anyhow::Error>> {
         // Filter out requests lacking a required field. They are unverifiable anyway.
         use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
+        // Todo: partition results to provide more detailed errors.
         requests
             .into_iter()
-            .filter(|r| r.pubkey.len() != 0 && r.signature.len() != 0)
+            .filter(|r| !r.pubkey.is_empty() && !r.signature.is_empty() && !r.rune.is_empty())
             .map(|r| {
                 let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, &r.pubkey);
                 let mut data = r.request.clone();
@@ -258,10 +263,71 @@ impl Signer {
                 }
 
                 pk.verify(&data, &r.signature)
+                    .map_err(|e| anyhow!("signature verification failed: {}", e))?;
+
+                self.verify_rune(r.clone())
                     .map(|_| r)
-                    .map_err(|e| anyhow!("signature verification failed: {}", e))
+                    .map_err(|e| anyhow!("rune verification failed: {}", e))
             })
             .collect()
+    }
+
+    /// Verifies that the public key of the request and the signers rune version
+    /// match the corresponding restrictions of the rune.
+    fn verify_rune(&self, request: crate::pb::PendingRequest) -> Result<(), anyhow::Error> {
+        let rune64 = general_purpose::URL_SAFE.encode(request.rune);
+        let rune = Rune::from_base64(&rune64)?;
+
+        // A valid gl-rune must contain a pubkey field as this  is bound to the
+        // signer. Against the rules of runes we do not accept a rune that has
+        // no restriction on a public key.
+        if !rune.to_string().contains("pubkey=") {
+            return Err(anyhow!("rune is missing pubkey field"));
+        }
+
+        let mut checks: HashMap<String, String> = HashMap::new();
+        checks.insert("pubkey".to_string(), hex::encode(request.pubkey));
+
+        // Runes only check on the version if the unique id field is set. The id
+        // and the version are part of the empty field.
+        if let Some(device_id) = rune.get_id() {
+            checks.insert("".to_string(), format!("{}-{}", device_id, RUNE_VERSION));
+        }
+
+        // Check that the request points to `cln.Node`.
+        let mut parts = request.uri.split('/');
+        parts.next();
+        match parts.next() {
+            Some(service) => {
+                if service != "cln.Node" && service != "greenlight.Node" {
+                    debug!("request from unknown service {}.", service);
+                    return Err(anyhow!("service {} is not valid", service));
+                }
+            }
+            None => {
+                debug!("could not extract service from the uri while verifying rune.");
+                return Err(anyhow!("can not extract service from uri"));
+            }
+        };
+
+        // Extract the method from the request uri: eg. `/cln.Node/CreateInvoice`
+        // becomes `createinvoice`.
+        let method = match parts.next() {
+            Some(m) => m.to_lowercase(),
+            None => {
+                debug!("could not extract method from uri while verifying rune.");
+                return Err(anyhow!("can not extract uri form request"));
+            }
+        };
+        checks.insert("method".to_string(), method.to_string());
+
+        match self
+            .master_rune
+            .check_with_reason(&rune64, MapChecker { map: checks })
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.into()),
+        }
     }
 
     /// Given the URI of the running node, connect to it and stream
@@ -894,6 +960,9 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 
 #[cfg(test)]
 mod tests {
+    use crate::tls;
+    use crate::pb;
+
     use super::*;
 
     /// We should not sign messages that we get from the node, since
@@ -982,5 +1051,108 @@ mod tests {
         ];
 
         assert_eq!(bip32, expected);
+    }
+
+    /// We want to ensure that we can not generate a rune that is unrestricted
+    /// on the public key "pubkey=<public-key-of-devices-tls-cert>".
+    #[test]
+    fn test_rune_expects_pubkey() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, tls::TlsConfig::new().unwrap()).unwrap();
+
+        let alt = "pubkey=112233";
+        let wrong_alt = "pubkey^112233";
+
+        // Check empty restrictions.
+        assert!(signer.create_rune(None, vec![]).is_err());
+
+        // Check wrong restriction.
+        assert!(signer.create_rune(None, vec![vec![wrong_alt]]).is_err());
+
+        // Check good restriction.
+        assert!(signer.create_rune(None, vec![vec![alt]]).is_ok());
+
+        // Check at least one alternative in one restriction.
+        assert!(signer
+            .create_rune(None, vec![vec![wrong_alt], vec![wrong_alt, alt]])
+            .is_ok());
+    }
+
+    #[test]
+    fn test_rune_expansion() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new().unwrap()).unwrap();
+        let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
+
+        let new_rune = signer
+            .create_rune(Some(rune), vec![vec!["method^get"]])
+            .unwrap();
+        let rs = Rune::from_base64(&new_rune).unwrap().to_string();
+        assert!(rs.contains("0-gl0&pubkey=000000&method^get"))
+    }
+
+    #[test]
+    fn test_rune_checks_method() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new().unwrap()).unwrap();
+
+        // This is just a placeholder public key, could also be a different one;
+        let pubkey = signer.node_id();
+        let pubkey_rest = format!("pubkey={}", hex::encode(&pubkey));
+
+        // Create a rune that allows methods that start with `create`.
+        let rune = signer
+            .create_rune(None, vec![vec![&pubkey_rest], vec!["method^create"]])
+            .unwrap();
+
+        // A method/uri that starts with `create` is ok.
+        let uri = "/cln.Node/CreateInvoice".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey: pubkey.clone(),
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_ok());
+
+        // method/uri `Pay` is not allowed by the rune.
+        let uri = "/cln.Node/Pay".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey: pubkey.clone(),
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_err());
+
+        // The `greenlight.Node` service also needs to be accepted for
+        // setting the `close_to_addr`.
+        let uri = "/greenlight.Node/CreateInvoice".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey: pubkey.clone(),
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_ok());
+
+        // A service other than `cln.Node` and `greenlight.Node` is
+        // not allowed.
+        let uri = "/wrong.Service/CreateInvoice".to_string();
+        let r = pb::PendingRequest {
+            request: vec![],
+            uri,
+            signature: vec![],
+            pubkey: pubkey.clone(),
+            timestamp: 0,
+            rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
+        };
+        assert!(signer.verify_rune(r).is_err());
     }
 }
