@@ -15,8 +15,10 @@ use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
+use lightning_signer::util::crypto_utils;
 use log::{debug, info, trace, warn};
-use std::convert::TryInto;
+use runeauth::{Condition, Restriction, Rune, RuneError};
+use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::sync::mpsc;
@@ -37,10 +39,12 @@ mod resolve;
 
 const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
+const RUNE_VERSION: &str = "gl0";
 
 #[derive(Clone)]
 pub struct Signer {
     secret: [u8; 32],
+    master_rune: Rune,
     services: NodeServices,
     tls: TlsConfig,
     id: Vec<u8>,
@@ -142,9 +146,15 @@ impl Signer {
         use vls_protocol::msgs::SerBolt;
         let init = init.as_vec();
 
+        // Init master rune. We create the rune seed from the nodes
+        // seed by deriving a hardened key tagged with "rune secret".
+        let rune_secret = crypto_utils::hkdf_sha256(&sec, "rune secret".as_bytes(), &[]);
+        let mr = Rune::new_master_rune(&rune_secret, vec![], None, Some(RUNE_VERSION.to_string()))?;
+
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             secret: sec,
+            master_rune: mr,
             services,
             tls,
             id,
@@ -721,6 +731,89 @@ impl Signer {
 
     pub fn version(&self) -> &'static str {
         VERSION
+    }
+
+    /// Creates a base64 string called a rune which is used to authorize
+    /// commands on the node and to issue signatures from the signer. Each new
+    /// rune must contain a `pubkey` field that equals the public key that is
+    /// used to sign-off signature requests. Nobody can remove restrictions from
+    /// a rune.
+    ///
+    /// If a `rune` is supplied the restrictions are added to this rune. This
+    /// way one can invoke a rune that only allows for a subset of commands.
+    ///
+    /// `restrictions` is a vector of restrictions where each restriction itself
+    /// is a vector of one ore more alternatives.
+    ///
+    /// - =: passes if equal ie. identical. e.g. method=withdraw
+    /// - /: not equals, e.g. method/withdraw
+    /// - ^: starts with, e.g. id^024b9a1fa8e006f1e3937f
+    /// - $: ends with, e.g. id$381df1cc449605.
+    /// - ~: contains, e.g. id~006f1e3937f65f66c40.
+    /// - <: is a decimal integer, and is less than. e.g. time<1656759180
+    /// - \>: is a decimal integer, and is greater than. e.g. time>1656759180
+    /// - {: preceeds in alphabetical order (or matches but is shorter), e.g. id{02ff.
+    /// - }: follows in alphabetical order (or matches but is longer), e.g. id}02ff.
+    /// - #: a comment, ignored, e.g. dumb example#.
+    /// - !: only passes if the name does not exist. e.g. something!.  Every other operator except # fails if name does not exist!
+    ///
+    /// # Examples
+    /// This creates a fresh rune that is only restricted to a pubkey:
+    ///
+    /// `create_rune(None, vec![vec!["pubkey=000000"]])`
+    ///
+    /// "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA"
+    ///
+    /// This adds a restriction to the rune, in this case a restriction that only
+    /// allows to call methods that start with "list" or "get", basically a
+    /// read-only rune:
+    ///
+    /// `create_rune("wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA", vec![vec!["method^list", "method^get"]])`
+    ///
+    pub fn create_rune(
+        &self,
+        rune: Option<&str>,
+        restrictions: Vec<Vec<&str>>,
+    ) -> Result<String, anyhow::Error> {
+        if let Some(rune) = rune {
+            // We got a rune, add restrictions to it!
+            let mut rune: Rune = Rune::from_base64(rune)?;
+            restrictions.into_iter().for_each(|alts| {
+                let joined = alts.join("|");
+                _ = rune.add_restriction(joined.as_str())
+            });
+            return Ok(rune.to_base64());
+        } else {
+            let res: Vec<Restriction> = restrictions
+                .into_iter()
+                .map(|alts| {
+                    let joined = alts.join("|");
+                    Restriction::try_from(joined.as_str())
+                })
+                .collect::<Result<Vec<Restriction>, RuneError>>()?;
+
+            // New rune, we need a unique id.
+            // FIXME: Add a counter that persists in SSS.
+            let unique_id = 0;
+
+            // Check that at least one restriction has a `pubkey` field set.
+            let has_pubkey_field = res.iter().any(|r: &Restriction| {
+                r.alternatives
+                    .iter()
+                    .any(|a| a.get_field() == *"pubkey" && a.get_condition() == Condition::Equal)
+            });
+            if !has_pubkey_field {
+                return Err(anyhow!("Missing a restriction on the pubkey"));
+            }
+
+            let rune = Rune::new(
+                self.master_rune.authcode(),
+                res,
+                Some(unique_id.to_string()),
+                Some(RUNE_VERSION.to_string()),
+            )?;
+            Ok(rune.to_base64())
+        }
     }
 }
 
