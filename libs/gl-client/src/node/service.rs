@@ -18,10 +18,11 @@ use ring::{
 
 pub struct AuthLayer {
     key: Vec<u8>,
+    rune: String,
 }
 
 impl AuthLayer {
-    pub fn new(pem: Vec<u8>) -> Result<Self> {
+    pub fn new(pem: Vec<u8>, rune: String) -> Result<Self> {
         // Try to convert the key into a keypair to make sure it works later
         // when we need it.
         let key = {
@@ -43,7 +44,7 @@ impl AuthLayer {
             Err(e) => return Err(anyhow!("Could not decide keypair from PEM string: {}", e)),
         };
 
-        Ok(AuthLayer { key })
+        Ok(AuthLayer { key, rune })
     }
 }
 
@@ -54,6 +55,7 @@ impl Layer<Channel> for AuthLayer {
         AuthService {
             key: self.key.clone(),
             inner,
+            rune: self.rune.clone(),
         }
     }
 }
@@ -63,6 +65,7 @@ pub struct AuthService {
     // PKCS#8 formatted private key
     key: Vec<u8>,
     inner: Channel,
+    rune: String,
 }
 impl Service<Request<BoxBody>> for AuthService {
     type Response = Response<Body>;
@@ -88,6 +91,8 @@ impl Service<Request<BoxBody>> for AuthService {
             self.key.as_ref(),
         )
         .unwrap();
+
+        let rune = self.rune.clone();
 
         Box::pin(async move {
             use bytes::BufMut;
@@ -135,6 +140,11 @@ impl Service<Request<BoxBody>> for AuthService {
             parts
                 .headers
                 .insert("glts", engine.encode(ts).parse().unwrap());
+
+            // Runes already come base64 URL_SAFE encoded.
+            parts
+                .headers
+                .insert("glrune", rune.parse().expect("Could not parse rune"));
 
             trace!("Payload size: {} (timestamp {})", data.len(), time);
 
