@@ -1,51 +1,7 @@
-from gltesting.fixtures import *
-from glclient import (
-    TlsConfig,
-    Signer,
-    Scheduler,
-    Node,
-    Credentials,
-)
-
-# from glclient.credentials import Credentials, CBuilder
+from fixtures import *
+from glclient import Signer, Scheduler, Node, Credentials
 from binascii import hexlify
 import unittest
-
-
-@pytest.fixture
-def creds(nobody_id):
-    """Nobody credentials for the tests."""
-    creds = (
-        Credentials.as_nobody()
-        .with_identity(nobody_id.cert_chain, nobody_id.private_key)
-        .with_ca(nobody_id.caroot)
-        .build()
-    )
-    return creds
-
-
-@pytest.fixture
-def tls(creds):
-    """Just a preconfigured TlsConfig."""
-    return TlsConfig(creds=creds)
-
-
-@pytest.fixture
-def signer(scheduler, tls):
-    secret = b"\x00" * 32
-    network = "regtest"
-    return Signer(secret, network=network, tls=tls)
-
-
-@pytest.fixture
-def sclient(signer, tls):
-    """Just a preconfigured scheduler client.
-
-    This scheduler client is configured with a secret for easy
-    registration and recovery, but no mTLS certificate yet.
-    """
-    network = "regtest"
-    return Scheduler(signer.node_id(), network=network, tls=tls)
 
 
 def test_connect(scheduler, tls):
@@ -59,19 +15,19 @@ def test_connect(scheduler, tls):
 
 def test_register(sclient, signer):
     res = sclient.register(signer)
-    assert(res.device_cert)
-    assert(res.device_key)
-    assert(res.rune)
-    assert(res.creds)
+    assert res.device_cert
+    assert res.device_key
+    assert res.rune
+    assert res.creds
 
 
 def test_recover(sclient, signer):
     sclient.register(signer)
     res = sclient.recover(signer)
-    assert(res.device_cert)
-    assert(res.device_key)
-    assert(res.rune)
-    assert(res.creds)
+    assert res.device_cert
+    assert res.device_key
+    assert res.rune
+    assert res.creds
 
 
 def test_schedule_call(sclient, signer):
@@ -96,6 +52,7 @@ def test_sign_challenge(signer):
 
 def test_signer_version(signer):
     import glclient
+
     assert glclient.__version__ == signer.version()
 
 
