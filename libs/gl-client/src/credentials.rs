@@ -67,6 +67,17 @@ impl Credentials {
         }
     }
 
+    /// Returns the rune that is part of this credential set. Returns an
+    /// error when called on `Credentials::Nobody`.
+    pub fn rune(&self) -> Result<String> {
+        match self {
+            Self::Nobody(_) => Err(Error::GetFromIdentityError(
+                "nobody identity has no rune".to_string(),
+            )),
+            Self::Device(c) => Ok(c.rune.clone()),
+        }
+    }
+
     /// Is a NoOp if the variant that the function is called on is
     /// `Credentials::Nobody`. Returns an error otherwise.
     pub fn is_nobody(&self) -> Result<()> {
@@ -158,6 +169,7 @@ pub struct Builder<T> {
     version: u32,
     identity: Option<Identity>,
     ca: Option<Vec<u8>>,
+    rune: Option<String>,
 }
 
 /// `Builder<Nobody>` implementation provides methods specific to constructing
@@ -202,7 +214,7 @@ impl Builder<Nobody> {
 
 /// `Builder<Device>` implementation provides methods specific to constructing
 /// `Credentials::Device`, which include device-specific configurations like
-/// certificates, private keys, and, CA certificates.
+/// certificates, private keys, CA certificates, and runes.
 impl Builder<Device> {
     /// Constructs a new `Builder<Device>` instance with default configurations,
     /// is the entrypoint to create `Credentials::Device`.
@@ -218,6 +230,7 @@ impl Builder<Device> {
             self.identity = Some(Identity { cert, key });
         }
         self.ca = data.ca;
+        self.rune = data.rune;
         Ok(self)
     }
 
@@ -226,6 +239,12 @@ impl Builder<Device> {
     pub fn from_path(self, path: impl AsRef<Path>) -> Result<Self> {
         let buf = std::fs::read(path)?;
         self.from_bytes(&buf)
+    }
+
+    /// Configures the builder with a custom rune
+    pub fn with_rune(mut self, rune: impl Into<String>) -> Self {
+        self.rune = Some(rune.into());
+        self
     }
 
     /// Asynchronously upgrades the credentials using the provided scheduler and
@@ -247,11 +266,13 @@ impl Builder<Device> {
             cert: Some(cert),
             key: Some(key),
             ca: Some(ca),
+            rune: Some(rune),
         } = data.clone()
         {
             self.version = version;
             self.identity = Some(Identity { cert, key });
             self.ca = Some(ca);
+            self.rune = Some(rune);
             Ok(self)
         } else {
             let mut missing = String::new();
@@ -272,21 +293,25 @@ impl Builder<Device> {
     }
 
     /// Finalizes the builder, attempting to construct a `Credentials::Device`
-    /// instance. Requires that an identity, and a ca have been set;
+    /// instance. Requires that an identity, a ca and a rune have been set;
     /// otherwise, it returns an error.
     pub fn build(self) -> Result<Credentials> {
         debug!("Building device credentials from {:?}", &self);
 
-        if let Some(identity) = self.identity.clone() {
+        if let (Some(identity), Some(rune)) = (self.identity.clone(), self.rune.clone()) {
             Ok(Credentials::Device(Device {
                 cert: identity.cert,
                 key: identity.key,
                 ca: self.own_ca_or_default()?,
+                rune,
             }))
         } else {
             let mut missing = String::new();
             if self.identity.is_none() {
                 add_missing(&mut missing, "identity");
+            }
+            if self.rune.is_none() {
+                add_missing(&mut missing, "rune");
             }
             Err(Error::BuildCredentialsError(format!(
                 "missing: {}",
@@ -343,12 +368,13 @@ impl Nobody {
 }
 
 /// The `Device` credentials store the device's certificate, the device's
-/// private key, and the certificate authority.
+/// private key, the certificate authority and the device's rune.
 #[derive(Clone, Debug, Default)]
 pub struct Device {
     pub cert: Vec<u8>,
     pub key: Vec<u8>,
     pub ca: Vec<u8>,
+    pub rune: String,
 }
 
 impl Device {
@@ -359,6 +385,11 @@ impl Device {
             .map_err(Error::CreateTlsConfigError)?;
         // .identity(self.cert.clone(), self.key.clone());
         Ok(tls)
+    }
+
+    /// Get the rune that is part of the credentials.
+    pub fn rune(&self) -> String {
+        self.to_owned().rune
     }
 
     /// Returns a byte encoded representation of the credentials. This
@@ -382,6 +413,7 @@ impl From<Device> for model::Data {
             cert: Some(device.cert),
             key: Some(device.key),
             ca: Some(device.ca),
+            rune: Some(device.rune),
         }
     }
 }
@@ -410,6 +442,8 @@ mod model {
         pub key: Option<Vec<u8>>,
         #[prost(bytes, optional, tag = "4")]
         pub ca: Option<Vec<u8>>,
+        #[prost(string, optional, tag = "5")]
+        pub rune: Option<String>,
     }
 
     impl TryFrom<&[u8]> for Data {
@@ -436,7 +470,7 @@ mod tests {
     fn test_credentials() {
         // Assert an error if data is not complete.
         let c = Builder::as_device().build();
-        assert!(c.is_err_and(|x| x.to_string() == "could not build credentials missing: identity"));
+        assert!(c.is_err_and(|x| x.to_string() == "could not build credentials missing: identity, rune"));
 
         // Check that we can use all the ways to build the credentials;
         if let Credentials::Nobody(nobody) = Builder::as_nobody()
@@ -455,6 +489,7 @@ mod tests {
             let d = Builder::as_device()
                 .with_ca(nobody.ca)
                 .with_identity(nobody.cert, nobody.key)
+                .with_rune("myrune")
                 .build()
                 .unwrap();
             // Check that we can build from a valid data blob.
@@ -471,11 +506,13 @@ mod tests {
         let cert: Vec<u8> = vec![99, 98];
         let key = vec![97, 96];
         let ca = vec![95, 94];
+        let rune = "non_functional_rune".to_string();
         let data = model::Data {
             version: 1,
             cert: Some(cert.clone()),
             key: Some(key.clone()),
             ca: Some(ca.clone()),
+            rune: Some(rune.clone()),
         };
         let buf: Vec<u8> = data.into();
         print!("{:?}", buf);
@@ -487,6 +524,9 @@ mod tests {
         }
         for n in ca {
             assert!(buf.contains(&n));
+        }
+        for n in rune.as_bytes() {
+            assert!(buf.contains(n));
         }
     }
 
@@ -501,5 +541,6 @@ mod tests {
         assert!(data.cert.is_some_and(|d| d == vec![99, 98]));
         assert!(data.key.is_some_and(|d| d == vec![97, 96]));
         assert!(data.ca.is_some_and(|d| d == vec![95, 94]));
+        assert!(data.rune.is_some_and(|d| d == *"non_functional_rune"));
     }
 }
