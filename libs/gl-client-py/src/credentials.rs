@@ -48,6 +48,11 @@ impl DeviceBuilder {
         Ok(Self { inner })
     }
 
+    pub fn with_rune(&self, rune: &str) -> Self {
+        let inner = self.inner.clone().with_rune(rune);
+        Self { inner }
+    }
+
     pub fn upgrade(&self, scheduler: &Scheduler, signer: &Signer) -> Result<Self> {
         let inner = exec(async move {
             self.inner
