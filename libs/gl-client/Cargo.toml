@@ -29,6 +29,7 @@ prost = "0.11"
 prost-derive = "0.11"
 reqwest = {version="^0.11", features=["json", "rustls-tls-native-roots"], default-features = false}
 ring = "~0.16.20"
+runeauth = "0.1"
 rustls-pemfile = "1.0.3"
 sha256 = "1.1.4"
 tokio = { version = "1", features = ["full"] }
