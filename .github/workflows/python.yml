@@ -84,13 +84,13 @@ jobs:
           pip3 install -U pip pytest
         run: |
           pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python3 -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
+          python3 -c "import glclient;creds=glclient.Credentials.as_nobody().with_default().build();signer=glclient.Signer(b'\x00'*32,'bitcoin', glclient.TlsConfig(creds));print(repr(creds));print(signer.version())"
 
     - name: Install built wheel (native)
       if: matrix.target == 'x86_64'
       run: |
           pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python3 -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
+          python3 -c "import glclient;creds=glclient.Credentials.as_nobody().with_default().build();signer=glclient.Signer(b'\x00'*32,'bitcoin', glclient.TlsConfig(creds));print(repr(creds));print(signer.version())"
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -134,7 +134,7 @@ jobs:
       if: matrix.target == 'x86_64'
       run: |
           pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python3 -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
+          python3 -c "import glclient;creds=glclient.Credentials.as_nobody().with_default().build();signer=glclient.Signer(b'\x00'*32,'bitcoin', glclient.TlsConfig(creds));print(repr(creds));print(signer.version())"
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -175,7 +175,7 @@ jobs:
 #    - name: Install built wheel
 #      run: |
 #          pip install libs\gl-client-py\dist\gl_client*.whl --force-reinstall
-#          python3 -c "import glclient;tls=glclient.TlsConfig();signer=glclient.Signer(b'\x00'*32,'bitcoin', tls);print(repr(tls));print(signer.version())"
+#          python3 -c "import glclient;creds=glclient.Credentials.as_nobody().with_default().build();signer=glclient.Signer(b'\x00'*32,'bitcoin', glclient.TlsConfig(creds));print(repr(creds));print(signer.version())"
 
     - name: Upload wheels
       uses: actions/upload-artifact@v3
