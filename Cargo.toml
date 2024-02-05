@@ -17,6 +17,7 @@ members = [
   "libs/gl-client-py",
   "libs/gl-plugin",
   "libs/gl-signerproxy",
+  "libs/gl-client-bindings",
 ]
 
 [workspace.dependencies]
