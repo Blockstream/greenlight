@@ -1,0 +1,32 @@
+namespace glclient {
+};
+
+[Error]
+enum Error {
+  "Call",
+  "Other",
+  "InvalidArgument",
+};
+
+interface Scheduler {
+
+  [Throws=Error]
+  constructor(bytes node_id, string network);
+  
+  [Throws=Error]
+  void authenticate(bytes cert_pem, bytes key_pem);
+};
+
+interface RawClient {
+    [Throws=Error]
+    constructor(
+      bytes node_id,
+      string network,
+      bytes cert_pem,
+      bytes key_pem,
+      string node_uri
+    );
+    
+    [Throws=Error]
+    bytes call(string method, bytes payload);
+  };
