@@ -37,7 +37,6 @@ tower = { version = "0.4" }
 rcgen = { version = "0.10.0", features = ["pem", "x509-parser"]}
 tempfile = "3.3.0"
 url = "2.4.0"
-bitcoin = "^0"
 serde = { version = "1", features = [ "derive" ] }
 vls-core = { workspace = true }
 vls-persist = { workspace = true }
