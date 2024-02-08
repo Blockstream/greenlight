@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use anyhow::{anyhow, Result};
 use bech32::FromBase32;
-use lightning_invoice::Bolt11Invoice;
-use std::str::FromStr;
+
+use crate::lightning_invoice::Bolt11Invoice;
 
 // Function to decode and parse the lnurl into a URL
 pub fn parse_lnurl(lnurl: &str) -> Result<String> {
