@@ -4,6 +4,7 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, U
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
+use crate::runes;
 use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
@@ -19,11 +20,11 @@ use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, info, trace, warn};
-use runeauth::{Condition, MapChecker, Restriction, Rune, RuneError};
-use std::collections::HashMap;
+use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tonic::transport::{Endpoint, Uri};
@@ -285,14 +286,10 @@ impl Signer {
             return Err(anyhow!("rune is missing pubkey field"));
         }
 
-        let mut checks: HashMap<String, String> = HashMap::new();
-        checks.insert("pubkey".to_string(), hex::encode(request.pubkey));
-
-        // Runes only check on the version if the unique id field is set. The id
-        // and the version are part of the empty field.
-        if let Some(device_id) = rune.get_id() {
-            checks.insert("".to_string(), format!("{}-{}", device_id, RUNE_VERSION));
-        }
+        let unique_id = match rune.get_id() {
+            Some(id) => format!("{}-{}", id, RUNE_VERSION),
+            None => String::new(),
+        };
 
         // Check that the request points to `cln.Node`.
         let mut parts = request.uri.split('/');
@@ -319,12 +316,21 @@ impl Signer {
                 return Err(anyhow!("can not extract uri form request"));
             }
         };
-        checks.insert("method".to_string(), method.to_string());
 
-        match self
-            .master_rune
-            .check_with_reason(&rune64, MapChecker { map: checks })
-        {
+        println!("GOT METHOD {}", method);
+
+        let ctx = runes::Context {
+            method,
+            pubkey: hex::encode(request.pubkey),
+            time: SystemTime::now(),
+            unique_id,
+        };
+
+        println!(
+            "MATCH RUNE {}, {}, {:?}, {}",
+            ctx.method, ctx.pubkey, ctx.time, ctx.unique_id
+        );
+        match self.master_rune.check_with_reason(&rune64, ctx) {
             Ok(_) => Ok(()),
             Err(e) => Err(e.into()),
         }
@@ -1154,5 +1160,51 @@ mod tests {
             rune: general_purpose::URL_SAFE.decode(&rune).unwrap(),
         };
         assert!(signer.verify_rune(r).is_err());
+    }
+
+    #[test]
+    fn test_empty_rune_is_valid() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+
+        // This is just a placeholder public key, could also be a different one;
+        let pubkey = signer.node_id();
+        let pubkey_rest = format!("pubkey={}", hex::encode(&pubkey));
+
+        let rune = signer.create_rune(None, vec![vec![&pubkey_rest]]).unwrap();
+        let uri = "/cln.Node/Pay".to_string();
+        assert!(signer
+            .verify_rune(crate::pb::PendingRequest {
+                request: vec![],
+                uri,
+                signature: vec![],
+                pubkey,
+                timestamp: 0,
+                rune: general_purpose::URL_SAFE.decode(rune).unwrap(),
+            })
+            .is_ok());
+    }
+
+    #[test]
+    fn test_empty_rune_checks_pubkey() {
+        let signer =
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+
+        // This is just a placeholder public key, could also be a different one;
+        let pubkey = signer.node_id();
+        let pubkey_rest = format!("pubkey={}", hex::encode(&pubkey));
+
+        let rune = signer.create_rune(None, vec![vec![&pubkey_rest]]).unwrap();
+        let uri = "/cln.Node/Pay".to_string();
+        assert!(signer
+            .verify_rune(crate::pb::PendingRequest {
+                request: vec![],
+                uri,
+                signature: vec![],
+                pubkey: hex::decode("33aabb").unwrap(),
+                timestamp: 0,
+                rune: general_purpose::URL_SAFE.decode(rune).unwrap(),
+            })
+            .is_err());
     }
 }
