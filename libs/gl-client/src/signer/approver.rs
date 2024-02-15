@@ -24,7 +24,7 @@ impl<A: Approve> Approve for ReportingApprover<A> {
     }
     fn approve_keysend(
         &self,
-        hash: lightning_signer::lightning::ln::PaymentHash,
+        hash: crate::lightning::ln::PaymentHash,
         amount_msat: u64,
     ) -> bool {
         log::warn!("unapproved keysend {:?} {:?}", hash, amount_msat);

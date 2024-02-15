@@ -69,6 +69,7 @@ pub enum Error {
 }
 
 pub use lightning_signer::bitcoin;
+pub use lightning_signer::lightning;
 pub use lightning_signer::lightning_invoice;
 
 pub(crate) const TCP_KEEPALIVE: Duration = Duration::from_secs(30);
