@@ -65,6 +65,7 @@ jobs:
         env:
           DOCSBRANCH: "gh-pages"
           DOCSREMOTE: "origin"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           rm libs/gl-client-py/glclient/*.pyi
           PATH=$(pwd)/.venv/bin:$PATH make docs
