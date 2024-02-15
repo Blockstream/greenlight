@@ -3,11 +3,13 @@ site_url: https://blockstream.github.io/greenlight/
 docs_dir: src
 repo_url: https://github.com/Blockstream/greenlight
 edit_uri: tree/main/docs/src
+
 plugins:
   - social
   - redirects:
       redirect_maps:
         'reference/partner-certs.md': 'getting-started/certs.md'
+
 markdown_extensions:
   - admonition
   - attr_list
