@@ -32,6 +32,9 @@ pub mod persist;
 
 pub mod lnurl;
 
+/// The pairing service that pairs signer-less clients with existing
+/// signers.
+pub mod pairing;
 /// Helpers to configure the mTLS connection authentication.
 ///
 /// mTLS configuration for greenlight clients. Clients are
