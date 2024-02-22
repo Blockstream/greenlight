@@ -1,4 +1,4 @@
-use crate::pb::scheduler::PairDeviceResponse;
+use crate::pb::scheduler::{PairDeviceResponse, PairingQr};
 use thiserror::Error;
 
 pub mod new_device;
@@ -13,5 +13,6 @@ pub enum Error {
 
 pub enum PairingSessionData {
     PairingResponse(PairDeviceResponse),
+    PairingQr(PairingQr),
     PairingError(tonic::Status),
 }
