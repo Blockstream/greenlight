@@ -295,3 +295,40 @@ class DebugStub:
                 glclient_dot_greenlight__pb2.Empty,
             )
         )
+
+
+class PairingServicer(purerpc.Servicer):
+    async def PairDevice(self, input_messages):
+        raise NotImplementedError()
+
+    @property
+    def service(self) -> purerpc.Service:
+        service_obj = purerpc.Service(
+            "scheduler.Pairing"
+        )
+        service_obj.add_method(
+            "PairDevice",
+            self.PairDevice,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.PairDeviceRequest,
+                glclient_dot_scheduler__pb2.PairDeviceResponse,
+            )
+        )
+        return service_obj
+
+
+class PairingStub:
+    def __init__(self, channel):
+        self._client = purerpc.Client(
+            "scheduler.Pairing",
+            channel
+        )
+        self.PairDevice = self._client.get_method_stub(
+            "PairDevice",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.PairDeviceRequest,
+                glclient_dot_scheduler__pb2.PairDeviceResponse,
+            )
+        )

@@ -89,6 +89,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.received_invite_code = None
         self.debugger = DebugServicer()
         self.webhooks = []
+        self.pairings = PairingServicer()
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -112,6 +113,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         )
         self.server.add_service(self.service)
         self.server.add_service(self.debugger.service)
+        self.server.add_service(self.pairings.service)
 
         threading.Thread(target=anyio.run, args=(self.run,), daemon=True).start()
         logging.info(f"Scheduler started on port {self.grpc_port}")
@@ -386,6 +388,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         secret = generate_secret()
         webhook["secret"] = secret
         return schedpb.WebhookSecretResponse(secret=secret)
+    
 
 class DebugServicer(schedgrpc.DebugServicer):
     """Collects and analyzes rejected signer requests."""
@@ -397,5 +400,23 @@ class DebugServicer(schedgrpc.DebugServicer):
         self.reports.append(report)
         return greenlightpb.Empty()
 
+class PairingServicer(schedgrpc.PairingServicer):
+    """Mocks a pairing backend for local testing"""
+    def __init__(self):
+        self.sessions: Dict[int, Dict[str, str | bytes]] = {}
         
+    async def PairDevice(self, req: schedpb.PairDeviceRequest):
+        data = {
+            "csr": req.csr,
+            "device_name": req.device_name,
+            "description": req.description,
+            "restrictions": req.restrictions,
+        }
+        self.sessions[req.session_id] = data
+        
+        device_cert = certs.gencert_from_csr(req.csr, recover=False, pairing=True)
+        return schedpb.PairDeviceResponse(
+            session_id=req.session_id,
+            device_cert=device_cert)    
+
 Scheduler = AsyncScheduler
