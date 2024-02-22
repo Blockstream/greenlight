@@ -6,6 +6,12 @@ def test_pairing_session(scheduler, nobody_id):
     ps = NewDeviceClient(TlsConfig())
     session = ps.pair_device("new_device", "my_description", "")
     session_iter = iter(session)
+
+    # check that qr data str is returned.
+    m = next(session_iter)
+    assert(m)
+
+    # check that response is returned.
     m = next(session_iter)
     assert(m.session_id)
     assert(m.device_cert)

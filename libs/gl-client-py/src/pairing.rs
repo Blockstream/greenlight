@@ -58,6 +58,7 @@ impl PyPairingChannelWrapper {
             match receiver.recv().await {
                 Some(data) => match data {
                     PairingSessionData::PairingResponse(d) => convert_pairing(d, 1),
+                    PairingSessionData::PairingQr(d) => convert_pairing(d, 2),
                     PairingSessionData::PairingError(d) => {
                         debug!("pairing returned a PairingError {}", d);
                         Err(PyValueError::new_err(d.to_string()))

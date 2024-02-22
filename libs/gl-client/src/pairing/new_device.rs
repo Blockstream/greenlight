@@ -95,12 +95,19 @@ impl Client<Connected> {
             // Step 1 of the Pairing Protocol: Request pairing at the Greenlight
             // Backend.
             let request = client.pair_device(PairDeviceRequest {
-                session_id,
+                session_id: session_id.clone(),
                 csr: csr.into_bytes(),
                 device_name,
                 description,
                 restrictions,
             });
+
+            // Step 2 of the Pairing Protocol: Return the PairingQR for the new
+            // device to show it to an old device.
+            let data = format!("gl-pairing:{}", session_id);
+            tx.send(PairingSessionData::PairingQr(data))
+                .await
+                .expect("could not pass qr data to the channel"); // We can unwrap here as there is no need to continue if the channel is broken.
 
             // Step 8 of the Pairing Protocol: Get back the response. We do fire
             // and forget here.
