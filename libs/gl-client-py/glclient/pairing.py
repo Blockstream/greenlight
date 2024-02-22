@@ -13,6 +13,7 @@ class NewDeviceClient(object):
     def _recv(self, m):
         msgs = {
             1: schedpb.PairDeviceResponse,
+            2: schedpb.PairingQr,
         }
 
         typ, msg = m[0], m[1:]
