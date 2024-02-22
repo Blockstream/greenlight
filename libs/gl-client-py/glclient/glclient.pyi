@@ -81,6 +81,10 @@ class Scheduler:
     def get_invite_codes(self) -> bytes: ...
 
 
+class NewDeviceClient:
+    def __init__(self, tls: TlsConfig, uri: Optional[str]): ...
+    def pair_device(self, name: str, desc: str, restrs: str): ...
+
 class Node:
     def __init__(
         self,

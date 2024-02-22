@@ -244,19 +244,45 @@ def gencert(idpath):
     gencrt(idpath, force=True)
     return Identity.from_path(idpath)
 
-def gencert_from_csr(csr: bytes, recover=False):
+def gencert_from_csr(csr: bytes, recover=False, pairing=False):
     """Generate a leaf certificate to be used for actual communication from
     certificate signing request."""
     # Get idpath from CN value in certificate signing request
     mycsr = x509.load_pem_x509_csr(csr, default_backend)
     idpath = mycsr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
+    if pairing:
+        # Create override subject.
+        parts = idpath.split("/")
+        device_name = parts[3]
+        dummy_node_id = "0a0a"
+        idpath = f"/users/{dummy_node_id}/{device_name}"
+        subject = json.dumps({
+            "CN": idpath,
+            "names": [
+                {
+                    "C": mycsr.subject.get_attributes_for_oid(NameOID.COUNTRY_NAME)[0].value,
+                    "L": mycsr.subject.get_attributes_for_oid(NameOID.LOCALITY_NAME)[0].value,
+                    "O": mycsr.subject.get_attributes_for_oid(NameOID.ORGANIZATION_NAME)[0].value,
+                    "ST": mycsr.subject.get_attributes_for_oid(NameOID.STATE_OR_PROVINCE_NAME)[0].value,
+                    "OU": mycsr.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)[0].value,
+                }
+            ]
+        })
+        tmpsubject = tempfile.NamedTemporaryFile(mode="w")
+        tmpsubject.write(subject)
+        tmpsubject.flush()
+        print(f"Write pairing override subject {tmpsubject.name}")
+
+        # Gen CA
+        genca(f"/users/{dummy_node_id}")
+
     parent = parent_ca(idpath)
     print(f"Using CA {parent} as parent")
     path = path_to_identity(idpath)
     parent = path_to_identity(parent)
     for f in path:
-        if os.path.exists(f) and not recover:
+        if os.path.exists(f) and not (recover or pairing):
             logging.info(f"Not overwriting existing file {f}")
             return
 
@@ -273,16 +299,30 @@ def gencert_from_csr(csr: bytes, recover=False):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    cfssljson(
-        cfssl(
-            "sign",
-            f"-ca={parent[0]}",
-            f"-ca-key={parent[1]}",
-            tmpcsr.name,
-        ),
-        "-bare",
-        path[3],
-    )
+    if pairing:
+        cfssljson(
+            cfssl(
+                "sign",
+                f"-ca={parent[0]}",
+                f"-ca-key={parent[1]}",
+                tmpcsr.name,
+                tmpsubject.name,
+            ),
+            "-bare",
+            path[3],
+        )
+    else:
+        cfssljson(
+            cfssl(
+                "sign",
+                f"-ca={parent[0]}",
+                f"-ca-key={parent[1]}",
+                tmpcsr.name,
+            ),
+            "-bare",
+            path[3],
+        )
+
     # Cleanup the temporary certificate signature request
     os.remove(path[3] + ".csr")
     

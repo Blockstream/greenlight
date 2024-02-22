@@ -5,20 +5,21 @@ use pyo3::prelude::*;
 #[macro_use]
 extern crate log;
 
+mod credentials;
+mod lsps;
 mod node;
+mod pairing;
 mod runtime;
 mod scheduler;
 mod signer;
 mod tls;
-mod lsps;
-mod credentials;
 
+pub use credentials::{Credentials, DeviceBuilder};
+pub use lsps::LspClient;
 pub use node::Node;
 pub use scheduler::Scheduler;
 pub use signer::Signer;
 pub use tls::TlsConfig;
-pub use lsps::LspClient;
-pub use credentials::{Credentials, DeviceBuilder};
 
 #[pyfunction]
 pub fn backup_decrypt_with_seed(encrypted: Vec<u8>, seed: Vec<u8>) -> PyResult<Vec<u8>> {
@@ -45,6 +46,7 @@ fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Credentials>()?;
     m.add_class::<DeviceBuilder>()?;
     m.add_class::<NobodyBuilder>()?;
+    m.add_class::<pairing::NewDeviceClient>()?;
 
     m.add_function(wrap_pyfunction!(backup_decrypt_with_seed, m)?)?;
 
