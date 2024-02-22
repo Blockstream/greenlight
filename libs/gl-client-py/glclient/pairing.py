@@ -1,5 +1,6 @@
 from . import TlsConfig
 from . import scheduler_pb2 as schedpb
+from google.protobuf.wrappers_pb2 import StringValue
 import glclient.glclient as native
 from typing import Optional, Generator
 
@@ -13,15 +14,24 @@ class NewDeviceClient(object):
     def _recv(self, m):
         msgs = {
             1: schedpb.PairDeviceResponse,
+            2: str,
         }
 
         typ, msg = m[0], m[1:]
         conv = msgs.get(typ, None)
 
+        print(f"GOT m {m}, typ {typ}, msg {msg}")
+
         if conv is None:
             raise ValueError(f"Unknown message type {typ}")
+        elif conv is str:
+            sv = StringValue()
+            sv.ParseFromString(bytes(msg))
+            res = sv.value
+        else:
+            res = conv.FromString(bytes(msg))
 
-        yield conv.FromString(bytes(msg))
+        yield res
 
     def pair_device(
         self, name: str, description: str, restrictions: str

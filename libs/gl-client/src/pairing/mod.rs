@@ -13,5 +13,6 @@ pub enum Error {
 
 pub enum PairingSessionData {
     PairingResponse(PairDeviceResponse),
+    PairingQr(String),
     PairingError(tonic::Status),
 }
