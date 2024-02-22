@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import shutil
 import socket
 import subprocess
@@ -9,10 +10,12 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Generator
 
-import anyio
 import purerpc
+import anyio
+import asyncio
+from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from glclient import greenlight_pb2 as greenlightpb
 from glclient import scheduler_pb2 as schedpb
 from pyln.client import LightningRpc
@@ -97,6 +100,9 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.invite_codes: List[str] = []
         self.received_invite_code = None
         self.debugger = DebugServicer()
+        self.pairing_tx_in, self.pairing_rx_in = anyio.create_memory_object_stream()
+        self.pairing_tx_out, self.paring_rx_out = anyio.create_memory_object_stream()
+        self.pairings = PairingServicer(stream_out=self.pairing_tx_in, stream_in=self.paring_rx_out)
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -120,6 +126,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         )
         self.server.add_service(self.service)
         self.server.add_service(self.debugger.service)
+        self.server.add_service(self.pairings.service)
 
         threading.Thread(target=anyio.run, args=(self.run,), daemon=True).start()
         print("Hello")
@@ -357,6 +364,26 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
     async def ListInviteCodes(self, req) -> schedpb.ListInviteCodesResponse:
         codes = [schedpb.InviteCode(**c) for c in self.invite_codes]
         return schedpb.ListInviteCodesResponse(invite_code_list=codes)
+    
+    async def _read_from_signer(self, req):
+        async for message in req:
+            await self.pairing_tx_out.send(message)
+
+    async def SignerRequestsStream(self, request):
+        print(f"Signer attached to schedulers signer_request_stream")
+        asyncio.create_task(self._read_from_signer(request))
+
+        async with self.pairing_rx_in:
+            async for data in self.pairing_rx_in:
+                yield schedpb.SignerRequest(request_id=1, approve_pairing=schedpb.ApprovePairingRequest(
+                    session_id=data.session_id,
+                    timestamp=data.timestamp,
+                    node_id=data.node_id,
+                    device_name=data.device_name,
+                    restrs=data.restrs,
+                    sig=data.sig,
+                    pubkey=data.pubkey,
+                    rune=data.rune))
 
 
 class DebugServicer(schedgrpc.DebugServicer):
@@ -369,5 +396,48 @@ class DebugServicer(schedgrpc.DebugServicer):
         self.reports.append(report)
         return greenlightpb.Empty()
 
+class PairingServicer(schedgrpc.PairingServicer):
+    """Mocks a pairing backend for local testing"""
+    def __init__(self, stream_out: MemoryObjectSendStream[Any]=None, stream_in: MemoryObjectReceiveStream[Any]=None):
+        self.sessions: Dict[int, Dict[str, str | bytes]] = {}
+        self.stream_out = stream_out
+        self.stream_in = stream_in
+
+    async def recv_once(self, stream: MemoryObjectReceiveStream[Any]):
+        async with stream:
+            data = await stream.receive()
+            return data
         
+    async def PairDevice(self, req: schedpb.PairDeviceRequest):
+        data = {
+            "csr": req.csr,
+            "device_name": req.device_name,
+            "desc": req.desc,
+            "restrs": req.restrs
+        }
+        self.sessions[req.session_id] = data
+
+        # Wait for the Approval from the signer.
+        await self.recv_once(self.stream_in)
+        
+        device_cert = certs.gencert_from_csr(req.csr, recover=False, pairing=True)
+        return schedpb.PairDeviceResponse(
+            session_id=req.session_id,
+            device_cert=device_cert)  
+    
+    async def GetPairingData(self, req: schedpb.GetPairingDataRequest):
+        data = self.sessions[req.session_id]
+        return schedpb.GetPairingDataResponse(
+            session_id=req.session_id,
+            csr=data["csr"],
+            device_name=data["device_name"],
+            desc=data["desc"],
+            restrs=data["restrs"]
+        )
+    
+    async def ApprovePairing(self, req):
+        await self.stream_out.send(req)
+        return schedpb.Empty()
+
+
 Scheduler = AsyncScheduler

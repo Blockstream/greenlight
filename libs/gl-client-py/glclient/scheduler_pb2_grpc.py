@@ -88,6 +88,11 @@ class SchedulerStub(object):
                 request_serializer=scheduler__pb2.ExportNodeRequest.SerializeToString,
                 response_deserializer=scheduler__pb2.ExportNodeResponse.FromString,
                 )
+        self.SignerRequestsStream = channel.stream_stream(
+                '/scheduler.Scheduler/SignerRequestsStream',
+                request_serializer=scheduler__pb2.SignerResponse.SerializeToString,
+                response_deserializer=scheduler__pb2.SignerRequest.FromString,
+                )
 
 
 class SchedulerServicer(object):
@@ -270,6 +275,19 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SignerRequestsStream(self, request_iterator, context):
+        """Attaches a Signer to via a bidirectional stream to the
+        scheduler. This is a communication channel between greenlight
+        and the signing device that is used for requests that are not
+        part of the node api.
+
+        The stream is used to hand out the ApprovePairingRequests that
+        the signer answers with a ApprovePairingResponse.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -312,6 +330,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.ExportNode,
                     request_deserializer=scheduler__pb2.ExportNodeRequest.FromString,
                     response_serializer=scheduler__pb2.ExportNodeResponse.SerializeToString,
+            ),
+            'SignerRequestsStream': grpc.stream_stream_rpc_method_handler(
+                    servicer.SignerRequestsStream,
+                    request_deserializer=scheduler__pb2.SignerResponse.FromString,
+                    response_serializer=scheduler__pb2.SignerRequest.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -492,6 +515,23 @@ class Scheduler(object):
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
+    @staticmethod
+    def SignerRequestsStream(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(request_iterator, target, '/scheduler.Scheduler/SignerRequestsStream',
+            scheduler__pb2.SignerResponse.SerializeToString,
+            scheduler__pb2.SignerRequest.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
 
 class DebugStub(object):
     """A service to collect debugging information from clients.
@@ -560,5 +600,144 @@ class Debug(object):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Debug/ReportSignerRejection',
             scheduler__pb2.SignerRejection.SerializeToString,
             greenlight__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class PairingStub(object):
+    """A service to pair signer-less clients with an existing signer.
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.PairDevice = channel.unary_unary(
+                '/scheduler.Pairing/PairDevice',
+                request_serializer=scheduler__pb2.PairDeviceRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.PairDeviceResponse.FromString,
+                )
+        self.GetPairingData = channel.unary_unary(
+                '/scheduler.Pairing/GetPairingData',
+                request_serializer=scheduler__pb2.GetPairingDataRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.GetPairingDataResponse.FromString,
+                )
+        self.ApprovePairing = channel.unary_unary(
+                '/scheduler.Pairing/ApprovePairing',
+                request_serializer=scheduler__pb2.ApprovePairingRequest.SerializeToString,
+                response_deserializer=scheduler__pb2.Empty.FromString,
+                )
+
+
+class PairingServicer(object):
+    """A service to pair signer-less clients with an existing signer.
+    """
+
+    def PairDevice(self, request, context):
+        """Initiates a new Pairing Sessions. This is called by the new
+        device that wants to request a pairing from an existing device.
+        The session lifetime is bound to the stream so closing the
+        stream destroys the session.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetPairingData(self, request, context):
+        """Returns the pairing related data that belongs to a pairing
+        session. This is meant to be called from a device that can
+        approve a pairing request, we sometimes call it "old device".
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ApprovePairing(self, request, context):
+        """Approves a pairing request. The ApprovePairingRequest is
+        forwarded to a signer for further processing.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_PairingServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'PairDevice': grpc.unary_unary_rpc_method_handler(
+                    servicer.PairDevice,
+                    request_deserializer=scheduler__pb2.PairDeviceRequest.FromString,
+                    response_serializer=scheduler__pb2.PairDeviceResponse.SerializeToString,
+            ),
+            'GetPairingData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetPairingData,
+                    request_deserializer=scheduler__pb2.GetPairingDataRequest.FromString,
+                    response_serializer=scheduler__pb2.GetPairingDataResponse.SerializeToString,
+            ),
+            'ApprovePairing': grpc.unary_unary_rpc_method_handler(
+                    servicer.ApprovePairing,
+                    request_deserializer=scheduler__pb2.ApprovePairingRequest.FromString,
+                    response_serializer=scheduler__pb2.Empty.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'scheduler.Pairing', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class Pairing(object):
+    """A service to pair signer-less clients with an existing signer.
+    """
+
+    @staticmethod
+    def PairDevice(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Pairing/PairDevice',
+            scheduler__pb2.PairDeviceRequest.SerializeToString,
+            scheduler__pb2.PairDeviceResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetPairingData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Pairing/GetPairingData',
+            scheduler__pb2.GetPairingDataRequest.SerializeToString,
+            scheduler__pb2.GetPairingDataResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ApprovePairing(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/scheduler.Pairing/ApprovePairing',
+            scheduler__pb2.ApprovePairingRequest.SerializeToString,
+            scheduler__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

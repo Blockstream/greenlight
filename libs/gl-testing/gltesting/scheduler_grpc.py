@@ -27,6 +27,9 @@ class SchedulerServicer(purerpc.Servicer):
 
     async def ExportNode(self, input_message):
         raise NotImplementedError()
+    
+    async def SignerRequestsStream(self, input_message):
+        raise NotImplementedError
 
     @property
     def service(self) -> purerpc.Service:
@@ -105,6 +108,15 @@ class SchedulerServicer(purerpc.Servicer):
                 scheduler__pb2.ExportNodeResponse,
             )
         )
+        service_obj.add_method(
+            "SignerRequestsStream",
+            self.SignerRequestsStream,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.STREAM_STREAM,
+                scheduler__pb2.SignerResponse,
+                scheduler__pb2.SignerRequest,
+            )
+        )
         return service_obj
 
 
@@ -178,6 +190,14 @@ class SchedulerStub:
                 scheduler__pb2.ExportNodeResponse,
             )
         )
+        self.SignerRequestsStream = self._client.get_method_stub(
+            "SignerRequestsStream",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.STREAM_STEAM,
+                scheduler__pb2.SignerResponse,
+                scheduler__pb2.SignerRequest,
+            )
+        )
 
 
 class DebugServicer(purerpc.Servicer):
@@ -213,5 +233,82 @@ class DebugStub:
                 purerpc.Cardinality.UNARY_UNARY,
                 scheduler__pb2.SignerRejection,
                 greenlight__pb2.Empty,
+            )
+        )
+
+
+class PairingServicer(purerpc.Servicer):
+    async def PairDevice(self, input_messages):
+        raise NotImplementedError()
+
+    async def GetPairingData(self, input_message):
+        raise NotImplementedError()
+
+    async def ApproveSession(self, input_message):
+        raise NotImplementedError()
+    
+    @property
+    def service(self) -> purerpc.Service:
+        service_obj = purerpc.Service(
+            "scheduler.Pairing"
+        )
+        service_obj.add_method(
+            "PairDevice",
+            self.PairDevice,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.PairDeviceRequest,
+                scheduler__pb2.PairDeviceResponse,
+            )
+        )
+        service_obj.add_method(
+            "GetPairingData",
+            self.GetPairingData,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.GetPairingDataRequest,
+                scheduler__pb2.GetPairingDataResponse,
+            )
+        )
+        service_obj.add_method(
+            "ApprovePairing",
+            self.ApprovePairing,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.ApprovePairingRequest,
+                scheduler__pb2.Empty,
+            )
+        )
+        return service_obj
+
+
+class PairingStub:
+    def __init__(self, channel):
+        self._client = purerpc.Client(
+            "scheduler.Pairing",
+            channel
+        )
+        self.PairDevice = self._client.get_method_stub(
+            "PairDevice",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.PairDeviceRequest,
+                scheduler__pb2.PairDeviceResponse,
+            )
+        )
+        self.GetPairingData = self._client.get_method_stub(
+            "GetPairingData",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.GetPairingDataRequest,
+                scheduler__pb2.GetPairingDataResponse,
+            )
+        )
+        self.ApprovePairing = self._client.get_method_stub(
+            "ApprovePairing",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                scheduler__pb2.ApprovePairingRequest,
+                scheduler__pb2.Empty,
             )
         )
