@@ -218,6 +218,18 @@ class SchedulerStub:
         glclient.scheduler_pb2.WebhookSecretResponse,
     ]
 
+    SignerRequestsStream: grpc.StreamStreamMultiCallable[
+        glclient.scheduler_pb2.SignerResponse,
+        glclient.scheduler_pb2.SignerRequest,
+    ]
+    """Attaches a Signer  via a bidirectional stream to the scheduler. 
+    This is a communication channel between greenlight and the signing
+    device that is used for requests that are not part of the node api.
+
+    The stream is used to hand out the ApprovePairingRequests that
+    the signer answers with a ApprovePairingResponse.
+    """
+
 class SchedulerAsyncStub:
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
@@ -416,6 +428,18 @@ class SchedulerAsyncStub:
         glclient.scheduler_pb2.RotateOutgoingWebhookSecretRequest,
         glclient.scheduler_pb2.WebhookSecretResponse,
     ]
+
+    SignerRequestsStream: grpc.aio.StreamStreamMultiCallable[
+        glclient.scheduler_pb2.SignerResponse,
+        glclient.scheduler_pb2.SignerRequest,
+    ]
+    """Attaches a Signer  via a bidirectional stream to the scheduler. 
+    This is a communication channel between greenlight and the signing
+    device that is used for requests that are not part of the node api.
+
+    The stream is used to hand out the ApprovePairingRequests that
+    the signer answers with a ApprovePairingResponse.
+    """
 
 class SchedulerServicer(metaclass=abc.ABCMeta):
     """The scheduler service is the endpoint which allows users to
@@ -640,6 +664,20 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         context: _ServicerContext,
     ) -> typing.Union[glclient.scheduler_pb2.WebhookSecretResponse, collections.abc.Awaitable[glclient.scheduler_pb2.WebhookSecretResponse]]: ...
 
+    @abc.abstractmethod
+    def SignerRequestsStream(
+        self,
+        request_iterator: _MaybeAsyncIterator[glclient.scheduler_pb2.SignerResponse],
+        context: _ServicerContext,
+    ) -> typing.Union[collections.abc.Iterator[glclient.scheduler_pb2.SignerRequest], collections.abc.AsyncIterator[glclient.scheduler_pb2.SignerRequest]]:
+        """Attaches a Signer  via a bidirectional stream to the scheduler. 
+        This is a communication channel between greenlight and the signing
+        device that is used for requests that are not part of the node api.
+
+        The stream is used to hand out the ApprovePairingRequests that
+        the signer answers with a ApprovePairingResponse.
+        """
+
 def add_SchedulerServicer_to_server(servicer: SchedulerServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
 
 class DebugStub:
@@ -694,3 +732,102 @@ class DebugServicer(metaclass=abc.ABCMeta):
         """
 
 def add_DebugServicer_to_server(servicer: DebugServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+
+class PairingStub:
+    """A service to pair signer-less clients with an existing signer."""
+
+    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
+    PairDevice: grpc.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.PairDeviceRequest,
+        glclient.scheduler_pb2.PairDeviceResponse,
+    ]
+    """Initiates a new Pairing Sessions. This is called by the new
+    device that wants to request a pairing from an existing device.
+    The session lifetime is bound to the stream so closing the
+    stream destroys the session.
+    """
+
+    GetPairingData: grpc.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.GetPairingDataRequest,
+        glclient.scheduler_pb2.GetPairingDataResponse,
+    ]
+    """Returns the pairing related data that belongs to a pairing
+    session. This is meant to be called from a device that can
+    approve a pairing request, we sometimes call it "old device".
+    """
+
+    ApprovePairing: grpc.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.ApprovePairingRequest,
+        glclient.greenlight_pb2.Empty,
+    ]
+    """Approves a pairing request. The ApprovePairingRequest is
+    forwarded to a signer for further processing.
+    """
+
+class PairingAsyncStub:
+    """A service to pair signer-less clients with an existing signer."""
+
+    PairDevice: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.PairDeviceRequest,
+        glclient.scheduler_pb2.PairDeviceResponse,
+    ]
+    """Initiates a new Pairing Sessions. This is called by the new
+    device that wants to request a pairing from an existing device.
+    The session lifetime is bound to the stream so closing the
+    stream destroys the session.
+    """
+
+    GetPairingData: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.GetPairingDataRequest,
+        glclient.scheduler_pb2.GetPairingDataResponse,
+    ]
+    """Returns the pairing related data that belongs to a pairing
+    session. This is meant to be called from a device that can
+    approve a pairing request, we sometimes call it "old device".
+    """
+
+    ApprovePairing: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.ApprovePairingRequest,
+        glclient.greenlight_pb2.Empty,
+    ]
+    """Approves a pairing request. The ApprovePairingRequest is
+    forwarded to a signer for further processing.
+    """
+
+class PairingServicer(metaclass=abc.ABCMeta):
+    """A service to pair signer-less clients with an existing signer."""
+
+    @abc.abstractmethod
+    def PairDevice(
+        self,
+        request: glclient.scheduler_pb2.PairDeviceRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.scheduler_pb2.PairDeviceResponse, collections.abc.Awaitable[glclient.scheduler_pb2.PairDeviceResponse]]:
+        """Initiates a new Pairing Sessions. This is called by the new
+        device that wants to request a pairing from an existing device.
+        The session lifetime is bound to the stream so closing the
+        stream destroys the session.
+        """
+
+    @abc.abstractmethod
+    def GetPairingData(
+        self,
+        request: glclient.scheduler_pb2.GetPairingDataRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.scheduler_pb2.GetPairingDataResponse, collections.abc.Awaitable[glclient.scheduler_pb2.GetPairingDataResponse]]:
+        """Returns the pairing related data that belongs to a pairing
+        session. This is meant to be called from a device that can
+        approve a pairing request, we sometimes call it "old device".
+        """
+
+    @abc.abstractmethod
+    def ApprovePairing(
+        self,
+        request: glclient.scheduler_pb2.ApprovePairingRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]:
+        """Approves a pairing request. The ApprovePairingRequest is
+        forwarded to a signer for further processing.
+        """
+
+def add_PairingServicer_to_server(servicer: PairingServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...

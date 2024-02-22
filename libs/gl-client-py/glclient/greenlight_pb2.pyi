@@ -167,8 +167,15 @@ class HsmResponse(google.protobuf.message.Message):
     REQUEST_ID_FIELD_NUMBER: builtins.int
     RAW_FIELD_NUMBER: builtins.int
     SIGNER_STATE_FIELD_NUMBER: builtins.int
+    ERROR_FIELD_NUMBER: builtins.int
     request_id: builtins.int
     raw: builtins.bytes
+    error: builtins.str
+    """If the signer reported an error, and did therefore not include
+    `raw`, this is the stringified error, so we can print it in the
+    logs. This should help us collate policy errors with the changes
+    proposed by CLN
+    """
     @property
     def signer_state(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SignerStateEntry]:
         """A list of updated key-value-version tuples that is to be
@@ -181,8 +188,9 @@ class HsmResponse(google.protobuf.message.Message):
         request_id: builtins.int = ...,
         raw: builtins.bytes = ...,
         signer_state: collections.abc.Iterable[global___SignerStateEntry] | None = ...,
+        error: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["raw", b"raw", "request_id", b"request_id", "signer_state", b"signer_state"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["error", b"error", "raw", b"raw", "request_id", b"request_id", "signer_state", b"signer_state"]) -> None: ...
 
 global___HsmResponse = HsmResponse
 
@@ -1605,14 +1613,14 @@ class TrampolinePayRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     BOLT11_FIELD_NUMBER: builtins.int
-    TRMP_NODE_ID_FIELD_NUMBER: builtins.int
+    TRAMPOLINE_NODE_ID_FIELD_NUMBER: builtins.int
     AMOUNT_MSAT_FIELD_NUMBER: builtins.int
     LABEL_FIELD_NUMBER: builtins.int
     MAXFEEPERCENT_FIELD_NUMBER: builtins.int
     MAXDELAY_FIELD_NUMBER: builtins.int
     DESCRIPTION_FIELD_NUMBER: builtins.int
     bolt11: builtins.str
-    trmp_node_id: builtins.bytes
+    trampoline_node_id: builtins.bytes
     amount_msat: builtins.int
     label: builtins.str
     maxfeepercent: builtins.float
@@ -1622,14 +1630,14 @@ class TrampolinePayRequest(google.protobuf.message.Message):
         self,
         *,
         bolt11: builtins.str = ...,
-        trmp_node_id: builtins.bytes = ...,
+        trampoline_node_id: builtins.bytes = ...,
         amount_msat: builtins.int = ...,
         label: builtins.str = ...,
         maxfeepercent: builtins.float = ...,
         maxdelay: builtins.int = ...,
         description: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "bolt11", b"bolt11", "description", b"description", "label", b"label", "maxdelay", b"maxdelay", "maxfeepercent", b"maxfeepercent", "trmp_node_id", b"trmp_node_id"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "bolt11", b"bolt11", "description", b"description", "label", b"label", "maxdelay", b"maxdelay", "maxfeepercent", b"maxfeepercent", "trampoline_node_id", b"trampoline_node_id"]) -> None: ...
 
 global___TrampolinePayRequest = TrampolinePayRequest
 
