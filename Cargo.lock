@@ -501,8 +501,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.5",
 ]
 
@@ -1095,11 +1097,13 @@ name = "gl-client"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "async-stream 0.3.5",
  "async-trait",
  "base64 0.21.7",
  "bech32",
  "bytes 1.6.0",
  "chacha20poly1305",
+ "chrono",
  "cln-grpc",
  "futures",
  "hex",
@@ -1150,6 +1154,7 @@ dependencies = [
  "once_cell",
  "prost 0.11.9",
  "pyo3",
+ "runeauth",
  "serde_json",
  "thiserror",
  "tokio 1.37.0",

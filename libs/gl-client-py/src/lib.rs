@@ -7,6 +7,7 @@ extern crate log;
 mod credentials;
 mod lsps;
 mod node;
+mod pairing;
 mod runtime;
 mod scheduler;
 mod signer;

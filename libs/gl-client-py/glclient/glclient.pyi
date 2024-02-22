@@ -65,6 +65,10 @@ class Scheduler:
     def rotate_outgoing_webhook_secret(self, webhook_id: int)  -> bytes: ...
 
 
+class NewDeviceClient:
+    def __init__(self, creds: Credentials, uri: Optional[str]): ...
+    def pair_device(self, name: str, desc: str, restrs: str): ...
+
 class Node:
     def __init__(
         self,
