@@ -156,6 +156,14 @@ service Scheduler {
 	rpc DeleteWebhooks(DeleteOutgoingWebhooksRequest) returns (greenlight.Empty) {}
 
 	rpc RotateOutgoingWebhookSecret(RotateOutgoingWebhookSecretRequest) returns (WebhookSecretResponse) {}
+
+	// Attaches a Signer  via a bidirectional stream to the scheduler. 
+	// This is a communication channel between greenlight and the signing
+	// device that is used for requests that are not part of the node api.
+	//
+	// The stream is used to hand out the ApprovePairingRequests that
+	// the signer answers with a ApprovePairingResponse.
+	rpc SignerRequestsStream(stream SignerResponse) returns (stream SignerRequest) {};
 };
 
 message AddOutgoingWebhookRequest {
@@ -205,6 +213,24 @@ service Debug {
   // so we can investigate the validity of the rejection, and to
   // fine-tine the signer's ruleset.
   rpc ReportSignerRejection(SignerRejection) returns (greenlight.Empty) {}  
+}
+
+// A service to pair signer-less clients with an existing signer.
+service Pairing {
+	// Initiates a new Pairing Sessions. This is called by the new
+	// device that wants to request a pairing from an existing device.
+	// The session lifetime is bound to the stream so closing the
+	// stream destroys the session.
+	rpc PairDevice(PairDeviceRequest) returns (PairDeviceResponse) {}
+
+	// Returns the pairing related data that belongs to a pairing
+	// session. This is meant to be called from a device that can
+	// approve a pairing request, we sometimes call it "old device".
+	rpc GetPairingData(GetPairingDataRequest) returns (GetPairingDataResponse) {}
+
+	// Approves a pairing request. The ApprovePairingRequest is
+	// forwarded to a signer for further processing.
+	rpc ApprovePairing(ApprovePairingRequest) returns (greenlight.Empty) {}
 }
 
 message ChallengeRequest {
@@ -397,4 +423,126 @@ message SignerRejection {
   string msg = 1;
   greenlight.HsmRequest request = 2;
   string git_version = 3;
+}
+
+message PairDeviceRequest {
+	// The tls public key of the new device.
+	string session_id = 1;
+
+	// The certificate signing request that will be signed by the
+	// greenlight backend if the pairing succeeds. Notice that the CN
+	// here is irrelevant.
+	bytes csr = 2;
+
+	// The name of the device that will be part of the tls certificate
+	// subjects CN field: CN=/users/<node_id>/<device_name>.
+	string device_name = 3;
+
+	// A human readable description of the device, this can be a 
+	// purpose or something similar. Can be used to display to the 
+	// user on the old device.
+	string description = 4;
+
+	// A set of restrictions that the new devices requests for the 
+	// rune. This might in the future get upgraded for easier naming.
+	string restrictions = 5;
+}
+
+message PairDeviceResponse {
+	// Session id is the public key of the new device used for the
+	// tls cert.
+	string session_id = 1;
+
+	// Upon a pairing request, the device receives back the signed certificate
+	// that belongs to the certificate signing request the that was sent with
+	// the pairing request, so they can authenticate themselves in the future.
+	string device_cert = 2;
+
+	// The private key that was used to create the certificate with. This key
+	// is used to sign the requests to the node.
+	string device_key = 3;
+
+	// A rune that is returned if the device that is created by the signer that
+	// the device pairs to.
+	string rune = 4;
+
+	// Creds contains a serialized version of the device certificate, the device 
+	// key and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes creds = 5;
+}
+
+message GetPairingDataRequest {
+	// The session_id that part of the qr code.
+	string session_id = 1;
+}
+
+message GetPairingDataResponse {
+	string session_id = 1;
+
+	// The certificate signing request that will be signed by the
+	// greenlight backend if the pairing succeeds. Notice that the CN
+	// here is irrelevant.
+	bytes csr = 2;
+
+	// The name of the device that will be part of the tls certificate
+	// subjects CN field: CN=/users/<node_id>/<device_name>.
+	string device_name = 3;
+
+	// A human readable description of the device, this can be a 
+	// purpose or something similar. Can be used to display to the 
+	// user on the old device.
+	string description = 4;
+
+	// A set of restrictions that the new devices requests for the 
+	// rune. This might in the future get upgraded for easier naming.
+	string restrictions = 5;
+}
+
+message ApprovePairingRequest {
+	string session_id = 1;
+
+	// The time that the old device approved the pairing request. This
+	// is used by the signer to restrict the duration an approval
+	// request is valid.
+	uint64 timestamp = 2;
+
+	// The name of the device that will be part of the tls certificate
+	// subjects CN field: CN=/users/<node_id>/<device_name>.
+	string device_name = 3;
+	
+	// The restrictions need a pubkey set.
+	string restrictions = 4;
+
+	// The signature of the above to ensure data integrity.
+	bytes sig = 5;
+	
+	// The public key corresponding to the private key that was used 
+	// to sign the request and that is part of the rune;
+	bytes pubkey = 6;
+
+	// The rune of the old device with a pubkey field corresponding to
+	// the signature above. Used to authorize the approval request.
+	string rune = 7;
+}
+
+message ApprovePairingResponse {
+	string session_id = 1;
+	bytes node_id = 2;
+	string rune =3;
+}
+
+message SignerRequest {
+	uint32 request_id = 1;
+	oneof request {
+		ApprovePairingRequest approve_pairing = 2;
+	}
+}
+
+message SignerResponse {
+	uint32 request_id = 1;
+	oneof response {
+		greenlight.Empty empty = 2;
+		ApprovePairingResponse approve_pairing = 3;
+	}
 }

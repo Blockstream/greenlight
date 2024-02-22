@@ -623,3 +623,261 @@ class SignerRejection(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["git_version", b"git_version", "msg", b"msg", "request", b"request"]) -> None: ...
 
 global___SignerRejection = SignerRejection
+
+@typing.final
+class PairDeviceRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    CSR_FIELD_NUMBER: builtins.int
+    DEVICE_NAME_FIELD_NUMBER: builtins.int
+    DESCRIPTION_FIELD_NUMBER: builtins.int
+    RESTRICTIONS_FIELD_NUMBER: builtins.int
+    session_id: builtins.str
+    """The tls public key of the new device."""
+    csr: builtins.bytes
+    """The certificate signing request that will be signed by the
+    greenlight backend if the pairing succeeds. Notice that the CN
+    here is irrelevant.
+    """
+    device_name: builtins.str
+    """The name of the device that will be part of the tls certificate
+    subjects CN field: CN=/users/<node_id>/<device_name>.
+    """
+    description: builtins.str
+    """A human readable description of the device, this can be a 
+    purpose or something similar. Can be used to display to the 
+    user on the old device.
+    """
+    restrictions: builtins.str
+    """A set of restrictions that the new devices requests for the 
+    rune. This might in the future get upgraded for easier naming.
+    """
+    def __init__(
+        self,
+        *,
+        session_id: builtins.str = ...,
+        csr: builtins.bytes = ...,
+        device_name: builtins.str = ...,
+        description: builtins.str = ...,
+        restrictions: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["csr", b"csr", "description", b"description", "device_name", b"device_name", "restrictions", b"restrictions", "session_id", b"session_id"]) -> None: ...
+
+global___PairDeviceRequest = PairDeviceRequest
+
+@typing.final
+class PairDeviceResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    DEVICE_CERT_FIELD_NUMBER: builtins.int
+    DEVICE_KEY_FIELD_NUMBER: builtins.int
+    RUNE_FIELD_NUMBER: builtins.int
+    CREDS_FIELD_NUMBER: builtins.int
+    session_id: builtins.str
+    """Session id is the public key of the new device used for the
+    tls cert.
+    """
+    device_cert: builtins.str
+    """Upon a pairing request, the device receives back the signed certificate
+    that belongs to the certificate signing request the that was sent with
+    the pairing request, so they can authenticate themselves in the future.
+    """
+    device_key: builtins.str
+    """The private key that was used to create the certificate with. This key
+    is used to sign the requests to the node.
+    """
+    rune: builtins.str
+    """A rune that is returned if the device that is created by the signer that
+    the device pairs to.
+    """
+    creds: builtins.bytes
+    """Creds contains a serialized version of the device certificate, the device 
+    key and the rune that are used to authenticate a device at the backend, 
+    and to authorize a request at the signer.
+    """
+    def __init__(
+        self,
+        *,
+        session_id: builtins.str = ...,
+        device_cert: builtins.str = ...,
+        device_key: builtins.str = ...,
+        rune: builtins.str = ...,
+        creds: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune", "session_id", b"session_id"]) -> None: ...
+
+global___PairDeviceResponse = PairDeviceResponse
+
+@typing.final
+class GetPairingDataRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    session_id: builtins.str
+    """The session_id that part of the qr code."""
+    def __init__(
+        self,
+        *,
+        session_id: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["session_id", b"session_id"]) -> None: ...
+
+global___GetPairingDataRequest = GetPairingDataRequest
+
+@typing.final
+class GetPairingDataResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    CSR_FIELD_NUMBER: builtins.int
+    DEVICE_NAME_FIELD_NUMBER: builtins.int
+    DESCRIPTION_FIELD_NUMBER: builtins.int
+    RESTRICTIONS_FIELD_NUMBER: builtins.int
+    session_id: builtins.str
+    csr: builtins.bytes
+    """The certificate signing request that will be signed by the
+    greenlight backend if the pairing succeeds. Notice that the CN
+    here is irrelevant.
+    """
+    device_name: builtins.str
+    """The name of the device that will be part of the tls certificate
+    subjects CN field: CN=/users/<node_id>/<device_name>.
+    """
+    description: builtins.str
+    """A human readable description of the device, this can be a 
+    purpose or something similar. Can be used to display to the 
+    user on the old device.
+    """
+    restrictions: builtins.str
+    """A set of restrictions that the new devices requests for the 
+    rune. This might in the future get upgraded for easier naming.
+    """
+    def __init__(
+        self,
+        *,
+        session_id: builtins.str = ...,
+        csr: builtins.bytes = ...,
+        device_name: builtins.str = ...,
+        description: builtins.str = ...,
+        restrictions: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["csr", b"csr", "description", b"description", "device_name", b"device_name", "restrictions", b"restrictions", "session_id", b"session_id"]) -> None: ...
+
+global___GetPairingDataResponse = GetPairingDataResponse
+
+@typing.final
+class ApprovePairingRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    TIMESTAMP_FIELD_NUMBER: builtins.int
+    DEVICE_NAME_FIELD_NUMBER: builtins.int
+    RESTRICTIONS_FIELD_NUMBER: builtins.int
+    SIG_FIELD_NUMBER: builtins.int
+    PUBKEY_FIELD_NUMBER: builtins.int
+    RUNE_FIELD_NUMBER: builtins.int
+    session_id: builtins.str
+    timestamp: builtins.int
+    """The time that the old device approved the pairing request. This
+    is used by the signer to restrict the duration an approval
+    request is valid.
+    """
+    device_name: builtins.str
+    """The name of the device that will be part of the tls certificate
+    subjects CN field: CN=/users/<node_id>/<device_name>.
+    """
+    restrictions: builtins.str
+    """The restrictions need a pubkey set."""
+    sig: builtins.bytes
+    """The signature of the above to ensure data integrity."""
+    pubkey: builtins.bytes
+    """The public key corresponding to the private key that was used 
+    to sign the request and that is part of the rune;
+    """
+    rune: builtins.str
+    """The rune of the old device with a pubkey field corresponding to
+    the signature above. Used to authorize the approval request.
+    """
+    def __init__(
+        self,
+        *,
+        session_id: builtins.str = ...,
+        timestamp: builtins.int = ...,
+        device_name: builtins.str = ...,
+        restrictions: builtins.str = ...,
+        sig: builtins.bytes = ...,
+        pubkey: builtins.bytes = ...,
+        rune: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["device_name", b"device_name", "pubkey", b"pubkey", "restrictions", b"restrictions", "rune", b"rune", "session_id", b"session_id", "sig", b"sig", "timestamp", b"timestamp"]) -> None: ...
+
+global___ApprovePairingRequest = ApprovePairingRequest
+
+@typing.final
+class ApprovePairingResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    NODE_ID_FIELD_NUMBER: builtins.int
+    RUNE_FIELD_NUMBER: builtins.int
+    session_id: builtins.str
+    node_id: builtins.bytes
+    rune: builtins.str
+    def __init__(
+        self,
+        *,
+        session_id: builtins.str = ...,
+        node_id: builtins.bytes = ...,
+        rune: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["node_id", b"node_id", "rune", b"rune", "session_id", b"session_id"]) -> None: ...
+
+global___ApprovePairingResponse = ApprovePairingResponse
+
+@typing.final
+class SignerRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    REQUEST_ID_FIELD_NUMBER: builtins.int
+    APPROVE_PAIRING_FIELD_NUMBER: builtins.int
+    request_id: builtins.int
+    @property
+    def approve_pairing(self) -> global___ApprovePairingRequest: ...
+    def __init__(
+        self,
+        *,
+        request_id: builtins.int = ...,
+        approve_pairing: global___ApprovePairingRequest | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "request", b"request"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "request", b"request", "request_id", b"request_id"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["request", b"request"]) -> typing.Literal["approve_pairing"] | None: ...
+
+global___SignerRequest = SignerRequest
+
+@typing.final
+class SignerResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    REQUEST_ID_FIELD_NUMBER: builtins.int
+    EMPTY_FIELD_NUMBER: builtins.int
+    APPROVE_PAIRING_FIELD_NUMBER: builtins.int
+    request_id: builtins.int
+    @property
+    def empty(self) -> glclient.greenlight_pb2.Empty: ...
+    @property
+    def approve_pairing(self) -> global___ApprovePairingResponse: ...
+    def __init__(
+        self,
+        *,
+        request_id: builtins.int = ...,
+        empty: glclient.greenlight_pb2.Empty | None = ...,
+        approve_pairing: global___ApprovePairingResponse | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "empty", b"empty", "response", b"response"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "empty", b"empty", "request_id", b"request_id", "response", b"response"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["response", b"response"]) -> typing.Literal["empty", "approve_pairing"] | None: ...
+
+global___SignerResponse = SignerResponse
