@@ -331,6 +331,15 @@ def recover(ctx):
 
     pbprint(res)
 
+@scheduler.command()
+@click.pass_context
+def upgradecreds(ctx):
+    signer = Signer(Tls(Creds()))
+    creds = Credentials.as_device().upgrade(ctx.obj.scheduler.inner, signer.inner.inner).build()
+
+    with open("credentials.gfs", "wb") as f:
+        f.write(creds.to_bytes())
+
 
 @scheduler.command()
 @click.pass_context
