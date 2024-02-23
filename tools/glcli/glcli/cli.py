@@ -1,6 +1,6 @@
 from binascii import hexlify, unhexlify
 from glcli import environment as env
-from glclient import TlsConfig, Scheduler
+from glclient import TlsConfig, Scheduler, Credentials
 from pyln.grpc import Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
@@ -26,22 +26,42 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
+class Creds:
+    """Encapsulation of the fs convention followed by glcli."""
+
+    def __init__(self) -> "Creds":
+        """Initialize the credentials."""
+        self.creds = Credentials.as_nobody().with_default().build()
+        creds_path = Path("credentials.gfs")
+        if creds_path.exists():
+            self.creds = Credentials.as_device().from_path(str(creds_path)).build()
+            logger.info("Configuring client with device credentials")
+        else:
+            logger.info("Configuring client with NOBODY credentials.")
+
+
 class Tls:
     """Encapsulation of the fs convention followed by glcli."""
 
-    def __init__(self):
+    def __init__(self, creds: Optional[Creds] = None):
         """Initialize an mTLS identity."""
+        if creds is not None:
+            self.tls = TlsConfig(creds.creds)
+            logger.info("Configuring client identity from Credentials.")
+            return
+
         self.tls = TlsConfig()
-        cert_path = Path('device.crt')
-        key_path = Path('device-key.pem')
+        cert_path = Path("device.crt")
+        key_path = Path("device-key.pem")
         have_certs = cert_path.exists() and key_path.exists()
         if have_certs:
-            device_cert = open('device.crt', 'rb').read()
-            device_key = open('device-key.pem', 'rb').read()
+            device_cert = open("device.crt", "rb").read()
+            device_key = open("device-key.pem", "rb").read()
             self.tls = self.tls.identity(device_cert, device_key)
             logger.info("Configuring client with user identity.")
         else:
             logger.info("Configuring client with the NOBODY identity.")
+
 
 class Signer:
     def __init__(self, tls: Tls, network='testnet'):
@@ -88,7 +108,8 @@ class Context:
             self.metadata['node_id'] = bytes.fromhex(self.metadata['hex_node_id'])
 
     def __init__(self, network='testnet', start_hsmd=False):
-        self.tls = Tls()
+        self.creds = Creds()
+        self.tls = Tls(self.creds)
         self.load_metadata(self.tls.tls)
         self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls.tls)
         self.scheduler.tls = self.tls.tls
@@ -98,7 +119,7 @@ class Context:
 
     def get_node(self):
         if self.node is None:
-            self.node = self.scheduler.node()
+            self.node = self.scheduler.node(self.creds.creds)
         return self.node
 
 
@@ -123,7 +144,7 @@ class AmountType(click.ParamType):
 
         return Amount(msat=int(num) * unit[suffix])
 
-    
+
 class AmountOrAnyType(click.ParamType):
     name = 'amount'
 
@@ -271,6 +292,9 @@ def register(ctx, network, invite):
     scheduler = Scheduler(node_id, network=network, tls=ctx.obj.scheduler.tls)
     res = scheduler.register(signer.inner, invite_code=invite)
 
+    with open("credentials.gfs", "wb") as f:
+        f.write(res.creds)
+
     with open("device-key.pem", "w") as f:
         f.write(res.device_key)
 
@@ -286,12 +310,15 @@ def register(ctx, network, invite):
 @scheduler.command()
 @click.pass_context
 def recover(ctx):
-    signer = Signer(Tls())
+    signer = Signer(Tls(Creds()))
     node_id = ctx.obj.node_id
     logger.debug(f"Recovering access to node_id={hexlify(node_id).decode('ASCII')}")
     scheduler = ctx.obj.scheduler
 
     res = scheduler.recover(signer.inner)
+
+    with open("credentials.gfs", "wb") as f:
+        f.write(res.creds)
 
     with open("device-key.pem", "w") as f:
         f.write(res.device_key)
@@ -329,7 +356,7 @@ def schedule(ctx):
 @click.pass_context
 def hsmd(ctx):
     """Run the hsmd against the scheduler."""
-    signer = Signer(Tls())
+    signer = Signer(Tls(Creds()))
     signer_handle = signer.inner.run_in_thread()
     
     def signal_handler(_signal, _frame):
