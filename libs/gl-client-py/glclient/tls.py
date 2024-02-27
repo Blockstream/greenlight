@@ -27,10 +27,11 @@ class TlsConfig(object):
         c.authenticated = True
         return c
 
-    def identity_from_path(self, path : str) -> "TlsConfig":
+    @classmethod
+    def identity_from_path(cls, path : str) -> "TlsConfig":
         c = TlsConfig()
-        c.inner = self.inner.identity_from_path(path)
-        c.ca = self.ca
+        c.inner = c.inner.identity_from_path(path)
+        c.ca = c.ca
         logger.debug("Authenticating TLS identity")
         c.authenticated = True
         return c
