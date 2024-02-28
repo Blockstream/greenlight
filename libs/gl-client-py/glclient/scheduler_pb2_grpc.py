@@ -2,8 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from . import greenlight_pb2 as greenlight__pb2
-from . import scheduler_pb2 as scheduler__pb2
+from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
+from glclient import scheduler_pb2 as glclient_dot_scheduler__pb2
 
 
 class SchedulerStub(object):
@@ -50,63 +50,63 @@ class SchedulerStub(object):
         """
         self.Register = channel.unary_unary(
                 '/scheduler.Scheduler/Register',
-                request_serializer=scheduler__pb2.RegistrationRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.RegistrationResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.RegistrationRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.RegistrationResponse.FromString,
                 )
         self.Recover = channel.unary_unary(
                 '/scheduler.Scheduler/Recover',
-                request_serializer=scheduler__pb2.RecoveryRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.RecoveryResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.RecoveryRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.RecoveryResponse.FromString,
                 )
         self.GetChallenge = channel.unary_unary(
                 '/scheduler.Scheduler/GetChallenge',
-                request_serializer=scheduler__pb2.ChallengeRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.ChallengeResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.ChallengeRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.ChallengeResponse.FromString,
                 )
         self.Schedule = channel.unary_unary(
                 '/scheduler.Scheduler/Schedule',
-                request_serializer=scheduler__pb2.ScheduleRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.NodeInfoResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.ScheduleRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.NodeInfoResponse.FromString,
                 )
         self.GetNodeInfo = channel.unary_unary(
                 '/scheduler.Scheduler/GetNodeInfo',
-                request_serializer=scheduler__pb2.NodeInfoRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.NodeInfoResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.NodeInfoRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.NodeInfoResponse.FromString,
                 )
         self.MaybeUpgrade = channel.unary_unary(
                 '/scheduler.Scheduler/MaybeUpgrade',
-                request_serializer=scheduler__pb2.UpgradeRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.UpgradeResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.UpgradeRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.UpgradeResponse.FromString,
                 )
         self.ListInviteCodes = channel.unary_unary(
                 '/scheduler.Scheduler/ListInviteCodes',
-                request_serializer=scheduler__pb2.ListInviteCodesRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.ListInviteCodesResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.ListInviteCodesRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.ListInviteCodesResponse.FromString,
                 )
         self.ExportNode = channel.unary_unary(
                 '/scheduler.Scheduler/ExportNode',
-                request_serializer=scheduler__pb2.ExportNodeRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.ExportNodeResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.ExportNodeRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.ExportNodeResponse.FromString,
                 )
         self.AddOutgoingWebhook = channel.unary_unary(
                 '/scheduler.Scheduler/AddOutgoingWebhook',
-                request_serializer=scheduler__pb2.AddOutgoingWebhookRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.AddOutgoingWebhookResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.AddOutgoingWebhookRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.AddOutgoingWebhookResponse.FromString,
                 )
         self.ListOutgoingWebhooks = channel.unary_unary(
                 '/scheduler.Scheduler/ListOutgoingWebhooks',
-                request_serializer=scheduler__pb2.ListOutgoingWebhooksRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.ListOutgoingWebhooksResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.ListOutgoingWebhooksRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.ListOutgoingWebhooksResponse.FromString,
                 )
         self.DeleteWebhooks = channel.unary_unary(
                 '/scheduler.Scheduler/DeleteWebhooks',
-                request_serializer=scheduler__pb2.DeleteOutgoingWebhooksRequest.SerializeToString,
-                response_deserializer=greenlight__pb2.Empty.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.DeleteOutgoingWebhooksRequest.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
                 )
         self.RotateOutgoingWebhookSecret = channel.unary_unary(
                 '/scheduler.Scheduler/RotateOutgoingWebhookSecret',
-                request_serializer=scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
-                response_deserializer=scheduler__pb2.WebhookSecretResponse.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.WebhookSecretResponse.FromString,
                 )
 
 
@@ -319,63 +319,63 @@ def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Register': grpc.unary_unary_rpc_method_handler(
                     servicer.Register,
-                    request_deserializer=scheduler__pb2.RegistrationRequest.FromString,
-                    response_serializer=scheduler__pb2.RegistrationResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.RegistrationRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.RegistrationResponse.SerializeToString,
             ),
             'Recover': grpc.unary_unary_rpc_method_handler(
                     servicer.Recover,
-                    request_deserializer=scheduler__pb2.RecoveryRequest.FromString,
-                    response_serializer=scheduler__pb2.RecoveryResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.RecoveryRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.RecoveryResponse.SerializeToString,
             ),
             'GetChallenge': grpc.unary_unary_rpc_method_handler(
                     servicer.GetChallenge,
-                    request_deserializer=scheduler__pb2.ChallengeRequest.FromString,
-                    response_serializer=scheduler__pb2.ChallengeResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.ChallengeRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.ChallengeResponse.SerializeToString,
             ),
             'Schedule': grpc.unary_unary_rpc_method_handler(
                     servicer.Schedule,
-                    request_deserializer=scheduler__pb2.ScheduleRequest.FromString,
-                    response_serializer=scheduler__pb2.NodeInfoResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.ScheduleRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.NodeInfoResponse.SerializeToString,
             ),
             'GetNodeInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetNodeInfo,
-                    request_deserializer=scheduler__pb2.NodeInfoRequest.FromString,
-                    response_serializer=scheduler__pb2.NodeInfoResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.NodeInfoRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.NodeInfoResponse.SerializeToString,
             ),
             'MaybeUpgrade': grpc.unary_unary_rpc_method_handler(
                     servicer.MaybeUpgrade,
-                    request_deserializer=scheduler__pb2.UpgradeRequest.FromString,
-                    response_serializer=scheduler__pb2.UpgradeResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.UpgradeRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.UpgradeResponse.SerializeToString,
             ),
             'ListInviteCodes': grpc.unary_unary_rpc_method_handler(
                     servicer.ListInviteCodes,
-                    request_deserializer=scheduler__pb2.ListInviteCodesRequest.FromString,
-                    response_serializer=scheduler__pb2.ListInviteCodesResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.ListInviteCodesRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.ListInviteCodesResponse.SerializeToString,
             ),
             'ExportNode': grpc.unary_unary_rpc_method_handler(
                     servicer.ExportNode,
-                    request_deserializer=scheduler__pb2.ExportNodeRequest.FromString,
-                    response_serializer=scheduler__pb2.ExportNodeResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.ExportNodeRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.ExportNodeResponse.SerializeToString,
             ),
             'AddOutgoingWebhook': grpc.unary_unary_rpc_method_handler(
                     servicer.AddOutgoingWebhook,
-                    request_deserializer=scheduler__pb2.AddOutgoingWebhookRequest.FromString,
-                    response_serializer=scheduler__pb2.AddOutgoingWebhookResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.AddOutgoingWebhookRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.AddOutgoingWebhookResponse.SerializeToString,
             ),
             'ListOutgoingWebhooks': grpc.unary_unary_rpc_method_handler(
                     servicer.ListOutgoingWebhooks,
-                    request_deserializer=scheduler__pb2.ListOutgoingWebhooksRequest.FromString,
-                    response_serializer=scheduler__pb2.ListOutgoingWebhooksResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.ListOutgoingWebhooksRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.ListOutgoingWebhooksResponse.SerializeToString,
             ),
             'DeleteWebhooks': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteWebhooks,
-                    request_deserializer=scheduler__pb2.DeleteOutgoingWebhooksRequest.FromString,
-                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.DeleteOutgoingWebhooksRequest.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
             ),
             'RotateOutgoingWebhookSecret': grpc.unary_unary_rpc_method_handler(
                     servicer.RotateOutgoingWebhookSecret,
-                    request_deserializer=scheduler__pb2.RotateOutgoingWebhookSecretRequest.FromString,
-                    response_serializer=scheduler__pb2.WebhookSecretResponse.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.WebhookSecretResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -432,8 +432,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/Register',
-            scheduler__pb2.RegistrationRequest.SerializeToString,
-            scheduler__pb2.RegistrationResponse.FromString,
+            glclient_dot_scheduler__pb2.RegistrationRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.RegistrationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -449,8 +449,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/Recover',
-            scheduler__pb2.RecoveryRequest.SerializeToString,
-            scheduler__pb2.RecoveryResponse.FromString,
+            glclient_dot_scheduler__pb2.RecoveryRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.RecoveryResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -466,8 +466,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/GetChallenge',
-            scheduler__pb2.ChallengeRequest.SerializeToString,
-            scheduler__pb2.ChallengeResponse.FromString,
+            glclient_dot_scheduler__pb2.ChallengeRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.ChallengeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -483,8 +483,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/Schedule',
-            scheduler__pb2.ScheduleRequest.SerializeToString,
-            scheduler__pb2.NodeInfoResponse.FromString,
+            glclient_dot_scheduler__pb2.ScheduleRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.NodeInfoResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -500,8 +500,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/GetNodeInfo',
-            scheduler__pb2.NodeInfoRequest.SerializeToString,
-            scheduler__pb2.NodeInfoResponse.FromString,
+            glclient_dot_scheduler__pb2.NodeInfoRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.NodeInfoResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -517,8 +517,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/MaybeUpgrade',
-            scheduler__pb2.UpgradeRequest.SerializeToString,
-            scheduler__pb2.UpgradeResponse.FromString,
+            glclient_dot_scheduler__pb2.UpgradeRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.UpgradeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -534,8 +534,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ListInviteCodes',
-            scheduler__pb2.ListInviteCodesRequest.SerializeToString,
-            scheduler__pb2.ListInviteCodesResponse.FromString,
+            glclient_dot_scheduler__pb2.ListInviteCodesRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.ListInviteCodesResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -551,8 +551,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ExportNode',
-            scheduler__pb2.ExportNodeRequest.SerializeToString,
-            scheduler__pb2.ExportNodeResponse.FromString,
+            glclient_dot_scheduler__pb2.ExportNodeRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.ExportNodeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -568,8 +568,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/AddOutgoingWebhook',
-            scheduler__pb2.AddOutgoingWebhookRequest.SerializeToString,
-            scheduler__pb2.AddOutgoingWebhookResponse.FromString,
+            glclient_dot_scheduler__pb2.AddOutgoingWebhookRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.AddOutgoingWebhookResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -585,8 +585,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/ListOutgoingWebhooks',
-            scheduler__pb2.ListOutgoingWebhooksRequest.SerializeToString,
-            scheduler__pb2.ListOutgoingWebhooksResponse.FromString,
+            glclient_dot_scheduler__pb2.ListOutgoingWebhooksRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.ListOutgoingWebhooksResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -602,8 +602,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/DeleteWebhooks',
-            scheduler__pb2.DeleteOutgoingWebhooksRequest.SerializeToString,
-            greenlight__pb2.Empty.FromString,
+            glclient_dot_scheduler__pb2.DeleteOutgoingWebhooksRequest.SerializeToString,
+            glclient_dot_greenlight__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -619,8 +619,8 @@ class Scheduler(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Scheduler/RotateOutgoingWebhookSecret',
-            scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
-            scheduler__pb2.WebhookSecretResponse.FromString,
+            glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.WebhookSecretResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -637,8 +637,8 @@ class DebugStub(object):
         """
         self.ReportSignerRejection = channel.unary_unary(
                 '/scheduler.Debug/ReportSignerRejection',
-                request_serializer=scheduler__pb2.SignerRejection.SerializeToString,
-                response_deserializer=greenlight__pb2.Empty.FromString,
+                request_serializer=glclient_dot_scheduler__pb2.SignerRejection.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
                 )
 
 
@@ -664,8 +664,8 @@ def add_DebugServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'ReportSignerRejection': grpc.unary_unary_rpc_method_handler(
                     servicer.ReportSignerRejection,
-                    request_deserializer=scheduler__pb2.SignerRejection.FromString,
-                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+                    request_deserializer=glclient_dot_scheduler__pb2.SignerRejection.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -690,7 +690,7 @@ class Debug(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/scheduler.Debug/ReportSignerRejection',
-            scheduler__pb2.SignerRejection.SerializeToString,
-            greenlight__pb2.Empty.FromString,
+            glclient_dot_scheduler__pb2.SignerRejection.SerializeToString,
+            glclient_dot_greenlight__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
