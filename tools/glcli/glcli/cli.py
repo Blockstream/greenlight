@@ -591,7 +591,7 @@ def listinvoices(ctx):
 @click.pass_context
 def listpays(ctx):
     node = ctx.obj.get_node()
-    res = node.list_pays()
+    res = node.listpays()
     pbprint(res)
 
 
