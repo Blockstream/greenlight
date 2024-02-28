@@ -12,9 +12,9 @@ PROTODIR=${REPO}/libs/proto
 
 PYPROTOC_OPTS = \
 	-I ${PROTODIR} \
-	--python_out=${PYDIR}/glclient \
-	--grpc_python_out=${PYDIR}/glclient \
-	--mypy_out=${PYDIR}/glclient \
+	--python_out=${PYDIR} \
+	--grpc_python_out=${PYDIR} \
+	--mypy_out=${PYDIR} \
 	--experimental_allow_proto3_optional
 
 PYPROTOS = \
@@ -24,19 +24,14 @@ PYPROTOS = \
 	${PYDIR}/glclient/scheduler_pb2_grpc.py
 
 PROTOSRC = \
-	${PROTODIR}/scheduler.proto \
-	${PROTODIR}/greenlight.proto \
-	${PROTODIR}/node.proto
+	${PROTODIR}/glclient/scheduler.proto \
+	${PROTODIR}/glclient/greenlight.proto \
 
 GENALL += ${PYPROTOS}
 
 pygrpc: ${PROTOSRC}
-	python -m grpc_tools.protoc ${PYPROTOC_OPTS} scheduler.proto
-	python -m grpc_tools.protoc ${PYPROTOC_OPTS} greenlight.proto
-	sed -i 's/import scheduler_pb2 as scheduler__pb2/from . import scheduler_pb2 as scheduler__pb2/g' ${PYDIR}/glclient/scheduler_pb2_grpc.py
-	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/scheduler_pb2_grpc.py
-	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/scheduler_pb2.py
-	sed -i 's/import greenlight_pb2 as greenlight__pb2/from . import greenlight_pb2 as greenlight__pb2/g' ${PYDIR}/glclient/greenlight_pb2_grpc.py
+	python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
+	python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
 
 check-py:
 	cd ${PYDIR}; mypy glclient

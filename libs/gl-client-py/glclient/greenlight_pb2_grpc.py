@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from . import greenlight_pb2 as greenlight__pb2
+from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 
 
 class NodeStub(object):
@@ -30,33 +30,33 @@ class NodeStub(object):
         """
         self.StreamIncoming = channel.unary_stream(
                 '/greenlight.Node/StreamIncoming',
-                request_serializer=greenlight__pb2.StreamIncomingFilter.SerializeToString,
-                response_deserializer=greenlight__pb2.IncomingPayment.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.IncomingPayment.FromString,
                 )
         self.StreamLog = channel.unary_stream(
                 '/greenlight.Node/StreamLog',
-                request_serializer=greenlight__pb2.StreamLogRequest.SerializeToString,
-                response_deserializer=greenlight__pb2.LogEntry.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.StreamLogRequest.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.LogEntry.FromString,
                 )
         self.StreamCustommsg = channel.unary_stream(
                 '/greenlight.Node/StreamCustommsg',
-                request_serializer=greenlight__pb2.StreamCustommsgRequest.SerializeToString,
-                response_deserializer=greenlight__pb2.Custommsg.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.StreamCustommsgRequest.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Custommsg.FromString,
                 )
         self.StreamHsmRequests = channel.unary_stream(
                 '/greenlight.Node/StreamHsmRequests',
-                request_serializer=greenlight__pb2.Empty.SerializeToString,
-                response_deserializer=greenlight__pb2.HsmRequest.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.HsmRequest.FromString,
                 )
         self.RespondHsmRequest = channel.unary_unary(
                 '/greenlight.Node/RespondHsmRequest',
-                request_serializer=greenlight__pb2.HsmResponse.SerializeToString,
-                response_deserializer=greenlight__pb2.Empty.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.HsmResponse.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
                 )
         self.Configure = channel.unary_unary(
                 '/greenlight.Node/Configure',
-                request_serializer=greenlight__pb2.GlConfig.SerializeToString,
-                response_deserializer=greenlight__pb2.Empty.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.GlConfig.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
                 )
 
 
@@ -144,33 +144,33 @@ def add_NodeServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'StreamIncoming': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamIncoming,
-                    request_deserializer=greenlight__pb2.StreamIncomingFilter.FromString,
-                    response_serializer=greenlight__pb2.IncomingPayment.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.StreamIncomingFilter.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.IncomingPayment.SerializeToString,
             ),
             'StreamLog': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamLog,
-                    request_deserializer=greenlight__pb2.StreamLogRequest.FromString,
-                    response_serializer=greenlight__pb2.LogEntry.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.StreamLogRequest.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.LogEntry.SerializeToString,
             ),
             'StreamCustommsg': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamCustommsg,
-                    request_deserializer=greenlight__pb2.StreamCustommsgRequest.FromString,
-                    response_serializer=greenlight__pb2.Custommsg.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.StreamCustommsgRequest.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Custommsg.SerializeToString,
             ),
             'StreamHsmRequests': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamHsmRequests,
-                    request_deserializer=greenlight__pb2.Empty.FromString,
-                    response_serializer=greenlight__pb2.HsmRequest.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.HsmRequest.SerializeToString,
             ),
             'RespondHsmRequest': grpc.unary_unary_rpc_method_handler(
                     servicer.RespondHsmRequest,
-                    request_deserializer=greenlight__pb2.HsmResponse.FromString,
-                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.HsmResponse.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
             ),
             'Configure': grpc.unary_unary_rpc_method_handler(
                     servicer.Configure,
-                    request_deserializer=greenlight__pb2.GlConfig.FromString,
-                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.GlConfig.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -208,8 +208,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamIncoming',
-            greenlight__pb2.StreamIncomingFilter.SerializeToString,
-            greenlight__pb2.IncomingPayment.FromString,
+            glclient_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
+            glclient_dot_greenlight__pb2.IncomingPayment.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -225,8 +225,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamLog',
-            greenlight__pb2.StreamLogRequest.SerializeToString,
-            greenlight__pb2.LogEntry.FromString,
+            glclient_dot_greenlight__pb2.StreamLogRequest.SerializeToString,
+            glclient_dot_greenlight__pb2.LogEntry.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -242,8 +242,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamCustommsg',
-            greenlight__pb2.StreamCustommsgRequest.SerializeToString,
-            greenlight__pb2.Custommsg.FromString,
+            glclient_dot_greenlight__pb2.StreamCustommsgRequest.SerializeToString,
+            glclient_dot_greenlight__pb2.Custommsg.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -259,8 +259,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/greenlight.Node/StreamHsmRequests',
-            greenlight__pb2.Empty.SerializeToString,
-            greenlight__pb2.HsmRequest.FromString,
+            glclient_dot_greenlight__pb2.Empty.SerializeToString,
+            glclient_dot_greenlight__pb2.HsmRequest.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -276,8 +276,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/greenlight.Node/RespondHsmRequest',
-            greenlight__pb2.HsmResponse.SerializeToString,
-            greenlight__pb2.Empty.FromString,
+            glclient_dot_greenlight__pb2.HsmResponse.SerializeToString,
+            glclient_dot_greenlight__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -293,8 +293,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/greenlight.Node/Configure',
-            greenlight__pb2.GlConfig.SerializeToString,
-            greenlight__pb2.Empty.FromString,
+            glclient_dot_greenlight__pb2.GlConfig.SerializeToString,
+            glclient_dot_greenlight__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -310,13 +310,13 @@ class HsmStub(object):
         """
         self.Request = channel.unary_unary(
                 '/greenlight.Hsm/Request',
-                request_serializer=greenlight__pb2.HsmRequest.SerializeToString,
-                response_deserializer=greenlight__pb2.HsmResponse.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.HsmRequest.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.HsmResponse.FromString,
                 )
         self.Ping = channel.unary_unary(
                 '/greenlight.Hsm/Ping',
-                request_serializer=greenlight__pb2.Empty.SerializeToString,
-                response_deserializer=greenlight__pb2.Empty.FromString,
+                request_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
                 )
 
 
@@ -340,13 +340,13 @@ def add_HsmServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Request': grpc.unary_unary_rpc_method_handler(
                     servicer.Request,
-                    request_deserializer=greenlight__pb2.HsmRequest.FromString,
-                    response_serializer=greenlight__pb2.HsmResponse.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.HsmRequest.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.HsmResponse.SerializeToString,
             ),
             'Ping': grpc.unary_unary_rpc_method_handler(
                     servicer.Ping,
-                    request_deserializer=greenlight__pb2.Empty.FromString,
-                    response_serializer=greenlight__pb2.Empty.SerializeToString,
+                    request_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -370,8 +370,8 @@ class Hsm(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/greenlight.Hsm/Request',
-            greenlight__pb2.HsmRequest.SerializeToString,
-            greenlight__pb2.HsmResponse.FromString,
+            glclient_dot_greenlight__pb2.HsmRequest.SerializeToString,
+            glclient_dot_greenlight__pb2.HsmResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -387,7 +387,7 @@ class Hsm(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/greenlight.Hsm/Ping',
-            greenlight__pb2.Empty.SerializeToString,
-            greenlight__pb2.Empty.FromString,
+            glclient_dot_greenlight__pb2.Empty.SerializeToString,
+            glclient_dot_greenlight__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -1,3 +1,3 @@
 fn main() {
-    tonic_build::compile_protos("../proto/greenlight.proto").unwrap();
+    tonic_build::compile_protos("../proto/glclient/greenlight.proto").unwrap();
 }

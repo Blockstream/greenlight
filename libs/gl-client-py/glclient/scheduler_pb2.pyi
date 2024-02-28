@@ -4,11 +4,11 @@ isort:skip_file
 """
 import builtins
 import collections.abc
+import glclient.greenlight_pb2
 import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
-import greenlight_pb2
 import sys
 import typing
 
@@ -579,13 +579,13 @@ class SignerRejection(google.protobuf.message.Message):
     msg: builtins.str
     """A human-readable description of what went wrong"""
     @property
-    def request(self) -> greenlight_pb2.HsmRequest: ...
+    def request(self) -> glclient.greenlight_pb2.HsmRequest: ...
     git_version: builtins.str
     def __init__(
         self,
         *,
         msg: builtins.str = ...,
-        request: greenlight_pb2.HsmRequest | None = ...,
+        request: glclient.greenlight_pb2.HsmRequest | None = ...,
         git_version: builtins.str = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["request", b"request"]) -> builtins.bool: ...
