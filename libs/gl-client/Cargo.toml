@@ -57,6 +57,7 @@ async-trait = "0.1.72"
 rand = "0.8.5"
 uuid = {version = "1.4.0", features=["serde"]}
 time = { version = "0.3", features = ["macros"] }
+x509-certificate = "0.23.1"
 
 [build-dependencies]
 tonic-build = "^0.8"
