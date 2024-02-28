@@ -13,7 +13,7 @@ mod lsps;
 
 pub use node::Node;
 pub use scheduler::Scheduler;
-pub use signer::Signer;
+pub use signer::{Signer, SignerHandle};
 pub use tls::TlsConfig;
 pub use lsps::LspClient;
 
@@ -36,6 +36,7 @@ pub fn backup_decrypt_with_seed(encrypted: Vec<u8>, seed: Vec<u8>) -> PyResult<V
 fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     env_logger::init();
     m.add_class::<Signer>()?;
+    m.add_class::<SignerHandle>()?;
     m.add_class::<Node>()?;
     m.add_class::<Scheduler>()?;
     m.add_class::<TlsConfig>()?;
