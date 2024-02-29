@@ -101,6 +101,7 @@ async fn process_requests(
                         request_id: request_counter.fetch_add(1, atomic::Ordering::Relaxed) as u32,
                         requests: Vec::new(),
                         signer_state: Vec::new(),
+			state_sketch: None,
                     });
                     let start_time = tokio::time::Instant::now();
                     debug!("Got a message from node: {:?}", &req);

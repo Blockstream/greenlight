@@ -317,6 +317,7 @@ impl Node for PluginNodeServer {
                     raw: msg.as_vec(),
                     requests: vec![], // No pending requests yet, nothing to authorize.
                     context: None,
+		    state_sketch: None, // TODO(cdecker) Make this a summary of our state.
                 };
 
                 if let Err(e) = tx.send(Ok(req)).await {

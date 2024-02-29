@@ -69,6 +69,12 @@ message HsmResponse {
 	// A list of updated key-value-version tuples that is to be
 	// merged into the state tracked by the plugin.
 	repeated SignerStateEntry signer_state = 5;
+
+	// A sketch summarizing the signer_state for the recipient to
+	// ensure that it has the latest state. Used in the
+	// differential sync to ensure that the diff is complete and
+	// doesn't miss some state changes.
+	SignerStateSketch state_sketch = 6;
 }
 
 message HsmRequest {
@@ -83,6 +89,8 @@ message HsmRequest {
 	// Currently active requests that are used to justify changes
 	// in state.
 	repeated PendingRequest requests = 5;
+	// Sketch to ensure we have the latest version
+	SignerStateSketch state_sketch = 6;
 }
 
 message Empty {}
@@ -489,6 +497,23 @@ message SignerStateEntry {
 	bytes value = 3;
 }
 
+// A SignerStateSketch is a summary of the signer state, not including
+// the values, but containing the metadata. It is used by the signer
+// to tell the plugin about its current status, so the plugin doesn't
+// send us an entire snapshot. In addition it can be used in the
+// incremental mode to communicate the latest state, in order to allow
+// asserting that we're not missing any state in the diff.
+message SignerStateSketch {
+  repeated SketchEntry entries = 1;
+}
+
+// The metadata of a single state entry. Does not include the value,
+// and is used to communicate the version current state.
+message SketchEntry {
+  uint64 version = 1;
+  string key = 2;
+}
+
 // This represents a grpc request that is currently pending, along
 // with the pubkey of the client issuing the request and a matching
 // signature. This allows the signer to verify that the state changes
@@ -499,7 +524,7 @@ message PendingRequest {
 	string uri = 2;
 	bytes signature = 3;
 	bytes pubkey = 4;
-        uint64 timestamp = 5;
+	uint64 timestamp = 5;
 }
 
 
@@ -517,8 +542,8 @@ message NodeConfig {
 
 
 // The `GlConfig` is used to pass greenlight-specific startup parameters
-// to the node. The `gl-plugin` will look for a serialized config object in 
-// the node's datastore to load these values from. Please refer to the 
+// to the node. The `gl-plugin` will look for a serialized config object in
+// the node's datastore to load these values from. Please refer to the
 // individual fields to learn what they do.
 message GlConfig {
 	string close_to_addr = 1;

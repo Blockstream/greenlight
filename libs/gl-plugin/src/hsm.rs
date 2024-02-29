@@ -63,6 +63,7 @@ impl Hsm for StagingHsmServer {
                 request_id: req.request_id,
                 raw: response,
                 signer_state: Vec::new(),
+		state_sketch: None,
             }));
         } else if req.get_type() == 11 {
             debug!("Returning stashed init msg: {:?}", self.node_info.initmsg);
@@ -70,6 +71,7 @@ impl Hsm for StagingHsmServer {
                 request_id: req.request_id,
                 raw: self.node_info.initmsg.clone(),
                 signer_state: Vec::new(), // the signerproxy doesn't care about state
+		state_sketch: None
             }));
         } else if req.get_type() == 33 {
             debug!("Returning stashed dev-memleak response");
@@ -77,6 +79,7 @@ impl Hsm for StagingHsmServer {
                 request_id: req.request_id,
                 raw: vec![0, 133, 0],
                 signer_state: Vec::new(), // the signerproxy doesn't care about state
+		state_sketch: None
             }));
         }
 

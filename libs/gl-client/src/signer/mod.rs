@@ -441,6 +441,7 @@ impl Signer {
             raw: response.0.as_vec(),
             request_id: req.request_id,
             signer_state,
+	    state_sketch: None
         })
     }
 
