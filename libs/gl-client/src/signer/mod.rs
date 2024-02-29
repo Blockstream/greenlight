@@ -10,6 +10,7 @@ use anyhow::anyhow;
 use bytes::BufMut;
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
+use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
@@ -26,7 +27,6 @@ use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
 use vls_protocol_signer::handler::Handler;
-use lightning_signer::bitcoin::secp256k1::PublicKey;
 
 mod approver;
 mod auth;
@@ -129,14 +129,18 @@ impl Signer {
             clock,
         };
 
-        let handler = handler::RootHandlerBuilder::new(network, 0 as u64, services.clone(), sec)
+        let mut handler = handler::HandlerBuilder::new(network, 0 as u64, services.clone(), sec)
             .build()
-            .map_err(|e| anyhow!("building root_handler: {:?}", e))?;
+            .map_err(|e| anyhow!("building root_handler: {:?}", e))?
+            .0;
 
-        #[allow(deprecated)]
-        let init = Signer::initmsg(&handler.0)?;
+        // Calling init on the `InitHandler` from above puts it into a
+        // state that it can be upgraded into the `RootHandler` that
+        // we need for the rest of the run.
+        let init = Signer::initmsg(&mut handler)?;
 
         let init = HsmdInitReplyV4::from_vec(init).unwrap();
+
         let id = init.node_id.0.to_vec();
         use vls_protocol::msgs::SerBolt;
         let init = init.as_vec();
@@ -153,8 +157,8 @@ impl Signer {
         })
     }
 
-    fn handler(&self) -> Result<handler::RootHandler, anyhow::Error> {
-        Ok(handler::RootHandlerBuilder::new(
+    fn init_handler(&self) -> Result<handler::InitHandler, anyhow::Error> {
+        let h = handler::HandlerBuilder::new(
             self.network,
             0 as u64,
             self.services.clone(),
@@ -162,14 +166,23 @@ impl Signer {
         )
         .build()
         .map_err(|e| anyhow!("building root_handler: {:?}", e))?
-        .0)
+        .0;
+
+        Ok(h)
+    }
+
+    fn handler(&self) -> Result<handler::RootHandler, anyhow::Error> {
+        let mut h = self.init_handler()?;
+        h.handle(Signer::initreq())
+            .expect("handling the hsmd_init message");
+        Ok(h.into_root_handler())
     }
 
     fn handler_with_approver(
         &self,
         approver: Arc<dyn Approve>,
     ) -> Result<handler::RootHandler, Error> {
-        Ok(handler::RootHandlerBuilder::new(
+        let mut h = handler::HandlerBuilder::new(
             self.network,
             0 as u64,
             self.services.clone(),
@@ -177,8 +190,11 @@ impl Signer {
         )
         .approver(approver)
         .build()
-        .map_err(|e| Error::Other(anyhow!("handler_with_approver build: {:?}", e)))?
-        .0)
+        .map_err(|e| crate::signer::Error::Other(anyhow!("Could not create handler: {:?}", e)))?
+        .0;
+        h.handle(Signer::initreq())
+            .expect("handling the hsmd_init message");
+        Ok(h.into_root_handler())
     }
 
     /// Create an `init` request that we can pass to the signer.
@@ -217,8 +233,8 @@ impl Signer {
         })
     }
 
-    fn initmsg(handler: &vls_protocol_signer::handler::RootHandler) -> Result<Vec<u8>, Error> {
-        Ok(handler.handle(Signer::initreq()).unwrap().0.as_vec())
+    fn initmsg(handler: &mut vls_protocol_signer::handler::InitHandler) -> Result<Vec<u8>, Error> {
+        Ok(handler.handle(Signer::initreq()).unwrap().1.as_vec())
     }
 
     /// Filter out any request that is not signed, such that the
@@ -457,10 +473,14 @@ impl Signer {
     /// background sync runs, we need to stash them at the `scheduler`
     /// so we can start without a signer present.
     pub fn get_startup_messages(&self) -> Vec<StartupMessage> {
+        let mut init_handler = self.init_handler().unwrap();
+
+        let init = StartupMessage {
+            request: Signer::initreq().inner().as_vec(),
+            response: init_handler.handle(Signer::initreq()).unwrap().1.as_vec(),
+        };
+
         let requests = vec![
-            // The classical init message; response will either be 111
-            // or 113 depending on signer proto version.
-            Signer::initreq(),
             // v22.11 introduced an addiotiona startup message, the
             // bolt12 key generation
             Signer::bolt12initreq(),
@@ -476,7 +496,7 @@ impl Signer {
             .map(|r| self.handler().unwrap().handle(r).unwrap().0.as_vec())
             .collect();
 
-        serialized
+        let mut msgs: Vec<StartupMessage> = serialized
             .into_iter()
             .zip(responses)
             .map(|r| {
@@ -487,7 +507,11 @@ impl Signer {
                     response: r.1,
                 }
             })
-            .collect()
+            .collect();
+
+        msgs.insert(0, init);
+
+        msgs
     }
 
     pub fn bip32_ext_key(&self) -> Vec<u8> {
@@ -503,7 +527,7 @@ impl Signer {
     }
 
     pub fn legacy_bip32_ext_key(&self) -> Vec<u8> {
-        let handler = self.handler().expect("retrieving the handler");
+        let mut handler = self.init_handler().expect("retrieving the handler");
         let req = vls_protocol::msgs::Message::HsmdInit(vls_protocol::msgs::HsmdInit {
             key_version: vls_protocol::model::Bip32KeyVersion {
                 pubkey_version: 0,
@@ -522,7 +546,7 @@ impl Signer {
         let initmsg = handler
             .handle(req)
             .expect("handling legacy init message")
-            .0
+            .1
             .as_vec();
         initmsg[35..].to_vec()
     }
