@@ -13,7 +13,6 @@ jobs:
   build:
     permissions:
       pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Github repo
@@ -68,7 +67,7 @@ jobs:
         env:
           DOCSBRANCH: "gh-pages"
           DOCSREMOTE: "origin"
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.GH_PAGES_PAT }}"
         run: |
           rm libs/gl-client-py/glclient/*.pyi
           PATH=$(pwd)/.venv/bin:$PATH make docs
