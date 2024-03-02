@@ -90,7 +90,6 @@ class Node:
     def __init__(
         self,
         node_id: bytes,
-        network: str,
         grpc_uri: str,
         creds: Credentials,
     ) -> None: ...

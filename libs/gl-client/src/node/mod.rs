@@ -5,7 +5,6 @@ use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
 use crate::utils;
 use anyhow::{anyhow, Result};
-use lightning_signer::bitcoin::Network;
 use log::{debug, info, trace};
 use tonic::transport::{Channel, Uri};
 use tower::ServiceBuilder;
@@ -33,7 +32,6 @@ pub trait GrpcClient {
 #[derive(Clone)]
 pub struct Node {
     node_id: Vec<u8>,
-    network: Network,
     tls: TlsConfig,
     rune: String,
 }
@@ -57,13 +55,12 @@ impl GrpcClient for ClnClient {
 }
 
 impl Node {
-    pub fn new(node_id: Vec<u8>, network: Network, creds: Credentials) -> Result<Node> {
+    pub fn new(node_id: Vec<u8>, creds: Credentials) -> Result<Node> {
         creds.is_device()?;
         let tls = creds.tls_config()?;
         let rune = creds.rune()?;
         Ok(Node {
             node_id,
-            network,
             tls,
             rune,
         })

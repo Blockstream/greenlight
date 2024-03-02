@@ -47,7 +47,7 @@ class GetInfoApp:
     def get_info(self) -> nodepb.GetInfoResponse:
         """Requests getinfo on the gltesting greenlight node"""
         res = self.scheduler().schedule()
-        node = Node(self.node_id, self.network, self.tls, res.grpc_uri)
+        node = Node(self.node_id, self.tls, res.grpc_uri)
         return node.get_info()
 
 

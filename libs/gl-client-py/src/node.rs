@@ -2,7 +2,6 @@ use crate::lsps::LspClient;
 use crate::runtime::exec;
 use crate::Credentials;
 use gl_client as gl;
-use gl_client::bitcoin::Network;
 use gl_client::pb;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
@@ -21,15 +20,10 @@ impl Node {
     #[new]
     fn new(
         node_id: Vec<u8>,
-        network: String,
         grpc_uri: String,
         creds: Credentials,
     ) -> PyResult<Self> {
-        let network: Network = match network.parse() {
-            Ok(v) => v,
-            Err(_) => return Err(PyValueError::new_err("unknown network")),
-        };
-        let inner = gl::node::Node::new(node_id, network, creds.inner)
+        let inner = gl::node::Node::new(node_id, creds.inner)
             .map_err(|s| PyValueError::new_err(s.to_string()))?;
         return node_from_inner(inner, grpc_uri);
     }

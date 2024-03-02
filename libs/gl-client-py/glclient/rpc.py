@@ -18,7 +18,6 @@ class Node(object):
         self.grpc_uri = grpc_uri
         self.inner = native.Node(
             node_id=node_id,
-            network=network,
             grpc_uri=grpc_uri,
             creds=creds,
         )
