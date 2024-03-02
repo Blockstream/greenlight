@@ -814,7 +814,7 @@ impl Signer {
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
     pub async fn node(&self, creds: Credentials) -> Result<Client, anyhow::Error> {
-        node::Node::new(self.node_id(), self.network, creds)?
+        node::Node::new(self.node_id(), creds)?
             .schedule()
             .await
     }

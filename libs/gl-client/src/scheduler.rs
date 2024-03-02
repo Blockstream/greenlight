@@ -344,7 +344,7 @@ impl Scheduler {
         T: GrpcClient,
     {
         let res = self.schedule().await?;
-        node::Node::new(self.node_id.clone(), self.network, creds)?
+        node::Node::new(self.node_id.clone(), creds)?
             .connect(res.grpc_uri)
             .await
     }

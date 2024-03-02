@@ -96,7 +96,6 @@ class Scheduler(object):
         res = self.schedule()
         return Node(
             node_id=self.node_id,
-            network=self.network,
             grpc_uri=res.grpc_uri,
             creds=creds,
         )
@@ -127,12 +126,12 @@ class Scheduler(object):
 class Node(object):
 
     def __init__(
-        self, node_id: bytes, network: str, grpc_uri: str, creds: Credentials
+        self, node_id: bytes, grpc_uri: str, creds: Credentials
     ) -> None:
         self.creds = creds
         self.grpc_uri = grpc_uri
         self.inner = native.Node(
-            node_id=node_id, network=network, grpc_uri=grpc_uri, creds=creds
+            node_id=node_id, grpc_uri=grpc_uri, creds=creds
         )
         self.logger = logging.getLogger("glclient.Node")
 

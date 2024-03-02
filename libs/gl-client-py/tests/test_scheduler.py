@@ -34,7 +34,7 @@ def test_schedule_call(sclient, signer):
     req = sclient.register(signer)
     res = sclient.schedule()
     creds = Credentials.as_device().from_bytes(req.creds).build()
-    node = Node(signer.node_id(), "regtest", res.grpc_uri, creds=creds)
+    node = Node(signer.node_id(), res.grpc_uri, creds=creds)
     info = node.get_info()
     assert info
 
