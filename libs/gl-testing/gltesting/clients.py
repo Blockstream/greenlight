@@ -84,25 +84,17 @@ class Client:
         credspath = self.directory / "greenlight.auth"
         if credspath.exists():
             self.log.info(f"Loading credentials data from {credspath}")
-            creds = (
-                glclient.Credentials.as_device()
-                .from_path(str(credspath.absolute()))
-                .build()
-            )
+            creds = glclient.Credentials.from_path(str(credspath.absolute()))
             return creds
         else:
             certpath = self.directory / "nobody.crt"
             keypath = self.directory / "nobody-key.pem"
             capath = self.directory / "ca.crt"
             self.log.info(f"Loading generic nobody credentials from {self.directory}")
-            creds = (
-                glclient.Credentials.as_nobody()
-                .with_identity(
-                    certpath.open(mode="rb").read(),
-                    keypath.open(mode="rb").read(),
-                )
-                .with_ca(capath.open(mode="rb").read())
-                .build()
+            creds = glclient.Credentials.nobody_with(
+                certpath.open(mode="rb").read(),
+                keypath.open(mode="rb").read(),
+                capath.open(mode="rb").read(),
             )
             return creds
 

@@ -15,102 +15,6 @@ pub enum CredentialType {
 }
 
 #[pyclass]
-pub struct DeviceBuilder {
-    inner: credentials::Builder<credentials::Device>,
-}
-
-#[pymethods]
-impl DeviceBuilder {
-    #[new]
-    pub fn new() -> Self {
-        Self {
-            inner: credentials::Builder::as_device(),
-        }
-    }
-
-    pub fn from_path(&mut self, path: &str) -> Result<Self> {
-        let inner = self.inner.clone().from_path(path)?;
-        Ok(Self { inner })
-    }
-
-    pub fn from_bytes(&self, data: &[u8]) -> Result<Self> {
-        let inner = self.inner.clone().from_bytes(data)?;
-        Ok(Self { inner })
-    }
-
-    pub fn with_identity(&self, cert: &[u8], key: &[u8]) -> Result<Self> {
-        let inner = self.inner.clone().with_identity(cert, key);
-        Ok(Self { inner })
-    }
-
-    pub fn with_ca(&self, ca: &[u8]) -> Result<Self> {
-        let inner = self.inner.clone().with_ca(ca);
-        Ok(Self { inner })
-    }
-
-    pub fn with_rune(&self, rune: &str) -> Self {
-        let inner = self.inner.clone().with_rune(rune);
-        Self { inner }
-    }
-
-    pub fn upgrade(&self, scheduler: &Scheduler, signer: &Signer) -> Result<Self> {
-        let inner = exec(async move {
-            self.inner
-                .clone()
-                .upgrade(&scheduler.inner, &signer.inner)
-                .await
-        })?;
-        Ok(Self { inner })
-    }
-
-    pub fn build(&self) -> Result<Credentials> {
-        let inner = self.inner.clone().build()?;
-        Ok(Credentials {
-            typ: CredentialType::Device,
-            inner,
-        })
-    }
-}
-
-#[pyclass]
-pub struct NobodyBuilder {
-    inner: credentials::Builder<credentials::Nobody>,
-}
-
-#[pymethods]
-impl NobodyBuilder {
-    #[new]
-    pub fn new() -> Self {
-        Self {
-            inner: credentials::Builder::as_nobody(),
-        }
-    }
-
-    pub fn with_default(&self) -> Result<Self> {
-        let inner = self.inner.clone().with_default()?;
-        Ok(Self { inner })
-    }
-
-    pub fn with_identity(&self, cert: &[u8], key: &[u8]) -> Result<Self> {
-        let inner = self.inner.clone().with_identity(cert, key);
-        Ok(Self { inner })
-    }
-
-    pub fn with_ca(&self, ca: &[u8]) -> Result<Self> {
-        let inner = self.inner.clone().with_ca(ca);
-        Ok(Self { inner })
-    }
-
-    pub fn build(&self) -> Result<Credentials> {
-        let inner = self.inner.clone().build();
-        Ok(Credentials {
-            typ: CredentialType::Nobody,
-            inner,
-        })
-    }
-}
-
-#[pyclass]
 #[derive(Clone)]
 pub struct Credentials {
     pub typ: CredentialType,
@@ -120,13 +24,52 @@ pub struct Credentials {
 #[pymethods]
 impl Credentials {
     #[staticmethod]
-    pub fn as_device() -> DeviceBuilder {
-        DeviceBuilder::new()
+    pub fn nobody() -> Credentials {
+        let inner = credentials::Nobody::new();
+        Credentials {
+            typ: CredentialType::Nobody,
+            inner,
+        }
     }
 
     #[staticmethod]
-    pub fn as_nobody() -> NobodyBuilder {
-        NobodyBuilder::new()
+    pub fn nobody_with(cert: &[u8], key: &[u8], ca: &[u8]) -> Credentials {
+        let inner = credentials::Nobody::with(cert, key, ca);
+        Credentials {
+            typ: CredentialType::Nobody,
+            inner,
+        }
+    }
+
+    #[staticmethod]
+    pub fn from_path(path: &str) -> Credentials {
+        let inner = credentials::Device::from_path(path);
+        Credentials {
+            typ: CredentialType::Device,
+            inner,
+        }
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> Credentials {
+        let inner = credentials::Device::from_bytes(data);
+        Credentials {
+            typ: CredentialType::Device,
+            inner,
+        }
+    }
+
+    pub fn upgrade(&self, scheduler: &Scheduler, signer: &Signer) -> Result<Credentials> {
+        let inner = exec(async move {
+            self.inner
+                .clone()
+                .upgrade(&scheduler.inner, &signer.inner)
+                .await
+        })?;
+        Ok(Self {
+            typ: self.typ.clone(),
+            inner,
+        })
     }
 
     pub fn tls_config(&self) -> Result<TlsConfig> {
