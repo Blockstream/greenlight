@@ -131,7 +131,7 @@ impl Scheduler {
     }
 
     pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
-        let tls = crate::tls::TlsConfig::new()?;
+        let tls = crate::tls::TlsConfig::new();
         let uri = utils::scheduler_uri();
         Self::with(node_id, network, uri, &tls).await
     }
@@ -142,7 +142,7 @@ impl Scheduler {
         uri: String,
         creds: Credentials,
     ) -> Result<Scheduler> {
-        let tls: TlsConfig = creds.tls_config()?;
+        let tls: TlsConfig = creds.tls_config();
         let scheduler = Self::with(node_id, network, uri, &tls).await?;
         Ok(scheduler)
     }
@@ -343,7 +343,7 @@ impl Scheduler {
     where
         T: GrpcClient,
     {
-        let cert_node_id = self.get_node_id_from_tls_config(&creds.tls_config()?)?;
+        let cert_node_id = self.get_node_id_from_tls_config(&creds.tls_config())?;
 
         if cert_node_id != self.node_id {
             return Err(anyhow!("The node_id defined on the Credential's certificate does not match the node_id the scheduler was initialized with\nExpected {}, got {}", hex::encode(&self.node_id), hex::encode(&cert_node_id)));

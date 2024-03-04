@@ -1007,7 +1007,7 @@ mod tests {
         let signer = Signer::new(
             vec![0 as u8; 32],
             Network::Bitcoin,
-            TlsConfig::new().unwrap(),
+            TlsConfig::new(),
         )
         .unwrap();
 
@@ -1030,7 +1030,7 @@ mod tests {
         let signer = Signer::new(
             vec![0 as u8; 32],
             Network::Bitcoin,
-            TlsConfig::new().unwrap(),
+            TlsConfig::new(),
         )
         .unwrap();
 
@@ -1053,7 +1053,7 @@ mod tests {
     #[test]
     fn test_sign_message_max_size() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new()).unwrap();
 
         // We test if we reject a message that is too long.
         let msg = [0u8; u16::MAX as usize + 1];
@@ -1070,7 +1070,7 @@ mod tests {
     #[test]
     fn test_legacy_bip32_key() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new().unwrap()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new()).unwrap();
 
         let bip32 = signer.legacy_bip32_ext_key();
         let expected: Vec<u8> = vec![
@@ -1090,7 +1090,7 @@ mod tests {
     #[test]
     fn test_rune_expects_pubkey() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, tls::TlsConfig::new().unwrap()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, tls::TlsConfig::new()).unwrap();
 
         let alt = "pubkey=112233";
         let wrong_alt = "pubkey^112233";
@@ -1113,7 +1113,7 @@ mod tests {
     #[test]
     fn test_rune_expansion() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new().unwrap()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new()).unwrap();
         let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
 
         let new_rune = signer
@@ -1126,7 +1126,7 @@ mod tests {
     #[test]
     fn test_rune_checks_method() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new().unwrap()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new()).unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();
