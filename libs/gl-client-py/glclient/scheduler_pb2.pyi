@@ -4,7 +4,8 @@ isort:skip_file
 """
 import builtins
 import collections.abc
-import glclient.greenlight_pb2
+import glclient.greenlighu
+t_pb2
 import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.internal.enum_type_wrapper
