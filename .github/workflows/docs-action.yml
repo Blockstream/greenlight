@@ -13,6 +13,8 @@ jobs:
   build:
     permissions:
       pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Github repo
@@ -62,7 +64,6 @@ jobs:
         run: |
           (cd libs/gl-client-py; ../../.venv/bin/maturin develop)
 
-
       - name: Build docs
         env:
           DOCSBRANCH: "gh-pages"
@@ -71,3 +72,9 @@ jobs:
         run: |
           rm libs/gl-client-py/glclient/*.pyi
           PATH=$(pwd)/.venv/bin:$PATH make docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site

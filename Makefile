@@ -153,6 +153,8 @@ docs:
 	mkdir -p ${REPO_ROOT}/site/
 	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/ --verbose)
 	pdoc -o site/py glclient
+
+docs-publish: docs
 	ghp-import ${REPO_ROOT}/site \
 	  --no-jekyll \
 	  -m "Deploy docs [skip ci]" \
