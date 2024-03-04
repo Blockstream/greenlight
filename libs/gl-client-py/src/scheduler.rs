@@ -1,9 +1,8 @@
 use crate::runtime::exec;
-use crate::Signer;
 use crate::{pb, pb::scheduler::scheduler_client::SchedulerClient};
+use crate::{Credentials, Signer};
 use anyhow::Result;
 use gl_client::bitcoin::Network;
-use gl_client::tls::TlsConfig;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -16,13 +15,13 @@ type Client = SchedulerClient<Channel>;
 pub struct Scheduler {
     node_id: Vec<u8>,
     pub inner: gl_client::scheduler::Scheduler,
-    tls: crate::tls::TlsConfig,
+    creds: Credentials,
 }
 
 #[pymethods]
 impl Scheduler {
     #[new]
-    fn new(node_id: Vec<u8>, network: String, tls: crate::tls::TlsConfig) -> PyResult<Scheduler> {
+    fn new(node_id: Vec<u8>, network: String, creds: Credentials) -> PyResult<Scheduler> {
         let network: Network = network
             .parse()
             .map_err(|_| PyValueError::new_err("Error parsing the network"))?;
@@ -30,16 +29,12 @@ impl Scheduler {
         let id = node_id.clone();
         let uri = gl_client::utils::scheduler_uri();
 
-        let ctls = tls.clone();
+        let ccreds = creds.clone();
         let res = exec(async move {
-            gl_client::scheduler::Scheduler::builder(
-                id,
-                network,
-                ctls.inner
-            )?
-            .with_uri(uri)
-            .build()
-            .await
+            gl_client::scheduler::Scheduler::builder(id, network, ccreds.inner)?
+                .with_uri(uri)
+                .connect()
+                .await
         });
 
         let inner = match res {
@@ -50,7 +45,7 @@ impl Scheduler {
         Ok(Scheduler {
             node_id,
             inner,
-            tls,
+            creds,
         })
     }
 
@@ -109,36 +104,53 @@ impl Scheduler {
     fn add_outgoing_webhook(&self, uri: String) -> PyResult<Vec<u8>> {
         let outgoing_webhook_request = pb::scheduler::AddOutgoingWebhookRequest {
             node_id: self.node_id.clone(),
-            uri
+            uri,
         };
 
-        convert(exec(async move { self.inner.add_outgoing_webhook(outgoing_webhook_request).await }))
+        convert(exec(async move {
+            self.inner
+                .add_outgoing_webhook(outgoing_webhook_request)
+                .await
+        }))
     }
 
-    fn list_outgoing_webhooks(&self) -> PyResult<Vec<u8>>{
+    fn list_outgoing_webhooks(&self) -> PyResult<Vec<u8>> {
         let list_outgoing_webhooks_request = pb::scheduler::ListOutgoingWebhooksRequest {
-            node_id: self.node_id.clone()
+            node_id: self.node_id.clone(),
         };
 
-        convert(exec(async move { self.inner.list_outgoing_webhooks(list_outgoing_webhooks_request).await }))
+        convert(exec(async move {
+            self.inner
+                .list_outgoing_webhooks(list_outgoing_webhooks_request)
+                .await
+        }))
     }
 
     fn delete_outgoing_webhooks(&self, webhook_ids: Vec<i64>) -> PyResult<Vec<u8>> {
         let delete_outgoing_webhooks_request = pb::scheduler::DeleteOutgoingWebhooksRequest {
             node_id: self.node_id.clone(),
-            ids: webhook_ids
+            ids: webhook_ids,
         };
 
-        convert(exec(async move { self.inner.delete_webhooks(delete_outgoing_webhooks_request).await }))
+        convert(exec(async move {
+            self.inner
+                .delete_webhooks(delete_outgoing_webhooks_request)
+                .await
+        }))
     }
 
     fn rotate_outgoing_webhook_secret(&self, webhook_id: i64) -> PyResult<Vec<u8>> {
-        let rotate_outgoing_webhook_secret_request = pb::scheduler::RotateOutgoingWebhookSecretRequest {
-            node_id: self.node_id.clone(),
-            webhook_id
-        };
+        let rotate_outgoing_webhook_secret_request =
+            pb::scheduler::RotateOutgoingWebhookSecretRequest {
+                node_id: self.node_id.clone(),
+                webhook_id,
+            };
 
-        convert(exec(async move { self.inner.rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request).await }))
+        convert(exec(async move {
+            self.inner
+                .rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request)
+                .await
+        }))
     }
 }
 
@@ -150,8 +162,8 @@ pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
 }
 
 impl Scheduler {
-    async fn connect_with(&self, uri: String, tls: &TlsConfig) -> Result<Client> {
-        let client_tls = tls.client_tls_config();
+    async fn connect_with(&self, uri: String, creds: &Credentials) -> Result<Client> {
+        let client_tls = creds.inner.tls_config().client_tls_config();
         let channel = Channel::from_shared(uri)?
             .tls_config(client_tls)?
             .connect()
@@ -161,6 +173,6 @@ impl Scheduler {
 
     async fn connect(&self) -> Result<Client> {
         let uri = gl_client::utils::scheduler_uri();
-        self.connect_with(uri, &self.tls.inner).await
+        self.connect_with(uri, &self.creds).await
     }
 }

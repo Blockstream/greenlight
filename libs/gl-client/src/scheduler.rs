@@ -1,13 +1,12 @@
 use crate::credentials::{self, Credentials};
 use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
-use crate::tls::{self, TlsConfig};
+use crate::tls::{self};
 use crate::{pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
 use runeauth;
-use std::convert::TryInto;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
@@ -19,7 +18,7 @@ type Client = SchedulerClient<Channel>;
 pub struct Builder {
     node_id: Vec<u8>,
     network: Network,
-    tls: TlsConfig,
+    creds: Credentials,
     uri: Option<String>,
 }
 
@@ -39,17 +38,12 @@ impl Builder {
     /// # Errors
     ///
     /// Returns an error if `tls` fails to convert into `TlsConfig`.
-    pub fn new<T>(node_id: Vec<u8>, network: Network, tls: T) -> Result<Self>
-    where
-        T: TryInto<TlsConfig>,
-        anyhow::Error: From<T::Error>,
-    {
-        let tls = tls.try_into()?;
+    pub fn new(node_id: Vec<u8>, network: Network, creds: Credentials) -> Result<Self> {
         Ok(Self {
             node_id,
             network,
             uri: None,
-            tls,
+            creds,
         })
     }
 
@@ -79,10 +73,10 @@ impl Builder {
     /// # Errors
     ///
     /// Returns an error if the `Scheduler` creation fails.
-    pub async fn build(&self) -> Result<Scheduler> {
+    pub async fn connect(&self) -> Result<Scheduler> {
         let uri = self.uri.clone().unwrap_or_else(|| utils::scheduler_uri());
         let node_id = self.node_id.clone();
-        Scheduler::with(node_id, self.network, uri, &self.tls).await
+        Scheduler::new(node_id, self.network, uri, self.creds.clone()).await
     }
 }
 
@@ -93,27 +87,23 @@ pub struct Scheduler {
     node_id: Vec<u8>,
     client: Client,
     network: Network,
-    tls: TlsConfig,
+    creds: Credentials,
 }
 
 impl Scheduler {
-    pub fn builder<T>(node_id: Vec<u8>, network: Network, tls: T) -> Result<Builder>
-    where
-        T: TryInto<TlsConfig>,
-        anyhow::Error: From<T::Error>,
-    {
-        Builder::new(node_id, network, tls)
+    pub fn builder(node_id: Vec<u8>, network: Network, creds: Credentials) -> Result<Builder> {
+        Builder::new(node_id, network, creds)
     }
 
-    pub async fn with(
+    pub async fn new(
         node_id: Vec<u8>,
         network: Network,
         uri: String,
-        tls: &TlsConfig,
+        creds: Credentials,
     ) -> Result<Scheduler> {
         debug!("Connecting to scheduler at {}", uri);
         let channel = tonic::transport::Endpoint::from_shared(uri)?
-            .tls_config(tls.inner.clone())?
+            .tls_config(creds.tls_config().inner.clone())?
             .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
             .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
             .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
@@ -126,25 +116,8 @@ impl Scheduler {
             client,
             node_id,
             network,
-            tls: tls.clone(),
+            creds,
         })
-    }
-
-    pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
-        let tls = crate::tls::TlsConfig::new();
-        let uri = utils::scheduler_uri();
-        Self::with(node_id, network, uri, &tls).await
-    }
-
-    pub async fn with_credentials(
-        node_id: Vec<u8>,
-        network: Network,
-        uri: String,
-        creds: Credentials,
-    ) -> Result<Scheduler> {
-        let tls: TlsConfig = creds.tls_config();
-        let scheduler = Self::with(node_id, network, uri, &tls).await?;
-        Ok(scheduler)
     }
 
     pub async fn register(
@@ -245,7 +218,7 @@ impl Scheduler {
         let creds = credentials::Device::with(
             res.device_cert.clone().into_bytes(),
             res.device_key.clone().into_bytes(),
-            self.tls.ca.clone(),
+            self.creds.tls_config().ca.clone(),
             res.rune.clone(),
         );
         res.creds = creds.to_bytes()?;
@@ -320,7 +293,7 @@ impl Scheduler {
         let creds = credentials::Device::with(
             res.device_cert.clone().into_bytes(),
             res.device_key.clone().into_bytes(),
-            self.tls.ca.clone(),
+            self.creds.tls_config().ca.clone(),
             res.rune.clone(),
         );
         res.creds = creds.to_bytes()?;
@@ -339,12 +312,12 @@ impl Scheduler {
         Ok(res.into_inner())
     }
 
-    pub async fn node<T>(&self, creds: Credentials) -> Result<T>
+    pub async fn node<T>(&self) -> Result<T>
     where
         T: GrpcClient,
     {
         let res = self.schedule().await?;
-        node::Node::new(self.node_id.clone(), self.network, creds)?
+        node::Node::new(self.node_id.clone(), self.network, self.creds.clone())?
             .connect(res.grpc_uri)
             .await
     }

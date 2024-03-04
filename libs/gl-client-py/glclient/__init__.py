@@ -64,11 +64,11 @@ class Signer(object):
 
 class Scheduler(object):
 
-    def __init__(self, node_id: bytes, network: str, tls: TlsConfig):
+    def __init__(self, node_id: bytes, network: str, creds: Credentials):
         self.node_id = node_id
         self.network = network
-        self.tls = tls
-        self.inner = native.Scheduler(node_id, network, tls.inner)
+        self.creds = creds
+        self.inner = native.Scheduler(node_id, network, creds)
 
     def get_node_info(self) -> schedpb.NodeInfoResponse:
         return _convert(
@@ -92,13 +92,13 @@ class Scheduler(object):
         res = schedpb.ExportNodeResponse
         return res.FromString(bytes(self.inner.export_node()))
 
-    def node(self, creds: Credentials) -> "Node":
+    def node(self) -> "Node":
         res = self.schedule()
         return Node(
             node_id=self.node_id,
             network=self.network,
             grpc_uri=res.grpc_uri,
-            creds=creds,
+            creds=self.creds,
         )
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
