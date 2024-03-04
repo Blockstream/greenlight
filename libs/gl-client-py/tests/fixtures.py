@@ -6,11 +6,8 @@ from glclient import Signer, Scheduler, Credentials, TlsConfig
 @pytest.fixture
 def creds(nobody_id):
     """Nobody credentials for the tests."""
-    creds = (
-        Credentials.as_nobody()
-        .with_identity(nobody_id.cert_chain, nobody_id.private_key)
-        .with_ca(nobody_id.caroot)
-        .build()
+    creds = Credentials.nobody_with(
+        nobody_id.cert_chain, nobody_id.private_key, nobody_id.caroot
     )
     return creds
 

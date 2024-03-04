@@ -33,7 +33,7 @@ def test_recover(sclient, signer):
 def test_schedule_call(sclient, signer):
     req = sclient.register(signer)
     res = sclient.schedule()
-    creds = Credentials.as_device().from_bytes(req.creds).build()
+    creds = Credentials.from_bytes(req.creds)
     node = Node(signer.node_id(), "regtest", res.grpc_uri, creds=creds)
     info = node.get_info()
     assert info

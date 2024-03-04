@@ -10,24 +10,20 @@ CRED_RUNE = bytes(
 
 def test_upgrade_credentials(scheduler, sclient, signer):
     creds = sclient.register(signer).creds
-    screds = Credentials.as_device().from_bytes(creds).build()
+    screds = Credentials.from_bytes(creds)
 
     # Remove rune from creds.
     creds = creds[0 : (len(creds) - len(CRED_RUNE)) + 1]
 
-    with pytest.raises(ValueError):
-        Credentials.as_device().from_bytes(creds).build()
+    # Returns no error as it defaults to empyt values but will fail once we try to 
+    # use them.
+    _creds = Credentials.from_bytes(creds)
 
-    c = (
-        Credentials.as_device()
-        .from_bytes(creds)
-        .upgrade(
-            Scheduler(
-                node_id=signer.node_id(), network="regtest", tls=TlsConfig(screds)
-            ).inner,
-            signer.inner,
-        )
-        .build()
+    c = Credentials.from_bytes(creds).upgrade(
+        Scheduler(
+            node_id=signer.node_id(), network="regtest", tls=TlsConfig(screds)
+        ).inner,
+        signer.inner,
     )
 
     assert c

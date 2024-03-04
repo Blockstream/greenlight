@@ -242,13 +242,13 @@ impl Scheduler {
 
         // Create a `credentials::Device` struct and serialize it into byte format to
         // return. This can than be stored on the device.
-        let creds = credentials::Device {
-            cert: res.device_cert.clone().into_bytes(),
-            key: res.device_key.clone().into_bytes(),
-            ca: self.tls.ca.clone(),
-            rune: res.rune.clone(),
-        };
-        res.creds = creds.into();
+        let creds = credentials::Device::with(
+            res.device_cert.clone().into_bytes(),
+            res.device_key.clone().into_bytes(),
+            self.tls.ca.clone(),
+            res.rune.clone(),
+        );
+        res.creds = creds.to_bytes()?;
 
         Ok(res)
     }
@@ -317,13 +317,13 @@ impl Scheduler {
 
         // Create a `credentials::Device` struct and serialize it into byte format to
         // return. This can than be stored on the device.
-        let creds = credentials::Device {
-            cert: res.device_cert.clone().into_bytes(),
-            key: res.device_key.clone().into_bytes(),
-            ca: self.tls.ca.clone(),
-            rune: res.rune.clone(),
-        };
-        res.creds = creds.into();
+        let creds = credentials::Device::with(
+            res.device_cert.clone().into_bytes(),
+            res.device_key.clone().into_bytes(),
+            self.tls.ca.clone(),
+            res.rune.clone(),
+        );
+        res.creds = creds.to_bytes()?;
 
         Ok(res)
     }

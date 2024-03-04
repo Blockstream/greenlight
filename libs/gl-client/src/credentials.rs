@@ -8,7 +8,7 @@ use crate::{
 /// They represent the identity of a device and can be encoded into a byte
 /// format for easy storage.
 use log::debug;
-use std::{convert::TryFrom, marker::PhantomData, path::Path};
+use std::{convert::TryFrom, path::Path};
 use thiserror;
 
 const CRED_VERSION: u32 = 1u32;
@@ -105,6 +105,17 @@ impl Credentials {
             Credentials::Device(d) => Ok(d.to_bytes()),
         }
     }
+
+    /// Uses the scheduler and the signer to upgrade a set of device
+    /// credentials.
+    pub async fn upgrade(self, scheduler: &Scheduler, signer: &Signer) -> Result<Credentials> {
+        match self {
+            Credentials::Nobody(_) => Err(Error::IsIdentityError(
+                "can not upgrade nobody credentials".to_string(),
+            )),
+            Credentials::Device(d) => d.upgrade(scheduler, signer).await,
+        }
+    }
 }
 
 impl std::fmt::Display for Credentials {
@@ -139,112 +150,116 @@ impl Default for Identity {
     }
 }
 
-/// `Builder<T>` is a flexible and generic structure for constructing different
-/// types of `Credentials`, parameterized over `T`. It supports building
-/// `Credentials` for the entities `Nobody` and `Device`, allowing for various
-/// configurations through a fluent API.
-///
-/// # Examples
-///
-/// Creating `Nobody` credentials with default settings:
-///
-/// ```
-/// use gl_client::credentials::Builder;
-/// let nobody_credentials = Builder::as_nobody()
-///     .with_default()
-///     .expect("Failed to create default Nobody credentials")
-///     .build();
-/// ```
-///
-/// Creating `Device` credentials from a file:
-///
-/// ```no_run
-/// use gl_client::credentials::Builder;
-/// let device_credentials = Builder::as_device()
-///     .from_path("path/to/credentials/file")
-///     .expect("Failed to load credentials from file")
-///     .build()
-///     .expect("Failed to build Device credentials");
-/// ```
-
+/// The `Nobody` credentials struct. This is an unauthenticated set of
+/// credentials and can only be used for registration and recovery.
 #[derive(Clone, Debug)]
-pub struct Builder<T> {
-    mark_type: PhantomData<T>,
-    version: u32,
-    identity: Identity,
-    ca: Vec<u8>,
-    rune: Option<String>,
+pub struct Nobody {
+    pub cert: Vec<u8>,
+    pub key: Vec<u8>,
+    pub ca: Vec<u8>,
 }
 
-/// `Builder<Nobody>` implementation provides methods specific to constructing
-/// `Credentials::Nobody`, which do not require a specific device configuration.
-impl Builder<Nobody> {
-    /// Creates a new `Builder<Nobody> instance with default configurations,
-    /// is the entrypoint to create `Credentials::Nobody`.
-    pub fn as_nobody() -> Builder<Nobody> {
-        Builder::default()
+impl Nobody {
+    /// Returns a new Nobody instance with default parameters.
+    pub fn new() -> Credentials {
+        Credentials::Nobody(Self::default())
     }
 
-    /// Configures the builder with a default identity and CA certificate,
-    /// specifically for "Nobody" credentials.
-    pub fn with_default(mut self) -> Result<Self> {
-        let ca = CA_RAW.to_vec();
-        self.identity = Identity::default();
-        self.ca = ca;
-        Ok(self)
-    }
-
-    /// Finalizes the builder, attempting to construct a `Credentials::Nobody`
-    /// instance. Requires that an identity and a ca have been set; otherwise,
-    /// it returns an error.
-    pub fn build(self) -> Credentials {
-        debug!("Building nobody credentials from {:?}", &self);
-        Credentials::Nobody(Nobody {
-            cert: self.identity.cert,
-            key: self.identity.key,
-            ca: self.ca,
+    /// Returns a new Nobody instance with a custom set of parameters.
+    pub fn with<V>(cert: V, key: V, ca: V) -> Credentials
+    where
+        V: Into<Vec<u8>>,
+    {
+        Credentials::Nobody(Self {
+            cert: cert.into(),
+            key: key.into(),
+            ca: ca.into(),
         })
     }
+
+    /// Returns the nobody tls identity based on the environmental
+    /// variables used by the `tls` crate.
+    pub fn tls_config(&self) -> TlsConfig {
+        tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
+    }
 }
 
-/// `Builder<Device>` implementation provides methods specific to constructing
-/// `Credentials::Device`, which include device-specific configurations like
-/// certificates, private keys, CA certificates, and runes.
-impl Builder<Device> {
-    /// Constructs a new `Builder<Device>` instance with default configurations,
-    /// is the entrypoint to create `Credentials::Device`.
-    pub fn as_device() -> Builder<Device> {
-        Builder::default()
-    }
+impl Default for Nobody {
+    fn default() -> Self {
+        let ca = CA_RAW.to_vec();
+        let identity = Identity::default();
 
-    /// Configures the builder with credentials loaded from a byte array.
-    pub fn from_bytes(mut self, data: impl AsRef<[u8]>) -> Result<Self> {
-        let data = model::Data::try_from(data.as_ref())?;
-        self.version = data.version;
-        if let (Some(cert), Some(key)) = (data.cert, data.key) {
-            self.identity = Identity { cert, key };
+        Self {
+            cert: identity.cert,
+            key: identity.key,
+            ca,
         }
-        self.ca = data.ca.unwrap_or_else(|| CA_RAW.to_vec());
-        self.rune = data.rune;
-        Ok(self)
+    }
+}
+
+/// The `Device` credentials store the device's certificate, the device's
+/// private key, the certificate authority and the device's rune.
+#[derive(Clone, Debug)]
+pub struct Device {
+    pub version: u32,
+    pub cert: Vec<u8>,
+    pub key: Vec<u8>,
+    pub ca: Vec<u8>,
+    pub rune: String,
+}
+
+impl Device {
+    /// Creates a new set of `Device` credentials from the given
+    /// credentials data blob. It defaults to the nobody credentials set.
+    pub fn from_bytes(data: impl AsRef<[u8]>) -> Credentials {
+        let mut creds = Self::default();
+        debug!("Build authenticated credentials from: {:?}", data.as_ref());
+        if let Ok(data) = model::Data::try_from(data.as_ref()) {
+            creds.version = data.version;
+            if let Some(cert) = data.cert {
+                creds.cert = cert
+            }
+            if let Some(key) = data.key {
+                creds.key = key
+            }
+            if let Some(ca) = data.ca {
+                creds.ca = ca
+            }
+            if let Some(rune) = data.rune {
+                creds.rune = rune
+            }
+        }
+        Credentials::Device(creds)
     }
 
-    /// Configures the builder with credentials loaded from a specified file
-    /// path.
-    pub fn from_path(self, path: impl AsRef<Path>) -> Result<Self> {
-        let buf = std::fs::read(path)?;
-        self.from_bytes(buf)
+    /// Creates a new set of `Device` credentials from a path that
+    /// contains a credentials data blob. Defaults to the nobody
+    /// credentials set.
+    pub fn from_path(path: impl AsRef<Path>) -> Credentials {
+        debug!("Read credentials data from {:?}", path.as_ref());
+        let data = std::fs::read(path).unwrap_or_default();
+        Device::from_bytes(data)
     }
 
-    /// Configures the builder with a custom rune
-    pub fn with_rune(mut self, rune: impl Into<String>) -> Self {
-        self.rune = Some(rune.into());
-        self
+    /// Creates a new set of `Device` credentials from a complete set of
+    /// credentials.
+    pub fn with<V, S>(cert: V, key: V, ca: V, rune: S) -> Credentials
+    where
+        V: Into<Vec<u8>>,
+        S: Into<String>,
+    {
+        Credentials::Device(Self {
+            version: CRED_VERSION,
+            cert: cert.into(),
+            key: key.into(),
+            ca: ca.into(),
+            rune: rune.into(),
+        })
     }
 
     /// Asynchronously upgrades the credentials using the provided scheduler and
     /// signer, potentially involving network operations or other async tasks.
-    pub async fn upgrade(mut self, scheduler: &Scheduler, signer: &Signer) -> Result<Self> {
+    pub async fn upgrade(mut self, scheduler: &Scheduler, signer: &Signer) -> Result<Credentials> {
         use Error::*;
 
         // For now, upgrade is covered by recover
@@ -255,121 +270,21 @@ impl Builder<Device> {
         let mut data = model::Data::try_from(&res.creds[..])
             .map_err(|e| UpgradeCredentialsError(e.to_string()))?;
         data.version = CRED_VERSION;
-
-        if let model::Data {
-            version,
-            cert: Some(cert),
-            key: Some(key),
-            ca: Some(ca),
-            rune: Some(rune),
-        } = data.clone()
-        {
-            self.version = version;
-            self.identity = Identity { cert, key };
-            self.ca = ca;
-            self.rune = Some(rune);
-            Ok(self)
-        } else {
-            let mut missing = String::new();
-            if data.cert.is_none() {
-                add_missing(&mut missing, "certificate");
-            }
-            if data.key.is_none() {
-                add_missing(&mut missing, "private key");
-            }
-            if data.ca.is_none() {
-                add_missing(&mut missing, "ca certificate");
-            }
-            Err(Error::UpgradeCredentialsError(format!(
-                "missing: {}",
-                missing
-            )))
+        if let Some(cert) = data.cert {
+            self.cert = cert
         }
-    }
-
-    /// Finalizes the builder, attempting to construct a `Credentials::Device`
-    /// instance. Requires that an identity, a ca and a rune have been set;
-    /// otherwise, it returns an error.
-    pub fn build(self) -> Result<Credentials> {
-        debug!("Building device credentials from {:?}", &self);
-
-        if let Some(rune) = self.rune.clone() {
-            Ok(Credentials::Device(Device {
-                cert: self.identity.cert,
-                key: self.identity.key,
-                ca: self.ca,
-                rune,
-            }))
-        } else {
-            let mut missing = String::new();
-            if self.rune.is_none() {
-                add_missing(&mut missing, "rune");
-            }
-            Err(Error::BuildCredentialsError(format!(
-                "missing: {}",
-                missing
-            )))
+        if let Some(key) = data.key {
+            self.key = key
         }
-    }
-}
-
-impl<T> Builder<T> {
-    /// Sets the identity for the credentials being built, consisting of a
-    /// certificate and a private key.
-    pub fn with_identity(mut self, cert: impl Into<Vec<u8>>, key: impl Into<Vec<u8>>) -> Self {
-        self.identity = Identity {
-            cert: cert.into(),
-            key: key.into(),
+        if let Some(ca) = data.ca {
+            self.ca = ca
+        }
+        if let Some(rune) = data.rune {
+            self.rune = rune
         };
-        self
+        Ok(Credentials::Device(self))
     }
 
-    /// Sets the CA certificate for the credentials being built.
-    pub fn with_ca(mut self, ca: impl Into<Vec<u8>>) -> Self {
-        self.ca = ca.into();
-        self
-    }
-}
-
-impl<T> Default for Builder<T> {
-    fn default() -> Self {
-        Self {
-            mark_type: Default::default(),
-            version: CRED_VERSION,
-            identity: Identity::default(),
-            ca: CA_RAW.to_vec(),
-            rune: None,
-        }
-    }
-}
-
-/// The `Nobody` credentials struct.
-#[derive(Clone, Debug, Default)]
-pub struct Nobody {
-    pub cert: Vec<u8>,
-    pub key: Vec<u8>,
-    pub ca: Vec<u8>,
-}
-
-impl Nobody {
-    /// Returns the nobody tls identity based on the environmental
-    /// variables used by the `tls` crate.
-    pub fn tls_config(&self) -> TlsConfig {
-        tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
-    }
-}
-
-/// The `Device` credentials store the device's certificate, the device's
-/// private key, the certificate authority and the device's rune.
-#[derive(Clone, Debug, Default)]
-pub struct Device {
-    pub cert: Vec<u8>,
-    pub key: Vec<u8>,
-    pub ca: Vec<u8>,
-    pub rune: String,
-}
-
-impl Device {
     /// Returns the device's tls identity based on the device's
     /// credentials.
     pub fn tls_config(&self) -> TlsConfig {
@@ -407,12 +322,18 @@ impl From<Device> for model::Data {
     }
 }
 
-/// Helper that appends to a string and adds a `,` if not the first.
-fn add_missing(missing: &mut String, add: &str) {
-    if !missing.is_empty() {
-        missing.push_str(", ")
+impl Default for Device {
+    fn default() -> Self {
+        let ca = CA_RAW.to_vec();
+        let identity = Identity::default();
+        Self {
+            version: 0,
+            cert: identity.cert,
+            key: identity.key,
+            ca,
+            rune: Default::default(),
+        }
     }
-    missing.push_str(add);
 }
 
 mod model {
@@ -454,34 +375,6 @@ mod model {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_credentials() {
-        // Assert an error if data is not complete.
-        let c = Builder::as_device().build();
-        assert!(c.is_err_and(|x| x.to_string() == "could not build credentials missing: rune"));
-
-        // Check that we can use all the ways to build the credentials;
-        if let Credentials::Nobody(nobody) = Builder::as_nobody().with_default().unwrap().build() {
-            // Check that we can build nobody credentials.
-            let _n = Builder::as_nobody()
-                .with_ca(nobody.ca.clone())
-                .with_identity(nobody.cert.clone(), nobody.key.clone())
-                .build();
-            // Check that we can build device credentials.
-            let d = Builder::as_device()
-                .with_ca(nobody.ca)
-                .with_identity(nobody.cert, nobody.key)
-                .with_rune("myrune")
-                .build()
-                .unwrap();
-            // Check that we can build from a valid data blob.
-            let _c = Builder::as_device()
-                .from_bytes(d.to_bytes().unwrap())
-                .unwrap()
-                .build();
-        }
-    }
 
     #[test]
     fn test_encode() {
