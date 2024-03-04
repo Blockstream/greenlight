@@ -71,7 +71,6 @@ jobs:
           DOCSREMOTE: "origin"
           GITHUB_TOKEN: "${{ secrets.GH_PAGES_PAT }}"
         run: |
-          rm libs/gl-client-py/glclient/*.pyi
           PATH=$(pwd)/.venv/bin:$PATH make docs
 
       - name: Deploy
