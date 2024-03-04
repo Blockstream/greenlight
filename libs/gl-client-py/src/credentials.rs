@@ -102,7 +102,7 @@ impl NobodyBuilder {
     }
 
     pub fn build(&self) -> Result<Credentials> {
-        let inner = self.inner.clone().build()?;
+        let inner = self.inner.clone().build();
         Ok(Credentials {
             typ: CredentialType::Nobody,
             inner,
@@ -130,7 +130,7 @@ impl Credentials {
     }
 
     pub fn tls_config(&self) -> Result<TlsConfig> {
-        let inner = self.inner.tls_config()?;
+        let inner = self.inner.tls_config();
         Ok(TlsConfig { inner })
     }
 

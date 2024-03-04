@@ -6,8 +6,8 @@ use crate::{pb, signer::Signer, utils};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
-use std::convert::TryInto;
 use runeauth;
+use std::convert::TryInto;
 use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
@@ -131,7 +131,7 @@ impl Scheduler {
     }
 
     pub async fn new(node_id: Vec<u8>, network: Network) -> Result<Scheduler> {
-        let tls = crate::tls::TlsConfig::new()?;
+        let tls = crate::tls::TlsConfig::new();
         let uri = utils::scheduler_uri();
         Self::with(node_id, network, uri, &tls).await
     }
@@ -142,7 +142,7 @@ impl Scheduler {
         uri: String,
         creds: Credentials,
     ) -> Result<Scheduler> {
-        let tls: TlsConfig = creds.tls_config()?;
+        let tls: TlsConfig = creds.tls_config();
         let scheduler = Self::with(node_id, network, uri, &tls).await?;
         Ok(scheduler)
     }
@@ -366,7 +366,7 @@ impl Scheduler {
             .await?;
         Ok(res.into_inner())
     }
-    
+
     pub async fn add_outgoing_webhook(
         &self,
         outgoing_webhook_request: pb::scheduler::AddOutgoingWebhookRequest,
@@ -377,7 +377,7 @@ impl Scheduler {
             .add_outgoing_webhook(outgoing_webhook_request)
             .await?;
         Ok(res.into_inner())
-    }    
+    }
 
     pub async fn list_outgoing_webhooks(
         &self,
@@ -389,7 +389,7 @@ impl Scheduler {
             .list_outgoing_webhooks(list_outgoing_webhooks_request)
             .await?;
         Ok(res.into_inner())
-    }    
+    }
 
     pub async fn delete_webhooks(
         &self,
@@ -401,11 +401,11 @@ impl Scheduler {
             .delete_webhooks(delete_webhooks_request)
             .await?;
         Ok(res.into_inner())
-    }    
+    }
 
     pub async fn rotate_outgoing_webhook_secret(
         &self,
-        rotate_outgoing_webhook_secret_request: pb::scheduler::RotateOutgoingWebhookSecretRequest
+        rotate_outgoing_webhook_secret_request: pb::scheduler::RotateOutgoingWebhookSecretRequest,
     ) -> Result<pb::scheduler::WebhookSecretResponse> {
         let res = self
             .client
@@ -413,5 +413,5 @@ impl Scheduler {
             .rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request)
             .await?;
         Ok(res.into_inner())
-    }    
+    }
 }

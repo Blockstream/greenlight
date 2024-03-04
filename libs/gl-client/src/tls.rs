@@ -14,7 +14,7 @@ const NOBODY_KEY: &[u8] = include_str!(env!("GL_NOBODY_KEY")).as_bytes();
 /// [`Scheduler.register`] and [`Scheduler.recover`], as these are the
 /// endpoints that are used to prove ownership of a node, and
 /// returning valid certificates if that proof succeeds.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TlsConfig {
     pub(crate) inner: ClientTlsConfig,
 
@@ -25,34 +25,46 @@ pub struct TlsConfig {
     pub ca: Vec<u8>,
 }
 
-fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
+/// Tries to load nobody credentials from a file that is passed by an envvar and
+/// defaults to the nobody cert and key paths that have been set during build-
+/// time.
+fn load_file_or_default(varname: &str, default: &[u8]) -> Vec<u8> {
     match std::env::var(varname) {
         Ok(fname) => {
             debug!("Loading file {} for envvar {}", fname, varname);
-            Ok(std::fs::read(fname.clone())
-                .with_context(|| format!("could not read file {} for envvar {}", fname, varname))?)
+            let f = std::fs::read(fname.clone());
+            if f.is_err() {
+                debug!(
+                    "Could not find file {} for var {}, loading from default",
+                    fname, varname
+                );
+                default.to_vec()
+            } else {
+                f.unwrap()
+            }
         }
-        Err(_) => Ok(default.to_vec()),
+        Err(_) => default.to_vec(),
     }
 }
 
 impl TlsConfig {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Self {
         debug!("Configuring TlsConfig with nobody identity");
-        let (nobody_crt, nobody_key) = default_nobody_identity()?;
-        let ca_crt = default_ca()?;
+        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT);
+        let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY);
+        let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW);
         Self::with(nobody_crt, nobody_key, ca_crt)
     }
-    pub fn with<V: AsRef<[u8]>>(crt: V, key: V, ca_crt: V) -> Result<Self> {
+    pub fn with<V: AsRef<[u8]>>(crt: V, key: V, ca_crt: V) -> Self {
         let config = ClientTlsConfig::new()
             .ca_certificate(Certificate::from_pem(ca_crt.as_ref()))
             .identity(Identity::from_pem(crt, key.as_ref()));
 
-        Ok(TlsConfig {
+        TlsConfig {
             inner: config,
             private_key: Some(key.as_ref().to_vec()),
             ca: ca_crt.as_ref().to_vec(),
-        })
+        }
     }
 }
 
@@ -107,15 +119,10 @@ impl TlsConfig {
     }
 }
 
-pub fn default_ca() -> Result<Vec<u8>> {
-    load_file_or_default("GL_CA_CRT", CA_RAW)
-}
-
-pub fn default_nobody_identity() -> Result<(Vec<u8>, Vec<u8>)> {
-    // Allow overriding the defaults through the environment variables
-    let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
-    let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
-    Ok((nobody_crt, nobody_key))
+impl Default for TlsConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Generate a new device certificate from a fresh set of keys. The path in the
