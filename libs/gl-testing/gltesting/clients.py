@@ -100,7 +100,7 @@ class Client:
 
     def scheduler(self) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        return glclient.Scheduler(self.node_id, network=NETWORK, tls=glclient.TlsConfig(self.creds()))
+        return glclient.Scheduler(self.node_id, network=NETWORK, creds=self.creds())
 
     def signer(self) -> glclient.Signer:
         secret = (self.directory / "hsm_secret").open(mode="rb").read()
@@ -113,7 +113,7 @@ class Client:
         return signer
 
     def node(self):
-        return self.scheduler().node(self.creds())
+        return self.scheduler().node()
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node

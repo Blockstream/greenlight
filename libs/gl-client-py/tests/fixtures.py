@@ -26,11 +26,11 @@ def signer(scheduler, tls):
 
 
 @pytest.fixture
-def sclient(signer, tls):
+def sclient(signer, creds):
     """Just a preconfigured scheduler client.
 
     This scheduler client is configured with a secret for easy
     registration and recovery, but no mTLS certificate yet.
     """
     network = "regtest"
-    return Scheduler(signer.node_id(), network=network, tls=tls)
+    return Scheduler(signer.node_id(), network=network, creds=creds)
