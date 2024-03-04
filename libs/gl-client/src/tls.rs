@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use log::debug;
 use std::path::Path;
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
@@ -15,7 +15,7 @@ const NOBODY_KEY: &[u8] = include_str!(env!("GL_NOBODY_KEY")).as_bytes();
 /// [`Scheduler.register`] and [`Scheduler.recover`], as these are the
 /// endpoints that are used to prove ownership of a node, and
 /// returning valid certificates if that proof succeeds.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TlsConfig {
     pub(crate) inner: ClientTlsConfig,
 
@@ -31,42 +31,52 @@ pub struct TlsConfig {
     pub x509_cert: Option<X509Certificate>,
 }
 
-fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
+/// Tries to load nobody credentials from a file that is passed by an envvar and
+/// defaults to the nobody cert and key paths that have been set during build-
+/// time.
+fn load_file_or_default(varname: &str, default: &[u8]) -> Vec<u8> {
     match std::env::var(varname) {
         Ok(fname) => {
             debug!("Loading file {} for envvar {}", fname, varname);
-            Ok(std::fs::read(fname.clone())
-                .with_context(|| format!("could not read file {} for envvar {}", fname, varname))?)
+            let f = std::fs::read(fname.clone());
+            if f.is_err() {
+                debug!(
+                    "Could not find file {} for var {}, loading from default",
+                    fname, varname
+                );
+                default.to_vec()
+            } else {
+                f.unwrap()
+            }
         }
-        Err(_) => Ok(default.to_vec()),
+        Err(_) => default.to_vec(),
     }
 }
 
 impl TlsConfig {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Self {
         debug!("Configuring TlsConfig with nobody identity");
-        let (nobody_crt, nobody_key) = default_nobody_identity()?;
-        let ca_crt = default_ca()?;
+        let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT);
+        let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY);
+        let ca_crt = load_file_or_default("GL_CA_CRT", CA_RAW);
+        // it is ok to panic here in case of a broken nobody certificate.
+        // We can not do anything at all and should fail loudly!
         Self::with(nobody_crt, nobody_key, ca_crt)
     }
-    pub fn with<V: AsRef<[u8]>>(crt: V, key: V, ca_crt: V) -> Result<Self> {
-        let x509_cert = match X509Certificate::from_pem(crt.as_ref()) {
-            Ok(x) => x,
-            Err(e) => {
-                return Err(anyhow!("Failed to parse x509 certificate: {}", e));
-            }
-        };
+
+    pub fn with<V: AsRef<[u8]>>(crt: V, key: V, ca_crt: V) -> Self {
+        let x509_cert = x509_certificate_from_pem_or_none(&crt);
 
         let config = ClientTlsConfig::new()
             .ca_certificate(Certificate::from_pem(ca_crt.as_ref()))
             .identity(Identity::from_pem(crt, key.as_ref()));
 
-        Ok(TlsConfig {
+        TlsConfig {
             inner: config,
             private_key: Some(key.as_ref().to_vec()),
             ca: ca_crt.as_ref().to_vec(),
-            x509_cert: Some(x509_cert),
-        })
+            x509_cert,
+        }
     }
 }
 
@@ -78,12 +88,12 @@ impl TlsConfig {
     /// nodes. If the `TlsConfig` is not upgraded, nodes will reply
     /// with handshake failures, and abort the connection attempt.
     pub fn identity(self, cert_pem: Vec<u8>, key_pem: Vec<u8>) -> Self {
-        let x509_cert = X509Certificate::from_pem(&cert_pem);
+        let x509_cert = x509_certificate_from_pem_or_none(&cert_pem);
 
         TlsConfig {
             inner: self.inner.identity(Identity::from_pem(&cert_pem, &key_pem)),
             private_key: Some(key_pem),
-            x509_cert: x509_cert.map_or(None, |x| Some(x)),
+            x509_cert,
             ..self
         }
     }
@@ -124,15 +134,19 @@ impl TlsConfig {
     }
 }
 
-pub fn default_ca() -> Result<Vec<u8>> {
-    load_file_or_default("GL_CA_CRT", CA_RAW)
+impl Default for TlsConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-pub fn default_nobody_identity() -> Result<(Vec<u8>, Vec<u8>)> {
-    // Allow overriding the defaults through the environment variables
-    let nobody_crt = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)?;
-    let nobody_key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)?;
-    Ok((nobody_crt, nobody_key))
+/// A wrapper that returns an Option that contains a `X509Certificate`
+/// if it could be parsed from the given `pem` data or None if it could
+/// not be parsed. Logs a failed attempt.
+fn x509_certificate_from_pem_or_none(pem: impl AsRef<[u8]>) -> Option<X509Certificate> {
+    X509Certificate::from_pem(pem)
+        .map_err(|e| debug!("Failed to parse x509 certificate: {}", e))
+        .ok()
 }
 
 /// Generate a new device certificate from a fresh set of keys. The path in the

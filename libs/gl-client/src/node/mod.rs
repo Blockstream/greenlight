@@ -57,7 +57,7 @@ impl GrpcClient for ClnClient {
 impl Node {
     pub fn new(node_id: Vec<u8>, creds: Credentials) -> Result<Node> {
         creds.is_device()?;
-        let tls = creds.tls_config()?;
+        let tls = creds.tls_config();
         let rune = creds.rune()?;
         Ok(Node {
             node_id,
