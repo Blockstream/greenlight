@@ -83,14 +83,14 @@ ensure-docker:
 		exit 1; \
 	fi
 
-docker-image: ${REPO_ROOT}/libs/gl-testing/Dockerfile
+docker-image: ${REPO_ROOT}/docker/gl-testing/Dockerfile
 	docker buildx build \
 	  --load \
 	  --build-arg DOCKER_USER=$(shell whoami) \
 	  --build-arg UID=$(shell id -u) \
 	  --build-arg GID=$(shell id -g) \
 	  -t gltesting \
-	  -f libs/gl-testing/Dockerfile \
+	  -f docker/gl-testing/Dockerfile \
 	  .
 
 docker-shell:
