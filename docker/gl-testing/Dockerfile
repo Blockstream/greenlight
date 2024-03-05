@@ -154,27 +154,8 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1
 RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
     chmod a+x /usr/bin/cfssljson
 
-COPY --from=builder /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
 
-COPY --from=builder /repo/cln-versions/ /opt/cln
-COPY --from=builder /tmp/target /tmp/target
-ADD . /repo
-RUN chown $DOCKER_USER -R /tmp/target /repo
-
-# Switch to docker user bevore we install dependencies.
 USER $DOCKER_USER
-
-# Add cargo and the rust toolchain in case we want to compile
-# gl-plugin and gl-signerproxy. This can be useful if we want to
-# develop them, and bind-mount the repository from the host into
-# `/repo`
-RUN curl \
-    --proto '=https' \
-    --tlsv1.2 \
-    -sSf https://sh.rustup.rs | sh \
-    -s -- -y --default-toolchain ${RUST_VERSION}
-
 # Run in a venv, so we don't get warnings about root being special.
 RUN python3 -m venv /tmp/venv
 
@@ -196,6 +177,30 @@ RUN python3 -m pip install -U pip tomli && \
     grpcio-tools \
     purerpc[grpc] \
     mypy-protobuf
+
+
+# Add cargo and the rust toolchain in case we want to compile
+# gl-plugin and gl-signerproxy. This can be useful if we want to
+# develop them, and bind-mount the repository from the host into
+# `/repo`
+RUN curl \
+    --proto '=https' \
+    --tlsv1.2 \
+    -sSf https://sh.rustup.rs | sh \
+    -s -- -y --default-toolchain ${RUST_VERSION}
+
+USER root
+
+COPY --from=builder /repo/cln-versions/ /opt/cln
+RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
+
+COPY --from=builder /repo/cln-versions/ /opt/cln
+COPY --from=builder /tmp/target /tmp/target
+ADD . /repo
+RUN chown $DOCKER_USER -R /tmp/target /repo
+
+# Switch to docker user bevore we install dependencies.
+USER $DOCKER_USER
 
 RUN git config --global --add safe.directory /repo
 
