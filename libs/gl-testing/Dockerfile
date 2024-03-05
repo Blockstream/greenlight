@@ -98,14 +98,10 @@ RUN apt-get update && apt-get install -qqy \
     libsqlite3-dev \
     libpq5 \
     libtool \
-    nodejs \
-    npm \
     pkgconf \
     python3 \
     python3-pip \
     python3-venv \
-    nodejs \
-    npm \
     sudo \
     socat \
     unzip \
@@ -137,8 +133,6 @@ ENV PATH=/home/$DOCKER_USER/.cargo/bin:$PATH
 ENV GL_DOCKER=1
 ENV PATH=/tmp/venv/bin:$PATH
 ENV VIRTUAL_ENV=/tmp/venv
-ENV NPM_PACKAGES="${HOME}/.npm-packages"
-ENV PATH="${PATH}:${NPM_PACKAGES}/bin"
 
 RUN cd /tmp/ && \
     wget "https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz" -O bitcoin.tar.gz && \
@@ -203,13 +197,6 @@ RUN python3 -m pip install -U pip tomli && \
     mypy-protobuf
 
 RUN git config --global --add safe.directory /repo
-
-# Install nodejs
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
-RUN mkdir "${HOME}/.npm-packages" && npm config set prefix "${HOME}/.npm-packages"
-
-# Required to build and test the JS bindings
-RUN npm install -g cargo-cp-artifact
 
 RUN (cd /repo/libs/gl-client-py; maturin develop)
 # Install `gl-testing`. When integrators use this image they'll mount
