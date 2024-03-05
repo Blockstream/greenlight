@@ -1,14 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
-@dataclass
-class NodeVersion:
-    # The path that we should use when calling `lightningd`, it is
-    # version specific
-    path: str
-    # The stringified version number
-    name: str
-
+from clnvm.utils import NodeVersion
 
 @dataclass
 class SignerVersion:
