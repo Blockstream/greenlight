@@ -140,8 +140,6 @@ RUN cd /tmp/ && \
     mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
     rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
 
-COPY --from=builder /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
 
 RUN mkdir /tmp/protoc && \
     cd /tmp/protoc && \
@@ -155,6 +153,9 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1
     chmod a+x /usr/bin/cfssl
 RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
     chmod a+x /usr/bin/cfssljson
+
+COPY --from=builder /repo/cln-versions/ /opt/cln
+RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
 
 COPY --from=builder /repo/cln-versions/ /opt/cln
 COPY --from=builder /tmp/target /tmp/target
