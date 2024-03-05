@@ -4,3 +4,5 @@ libs/gl-client-js/build
 libs/gl-client-js/index.node
 .venv
 dist
+venv
+target
