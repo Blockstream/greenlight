@@ -1,6 +1,6 @@
 import purerpc
-from glclient import scheduler_pb2 as scheduler__pb2
-from glclient import greenlight_pb2 as greenlight__pb2
+import glclient.scheduler_pb2 as glclient_dot_scheduler__pb2
+import glclient.greenlight_pb2 as glclient_dot_greenlight__pb2
 
 
 class SchedulerServicer(purerpc.Servicer):
@@ -28,6 +28,18 @@ class SchedulerServicer(purerpc.Servicer):
     async def ExportNode(self, input_message):
         raise NotImplementedError()
 
+    async def AddOutgoingWebhook(self, input_message):
+        raise NotImplementedError()
+
+    async def ListOutgoingWebhooks(self, input_message):
+        raise NotImplementedError()
+
+    async def DeleteWebhooks(self, input_message):
+        raise NotImplementedError()
+
+    async def RotateOutgoingWebhookSecret(self, input_message):
+        raise NotImplementedError()
+
     @property
     def service(self) -> purerpc.Service:
         service_obj = purerpc.Service(
@@ -38,8 +50,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.Register,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.RegistrationRequest,
-                scheduler__pb2.RegistrationResponse,
+                glclient_dot_scheduler__pb2.RegistrationRequest,
+                glclient_dot_scheduler__pb2.RegistrationResponse,
             )
         )
         service_obj.add_method(
@@ -47,8 +59,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.Recover,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.RecoveryRequest,
-                scheduler__pb2.RecoveryResponse,
+                glclient_dot_scheduler__pb2.RecoveryRequest,
+                glclient_dot_scheduler__pb2.RecoveryResponse,
             )
         )
         service_obj.add_method(
@@ -56,8 +68,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.GetChallenge,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ChallengeRequest,
-                scheduler__pb2.ChallengeResponse,
+                glclient_dot_scheduler__pb2.ChallengeRequest,
+                glclient_dot_scheduler__pb2.ChallengeResponse,
             )
         )
         service_obj.add_method(
@@ -65,8 +77,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.Schedule,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ScheduleRequest,
-                scheduler__pb2.NodeInfoResponse,
+                glclient_dot_scheduler__pb2.ScheduleRequest,
+                glclient_dot_scheduler__pb2.NodeInfoResponse,
             )
         )
         service_obj.add_method(
@@ -74,8 +86,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.GetNodeInfo,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.NodeInfoRequest,
-                scheduler__pb2.NodeInfoResponse,
+                glclient_dot_scheduler__pb2.NodeInfoRequest,
+                glclient_dot_scheduler__pb2.NodeInfoResponse,
             )
         )
         service_obj.add_method(
@@ -83,8 +95,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.MaybeUpgrade,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.UpgradeRequest,
-                scheduler__pb2.UpgradeResponse,
+                glclient_dot_scheduler__pb2.UpgradeRequest,
+                glclient_dot_scheduler__pb2.UpgradeResponse,
             )
         )
         service_obj.add_method(
@@ -92,8 +104,8 @@ class SchedulerServicer(purerpc.Servicer):
             self.ListInviteCodes,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ListInviteCodesRequest,
-                scheduler__pb2.ListInviteCodesResponse,
+                glclient_dot_scheduler__pb2.ListInviteCodesRequest,
+                glclient_dot_scheduler__pb2.ListInviteCodesResponse,
             )
         )
         service_obj.add_method(
@@ -101,8 +113,44 @@ class SchedulerServicer(purerpc.Servicer):
             self.ExportNode,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ExportNodeRequest,
-                scheduler__pb2.ExportNodeResponse,
+                glclient_dot_scheduler__pb2.ExportNodeRequest,
+                glclient_dot_scheduler__pb2.ExportNodeResponse,
+            )
+        )
+        service_obj.add_method(
+            "AddOutgoingWebhook",
+            self.AddOutgoingWebhook,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.AddOutgoingWebhookRequest,
+                glclient_dot_scheduler__pb2.AddOutgoingWebhookResponse,
+            )
+        )
+        service_obj.add_method(
+            "ListOutgoingWebhooks",
+            self.ListOutgoingWebhooks,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.ListOutgoingWebhooksRequest,
+                glclient_dot_scheduler__pb2.ListOutgoingWebhooksResponse,
+            )
+        )
+        service_obj.add_method(
+            "DeleteWebhooks",
+            self.DeleteWebhooks,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.DeleteOutgoingWebhooksRequest,
+                glclient_dot_greenlight__pb2.Empty,
+            )
+        )
+        service_obj.add_method(
+            "RotateOutgoingWebhookSecret",
+            self.RotateOutgoingWebhookSecret,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest,
+                glclient_dot_scheduler__pb2.WebhookSecretResponse,
             )
         )
         return service_obj
@@ -118,64 +166,96 @@ class SchedulerStub:
             "Register",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.RegistrationRequest,
-                scheduler__pb2.RegistrationResponse,
+                glclient_dot_scheduler__pb2.RegistrationRequest,
+                glclient_dot_scheduler__pb2.RegistrationResponse,
             )
         )
         self.Recover = self._client.get_method_stub(
             "Recover",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.RecoveryRequest,
-                scheduler__pb2.RecoveryResponse,
+                glclient_dot_scheduler__pb2.RecoveryRequest,
+                glclient_dot_scheduler__pb2.RecoveryResponse,
             )
         )
         self.GetChallenge = self._client.get_method_stub(
             "GetChallenge",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ChallengeRequest,
-                scheduler__pb2.ChallengeResponse,
+                glclient_dot_scheduler__pb2.ChallengeRequest,
+                glclient_dot_scheduler__pb2.ChallengeResponse,
             )
         )
         self.Schedule = self._client.get_method_stub(
             "Schedule",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ScheduleRequest,
-                scheduler__pb2.NodeInfoResponse,
+                glclient_dot_scheduler__pb2.ScheduleRequest,
+                glclient_dot_scheduler__pb2.NodeInfoResponse,
             )
         )
         self.GetNodeInfo = self._client.get_method_stub(
             "GetNodeInfo",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.NodeInfoRequest,
-                scheduler__pb2.NodeInfoResponse,
+                glclient_dot_scheduler__pb2.NodeInfoRequest,
+                glclient_dot_scheduler__pb2.NodeInfoResponse,
             )
         )
         self.MaybeUpgrade = self._client.get_method_stub(
             "MaybeUpgrade",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.UpgradeRequest,
-                scheduler__pb2.UpgradeResponse,
+                glclient_dot_scheduler__pb2.UpgradeRequest,
+                glclient_dot_scheduler__pb2.UpgradeResponse,
             )
         )
         self.ListInviteCodes = self._client.get_method_stub(
             "ListInviteCodes",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ListInviteCodesRequest,
-                scheduler__pb2.ListInviteCodesResponse,
+                glclient_dot_scheduler__pb2.ListInviteCodesRequest,
+                glclient_dot_scheduler__pb2.ListInviteCodesResponse,
             )
         )
         self.ExportNode = self._client.get_method_stub(
             "ExportNode",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.ExportNodeRequest,
-                scheduler__pb2.ExportNodeResponse,
+                glclient_dot_scheduler__pb2.ExportNodeRequest,
+                glclient_dot_scheduler__pb2.ExportNodeResponse,
+            )
+        )
+        self.AddOutgoingWebhook = self._client.get_method_stub(
+            "AddOutgoingWebhook",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.AddOutgoingWebhookRequest,
+                glclient_dot_scheduler__pb2.AddOutgoingWebhookResponse,
+            )
+        )
+        self.ListOutgoingWebhooks = self._client.get_method_stub(
+            "ListOutgoingWebhooks",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.ListOutgoingWebhooksRequest,
+                glclient_dot_scheduler__pb2.ListOutgoingWebhooksResponse,
+            )
+        )
+        self.DeleteWebhooks = self._client.get_method_stub(
+            "DeleteWebhooks",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.DeleteOutgoingWebhooksRequest,
+                glclient_dot_greenlight__pb2.Empty,
+            )
+        )
+        self.RotateOutgoingWebhookSecret = self._client.get_method_stub(
+            "RotateOutgoingWebhookSecret",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest,
+                glclient_dot_scheduler__pb2.WebhookSecretResponse,
             )
         )
 
@@ -194,8 +274,8 @@ class DebugServicer(purerpc.Servicer):
             self.ReportSignerRejection,
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.SignerRejection,
-                greenlight__pb2.Empty,
+                glclient_dot_scheduler__pb2.SignerRejection,
+                glclient_dot_greenlight__pb2.Empty,
             )
         )
         return service_obj
@@ -211,7 +291,7 @@ class DebugStub:
             "ReportSignerRejection",
             purerpc.RPCSignature(
                 purerpc.Cardinality.UNARY_UNARY,
-                scheduler__pb2.SignerRejection,
-                greenlight__pb2.Empty,
+                glclient_dot_scheduler__pb2.SignerRejection,
+                glclient_dot_greenlight__pb2.Empty,
             )
         )
