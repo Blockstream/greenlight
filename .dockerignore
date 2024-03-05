@@ -6,3 +6,10 @@ libs/gl-client-js/index.node
 dist
 venv
 target
+docker
+site
+.git
+.github
+docs
+.gitmodules
+.gitattributes
