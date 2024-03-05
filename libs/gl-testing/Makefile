@@ -10,7 +10,12 @@ GEN_TESTING = \
 
 GENALL += ${GEN_TESTING}
 
-testgrpc ${TESTINGDIR}/gltesting/scheduler_grpc.py: ${REPO}/libs/proto/glclient/scheduler.proto
+${TESTINGDIR}/gltesting/scheduler_grpc.py: testgrpc
+
+testgrpc: ${REPO}/libs/proto/glclient/scheduler.proto
 	python -m grpc_tools.protoc ${TESTPROTOC_OPTS} glclient/scheduler.proto
+	mv ${TESTINGDIR}/gltesting/glclient/scheduler_grpc.py ${TESTINGDIR}/gltesting/scheduler_grpc.py
+	rm -rf ${TESTINGDIR}/gltesting/glclient
+
 
 

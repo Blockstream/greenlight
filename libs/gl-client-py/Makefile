@@ -29,6 +29,8 @@ PROTOSRC = \
 
 GENALL += ${PYPROTOS}
 
+${PYPROTOS}: pygrpc
+
 pygrpc: ${PROTOSRC}
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
 	python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
