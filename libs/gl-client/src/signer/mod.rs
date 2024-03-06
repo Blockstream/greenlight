@@ -1,4 +1,4 @@
-use crate::credentials::Credentials;
+use crate::credentials::{RuneProvider, TlsConfigProvider};
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 /// The core signer system. It runs in a dedicated thread or using the
 /// caller thread, streaming incoming requests, verifying them,
@@ -93,7 +93,10 @@ pub enum Error {
 }
 
 impl Signer {
-    pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer, anyhow::Error> {
+    pub fn new<T>(secret: Vec<u8>, network: Network, tls: T) -> Result<Signer, anyhow::Error>
+    where
+        T: TlsConfigProvider,
+    {
         use lightning_signer::policy::{
             filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
         };
@@ -159,7 +162,7 @@ impl Signer {
             secret: sec,
             master_rune: mr,
             services,
-            tls,
+            tls: tls.tls_config(),
             id,
             init,
             network,
@@ -789,7 +792,10 @@ impl Signer {
 
     /// Create a Node stub from this instance of the signer, configured to
     /// talk to the corresponding node.
-    pub async fn node(&self, creds: Credentials) -> Result<Client, anyhow::Error> {
+    pub async fn node<Creds>(&self, creds: Creds) -> Result<Client, anyhow::Error>
+    where
+        Creds: TlsConfigProvider + RuneProvider,
+    {
         node::Node::new(self.node_id(), self.network, creds)?
             .schedule()
             .await
@@ -960,10 +966,9 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 
 #[cfg(test)]
 mod tests {
-    use crate::tls;
-    use crate::pb;
-
     use super::*;
+    use crate::credentials;
+    use crate::pb;
 
     /// We should not sign messages that we get from the node, since
     /// we're using the sign_message RPC message to create TLS
@@ -972,12 +977,7 @@ mod tests {
     /// attestations.
     #[tokio::test]
     async fn test_sign_message_rejection() {
-        let signer = Signer::new(
-            vec![0 as u8; 32],
-            Network::Bitcoin,
-            TlsConfig::new(),
-        )
-        .unwrap();
+        let signer = Signer::new(vec![0 as u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
 
         let msg = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
         assert!(signer
@@ -995,12 +995,7 @@ mod tests {
     /// We should reject a signing request with an empty message.
     #[tokio::test]
     async fn test_empty_message() {
-        let signer = Signer::new(
-            vec![0 as u8; 32],
-            Network::Bitcoin,
-            TlsConfig::new(),
-        )
-        .unwrap();
+        let signer = Signer::new(vec![0 as u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
 
         assert_eq!(
             signer
@@ -1020,8 +1015,7 @@ mod tests {
 
     #[test]
     fn test_sign_message_max_size() {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new()).unwrap();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
 
         // We test if we reject a message that is too long.
         let msg = [0u8; u16::MAX as usize + 1];
@@ -1037,8 +1031,7 @@ mod tests {
     /// remain.
     #[test]
     fn test_legacy_bip32_key() {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new()).unwrap();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
 
         let bip32 = signer.legacy_bip32_ext_key();
         let expected: Vec<u8> = vec![
@@ -1057,8 +1050,7 @@ mod tests {
     /// on the public key "pubkey=<public-key-of-devices-tls-cert>".
     #[test]
     fn test_rune_expects_pubkey() {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, tls::TlsConfig::new()).unwrap();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
 
         let alt = "pubkey=112233";
         let wrong_alt = "pubkey^112233";
@@ -1080,8 +1072,7 @@ mod tests {
 
     #[test]
     fn test_rune_expansion() {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new()).unwrap();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
         let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
 
         let new_rune = signer
@@ -1093,8 +1084,7 @@ mod tests {
 
     #[test]
     fn test_rune_checks_method() {
-        let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new()).unwrap();
+        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::default()).unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();

@@ -1,8 +1,9 @@
-use crate::credentials::{self, Credentials};
+use crate::credentials::{self, RuneProvider, TlsConfigProvider};
 use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self};
-use crate::{pb, signer::Signer, utils};
+use crate::utils::scheduler_uri;
+use crate::{pb, signer::Signer};
 use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
@@ -11,98 +12,35 @@ use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
 
-/// Represents a builder for creating a `Scheduler` instance.
-///
-/// This struct is used to configure and build a `Scheduler` with various
-/// options, such as network settings, credentials, and a URI.
-pub struct Builder {
-    node_id: Vec<u8>,
-    network: Network,
-    creds: Credentials,
-    uri: Option<String>,
-}
-
-impl Builder {
-    /// Constructs a new `Builder` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `node_id` - A unique identifier for the node as a byte vector.
-    /// * `network` - Network settings for the Scheduler.
-    /// * `tls` - A value that can be converted into `TlsConfig`.
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the new instance of `Builder` or an error.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `tls` fails to convert into `TlsConfig`.
-    pub fn new(node_id: Vec<u8>, network: Network, creds: Credentials) -> Result<Self> {
-        Ok(Self {
-            node_id,
-            network,
-            uri: None,
-            creds,
-        })
-    }
-
-    /// Sets the URI for the Scheduler.
-    ///
-    /// # Arguments
-    ///
-    /// * `uri` - URI that the scheduler connects to.
-    ///
-    /// # Returns
-    ///
-    /// The updated Builder instance.
-    pub fn with_uri(mut self, uri: String) -> Self {
-        self.uri = Some(uri);
-        self
-    }
-
-    /// Builds a Scheduler instance based on the configured parameters.
-    ///
-    /// This method finalizes the configuration and creates a new `Scheduler`
-    /// instance with the provided settings.
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the Scheduler or an error.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `Scheduler` creation fails.
-    pub async fn connect(&self) -> Result<Scheduler> {
-        let uri = self.uri.clone().unwrap_or_else(|| utils::scheduler_uri());
-        let node_id = self.node_id.clone();
-        Scheduler::new(node_id, self.network, uri, self.creds.clone()).await
-    }
-}
-
 #[derive(Clone)]
-pub struct Scheduler {
+pub struct Scheduler<Creds> {
     /// Our local `node_id` used when talking to the scheduler to
     /// identify us.
     node_id: Vec<u8>,
     client: Client,
     network: Network,
-    creds: Credentials,
+    grpc_uri: String,
+    creds: Creds,
+    ca: Vec<u8>,
 }
 
-impl Scheduler {
-    pub fn builder(node_id: Vec<u8>, network: Network, creds: Credentials) -> Result<Builder> {
-        Builder::new(node_id, network, creds)
+impl<Creds> Scheduler<Creds>
+where
+    Creds: TlsConfigProvider,
+{
+    pub async fn new(node_id: Vec<u8>, network: Network, creds: Creds) -> Result<Scheduler<Creds>> {
+        let grpc_uri = scheduler_uri();
+        Self::with(node_id, network, creds, grpc_uri).await
     }
 
-    pub async fn new(
+    pub async fn with(
         node_id: Vec<u8>,
         network: Network,
+        creds: Creds,
         uri: String,
-        creds: Credentials,
-    ) -> Result<Scheduler> {
+    ) -> Result<Scheduler<Creds>> {
         debug!("Connecting to scheduler at {}", uri);
-        let channel = tonic::transport::Endpoint::from_shared(uri)?
+        let channel = tonic::transport::Endpoint::from_shared(uri.clone())?
             .tls_config(creds.tls_config().inner.clone())?
             .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
             .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
@@ -111,15 +49,20 @@ impl Scheduler {
             .connect_lazy();
 
         let client = SchedulerClient::new(channel);
+        let ca = creds.tls_config().ca.clone();
 
         Ok(Scheduler {
             client,
             node_id,
             network,
             creds,
+            grpc_uri: uri,
+            ca,
         })
     }
+}
 
+impl<Creds> Scheduler<Creds> {
     pub async fn register(
         &self,
         signer: &Signer,
@@ -218,10 +161,10 @@ impl Scheduler {
         let creds = credentials::Device::with(
             res.device_cert.clone().into_bytes(),
             res.device_key.clone().into_bytes(),
-            self.creds.tls_config().ca.clone(),
+            self.ca.clone(),
             res.rune.clone(),
         );
-        res.creds = creds.to_bytes()?;
+        res.creds = creds.to_bytes();
 
         Ok(res)
     }
@@ -293,14 +236,81 @@ impl Scheduler {
         let creds = credentials::Device::with(
             res.device_cert.clone().into_bytes(),
             res.device_key.clone().into_bytes(),
-            self.creds.tls_config().ca.clone(),
+            self.ca.clone(),
             res.rune.clone(),
         );
-        res.creds = creds.to_bytes()?;
+        res.creds = creds.to_bytes();
 
         Ok(res)
     }
 
+    pub async fn authenticate<Auth>(&self, creds: Auth) -> Result<Scheduler<Auth>>
+    where
+        Auth: TlsConfigProvider + RuneProvider,
+    {
+        debug!("Connecting to scheduler at {}", self.grpc_uri);
+        let channel = tonic::transport::Endpoint::from_shared(self.grpc_uri.clone())?
+            .tls_config(creds.tls_config().inner.clone())?
+            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
+            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
+            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
+            .keep_alive_while_idle(true)
+            .connect_lazy();
+
+        let client = SchedulerClient::new(channel);
+
+        Ok(Scheduler {
+            node_id: self.node_id.clone(),
+            client,
+            network: self.network,
+            creds,
+            grpc_uri: self.grpc_uri.clone(),
+            ca: self.ca.clone(),
+        })
+    }
+}
+
+impl<Creds> Scheduler<Creds>
+where
+    Creds: TlsConfigProvider + RuneProvider + Clone,
+{
+    pub async fn new_authenticated(
+        node_id: Vec<u8>,
+        network: Network,
+        creds: Creds,
+    ) -> Result<Scheduler<Creds>> {
+        let uri = scheduler_uri();
+        Self::with_authenticated(node_id, network, creds, uri).await
+    }
+
+    pub async fn with_authenticated(
+        node_id: Vec<u8>,
+        network: Network,
+        creds: Creds,
+        uri: String,
+    ) -> Result<Scheduler<Creds>> {
+        debug!("Connecting to scheduler at {} authenticated", uri);
+        let channel = tonic::transport::Endpoint::from_shared(uri.clone())?
+            .tls_config(creds.tls_config().inner.clone())?
+            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
+            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
+            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
+            .keep_alive_while_idle(true)
+            .connect_lazy();
+
+        let client = SchedulerClient::new(channel);
+        let ca = creds.tls_config().ca.clone();
+
+        Ok(Scheduler {
+            client,
+            node_id,
+            network,
+            creds,
+            grpc_uri: uri,
+            ca,
+        })
+    }
+    
     pub async fn schedule(&self) -> Result<pb::scheduler::NodeInfoResponse> {
         let res = self
             .client
@@ -386,5 +396,21 @@ impl Scheduler {
             .rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request)
             .await?;
         Ok(res.into_inner())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::credentials::{Device, Nobody};
+    use lightning_signer::bitcoin::Network;
+
+    use super::Scheduler;
+
+    #[tokio::test]
+    async fn test_scheduler() {
+        let s = Scheduler::new(vec![], Network::Regtest, Nobody::default())
+            .await
+            .unwrap();
+        let s = s.authenticate(Device::default()).await.unwrap();
     }
 }

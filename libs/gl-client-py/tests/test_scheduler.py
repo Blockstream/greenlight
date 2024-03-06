@@ -4,13 +4,13 @@ from binascii import hexlify
 import unittest
 
 
-def test_connect(scheduler, creds, tls):
+def test_connect(scheduler, creds):
     """Test that we can connect to the scheduler."""
-    sig = Signer(b"\x00" * 32, network="regtest", tls=tls)
+    sig = Signer(b"\x00" * 32, network="regtest", creds=creds)
     node_id = sig.node_id()
     s = Scheduler(node_id, network="regtest", creds=creds)
     with pytest.raises(ValueError):
-        s.get_node_info()
+        s.recover(sig)
 
 
 def test_register(sclient, signer):
@@ -32,9 +32,16 @@ def test_recover(sclient, signer):
 
 def test_schedule_call(sclient, signer):
     req = sclient.register(signer)
-    res = sclient.schedule()
+    
+    # This fails now as the scheduler needs to be authenticated to 
+    # schedule a node.
+    with pytest.raises(ValueError):
+        res = sclient.schedule()
+
+    # Authenticate the scheduler client.
     creds = Credentials.from_bytes(req.creds)
-    node = Node(signer.node_id(), "regtest", res.grpc_uri, creds=creds)
+    sclient.authenticate(creds)
+    node = sclient.node()
     info = node.get_info()
     assert info
 
@@ -56,11 +63,11 @@ def test_signer_version(signer):
     assert glclient.__version__ == signer.version()
 
 
-def test_get_invite_codes(scheduler, sclient):
+def test_get_invite_codes(scheduler, sclient, device_creds):
     scheduler.add_invite_codes(
         [{"code": "ABC", "is_redeemed": False}, {"code": "HELLO", "is_redeemed": True}]
     )
-    invite_codes = sclient.get_invite_codes()
+    invite_codes = sclient.authenticate(device_creds).get_invite_codes()
     print(f"Got codes: {invite_codes}")
 
 

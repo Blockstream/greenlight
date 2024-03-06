@@ -1,6 +1,5 @@
-use crate::lsps::LspClient;
 use crate::runtime::exec;
-use crate::Credentials;
+use crate::{credentials::Credentials, lsps::LspClient};
 use gl_client as gl;
 use gl_client::bitcoin::Network;
 use gl_client::pb;
@@ -25,13 +24,14 @@ impl Node {
         grpc_uri: String,
         creds: Credentials,
     ) -> PyResult<Self> {
+        creds.is_device()?;
         let network: Network = match network.parse() {
             Ok(v) => v,
             Err(_) => return Err(PyValueError::new_err("unknown network")),
         };
         let inner = gl::node::Node::new(node_id, network, creds.inner)
             .map_err(|s| PyValueError::new_err(s.to_string()))?;
-        return node_from_inner(inner, grpc_uri);
+        node_from_inner(inner, grpc_uri)
     }
 
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {

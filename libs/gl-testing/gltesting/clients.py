@@ -98,9 +98,12 @@ class Client:
             )
             return creds
 
-    def scheduler(self) -> glclient.Scheduler:
+    def scheduler(self, authenticate: bool = False) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        return glclient.Scheduler(self.node_id, network=NETWORK, creds=self.creds())
+        scheduler = glclient.Scheduler(self.node_id, network=NETWORK, creds=self.creds())
+        if authenticate:
+            scheduler.authenticate(creds=self.creds())
+        return scheduler
 
     def signer(self) -> glclient.Signer:
         secret = (self.directory / "hsm_secret").open(mode="rb").read()
@@ -108,12 +111,14 @@ class Client:
         have_certs = keypath.exists()
 
         self.directory.mkdir(exist_ok=True)
-        signer = glclient.Signer(secret, NETWORK, glclient.TlsConfig(self.creds()))
+        signer = glclient.Signer(secret, NETWORK, self.creds())
 
         return signer
 
     def node(self):
-        return self.scheduler().node()
+        """Return a node instance from the scheduler.
+        """
+        return self.scheduler(authenticate=True).node()
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node
