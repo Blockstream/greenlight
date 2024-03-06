@@ -42,96 +42,11 @@ pub enum Error {
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-/// Credentials is a superset of sets that contain relevant credentials
-/// like keys, certificates, etc. There are two possible variants:
-/// - `Credentials::Nobody`: Contains no device specific credentials but
-///                          is allowed to communicate with the backend.
-///                          This variant can not communicate with a node.
-/// - `Credentials::Device`: Contains device specific credentials that
-///                          allow to communicate with the node that
-///                          belongs to this device.
-#[derive(Clone)]
-pub enum Credentials {
-    Nobody(Nobody),
-    Device(Device),
+pub trait TlsConfigProvider: Send + Sync {
+    fn tls_config(&self) -> TlsConfig;
 }
-
-impl Credentials {
-    /// Creates and returns a `TlsConfig` that can be used to establish
-    /// a connection to the services.
-    pub fn tls_config(&self) -> TlsConfig {
-        match self {
-            Self::Nobody(c) => c.tls_config(),
-            Self::Device(c) => c.tls_config(),
-        }
-    }
-
-    /// Returns the rune that is part of this credential set. Returns an
-    /// error when called on `Credentials::Nobody`.
-    pub fn rune(&self) -> Result<String> {
-        match self {
-            Self::Nobody(_) => Err(Error::GetFromIdentityError(
-                "nobody identity has no rune".to_string(),
-            )),
-            Self::Device(c) => Ok(c.rune.clone()),
-        }
-    }
-
-    /// Is a NoOp if the variant that the function is called on is
-    /// `Credentials::Nobody`. Returns an error otherwise.
-    pub fn is_nobody(&self) -> Result<()> {
-        match self {
-            Credentials::Nobody(_) => Ok(()),
-            _ => Err(Error::IsIdentityError(self.to_string())),
-        }
-    }
-
-    /// Is a NoOp if the variant that the function is called on is
-    /// `Credentials::Device`. Returns an error otherwise.
-    pub fn is_device(&self) -> Result<()> {
-        match self {
-            Credentials::Device(_) => Ok(()),
-            _ => Err(Error::IsIdentityError(self.to_string())),
-        }
-    }
-
-    /// Returns the byte encoded credentials when called on a Device.
-    /// Returns an error otherwise.
-    pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        match self {
-            Credentials::Nobody(_) => Err(Error::IsIdentityError(
-                "can not return bytes for nobody".to_string(),
-            )),
-            Credentials::Device(d) => Ok(d.to_bytes()),
-        }
-    }
-
-    /// Uses the scheduler and the signer to upgrade a set of device
-    /// credentials.
-    pub async fn upgrade(self, scheduler: &Scheduler, signer: &Signer) -> Result<Credentials> {
-        match self {
-            Credentials::Nobody(_) => Err(Error::IsIdentityError(
-                "can not upgrade nobody credentials".to_string(),
-            )),
-            Credentials::Device(d) => d.upgrade(scheduler, signer).await,
-        }
-    }
-}
-
-impl std::fmt::Display for Credentials {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            Credentials::Nobody(_) => "Nobody Credentials",
-            Credentials::Device(_) => "Device Credentials",
-        };
-        f.write_str(str)
-    }
-}
-
-impl From<Credentials> for TlsConfig {
-    fn from(value: Credentials) -> Self {
-        value.tls_config()
-    }
+pub trait RuneProvider {
+    fn rune(&self) -> String;
 }
 
 /// A helper struct to combine the Tls certificate and the corresponding private
@@ -161,25 +76,25 @@ pub struct Nobody {
 
 impl Nobody {
     /// Returns a new Nobody instance with default parameters.
-    pub fn new() -> Credentials {
-        Credentials::Nobody(Self::default())
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Returns a new Nobody instance with a custom set of parameters.
-    pub fn with<V>(cert: V, key: V, ca: V) -> Credentials
+    pub fn with<V>(cert: V, key: V, ca: V) -> Self
     where
         V: Into<Vec<u8>>,
     {
-        Credentials::Nobody(Self {
+        Self {
             cert: cert.into(),
             key: key.into(),
             ca: ca.into(),
-        })
+        }
     }
+}
 
-    /// Returns the nobody tls identity based on the environmental
-    /// variables used by the `tls` crate.
-    pub fn tls_config(&self) -> TlsConfig {
+impl TlsConfigProvider for Nobody {
+    fn tls_config(&self) -> TlsConfig {
         tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
     }
 }
@@ -211,7 +126,7 @@ pub struct Device {
 impl Device {
     /// Creates a new set of `Device` credentials from the given
     /// credentials data blob. It defaults to the nobody credentials set.
-    pub fn from_bytes(data: impl AsRef<[u8]>) -> Credentials {
+    pub fn from_bytes(data: impl AsRef<[u8]>) -> Self {
         let mut creds = Self::default();
         debug!("Build authenticated credentials from: {:?}", data.as_ref());
         if let Ok(data) = model::Data::try_from(data.as_ref()) {
@@ -229,13 +144,13 @@ impl Device {
                 creds.rune = rune
             }
         }
-        Credentials::Device(creds)
+        creds
     }
 
     /// Creates a new set of `Device` credentials from a path that
     /// contains a credentials data blob. Defaults to the nobody
     /// credentials set.
-    pub fn from_path(path: impl AsRef<Path>) -> Credentials {
+    pub fn from_path(path: impl AsRef<Path>) -> Self {
         debug!("Read credentials data from {:?}", path.as_ref());
         let data = std::fs::read(path).unwrap_or_default();
         Device::from_bytes(data)
@@ -243,23 +158,26 @@ impl Device {
 
     /// Creates a new set of `Device` credentials from a complete set of
     /// credentials.
-    pub fn with<V, S>(cert: V, key: V, ca: V, rune: S) -> Credentials
+    pub fn with<V, S>(cert: V, key: V, ca: V, rune: S) -> Self
     where
         V: Into<Vec<u8>>,
         S: Into<String>,
     {
-        Credentials::Device(Self {
+        Self {
             version: CRED_VERSION,
             cert: cert.into(),
             key: key.into(),
             ca: ca.into(),
             rune: rune.into(),
-        })
+        }
     }
 
     /// Asynchronously upgrades the credentials using the provided scheduler and
     /// signer, potentially involving network operations or other async tasks.
-    pub async fn upgrade(mut self, scheduler: &Scheduler, signer: &Signer) -> Result<Credentials> {
+    pub async fn upgrade<T>(mut self, scheduler: &Scheduler<T>, signer: &Signer) -> Result<Self>
+    where
+        T: TlsConfigProvider,
+    {
         use Error::*;
 
         // For now, upgrade is covered by recover
@@ -282,24 +200,25 @@ impl Device {
         if let Some(rune) = data.rune {
             self.rune = rune
         };
-        Ok(Credentials::Device(self))
-    }
-
-    /// Returns the device's tls identity based on the device's
-    /// credentials.
-    pub fn tls_config(&self) -> TlsConfig {
-        tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
-    }
-
-    /// Get the rune that is part of the credentials.
-    pub fn rune(&self) -> String {
-        self.to_owned().rune
+        Ok(self)
     }
 
     /// Returns a byte encoded representation of the credentials. This
     /// can be used to store the credentials in one single file.
     pub fn to_bytes(&self) -> Vec<u8> {
         self.to_owned().into()
+    }
+}
+
+impl TlsConfigProvider for Device {
+    fn tls_config(&self) -> TlsConfig {
+        tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
+    }
+}
+
+impl RuneProvider for Device {
+    fn rune(&self) -> String {
+        self.to_owned().rune
     }
 }
 

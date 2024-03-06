@@ -1,4 +1,4 @@
-use crate::Credentials;
+use crate::credentials::Credentials;
 use gl_client::bitcoin::Network;
 use log::warn;
 use pyo3::{exceptions::PyValueError, prelude::*};
