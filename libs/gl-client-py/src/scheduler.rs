@@ -1,27 +1,160 @@
+use crate::credentials::{Credentials, PyCredentials};
 use crate::runtime::exec;
-use crate::{pb, pb::scheduler::scheduler_client::SchedulerClient};
-use crate::{Credentials, Signer};
-use anyhow::Result;
+use crate::Signer;
+use anyhow::{anyhow, Result};
 use gl_client::bitcoin::Network;
+use gl_client::credentials::RuneProvider;
+use gl_client::credentials::TlsConfigProvider;
+use gl_client::pb;
+use gl_client::scheduler;
 use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use tonic::transport::Channel;
 
-type Client = SchedulerClient<Channel>;
+pub enum UnifiedScheduler<T, R>
+where
+    T: TlsConfigProvider,
+    R: TlsConfigProvider + RuneProvider + Clone,
+{
+    Unauthenticated(scheduler::Scheduler<T>),
+    Authenticated(scheduler::Scheduler<R>),
+}
+
+impl<T, R> UnifiedScheduler<T, R>
+where
+    T: TlsConfigProvider,
+    R: TlsConfigProvider + RuneProvider + Clone,
+{
+    pub fn is_authenticated(&self) -> Result<()> {
+        if let Self::Authenticated(_) = self {
+            Ok(())
+        } else {
+            Err(anyhow!("scheduler is unauthenticated",))?
+        }
+    }
+
+    async fn register(
+        &self,
+        signer: &gl_client::signer::Signer,
+        invite_code: Option<String>,
+    ) -> Result<pb::scheduler::RegistrationResponse> {
+        match self {
+            UnifiedScheduler::Unauthenticated(u) => u.register(&signer, invite_code).await,
+            UnifiedScheduler::Authenticated(a) => a.register(&signer, invite_code).await,
+        }
+    }
+
+    async fn recover(
+        &self,
+        signer: &gl_client::signer::Signer,
+    ) -> Result<pb::scheduler::RecoveryResponse> {
+        match self {
+            UnifiedScheduler::Unauthenticated(u) => u.recover(&signer).await,
+            UnifiedScheduler::Authenticated(a) => a.recover(&signer).await,
+        }
+    }
+
+    async fn authenticate(&self, creds: R) -> Result<Self> {
+        match self {
+            UnifiedScheduler::Unauthenticated(u) => {
+                let inner = u.authenticate(creds).await?;
+                Ok(Self::Authenticated(inner))
+            }
+            UnifiedScheduler::Authenticated(a) => {
+                let inner = a.authenticate(creds).await?;
+                Ok(Self::Authenticated(inner))
+            }
+        }
+    }
+}
+
+/// The following implementations need an authenticated scheduler.
+impl<T, R> UnifiedScheduler<T, R>
+where
+    T: TlsConfigProvider,
+    R: TlsConfigProvider + RuneProvider + Clone,
+{
+    async fn export_node(&self) -> Result<pb::scheduler::ExportNodeResponse> {
+        let s = self.authenticated_scheduler()?;
+        s.export_node().await
+    }
+
+    async fn schedule(&self) -> Result<pb::scheduler::NodeInfoResponse> {
+        let s = self.authenticated_scheduler()?;
+        s.schedule().await
+    }
+
+    async fn get_invite_codes(&self) -> Result<pb::scheduler::ListInviteCodesResponse> {
+        let s = self.authenticated_scheduler()?;
+        s.get_invite_codes().await
+    }
+
+    async fn add_outgoing_webhook(
+        &self,
+        node_id: Vec<u8>,
+        uri: String,
+    ) -> Result<pb::scheduler::AddOutgoingWebhookResponse> {
+        let s = self.authenticated_scheduler()?;
+        let outgoing_webhook_request = pb::scheduler::AddOutgoingWebhookRequest {
+            node_id: node_id,
+            uri,
+        };
+        s.add_outgoing_webhook(outgoing_webhook_request).await
+    }
+
+    async fn list_outgoing_webhooks(
+        &self,
+        node_id: Vec<u8>,
+    ) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
+        let s = self.authenticated_scheduler()?;
+        let list_outgoing_webhook_request =
+            pb::scheduler::ListOutgoingWebhooksRequest { node_id: node_id };
+        s.list_outgoing_webhooks(list_outgoing_webhook_request)
+            .await
+    }
+
+    async fn delete_outgoing_webhooks(&self, node_id: Vec<u8>, ids: Vec<i64>) -> Result<pb::Empty> {
+        let s = self.authenticated_scheduler()?;
+        let delete_outgoing_webhook_request =
+            pb::scheduler::DeleteOutgoingWebhooksRequest { node_id, ids };
+        s.delete_webhooks(delete_outgoing_webhook_request).await
+    }
+
+    async fn rotate_outgoing_webhook_secret(
+        &self,
+        node_id: Vec<u8>,
+        webhook_id: i64,
+    ) -> Result<pb::scheduler::WebhookSecretResponse> {
+        let s = self.authenticated_scheduler()?;
+        let rotate_outgoing_webhool_secret_request =
+            pb::scheduler::RotateOutgoingWebhookSecretRequest {
+                node_id,
+                webhook_id,
+            };
+        s.rotate_outgoing_webhook_secret(rotate_outgoing_webhool_secret_request)
+            .await
+    }
+
+    fn authenticated_scheduler(&self) -> Result<&scheduler::Scheduler<R>> {
+        match self {
+            UnifiedScheduler::Unauthenticated(_) => {
+                Err(anyhow!("scheduler needs to be authenticated"))
+            }
+            UnifiedScheduler::Authenticated(a) => Ok(a),
+        }
+    }
+}
 
 #[pyclass]
-#[derive(Clone)]
 pub struct Scheduler {
     node_id: Vec<u8>,
-    pub inner: gl_client::scheduler::Scheduler,
-    creds: Credentials,
+    pub inner: UnifiedScheduler<PyCredentials, PyCredentials>,
 }
 
 #[pymethods]
 impl Scheduler {
     #[new]
-    fn new(node_id: Vec<u8>, network: String, creds: Credentials) -> PyResult<Scheduler> {
+    fn new(node_id: Vec<u8>, network: &str, creds: Credentials) -> PyResult<Scheduler> {
         let network: Network = network
             .parse()
             .map_err(|_| PyValueError::new_err("Error parsing the network"))?;
@@ -29,126 +162,96 @@ impl Scheduler {
         let id = node_id.clone();
         let uri = gl_client::utils::scheduler_uri();
 
-        let ccreds = creds.clone();
-        let res = exec(async move {
-            gl_client::scheduler::Scheduler::builder(id, network, ccreds.inner)?
-                .with_uri(uri)
-                .connect()
-                .await
-        });
-
-        let inner = match res {
-            Ok(v) => v,
-            Err(_) => return Err(PyValueError::new_err("could not connect to the scheduler")),
+        let inner = match creds.inner {
+            crate::credentials::UnifiedCredentials::Nobody(_) => {
+                let scheduler = exec(async move {
+                    gl_client::scheduler::Scheduler::with(id, network, creds.inner.clone(), uri)
+                        .await
+                })
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                UnifiedScheduler::Unauthenticated(scheduler)
+            }
+            crate::credentials::UnifiedCredentials::Device(_) => {
+                let scheduler = exec(async move {
+                    gl_client::scheduler::Scheduler::with(id, network, creds.inner.clone(), uri)
+                        .await
+                })
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                UnifiedScheduler::Authenticated(scheduler)
+            }
         };
 
-        Ok(Scheduler {
-            node_id,
-            inner,
-            creds,
-        })
+        Ok(Scheduler { node_id, inner })
     }
 
     fn register(&self, signer: &Signer, invite_code: Option<String>) -> PyResult<Vec<u8>> {
-        convert(exec(self.inner.register(&signer.inner, invite_code)))
-    }
-
-    fn recover(&self, signer: &Signer) -> PyResult<Vec<u8>> {
-        convert(exec(async move { self.inner.recover(&signer.inner).await }))
-    }
-
-    fn export_node(&self) -> PyResult<Vec<u8>> {
-        convert(exec(async move { self.inner.export_node().await }))
-    }
-
-    fn get_node_info(&self) -> PyResult<Vec<u8>> {
-        let res: Result<pb::scheduler::NodeInfoResponse> = exec(async move {
-            let mut client = self.connect().await.unwrap();
-
-            let info = client
-                .get_node_info(pb::scheduler::NodeInfoRequest {
-                    node_id: self.node_id.clone(),
-                    wait: false,
-                })
-                .await;
-
-            Ok(info?.into_inner())
-        });
-
-        let res = match res {
-            Ok(v) => v,
-            Err(_) => return Err(PyValueError::new_err("error calling get_node_info")),
-        };
-        let mut buf = Vec::with_capacity(res.encoded_len());
-        res.encode(&mut buf).unwrap();
-        Ok(buf)
-    }
-
-    fn schedule(&self) -> PyResult<Vec<u8>> {
-        convert(exec(async move {
-            Ok(self
-                .connect()
-                .await?
-                .schedule(pb::scheduler::ScheduleRequest {
-                    node_id: self.node_id.clone(),
-                })
-                .await?
-                .into_inner())
+        convert(exec(async {
+            self.inner.register(&signer.inner, invite_code).await
         }))
     }
 
+    fn recover(&self, signer: &Signer) -> PyResult<Vec<u8>> {
+        convert(exec(async { self.inner.recover(&signer.inner).await }))
+    }
+
+    fn authenticate(&self, creds: Credentials) -> PyResult<Self> {
+        creds.ensure_device().map_err(|_| {
+            PyValueError::new_err(
+                "can not authenticate scheduler, need device credentials".to_string(),
+            )
+        })?;
+        let s = exec(async { self.inner.authenticate(creds.inner).await }).map_err(|e| {
+            PyValueError::new_err(format!(
+                "could not authenticate scheduler {}",
+                e.to_string()
+            ))
+        })?;
+        Ok(Scheduler {
+            node_id: self.node_id.clone(),
+            inner: s,
+        })
+    }
+
+    fn export_node(&self) -> PyResult<Vec<u8>> {
+        convert(exec(async { self.inner.export_node().await }))
+    }
+
+    fn schedule(&self) -> PyResult<Vec<u8>> {
+        convert(exec(async { self.inner.schedule().await }))
+    }
+
     fn get_invite_codes(&self) -> PyResult<Vec<u8>> {
-        convert(exec(async move { self.inner.get_invite_codes().await }))
+        convert(exec(async { self.inner.get_invite_codes().await }))
     }
 
     fn add_outgoing_webhook(&self, uri: String) -> PyResult<Vec<u8>> {
-        let outgoing_webhook_request = pb::scheduler::AddOutgoingWebhookRequest {
-            node_id: self.node_id.clone(),
-            uri,
-        };
-
-        convert(exec(async move {
+        convert(exec(async {
             self.inner
-                .add_outgoing_webhook(outgoing_webhook_request)
+                .add_outgoing_webhook(self.node_id.clone(), uri)
                 .await
         }))
     }
 
     fn list_outgoing_webhooks(&self) -> PyResult<Vec<u8>> {
-        let list_outgoing_webhooks_request = pb::scheduler::ListOutgoingWebhooksRequest {
-            node_id: self.node_id.clone(),
-        };
-
-        convert(exec(async move {
+        convert(exec(async {
             self.inner
-                .list_outgoing_webhooks(list_outgoing_webhooks_request)
+                .list_outgoing_webhooks(self.node_id.clone())
                 .await
         }))
     }
 
     fn delete_outgoing_webhooks(&self, webhook_ids: Vec<i64>) -> PyResult<Vec<u8>> {
-        let delete_outgoing_webhooks_request = pb::scheduler::DeleteOutgoingWebhooksRequest {
-            node_id: self.node_id.clone(),
-            ids: webhook_ids,
-        };
-
-        convert(exec(async move {
+        convert(exec(async {
             self.inner
-                .delete_webhooks(delete_outgoing_webhooks_request)
+                .delete_outgoing_webhooks(self.node_id.clone(), webhook_ids)
                 .await
         }))
     }
 
     fn rotate_outgoing_webhook_secret(&self, webhook_id: i64) -> PyResult<Vec<u8>> {
-        let rotate_outgoing_webhook_secret_request =
-            pb::scheduler::RotateOutgoingWebhookSecretRequest {
-                node_id: self.node_id.clone(),
-                webhook_id,
-            };
-
-        convert(exec(async move {
+        convert(exec(async {
             self.inner
-                .rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request)
+                .rotate_outgoing_webhook_secret(self.node_id.clone(), webhook_id)
                 .await
         }))
     }
@@ -159,20 +262,4 @@ pub fn convert<T: Message>(r: Result<T>) -> PyResult<Vec<u8>> {
     let mut buf = Vec::with_capacity(res.encoded_len());
     res.encode(&mut buf).unwrap();
     Ok(buf)
-}
-
-impl Scheduler {
-    async fn connect_with(&self, uri: String, creds: &Credentials) -> Result<Client> {
-        let client_tls = creds.inner.tls_config().client_tls_config();
-        let channel = Channel::from_shared(uri)?
-            .tls_config(client_tls)?
-            .connect()
-            .await?;
-        Ok(SchedulerClient::new(channel))
-    }
-
-    async fn connect(&self) -> Result<Client> {
-        let uri = gl_client::utils::scheduler_uri();
-        self.connect_with(uri, &self.creds).await
-    }
 }

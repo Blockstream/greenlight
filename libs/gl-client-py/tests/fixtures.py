@@ -13,12 +13,6 @@ def creds(nobody_id):
 
 
 @pytest.fixture
-def tls(creds):
-    """Just a preconfigured TlsConfig."""
-    return TlsConfig(creds=creds)
-
-
-@pytest.fixture
 def signer(scheduler, creds):
     secret = b"\x00" * 32
     network = "regtest"
@@ -34,3 +28,12 @@ def sclient(signer, creds):
     """
     network = "regtest"
     return Scheduler(signer.node_id(), network=network, creds=creds)
+
+
+@pytest.fixture
+def device_creds(signer, creds, sclient):
+    """An authenticated set of credentials.
+    """
+
+    res = sclient.register(signer)
+    return Credentials.from_bytes(res.creds)

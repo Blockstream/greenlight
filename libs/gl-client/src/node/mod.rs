@@ -1,4 +1,4 @@
-use crate::credentials::Credentials;
+use crate::credentials::{RuneProvider, TlsConfigProvider};
 use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
@@ -55,10 +55,12 @@ impl GrpcClient for ClnClient {
 }
 
 impl Node {
-    pub fn new(node_id: Vec<u8>, creds: Credentials) -> Result<Node> {
-        creds.is_device()?;
+    pub fn new<Creds>(node_id: Vec<u8>, creds: Creds) -> Result<Node>
+    where
+        Creds: TlsConfigProvider + RuneProvider,
+    {
         let tls = creds.tls_config();
-        let rune = creds.rune()?;
+        let rune = creds.rune();
         Ok(Node {
             node_id,
             tls,
