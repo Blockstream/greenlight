@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.11">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.13">
     
     
       
@@ -714,6 +714,8 @@
       
         
       
+        
+      
     
     
       
@@ -772,6 +774,27 @@
   
   <span class="md-ellipsis">
     Client Libraries
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../creds/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Credentials
   </span>
   
 
@@ -857,7 +880,7 @@
         <li class="md-nav__item">
   <a href="#client-node-authentication" class="md-nav__link">
     <span class="md-ellipsis">
-      Client &rlarr; Node authentication
+      Client &rlarr; Node Authentication
     </span>
   </a>
   
@@ -866,7 +889,16 @@
         <li class="md-nav__item">
   <a href="#client-signer-authentication" class="md-nav__link">
     <span class="md-ellipsis">
-      Client &rlarr; Signer authentication
+      Client &rlarr; Signer Authentication
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-signer-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client &rlarr; Signer Authorization
     </span>
   </a>
   
@@ -1047,7 +1079,7 @@
         <li class="md-nav__item">
   <a href="#client-node-authentication" class="md-nav__link">
     <span class="md-ellipsis">
-      Client &rlarr; Node authentication
+      Client &rlarr; Node Authentication
     </span>
   </a>
   
@@ -1056,7 +1088,16 @@
         <li class="md-nav__item">
   <a href="#client-signer-authentication" class="md-nav__link">
     <span class="md-ellipsis">
-      Client &rlarr; Signer authentication
+      Client &rlarr; Signer Authentication
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-signer-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client &rlarr; Signer Authorization
     </span>
   </a>
   
@@ -1095,7 +1136,7 @@ signer. This can either be an external attacker or a rogue Greenlight
 operator. Our goal is to prevent any access to funds from such an
 attacker, whether internal or external, by checking authorization on
 both the node as well as the signer level.</p>
-<h2 id="client-node-authentication">Client &rlarr; Node authentication</h2>
+<h2 id="client-node-authentication">Client &rlarr; Node Authentication</h2>
 <p>This is a direct connection from a client to the node, or the signer
 to the node. The mTLS certificate hierarchy is under the control of
 the Greenlight Team. Each user gets their own CA, and nodes are
@@ -1123,24 +1164,25 @@ with the server. Notice however that the Greenlight team, being in
 control of the CA hierarchy, could create a bogus client certificate
 and use that to issue commands to the node. More on this in the next
 section.</p>
-<h2 id="client-signer-authentication">Client &rlarr; Signer authentication</h2>
+<h2 id="client-signer-authentication">Client &rlarr; Signer Authentication</h2>
 <p>The signer cannot rely on the mTLS CA structure, since that is under
-control of the Greenlight team. As such it uses an attestation scheme
-in which the signer-identity attests to itself (and other signers)
-that a given client is permitted to perform some operations.</p>
-<p>Upon registering a new client, the signer will provide an attestation
-signature. This attestation signature is what tells other signers that
-commands originating from that client are to be accepted. This is
-important because it allows multiple signers to recognize which
-clients are authorized, even if the attesting signer is not the signer
-that is currently verifying the authorization.</p>
+control of the Greenlight team. Instead, Greenlight employs an 
+attestation scheme in which the signer identity attests to itself and 
+other signers that a particular client is authorized to perform 
+certain operations.</p>
+<p>When registering a new client, the signer will submit a <a href="https://github.com/nepet/runeauth"><code>rune</code></a>
+as an access token. The rune serves mainly as an authentication while the 
+client's identity in form of a mTLS key-pair provides authorization. 
+The run is bound to the client's identity; it is presented to the signer 
+on each request. This will allow multiple signers to recognize which 
+clients are authorized, even if the signer who carved the rune is not the 
+signer verifying the authorization.</p>
 <p>Before signing a request the signer independently verifies that:</p>
 <ol>
 <li>The operations that it is asked to sign off on match pending RPC
     commands, and are safe to perform.</li>
 <li>The pending RPC commands are all signed by a valid client-identity</li>
-<li>The client-identities all have a matching attestation signature
-    from the signer</li>
+<li>The client-identity has a valid rune that qualifies for the request.</li>
 <li>None of the pending RPC commands is a replay of a previously
     completed RPC command.</li>
 </ol>
@@ -1151,13 +1193,25 @@ the same checks both on the node as well as the signer, the former
 preventing read-access that doesn't involve the signer, while the
 latter ensures funds are not moved without a client authorizing it.</p>
 <p>The client-identity pubkey, its signature of the command payload, and
-the signer-attestation are all passed to the node via grpc
-headers. The node extracts them, alongside the call itself, and adds
-it to a request context which will itself be attached to requests that
-are sent to the signer, so it can verify the validity and authenticity
-of the operations. An attacker that gains access to the node is unable
-to provide either these signatures and will therefore fail to convince
+the rune are all passed to the node via grpc headers. The node 
+extracts them, alongside the call itself, and adds it to a request 
+context which will itself be attached to requests that are sent to the
+signer, so it can verify the validity and authenticity of the 
+operations. An attacker that gains access to the node is unable to 
+provide either these signatures and will therefore fail to convince
 the signer of its injected commands.</p>
+<h2 id="client-signer-authorization">Client &rlarr; Signer Authorization</h2>
+<p>The <a href="https://github.com/nepet/runeauth"><code>rune</code></a>-based signer authentication verifies a client's 
+identity and their authorization to execute commands. To achieve more 
+granular control over command authorization for individual clients, a 
+rune can be created with specific restrictions. When verifying client 
+identity, the signer additionally ensures that specific conditions, 
+such as the requested command, align with the limitations of the given
+rune.</p>
+<p>This enables a user to share access to the signer across multiple 
+clients that are restricted to a subset of commands, for example 
+read-only clients, or invoice-only clients, or clients that can only
+create on-chain addresses and so on.</p>
 
 
 
@@ -1212,7 +1266,7 @@ the signer of its injected commands.</p>
     <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "content.code.annotate", "navigation.instant", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.8fd75fb4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
       
     
   </body>
