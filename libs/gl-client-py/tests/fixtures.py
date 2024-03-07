@@ -19,10 +19,10 @@ def tls(creds):
 
 
 @pytest.fixture
-def signer(scheduler, tls):
+def signer(scheduler, creds):
     secret = b"\x00" * 32
     network = "regtest"
-    return Signer(secret, network=network, tls=tls)
+    return Signer(secret, network=network, creds=creds)
 
 
 @pytest.fixture

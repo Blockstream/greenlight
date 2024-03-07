@@ -26,9 +26,9 @@ def _convert(cls: Type[E], res: Iterable[Any]) -> E:
 
 
 class Signer(object):
-    def __init__(self, secret: bytes, network: str, tls: TlsConfig):
-        self.inner = native.Signer(secret, network, tls.inner)
-        self.tls = tls
+    def __init__(self, secret: bytes, network: str, creds: Credentials):
+        self.inner = native.Signer(secret, network, creds)
+        self.creds = creds
         self.handle: Optional[native.SignerHandle] = None
 
     def run_in_thread(self) -> "native.SignerHandle":
