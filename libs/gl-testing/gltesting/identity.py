@@ -59,10 +59,6 @@ class Identity(object):
         s.load_cert_chain(self.cert_chain_path, keyfile=self.private_key_path)
         s.load_verify_locations(capath=self.caroot_path)
         s.set_alpn_protocols(['h2'])
-        try:
-            s.set_npn_protocols(['h2'])
-        except NotImplementedError:
-            pass
         return s
 
     def __str__(self):
