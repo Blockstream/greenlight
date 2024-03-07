@@ -108,7 +108,7 @@ class Client:
         have_certs = keypath.exists()
 
         self.directory.mkdir(exist_ok=True)
-        signer = glclient.Signer(secret, NETWORK, glclient.TlsConfig(self.creds()))
+        signer = glclient.Signer(secret, NETWORK, self.creds())
 
         return signer
 

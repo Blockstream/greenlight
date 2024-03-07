@@ -93,7 +93,11 @@ pub enum Error {
 }
 
 impl Signer {
-    pub fn new(secret: Vec<u8>, network: Network, tls: TlsConfig) -> Result<Signer, anyhow::Error> {
+    pub fn new(
+        secret: Vec<u8>,
+        network: Network,
+        creds: Credentials,
+    ) -> Result<Signer, anyhow::Error> {
         use lightning_signer::policy::{
             filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
         };
@@ -171,7 +175,7 @@ impl Signer {
             secret: sec,
             master_rune: mr,
             services,
-            tls,
+            tls: creds.tls_config(),
             id,
             init,
             network,
@@ -992,8 +996,9 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 
 #[cfg(test)]
 mod tests {
-    use crate::tls;
+    use crate::credentials;
     use crate::pb;
+    use crate::tls;
 
     use super::*;
 
@@ -1007,7 +1012,7 @@ mod tests {
         let signer = Signer::new(
             vec![0 as u8; 32],
             Network::Bitcoin,
-            TlsConfig::new(),
+            credentials::Nobody::new(),
         )
         .unwrap();
 
@@ -1030,7 +1035,7 @@ mod tests {
         let signer = Signer::new(
             vec![0 as u8; 32],
             Network::Bitcoin,
-            TlsConfig::new(),
+            credentials::Nobody::new(),
         )
         .unwrap();
 
@@ -1053,7 +1058,7 @@ mod tests {
     #[test]
     fn test_sign_message_max_size() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::new()).unwrap();
 
         // We test if we reject a message that is too long.
         let msg = [0u8; u16::MAX as usize + 1];
@@ -1070,7 +1075,7 @@ mod tests {
     #[test]
     fn test_legacy_bip32_key() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, TlsConfig::new()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::new()).unwrap();
 
         let bip32 = signer.legacy_bip32_ext_key();
         let expected: Vec<u8> = vec![
@@ -1090,7 +1095,7 @@ mod tests {
     #[test]
     fn test_rune_expects_pubkey() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin, tls::TlsConfig::new()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::new()).unwrap();
 
         let alt = "pubkey=112233";
         let wrong_alt = "pubkey^112233";
@@ -1113,7 +1118,7 @@ mod tests {
     #[test]
     fn test_rune_expansion() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::new()).unwrap();
         let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
 
         let new_rune = signer
@@ -1126,7 +1131,7 @@ mod tests {
     #[test]
     fn test_rune_checks_method() {
         let signer =
-            Signer::new(vec![0u8; 32], Network::Bitcoin,  tls::TlsConfig::new()).unwrap();
+            Signer::new(vec![0u8; 32], Network::Bitcoin, credentials::Nobody::new()).unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();

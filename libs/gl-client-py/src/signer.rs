@@ -1,4 +1,4 @@
-use crate::tls::TlsConfig;
+use crate::Credentials;
 use gl_client::bitcoin::Network;
 use log::warn;
 use pyo3::{exceptions::PyValueError, prelude::*};
@@ -13,7 +13,7 @@ pub struct Signer {
 #[pymethods]
 impl Signer {
     #[new]
-    fn new(secret: Vec<u8>, network: String, tls: TlsConfig) -> PyResult<Signer> {
+    fn new(secret: Vec<u8>, network: String, creds: Credentials) -> PyResult<Signer> {
         let network: Network = match network.parse() {
             Ok(network) => network,
             Err(_) => {
@@ -24,7 +24,7 @@ impl Signer {
             }
         };
 
-        let inner = match gl_client::signer::Signer::new(secret, network, tls.inner) {
+        let inner = match gl_client::signer::Signer::new(secret, network, creds.inner) {
             Ok(v) => v,
             Err(e) => {
                 return Err(pyo3::exceptions::PyValueError::new_err(format!(
