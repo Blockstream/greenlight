@@ -15,9 +15,6 @@ cryptography = ">=36.0.1,<37.0.0"
 ephemeral-port-reserve = "^1.1.4"
 sh = "^1.14.2"
 pytest-timeout = "^2.1.0"
-# `pip` doesn't like relative-path dependencies. Should be ok once we
-# publish this on PyPI so pip can find it too.
-# gl-client-py = {path = "../gl-client-py"}
 pytest-xdist = "^2.5.0"
 pytest = "^7.1.2"
 pytest-cov = "^3.0.0"
@@ -30,7 +27,17 @@ anyio = "^3.7.1"
 purerpc = { version = "^0.8.0", extras = ["grpc"] }
 pytest-sugar = "^0.9.7"
 
-[tool.poetry.dev-dependencies]
+# The dependency below is defined in this repository
+# PyPi cannot support relative paths.
+#
+# Users, who `pip install` this library retrieve the sources from `PyPi`.
+# using the version numbers listed below
+#
+# Contributors should use `poetry install` in the project root
+# to insure the installation is editable from local sources.
+gl-client = "^0.1.11"
+
+[tool.poetry.group.dev.dependencies]
 mypy = "^1"
 typed-ast = "^1.5.4"
 
