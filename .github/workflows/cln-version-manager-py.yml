@@ -1,0 +1,58 @@
+name: ClnVersionManager
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - opened
+    workflow_dispatch:
+    merge_roup:
+    push:
+      branches:
+        - master
+
+jobs:
+  source:
+    runs-on: ubuntu-20.04
+    steps:
+      # Check out the code
+      # We use a sparse check-out to ensure we only use the files we need
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          sparse-checkout: |
+            libs/cln-version-manager
+      - name: Move files to toplevel
+        run: mv ./libs/cln-version-manager/** .
+      # Install python-3.8
+      - name: Install python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      # Load the poetry installation if it still cached
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local  # the path depends on the OS
+          key: poetry-0  # increment to reset cache
+      # Install poetry. By default the poetry-files venv is created
+      # in ~/.cache/virtualenvs
+      - name: Install poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+      - name: Install dependencies
+        run: poetry install --no-interaction
+      - name: Run mypy
+        run: poetry run mypy
+      - name: Run tests
+        run: poetry run pytest tests
+
+    
+
+      
+    
+
+          
+        
+
