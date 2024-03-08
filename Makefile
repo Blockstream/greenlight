@@ -48,7 +48,6 @@ CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/loca
 include libs/gl-client/Makefile
 include libs/gl-client-py/Makefile
 include libs/gl-testing/Makefile
-include libs/cln-version-manager/Makefile
 
 check: check-rs check-py
 
