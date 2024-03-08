@@ -79,9 +79,9 @@ def _get_cln_version_path(cln_path: Optional[PathLike] = None) -> Path:
     if cln_path is not None:
         return Path(cln_path).resolve()
 
-    gltesting_cln_path = os.environ.get("CLNVM_CACHE_DIR")
-    if cln_path is not None:
-        return Path(cln_path).resolve()
+    cln_cache_dir = os.environ.get("CLNVM_CACHE_DIR")
+    if cln_cache_dir is not None:
+        return Path(cln_cache_dir).resolve()
 
     xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
     if xdg_cache_home is not None:

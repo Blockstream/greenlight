@@ -24,7 +24,6 @@ def cli() -> None:
 
 @cli.command()
 @click.option("--force", is_flag=True)
-@click.option("--pretty", is_flag=True)
 def get_all(force: bool) -> None:
     version_manager = ClnVersionManager()
     versions = version_manager.get_versions()
