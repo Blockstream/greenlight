@@ -9,7 +9,7 @@
 FROM ubuntu:20.04 as builder
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
-ENV RUST_VERSION=1.70.0
+ENV RUST_VERSION=1.74
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_LOG=debug
 ENV PYTHONPATH=/repo/libs/gl-testing
@@ -80,7 +80,7 @@ ARG GID=1000
 ENV TZ="Europe/Zurich"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_TARGET_DIR=/tmp/target/
-ENV RUST_VERSION=1.70.0
+ENV RUST_VERSION=1.74
 
 # Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
 ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
