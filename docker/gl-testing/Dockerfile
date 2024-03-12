@@ -89,7 +89,7 @@ RUN apt update && apt install curl build-essential -qqy
 ENV RUSTUP_HOME=/opt/rustup
 ENV CARGO_HOME=/opt/cargo
 
-ENV RUST_VERSION=1.70.0
+ENV RUST_VERSION=1.74
 RUN curl \
     --proto '=https' \
     --tlsv1.2 \
