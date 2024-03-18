@@ -13,7 +13,7 @@ pytest = "^7"
 [tool.poetry.group.dev-gl-client-py.dependencies]
 black = "^24.0.0"
 mypy-protobuf = "^3.5"
-maturin = ">=1.0,<1.3.2"
+maturin = {version = ">=1.0,<1.3.2", extras = ["patchelf"]}
 mypy = "^1.7.0"
 grpcio-tools = "^1.59.2"
 

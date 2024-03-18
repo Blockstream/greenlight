@@ -8,8 +8,13 @@ venv
 target
 docker
 site
-.git
 .github
 docs
+poetry.lock
 .gitmodules
 .gitattributes
+site
+**/__pycache__
+**/*.pyc
+**/dist
+cln_versions
