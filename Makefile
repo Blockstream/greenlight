@@ -41,6 +41,16 @@ CLN_VERSIONS = \
 	v23.05gl1 \
 	v23.08gl1
 
+DOCKER_OPTIONS= \
+	--rm \
+	--user $(shell id -u):$(shell id -g) \
+	-e TMPDIR=/tmp/gltesting/tmp \
+	-v /tmp/gltesting/tmp:/tmp/gltesting/tmp \
+	-e CARGO_TARGET_DIR=/tmp/gltesting/target \
+	-v /tmp/gltesting/target:/tmp/gltesting/target \
+	-v /tmp/gltesting/cargo/registry:/opt/bin/cargo/registry \
+	-v ${REPO_ROOT}:/repo
+
 CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)
 
 .PHONY: ensure-docker build-self check-self docker-image docs wheels
@@ -59,13 +69,11 @@ gen: ${GENALL}
 
 build-self: ensure-docker
 	cargo build --all
-	(cd libs/gl-client-py && poetry install --with=dev)
-	(cd libs/gl-client-py && python3 -m maturin develop)
-	pip install -e libs/gl-testing
+	cd libs/gl-client-py; maturin develop
 
 check-all: check-self check-self-gl-client check-py
 
-check-self: ensure-docker
+check-self: ensure-docker build-self
 	PYTHONPATH=/repo/libs/gl-testing \
 	pytest -vvv \
 	  /repo/libs/gl-testing \
@@ -93,48 +101,40 @@ docker-image: ${REPO_ROOT}/docker/gl-testing/Dockerfile
 	  -f docker/gl-testing/Dockerfile \
 	  .
 
-docker-shell:
+docker-volumes:
 	mkdir -p /tmp/gltesting/tmp && \
-	mkdir -p /tmp/gltesting/target && \
-	mkdir -p /tmp/gltesting/.cargo/.registry && \
+	mkdir -p /tmp/gltesting/target &&\
+	mkdir -p /tmp/gltesting/cargo/registry \
+
+docker-shell: docker-volumes
 	docker run \
 		-ti \
-		--net=host \
-		--rm \
 		--cap-add=SYS_PTRACE \
-		-e TMPDIR=/tmp/gltesting/tmp \
-		-v /tmp/gltesting/:/tmp/gltesting \
-		-e CARGO_TARGET_DIR=/tmp/gltesting/target \
-		-v /tmp/gltesting/.cargo/.registry:/home/$(shell whoami)/.cargo/registry/ \
-		-v ${REPO_ROOT}:/repo \
+		${DOCKER_OPTIONS} \
 		gltesting bash
 
-docker-check-self:
+docker-check-self: docker-volumes
 	docker run \
 	  -t \
-	  --rm \
-	  -v ${REPO_ROOT}:/repo \
+	  ${DOCKER_OPTIONS} \
 	  gltesting make build-self check-self
 
-docker-check-all:
+docker-check-all:docker-volumes
 	docker run \
 	  -t \
-	  --rm \
-	  -v ${REPO_ROOT}:/repo \
+	  ${DOCKER_OPTIONS} \
 	  gltesting make build-self check-all
 
-docker-check:
+docker-check: docker-volumes
 	docker run \
 	  -t \
-	  --rm \
 	  -v ${REPO_ROOT}:/repo \
 	  gltesting make check
 
-docker-check-py:
+docker-check-py: docker-volumes
 	docker run \
 		-t \
-		--rm \
-		-v ${REPO_ROOT}:/repo \
+		${DOCKER_OPTIONS} \
 		gltesting make build-self check-py
 
 cln-versions/%/usr/local/bin/lightningd: cln-versions/lightningd-%.tar.bz2

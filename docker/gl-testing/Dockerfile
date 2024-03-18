@@ -1,219 +1,273 @@
-# A simple Dockerfile that can be used to test integrations.
+# This dev-container is used to build and test greenlight.
+# It can also be used to generate code such as the grpc-bindings.
 #
-# The `gl-testing` framework requires a number of dependencies in
-# order to run correctly (CLN versions, python dependencies,
-# `gl-client` library, etc). This Dockerfile provisions all those
-# dependencies correctly and can be used to test the greenlight
-# libraries themselves or as a base image for your own test images.
+# Typically, Dockerfiles are optimized for size.
+# This allows quick deployments and pulls.
+# However, this Dockerfile isn't deployed nor pushed to a registry.
+# There is no need to optimize size for the time being. 
+#
+# I've decided to optimize for the following attributes
+#
+# Developer Experience:
+# We want to mount the repository in the Dockerfile.
+# I want to have editable installs where possible.
+#
+# The docker-file should be easy to run under your own user.
+# This ensures we never have rights issues on our own system.
+#
+# Caching
+# The Dockerfile should provide good caching
+# We only want to rebuild parts that have actually changed.
+# E.g: We will only reinstall python dependencies if
+# a `pyproject.toml` file has changed
+#
+# Build-time
+# Prefer binary installs over compilation where possible.
+# We also heavily rely on staged builds to increase concurrency.
 
-FROM ubuntu:20.04 as builder
-ENV TZ="Europe/Zurich"
-ENV DEBIAN_FRONTEND=noninteractive
+
+
+# --------------------------------------------------
+# STAGE: python-builder
+#--------------------------------------------------
+# This imaged is used to build the python environment
+# It gets all dependencies from our `pyproject.toml`
+# files and installs them in a `venv`.
+#
+# Later, we'll copy this venv to our project
+FROM ubuntu:20.04 as python-builder
+RUN apt update && apt install -qqy curl python3 python3-pip python3-venv
+
+# Create a python-venv that will include all dependencies
+ENV PATH=/tmp/venv/bin:$PATH
+RUN python3 -m venv /tmp/venv
+
+# We use the official poetry installer
+# This ensures poetry is always up-to-date.
+# This approach also ensures `poetry` and our environment don't overlap
+ENV POETRY_HOME=/tmp/poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH=$POETRY_HOME/bin:$PATH
+RUN poetry self add poetry-plugin-export
+
+
+# The pyproject.toml files describe our project
+# I purposefully ignore lock-files here
+# We are developping a libraries and if a new version of a
+# dependency breaks our code I want to be the first to know it
+ADD pyproject.toml /repo/pyproject.toml
+ADD libs/gl-client-py/pyproject.toml /repo/libs/gl-client-py/pyproject.toml
+ADD libs/gl-testing/pyproject.toml /repo/libs/gl-testing/pyproject.toml
+
+WORKDIR repo
+
+# We don't want to reinstall depenendencies every time
+# a single line of library code changes.
+#
+# Poetry install requires us to ADD the library-code to
+# the dockerfil. So this approach doesn't work
+#
+# Using poetry export we can generate a list of all dependencies.
+# We filter out all path-depenendencies from this list cause we
+# don't have the code in the Docker-repo yet.
+RUN poetry lock
+RUN poetry export -f requirements.txt -o requirements.txt --with=dev
+RUN cat requirements.txt | sed '/gl\-testing/d' | sed '/gl\-client/d' > requirements2.txt
+RUN python -m pip install --upgrade pip && pip install wheel && pip install -r requirements2.txt
+
+# Later we will run this image under another user
+# It is great if they can access this as well
+RUN chmod a+rwx -R /tmp/venv
+
+# ---------------------------------------------
+# STAGE: rust-builder
+# --------------------------------------------
+# Installs rustc and cargo using rust-up
+from ubuntu:20.04 as rust-base
+RUN apt update && apt install curl build-essential -qqy
+
+ENV RUSTUP_HOME=/opt/rustup
+ENV CARGO_HOME=/opt/cargo
+
 ENV RUST_VERSION=1.70.0
-ENV PATH=/root/.cargo/bin:$PATH
-ENV RUST_LOG=debug
-ENV PYTHONPATH=/repo/libs/gl-testing
-ENV CARGO_UNSTABLE_SPARSE_REGISTRY=true
-
-RUN apt-get update && apt-get install -qqy \
-    python3 \
-    python3-pip \
-    clang \
-    autoconf \
-    automake \
-    build-essential \
-    git \
-    jq \
-    libtool \
-    libpq5 \
-    libgmp-dev \
-    libsqlite3-dev \
-    net-tools \
-    zlib1g-dev \
-    libsodium-dev \
-    gettext \
-    pkgconf \
-    curl \
-    wget \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN curl \
     --proto '=https' \
     --tlsv1.2 \
     -sSf https://sh.rustup.rs | sh \
     -s -- -y --default-toolchain ${RUST_VERSION}
 
-RUN mkdir /tmp/protoc && \
-    cd /tmp/protoc && \
-    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
-    unzip protoc.zip && \
-    mv /tmp/protoc/bin/protoc /usr/local/bin && \
-    rm -rf /tmp/protoc
+ENV PATH=$CARGO_HOME/bin:$PATH
 
-RUN python3 -m pip install -U \
-      pip tomli &&\
-    python3 -m pip install \
-      maturin[patchelf] \
-      mrkd \
-      mako
-ADD . /repo
+RUN rustup default stable
+
+# Ensure we can use cargo under a different user
+RUN chmod a+rwx -R $CARGO_HOME
+
+
+# ------------------------------------------
+# STAGE: cln-downloader
+# -----------------------------------------
+# gl-testing requires multiple versions of Core Lightning
+# DOwnload all versions so they can be copied to our dev-container
+from ubuntu:20.04 as cln-downloader
+RUN apt update && apt install wget make git -qqy
+
+# Add all the makefiles
+# Althoug we only need the main one here we have to include all of them
+ADD Makefile /repo/Makefile
+ADD libs/gl-testing/Makefile /repo/libs/gl-testing/Makefile
+ADD libs/gl-client-py/Makefile /repo/libs/gl-client-py/Makefile
+ADD libs/gl-client/Makefile /repo/libs/gl-client/Makefile
+
 WORKDIR /repo
 
-RUN make cln
+RUN git init && make cln
+RUN chmod a+x -R /repo/cln-versions/
 
-RUN cd /repo/libs/gl-plugin && cargo build --release && \
-    cd /repo/libs/gl-signerproxy && cargo build --release
+# -------------------------------------
+# STAGE: bitcoin-downloader
+# ------------------------------------
+# Downloads bitcoin-core
+FROM ubuntu:20.04 as bitcoin-downloader
+RUN apt update && apt install -qqy wget
 
-# Move the binaries into the location the tester expects, we copy just
-# the binaries and we switch from release to debug, simply to keep the
-# docker image size in check
-RUN mkdir -p /tmp/target/debug && \
-    mv /repo/target/release/gl-plugin /tmp/target/debug/ && \
-    mv /repo/target/release/gl-signerproxy /tmp/target/debug/
-
-FROM ubuntu:20.04 as tester
 ARG BITCOIN_VERSION=25.0
-ARG DOCKER_USER=default_user
-ARG UID=1000
-ARG GID=1000
-ENV TZ="Europe/Zurich"
-ENV DEBIAN_FRONTEND=noninteractive
-ENV CARGO_TARGET_DIR=/tmp/target/
-ENV RUST_VERSION=1.70.0
-
-# Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
-ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
-
-# grpcio == 1.46 produces spammy log messages, silence them
-ENV GRPC_ENABLE_FORK_SUPPORT=0
-
-RUN apt-get update && apt-get install -qqy \
-    autoconf \
-    clang \
-    curl \
-    git \
-    libgmp-dev \
-    libsodium23 \
-    libsqlite3-dev \
-    libpq5 \
-    libtool \
-    pkgconf \
-    python3 \
-    python3-pip \
-    python3-venv \
-    sudo \
-    socat \
-    unzip \
-    wget \
-    jq \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN groupadd -g $GID -o $DOCKER_USER &&\
-    useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
-    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-# Enumerate all CLN version we want `gl-testing` to find.
-ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/
-
-# Shorten poll intervals so tests are faster to run
-ENV DEVELOPER=1
-
-# Add the latest CLN version to the `$PATH` so `pyln-testing` can find
-# it when it wants to spawn a new node
-ENV PATH=/opt/cln-latest/usr/local/bin/:$PATH
-
-# And we also add the cargo bin directory just for the sake of
-# simplifying a dev's life.
-ENV PATH=/home/$DOCKER_USER/.cargo/bin:$PATH
-
-# Make sure we can tell when running in the docker container. This is
-# helpful if we expect to be run in the container, but have been
-# invoked somewhere else.
-ENV GL_DOCKER=1
-ENV PATH=/tmp/venv/bin:$PATH
-ENV VIRTUAL_ENV=/tmp/venv
 
 RUN cd /tmp/ && \
     wget "https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz" -O bitcoin.tar.gz && \
     tar -xvzf bitcoin.tar.gz && \
-    mv /tmp/bitcoin-$BITCOIN_VERSION/bin/bitcoin* /usr/local/bin/ && \
+    mv /tmp/bitcoin-$BITCOIN_VERSION/ /opt/bitcoin && \
     rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
 
+# ---------------------------------------
+# STAGE: cfssl-downloader
+# --------------------------------------
+# Downloads cloudlfares SSL binaries
+FROM ubuntu:20.04 as cfssl-downloader
 
-RUN mkdir /tmp/protoc && \
-    cd /tmp/protoc && \
-    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
-    unzip protoc.zip && \
-    mv /tmp/protoc/bin/* /usr/local/bin/ && \
-    rm -rf protoc.zip /tmp/protoc && \
-    chmod a+x /usr/local/bin/protoc
+RUN apt update && apt install -qqy wget
 
 RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1.5.0_linux_amd64 -O /usr/bin/cfssl && \
     chmod a+x /usr/bin/cfssl
 RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
     chmod a+x /usr/bin/cfssljson
 
+# ----------------------------------------
+# STAGE: protoc-downloader
+# ----------------------------------------
+from ubuntu:20.04 as protoc-downloader
+RUN apt update && apt install -qqy wget unzip
+RUN mkdir /tmp/protoc && \
+    cd /tmp/protoc && \
+    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
+    unzip protoc.zip && \
+    mv /tmp/protoc/bin/protoc /usr/local/bin && \
+    chmod a+x /usr/local/bin/protoc && \
+    rm -rf /tmp/protoc
 
-USER $DOCKER_USER
-# Run in a venv, so we don't get warnings about root being special.
-RUN python3 -m venv /tmp/venv
+# ----------------------------------------
+# STAGE: plugin-builder
+# ---------------------------------------
+# Create a release installation or all plugins.
+# This is mainly useful for users who don't to build or edit the rust-code
+FROM rust-base as gl-plugin-builder
 
-RUN python3 -m pip install -U pip tomli && \
-    python3 -m pip install \
-    mako \
-    protobuf \
-    ephemeral-port-reserve \
-    sh \
-    poetry \
-    pytest-timeout \
-    pytest-xdist \
-    rich \
-    pyln-testing \
-    pytest-cov \
-    grpcio \
-    pytest-xdist \
-    maturin[patchelf] \
-    grpcio-tools \
-    purerpc[grpc] \
-    mypy-protobuf
+RUN apt update && apt install -qqy git
 
+# Building the grpc-interface and gl-plugin requires a protoc compiler
+COPY --from=protoc-downloader /usr/local/bin/protoc /usr/local/bin/protoc
 
-# Add cargo and the rust toolchain in case we want to compile
-# gl-plugin and gl-signerproxy. This can be useful if we want to
-# develop them, and bind-mount the repository from the host into
-# `/repo`
-RUN curl \
-    --proto '=https' \
-    --tlsv1.2 \
-    -sSf https://sh.rustup.rs | sh \
-    -s -- -y --default-toolchain ${RUST_VERSION}
-
-USER root
-
-COPY --from=builder /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
-
-COPY --from=builder /repo/cln-versions/ /opt/cln
-COPY --from=builder /tmp/target /tmp/target
+# We should only ADD the files we need to optimize caching
 ADD . /repo
-RUN chown $DOCKER_USER -R /tmp/target /repo
 
-# Switch to docker user bevore we install dependencies.
-USER $DOCKER_USER
-
-RUN git config --global --add safe.directory /repo
-
-RUN (cd /repo/libs/gl-client-py; maturin develop)
-# Install `gl-testing`. When integrators use this image they'll mount
-# their own code into `/repo`
-RUN python3 -m pip install /repo/libs/gl-testing
-
-# Hack: importing the proto files twice isn't a good idea, and
-# pyln-testing currently does.
-RUN sed -i \
-    's/from pyln.testing import grpc/#from pyln.testing import grpc/g' \
-    /tmp/venv/lib/python3.8/site-packages/pyln/testing/utils.py
 
 WORKDIR /repo
+
+RUN cd /repo/libs/gl-plugin && cargo build && \
+    cd /repo/libs/gl-signerproxy && cargo build
+
+
+# ---------------------
+# STAGE: Dev container
+# ----------------------------
+#
+# This is the dev-container that we will be using
+FROM rust-base as gl-dev
+ENV DEBIAN_FRONTEND=noninteractive
+# Indicate we run inside the Dockerfile
+ENV GL_DOCKER=1
+# Tells cln to use shorter polling intervals
+ENV DEVELOPER=1
+
+# Required dependencies and some dependencies which are nice to have
+# floating around
+RUN apt-get update && apt install -qqy \
+    curl \
+    git \
+    jq \
+    libpq5 \
+    python \
+    python3-venv \
+    python3-pip \
+    tree \
+    socat \
+    sudo \
+    unzip \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# COnfigure rust and related logging
+# Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
+ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
+
+# grpcio == 1.46 produces spammy log messages, silence them
+ENV GRPC_ENABLE_FORK_SUPPORT=0
+
+# Install cln-versions
+COPY --from=cln-downloader /repo/cln-versions/ /opt/cln
+RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
+ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
+
+# Enumerate all versions that gl-testing should find
+ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/
+
+# Install bitcoin-core
+COPY --from=bitcoin-downloader /opt/bitcoin/bin /opt/bitcoin/bin
+ENV PATH=/opt/bitcoin/bin:$PATH
+
+# Install cfssl
+copy --from=cfssl-downloader /usr/bin/cfssl /usr/local/bin/cfssl
+copy --from=cfssl-downloader /usr/bin/cfssljson /usr/local/bin/cfssljson
+
+# Install protoc
+COPY --from=protoc-downloader /usr/local/bin/protoc /usr/local/bin/protoc
+
+# Copy the installs from the python-builder
+COPY --from=python-builder /tmp/poetry /tmp/poetry
+COPY --from=python-builder /tmp/venv /tmp/venv
+COPY --from=python-builder /repo/poetry.lock /repo/poetry.lock
+
+ENV PATH=/tmp/poetry/bin:/tmp/venv/bin:$PATH
+ENV VIRTUAL_ENV=/tmp/venv
+
+# Create a non-root user.
+ARG GID=0
+ARG UID=0
+ARG DOCKER_USER=dev
+RUN groupadd -g $GID -o $DOCKER_USER &&\
+    useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
+    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Create the required tmp-dicts
+RUN chmod a+rw /tmp
+RUN mkdir -p /tmp/gltesting/cargo && mkdir -p /tmp/gltesting/tmp
+
+ADD . /repo
+WORKDIR /repo
+
+# Add the remaining repositories to the python-path
+ENV PYTHONPATH=/repo/libs/gl-testing:/repo/libs/gl-client-py
+
+
+
 

@@ -22,7 +22,6 @@ jobs:
       run: |
         sudo chmod a+rwx -R libs/gl-client-py
         make docker-image
-
     - name: Check Self
       run : |
         make docker-check-self
