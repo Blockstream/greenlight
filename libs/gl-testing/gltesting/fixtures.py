@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 import sys
 from pyln.testing.fixtures import bitcoind, teardown_checks, node_factory, node_cls, test_name, executor, db_provider, test_base_dir, jsonschemas
+from pyln.testing.fixtures import directory as str_directory
 from decimal import Decimal
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
@@ -19,14 +20,9 @@ logging.getLogger("sh").setLevel(logging.ERROR)
 logging.getLogger("hpack").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
-
 @pytest.fixture()
-def directory():
-    """Root directory in which we'll generate all dependent files."""
-
-    with tempfile.TemporaryDirectory() as d:
-        yield Path(d)
-
+def directory(str_directory : str) -> Path:
+    return Path(str_directory) / "gl-testing"
 
 @pytest.fixture()
 def cert_directory(directory):
