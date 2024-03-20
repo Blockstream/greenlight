@@ -48,7 +48,7 @@ DOCKER_OPTIONS= \
 	-v /tmp/gltesting/tmp:/tmp/gltesting/tmp \
 	-e CARGO_TARGET_DIR=/tmp/gltesting/target \
 	-v /tmp/gltesting/target:/tmp/gltesting/target \
-	-v /tmp/gltesting/cargo/registry:/opt/bin/cargo/registry \
+	-v /tmp/gltesting/cargo/registry:/opt/cargo/registry \
 	-v ${REPO_ROOT}:/repo
 
 CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)

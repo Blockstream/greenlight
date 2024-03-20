@@ -22,6 +22,13 @@ jobs:
       run: |
         sudo chmod a+rwx -R libs/gl-client-py
         make docker-image
+    - name: Rust Cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          /tmp/gltesting/cargo
+          /tmp/gltesting/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Check Self
       run : |
         make docker-check-self
