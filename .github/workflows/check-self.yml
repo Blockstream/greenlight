@@ -31,8 +31,8 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Check Self
       run : |
-        make docker-check-self
+        PYTEST_OPTS='-n 8' make docker-check-self
 
     - name: Run python image
       run : |
-        make docker-check-py
+        PYTEST_OPTS='-n 8' make docker-check-py
