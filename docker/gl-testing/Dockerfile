@@ -65,7 +65,7 @@ WORKDIR repo
 # a single line of library code changes.
 #
 # Poetry install requires us to ADD the library-code to
-# the dockerfil. So this approach doesn't work
+# the dockerfile. So this approach doesn't work
 #
 # Using poetry export we can generate a list of all dependencies.
 # We filter out all path-depenendencies from this list cause we
@@ -108,8 +108,8 @@ RUN chmod a+rwx -R $CARGO_HOME
 # STAGE: cln-downloader
 # -----------------------------------------
 # gl-testing requires multiple versions of Core Lightning
-# DOwnload all versions so they can be copied to our dev-container
-from ubuntu:20.04 as cln-downloader
+# Download all versions so they can be copied to our dev-container
+FROM ubuntu:20.04 as cln-downloader
 RUN apt update && apt install wget make git -qqy
 
 # Add all the makefiles
@@ -216,7 +216,7 @@ RUN apt-get update && apt install -qqy \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# COnfigure rust and related logging
+# Configure rust and related logging
 # Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
 ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
 
