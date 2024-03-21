@@ -580,7 +580,7 @@ impl PluginNodeServer {
 
         for r in peers {
             trace!("Calling connect: {:?}", &r.id);
-            let res = rpc.call_typed(r.clone()).await;
+            let res = rpc.call_typed(&r).await;
             trace!("Connect returned: {:?} -> {:?}", &r.id, res);
 
             match res {
@@ -597,7 +597,7 @@ impl PluginNodeServer {
         let rpc_path = self.rpc_path.clone();
         let mut rpc = cln_rpc::ClnRpc::new(rpc_path).await?;
         let peers = rpc
-            .call_typed(cln_rpc::model::requests::ListpeersRequest {
+            .call_typed(&cln_rpc::model::requests::ListpeersRequest {
                 id: None,
                 level: None,
             })
@@ -615,7 +615,7 @@ impl PluginNodeServer {
             .collect();
 
         let mut dspeers: Vec<cln_rpc::model::requests::ConnectRequest> = rpc
-            .call_typed(cln_rpc::model::requests::ListdatastoreRequest {
+            .call_typed(&cln_rpc::model::requests::ListdatastoreRequest {
                 key: Some(vec!["greenlight".to_string(), "peerlist".to_string()]),
             })
             .await?
