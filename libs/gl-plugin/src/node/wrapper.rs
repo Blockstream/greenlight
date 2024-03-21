@@ -103,6 +103,27 @@ impl Node for WrappedNodeServer {
         self.inner.getinfo(r).await
     }
 
+    async fn list_offers(
+        &self,
+        r: Request<pb::ListoffersRequest>,
+    ) -> Result<Response<pb::ListoffersResponse>, Status> {
+        self.inner.list_offers(r).await
+    }
+
+    async fn offer(
+        &self,
+        r: Request<pb::OfferRequest>,
+    ) -> Result<Response<pb::OfferResponse>, Status> {
+        self.inner.offer(r).await
+    }
+
+    async fn bkpr_list_income(
+        &self,
+        r: Request<pb::BkprlistincomeRequest>,
+    ) -> Result<Response<pb::BkprlistincomeResponse>, Status> {
+        self.inner.bkpr_list_income(r).await
+    }
+
     async fn list_peers(
         &self,
         r: Request<pb::ListpeersRequest>,
