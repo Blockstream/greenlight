@@ -481,9 +481,9 @@ dependencies = [
 
 [[package]]
 name = "cln-grpc"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e745ebc04340d421c7bc8305942a60d3dd8531d94df24f1b8c3906942735f0d"
+checksum = "85b7b9e8de980dba797a0885b99fda797638d8a207089cb98710d94285e871df"
 dependencies = [
  "anyhow",
  "bitcoin 0.30.2",
@@ -491,6 +491,7 @@ dependencies = [
  "hex",
  "log",
  "prost 0.11.9",
+ "serde",
  "tonic 0.8.3",
  "tonic-build 0.8.4",
 ]
@@ -515,9 +516,9 @@ dependencies = [
 
 [[package]]
 name = "cln-rpc"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a385bf28474fe5636297023b5550e74f27271ca569b31832bfebbfcf7de26d88"
+checksum = "2653217d27aee65a670f0c4f340b8f70b1f0b4e1c2fa085afe1b8e24ba12c069"
 dependencies = [
  "anyhow",
  "bitcoin 0.30.2",
