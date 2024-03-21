@@ -37,6 +37,9 @@ mod resolve;
 const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
 
+const TCP_KEEPALIVE: Duration = Duration::from_secs(30);
+const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(90);
+
 #[derive(Clone)]
 pub struct Signer {
     secret: [u8; 32],
@@ -276,9 +279,9 @@ impl Signer {
         debug!("Connecting to node at {}", node_uri);
         let c = Endpoint::from_shared(node_uri.to_string())?
             .tls_config(self.tls.inner.clone().domain_name("localhost"))?
-            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
-            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
-            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
+            .tcp_keepalive(Some(TCP_KEEPALIVE))
+            .http2_keep_alive_interval(TCP_KEEPALIVE)
+            .keep_alive_timeout(TCP_KEEPALIVE_TIMEOUT)
             .keep_alive_while_idle(true)
             .connect_lazy();
 
@@ -572,9 +575,9 @@ impl Signer {
 
         let channel = Endpoint::from_shared(scheduler_uri)?
             .tls_config(self.tls.inner.clone())?
-            .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
-            .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
-            .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
+            .tcp_keepalive(Some(TCP_KEEPALIVE))
+            .http2_keep_alive_interval(TCP_KEEPALIVE)
+            .keep_alive_timeout(TCP_KEEPALIVE_TIMEOUT)
             .keep_alive_while_idle(true)
             .connect_lazy();
         let mut scheduler = SchedulerClient::new(channel);
