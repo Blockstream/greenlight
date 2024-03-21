@@ -99,7 +99,6 @@ docker-shell:
 	mkdir -p /tmp/gltesting/.cargo/.registry && \
 	docker run \
 		-ti \
-		--net=host \
 		--rm \
 		--cap-add=SYS_PTRACE \
 		-e TMPDIR=/tmp/gltesting/tmp \
