@@ -71,7 +71,7 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
 
         let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
         let res: cln_rpc::model::responses::ListinvoicesResponse = rpc
-            .call_typed(cln_rpc::model::requests::ListinvoicesRequest {
+            .call_typed(&cln_rpc::model::requests::ListinvoicesRequest {
                 payment_hash: Some(hex::encode(&req.htlc.payment_hash)),
                 label: None,
                 offer_id: None,

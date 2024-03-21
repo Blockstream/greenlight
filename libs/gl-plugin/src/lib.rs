@@ -150,7 +150,7 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
     };
 
     // We ignore the response and continue anyways.
-    let res = rpc.call_typed(req).await;
+    let res = rpc.call_typed(&req).await;
     debug!("Got datastore response: {:?}", res);
     Ok(json!({"result": "continue"}))
 }
@@ -166,7 +166,7 @@ async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_js
         ])
     };
 
-    let res = rpc.call_typed(req).await;
+    let res = rpc.call_typed(&req).await;
     debug!("ListdatastoreRequest response: {:?}", res);
 
     match res {
