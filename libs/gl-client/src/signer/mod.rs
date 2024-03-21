@@ -118,6 +118,14 @@ impl Signer {
             ],
         });
 
+        policy.filter.merge(PolicyFilter {
+            // TODO: Remove once we have implemented zero invoice support
+            rules: vec![
+                FilterRule::new_warn("policy-routing-balanced"),
+                FilterRule::new_warn("policy-htlc-fee-range"),
+            ],
+        });
+
         // Increase the invoices limit. Results in a larger state, but
         // bumping into this is rather annoying.
         policy.max_invoices = 10_000usize;
