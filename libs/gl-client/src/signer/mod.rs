@@ -37,7 +37,7 @@ mod resolve;
 const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
 
-const TCP_KEEPALIVE: Duration = Duration::from_secs(30);
+const TCP_KEEPALIVE: Duration = Duration::from_secs(5);
 const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(90);
 
 #[derive(Clone)]
