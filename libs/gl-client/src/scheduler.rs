@@ -12,10 +12,10 @@ use tonic::transport::Channel;
 
 type Client = SchedulerClient<Channel>;
 
+/// A scheduler client to interact with the scheduler service. It has
+/// different implementations depending on the implementations
 #[derive(Clone)]
 pub struct Scheduler<Creds> {
-    /// Our local `node_id` used when talking to the scheduler to
-    /// identify us.
     node_id: Vec<u8>,
     client: Client,
     network: Network,
@@ -28,11 +28,47 @@ impl<Creds> Scheduler<Creds>
 where
     Creds: TlsConfigProvider,
 {
+    /// Creates a new scheduler client with the provided parameters.
+    /// A scheduler created this way is considered unauthenticated and
+    /// limited in its scope.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::Nobody;
+    /// # use gl_client::scheduler::Scheduler;
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Nobody::new();
+    /// let scheduler = Scheduler::new(node_id, network, creds).await.unwrap();
+    /// # }
+    /// ```
     pub async fn new(node_id: Vec<u8>, network: Network, creds: Creds) -> Result<Scheduler<Creds>> {
         let grpc_uri = scheduler_uri();
         Self::with(node_id, network, creds, grpc_uri).await
     }
 
+    /// Creates a new scheduler client with the provided parameters and
+    /// custom URI.
+    /// A scheduler created this way is considered unauthenticated and
+    /// limited in its scope.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::Nobody;
+    /// # use gl_client::scheduler::Scheduler;
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Nobody::new();
+    /// let uri = "https://example.com".to_string();
+    /// let scheduler = Scheduler::with(node_id, network, creds, uri).await.unwrap();
+    /// # }
+    /// ```
     pub async fn with(
         node_id: Vec<u8>,
         network: Network,
@@ -63,6 +99,29 @@ where
 }
 
 impl<Creds> Scheduler<Creds> {
+    /// Registers a new node with the scheduler service.
+    ///
+    /// # Arguments
+    ///
+    /// * `signer` - The signer instance bound to the node.
+    /// * `invite_code` - Optional invite code to register the node.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::Nobody;
+    /// # use gl_client::{scheduler::Scheduler, signer::Signer};
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Nobody::new();
+    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let secret = vec![0, 0, 0, 0];
+    /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
+    /// let registration_response = scheduler.register(&signer, None).await.unwrap();
+    /// # }
+    /// ```
     pub async fn register(
         &self,
         signer: &Signer,
@@ -169,6 +228,28 @@ impl<Creds> Scheduler<Creds> {
         Ok(res)
     }
 
+    /// Recovers a previously registered node with the scheduler service.
+    ///
+    /// # Arguments
+    ///
+    /// * `signer` - The signer instance used to sign the recovery challenge.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::Nobody;
+    /// # use gl_client::{scheduler::Scheduler, signer::Signer};
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Nobody::new();
+    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let secret = vec![0, 0, 0, 0];
+    /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
+    /// let recovery_response = scheduler.recover(&signer).await.unwrap();
+    /// # }
+    /// ```
     pub async fn recover(&self, signer: &Signer) -> Result<pb::scheduler::RecoveryResponse> {
         let challenge = self
             .client
@@ -244,6 +325,32 @@ impl<Creds> Scheduler<Creds> {
         Ok(res)
     }
 
+    /// Elevates the scheduler client to an authenticated scheduler client
+    /// that is able to schedule a node for example.
+    ///
+    /// # Arguments
+    ///
+    /// * `creds` - Credentials that carry a TlsConfig and a Rune. These
+    /// are credentials returned during registration or recovery.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::{Device, Nobody};
+    /// # use gl_client::{scheduler::Scheduler, signer::Signer};
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Nobody::new();
+    /// let scheduler_unauthed = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let secret = vec![0, 0, 0, 0];
+    /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
+    /// let registration_response = scheduler_unauthed.register(&signer, None).await.unwrap();
+    /// let creds = Device::from_bytes(registration_response.creds);
+    /// let scheduler_authed = scheduler_unauthed.authenticate(creds);
+    /// # }
+    /// ```
     pub async fn authenticate<Auth>(&self, creds: Auth) -> Result<Scheduler<Auth>>
     where
         Auth: TlsConfigProvider + RuneProvider,
@@ -274,6 +381,24 @@ impl<Creds> Scheduler<Creds>
 where
     Creds: TlsConfigProvider + RuneProvider + Clone,
 {
+    /// Schedules a node at the scheduler service. Once a node is
+    /// scheduled one can access it through the node client.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::Device;
+    /// # use gl_client::{scheduler::Scheduler, node::{Node, Client}};
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Device::from_path("my/path/to/credentials.glc");
+    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let info = scheduler.schedule().await.unwrap();
+    /// let node_client: Client  = Node::new(node_id, creds).unwrap().connect(info.grpc_uri).await.unwrap();
+    /// # }
+    /// ```
     pub async fn schedule(&self) -> Result<pb::scheduler::NodeInfoResponse> {
         let res = self
             .client
@@ -285,6 +410,24 @@ where
         Ok(res.into_inner())
     }
 
+    /// Schedules a node at the scheduler service and returns a node
+    /// client.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use gl_client::credentials::Device;
+    /// # use gl_client::scheduler::Scheduler;
+    /// # use gl_client::node::Client;
+    /// # use lightning_signer::bitcoin::Network;
+    /// # async fn example() {
+    /// let node_id = vec![0, 1, 2, 3];
+    /// let network = Network::Regtest;
+    /// let creds = Device::from_path("my/path/to/credentials.glc");
+    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let node_client: Client  = scheduler.node().await.unwrap();
+    /// # }
+    /// ```
     pub async fn node<T>(&self) -> Result<T>
     where
         T: GrpcClient,
