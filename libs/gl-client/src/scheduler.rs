@@ -73,8 +73,9 @@ where
         node_id: Vec<u8>,
         network: Network,
         creds: Creds,
-        uri: String,
+        uri: impl Into<String>,
     ) -> Result<Scheduler<Creds>> {
+        let uri = uri.into();
         debug!("Connecting to scheduler at {}", uri);
         let channel = tonic::transport::Endpoint::from_shared(uri.clone())?
             .tls_config(creds.tls_config().inner.clone())?
@@ -138,7 +139,7 @@ impl<Creds> Scheduler<Creds> {
     async fn inner_register(
         &self,
         signer: &Signer,
-        invite_code: String,
+        invite_code: impl Into<String>,
     ) -> Result<pb::scheduler::RegistrationResponse> {
         log::debug!("Retrieving challenge for registration");
         let challenge = self
@@ -180,7 +181,7 @@ impl<Creds> Scheduler<Creds> {
                 init_msg: signer.get_init(),
                 signature,
                 csr: device_csr.into_bytes(),
-                invite_code,
+                invite_code: invite_code.into(),
                 startupmsgs,
             })
             .await?
