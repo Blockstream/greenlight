@@ -5,6 +5,7 @@ package-mode=false
 python = ">=3.8,<4.0"
 gl-client = {path = "./libs/gl-client-py", develop=true}
 gltesting = {path = "./libs/gl-testing", develop=true}
+cln-version-manager = {path = "./libs/cln-version-manager", develop=true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.0.0"
@@ -15,6 +16,9 @@ maturin = {version = ">=1.0,<1.3.2", extras = ["patchelf"]}
 mypy-protobuf = "^3.5"
 typed-ast = "^1.5.4"
 grpc-stubs= "^1.53.0"
+
+[tool.poetry.group.dev-cln-version-manager.dependencies]
+types-requests = "^2.31"
 
 [tool.poetry.group.docs]
 optional=true

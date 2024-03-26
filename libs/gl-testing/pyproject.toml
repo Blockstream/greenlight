@@ -37,6 +37,7 @@ pytest-sugar = "^0.9.7"
 # Contributors should use `poetry install` in the project root
 # to insure the installation is editable from local sources.
 gl-client = "^0.1.11"
+cln-version-manager = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1"
