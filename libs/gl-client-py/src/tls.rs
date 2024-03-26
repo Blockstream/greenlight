@@ -1,5 +1,5 @@
 use gl_client::tls;
-use pyo3::exceptions::{PyValueError,PyFileNotFoundError};
+use pyo3::exceptions::PyFileNotFoundError;
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -12,8 +12,7 @@ pub struct TlsConfig {
 impl TlsConfig {
     #[new]
     fn new() -> PyResult<TlsConfig> {
-        let inner = tls::TlsConfig::new()
-            .map_err(|e| PyValueError::new_err(format!("Error creating TlsConfig: {:?}", e)))?;
+        let inner = tls::TlsConfig::new();
         Ok(Self { inner })
     }
 
@@ -23,14 +22,16 @@ impl TlsConfig {
         }
     }
 
-    fn identity_from_path(&self, path : &str) -> Result<Self, PyErr> {
+    fn identity_from_path(&self, path: &str) -> Result<Self, PyErr> {
         let result = Self {
-            inner : self.inner.clone()
+            inner: self
+                .inner
+                .clone()
                 .identity_from_path(path)
                 .map_err(|_| PyFileNotFoundError::new_err(String::from(path)))?,
         };
 
-        return Ok(result)
+        return Ok(result);
     }
 
     fn with_ca_certificate(&self, ca: Vec<u8>) -> TlsConfig {

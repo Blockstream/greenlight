@@ -1,6 +1,5 @@
-use crate::lsps::LspClient;
 use crate::runtime::exec;
-use crate::Credentials;
+use crate::{credentials::Credentials, lsps::LspClient};
 use gl_client as gl;
 use gl_client::pb;
 use prost::Message;
@@ -23,9 +22,10 @@ impl Node {
         grpc_uri: String,
         creds: Credentials,
     ) -> PyResult<Self> {
+        creds.ensure_device()?;
         let inner = gl::node::Node::new(node_id, creds.inner)
             .map_err(|s| PyValueError::new_err(s.to_string()))?;
-        return node_from_inner(inner, grpc_uri);
+        node_from_inner(inner, grpc_uri)
     }
 
     fn call(&self, method: &str, payload: Vec<u8>) -> PyResult<Vec<u8>> {

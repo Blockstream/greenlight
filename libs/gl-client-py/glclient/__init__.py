@@ -10,7 +10,7 @@ from binascii import hexlify, unhexlify
 from typing import Optional, List, Iterable, Any, Type, TypeVar
 import logging
 from glclient.lsps import LspClient
-from glclient.glclient import Credentials, DeviceBuilder, NobodyBuilder
+from glclient.glclient import Credentials
 
 
 backup_decrypt_with_seed = native.backup_decrypt_with_seed
@@ -26,9 +26,9 @@ def _convert(cls: Type[E], res: Iterable[Any]) -> E:
 
 
 class Signer(object):
-    def __init__(self, secret: bytes, network: str, tls: TlsConfig):
-        self.inner = native.Signer(secret, network, tls.inner)
-        self.tls = tls
+    def __init__(self, secret: bytes, network: str, creds: Credentials):
+        self.inner = native.Signer(secret, network, creds)
+        self.creds = creds
         self.handle: Optional[native.SignerHandle] = None
 
     def run_in_thread(self) -> "native.SignerHandle":
@@ -64,17 +64,11 @@ class Signer(object):
 
 class Scheduler(object):
 
-    def __init__(self, node_id: bytes, network: str, tls: TlsConfig):
+    def __init__(self, node_id: bytes, network: str, creds: Optional[Credentials] = None):
         self.node_id = node_id
         self.network = network
-        self.tls = tls
-        self.inner = native.Scheduler(node_id, network, tls.inner)
-
-    def get_node_info(self) -> schedpb.NodeInfoResponse:
-        return _convert(
-            schedpb.NodeInfoResponse,
-            self.inner.get_node_info()
-        )
+        self.creds = creds if creds is not None else native.Credentials()
+        self.inner = native.Scheduler(node_id, network, self.creds)
 
     def schedule(self) -> schedpb.NodeInfoResponse:
         res = self.inner.schedule()
@@ -87,17 +81,22 @@ class Scheduler(object):
     def recover(self, signer: Signer) -> schedpb.RecoveryResponse:
         res = self.inner.recover(signer.inner)
         return schedpb.RecoveryResponse.FromString(bytes(res))
+    
+    def authenticate(self, creds: Credentials):
+        self.creds = creds
+        self.inner = self.inner.authenticate(creds)
+        return self
 
     def export_node(self) -> schedpb.ExportNodeResponse:
         res = schedpb.ExportNodeResponse
         return res.FromString(bytes(self.inner.export_node()))
 
-    def node(self, creds: Credentials) -> "Node":
+    def node(self) -> "Node":
         res = self.schedule()
         return Node(
             node_id=self.node_id,
             grpc_uri=res.grpc_uri,
-            creds=creds,
+            creds=self.creds,
         )
 
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:

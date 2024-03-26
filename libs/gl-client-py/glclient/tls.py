@@ -5,11 +5,11 @@ import logging
 logger = logging.getLogger("glclientpy.tls.TlsConfig")
 
 class TlsConfig(object):
-    def __init__(self, creds: Optional[native.Credentials] = None):
+    def __init__(self):
         logger.debug("Constructing nobody identity")
         # We wrap the TlsConfig since some calls cannot yet be routed
         # through the rust library (streaming calls)
-        self.inner = creds.tls_config() if creds is not None else native.TlsConfig()
+        self.inner = native.TlsConfig()
         self.ca: Optional[bytes] = None
         self.authenticated = False
 

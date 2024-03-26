@@ -2,6 +2,7 @@ const NOBODY_CRT: &'static str = "../../tls/users-nobody.pem";
 const NOBODY_KEY: &'static str = "../../tls/users-nobody-key.pem";
 
 use std::env::var;
+use std::path::Path;
 use std::process::Command;
 
 fn main() {
@@ -32,8 +33,27 @@ fn main() {
             std::process::exit(1);
         }
     };
+
+    // This actually sets the GL_NOBODY_KEY and GL_NOBODY_CRT env to the
+    // path of the given certs.
     println!("cargo:rustc-env=GL_NOBODY_KEY={}", vars.0);
     println!("cargo:rustc-env=GL_NOBODY_CRT={}", vars.1);
+
+    // We check that these exist before we compile.
+    let key_path = Path::new(&vars.0);
+    let cert_path = Path::new(&vars.1);
+
+    match (key_path.exists(), cert_path.exists()) {
+        (true, true) => (),
+        (_, _) => {
+            // We could not find either the key or the cert.
+            println!(
+                "Could not find cert and key files: {:?}, {:?}",
+                key_path, cert_path
+            );
+            std::process::exit(1);
+        }
+    }
 
     // Setting a custom certificate causes rebuilds of this crate
     println!("cargo:rerun-if-env-changed=GL_CUSTOM_NOBODY_CERT");

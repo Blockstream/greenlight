@@ -84,31 +84,26 @@ class Client:
         credspath = self.directory / "greenlight.auth"
         if credspath.exists():
             self.log.info(f"Loading credentials data from {credspath}")
-            creds = (
-                glclient.Credentials.as_device()
-                .from_path(str(credspath.absolute()))
-                .build()
-            )
+            creds = glclient.Credentials.from_path(str(credspath.absolute()))
             return creds
         else:
             certpath = self.directory / "nobody.crt"
             keypath = self.directory / "nobody-key.pem"
             capath = self.directory / "ca.crt"
             self.log.info(f"Loading generic nobody credentials from {self.directory}")
-            creds = (
-                glclient.Credentials.as_nobody()
-                .with_identity(
-                    certpath.open(mode="rb").read(),
-                    keypath.open(mode="rb").read(),
-                )
-                .with_ca(capath.open(mode="rb").read())
-                .build()
+            creds = glclient.Credentials.nobody_with(
+                certpath.open(mode="rb").read(),
+                keypath.open(mode="rb").read(),
+                capath.open(mode="rb").read(),
             )
             return creds
 
-    def scheduler(self) -> glclient.Scheduler:
+    def scheduler(self, authenticate: bool = False) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        return glclient.Scheduler(self.node_id, network=NETWORK, tls=glclient.TlsConfig(self.creds()))
+        scheduler = glclient.Scheduler(self.node_id, network=NETWORK, creds=self.creds())
+        if authenticate:
+            scheduler.authenticate(creds=self.creds())
+        return scheduler
 
     def signer(self) -> glclient.Signer:
         secret = (self.directory / "hsm_secret").open(mode="rb").read()
@@ -116,12 +111,14 @@ class Client:
         have_certs = keypath.exists()
 
         self.directory.mkdir(exist_ok=True)
-        signer = glclient.Signer(secret, NETWORK, glclient.TlsConfig(self.creds()))
+        signer = glclient.Signer(secret, NETWORK, self.creds())
 
         return signer
 
     def node(self):
-        return self.scheduler().node(self.creds())
+        """Return a node instance from the scheduler.
+        """
+        return self.scheduler().node()
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node

@@ -18,7 +18,7 @@ pub struct Reporter {}
 impl Reporter {
     pub async fn report(r: pb::scheduler::SignerRejection) {
         log::warn!("Delivering report {:?}", r);
-        let tls = crate::tls::TlsConfig::new().expect("could not load TlsConfig");
+        let tls = crate::tls::TlsConfig::new();
         let uri = crate::utils::scheduler_uri();
         let channel = tonic::transport::Endpoint::from_shared(uri)
             .expect("could not configure client")
