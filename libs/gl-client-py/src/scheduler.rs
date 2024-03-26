@@ -11,6 +11,7 @@ use prost::Message;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+#[derive(Clone)]
 pub enum UnifiedScheduler<T, R>
 where
     T: TlsConfigProvider,
@@ -54,15 +55,14 @@ where
         }
     }
 
-    async fn authenticate(&self, creds: R) -> Result<Self> {
+    async fn authenticate(self, creds: R) -> Result<Self> {
         match self {
             UnifiedScheduler::Unauthenticated(u) => {
                 let inner = u.authenticate(creds).await?;
                 Ok(Self::Authenticated(inner))
             }
-            UnifiedScheduler::Authenticated(a) => {
-                let inner = a.authenticate(creds).await?;
-                Ok(Self::Authenticated(inner))
+            UnifiedScheduler::Authenticated(_) => {
+                Err(anyhow!("scheduler is already authenticated"))
             }
         }
     }
@@ -200,12 +200,13 @@ impl Scheduler {
                 "can not authenticate scheduler, need device credentials".to_string(),
             )
         })?;
-        let s = exec(async { self.inner.authenticate(creds.inner).await }).map_err(|e| {
-            PyValueError::new_err(format!(
-                "could not authenticate scheduler {}",
-                e.to_string()
-            ))
-        })?;
+        let s =
+            exec(async { self.inner.clone().authenticate(creds.inner).await }).map_err(|e| {
+                PyValueError::new_err(format!(
+                    "could not authenticate scheduler {}",
+                    e.to_string()
+                ))
+            })?;
         Ok(Scheduler {
             node_id: self.node_id.clone(),
             inner: s,
