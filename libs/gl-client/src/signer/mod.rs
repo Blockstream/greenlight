@@ -43,6 +43,8 @@ mod resolve;
 const VERSION: &str = "v23.08";
 const GITHASH: &str = env!("GIT_HASH");
 const RUNE_VERSION: &str = "gl0";
+// This is the same derivation key that is used by core lightning itself.
+const RUNE_DERIVATION_SECRET: &str = "gl-commando";
 
 #[derive(Clone)]
 pub struct Signer {
@@ -166,7 +168,7 @@ impl Signer {
 
         // Init master rune. We create the rune seed from the nodes
         // seed by deriving a hardened key tagged with "rune secret".
-        let rune_secret = crypto_utils::hkdf_sha256(&sec, "rune secret".as_bytes(), &[]);
+        let rune_secret = crypto_utils::hkdf_sha256(&sec, RUNE_DERIVATION_SECRET.as_bytes(), &[]);
         let mr = Rune::new_master_rune(&rune_secret, vec![], None, Some(RUNE_VERSION.to_string()))?;
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
