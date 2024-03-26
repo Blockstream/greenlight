@@ -118,7 +118,7 @@ class Client:
     def node(self):
         """Return a node instance from the scheduler.
         """
-        return self.scheduler(authenticate=True).node()
+        return self.scheduler().node()
 
     def register(self, configure: bool = True) -> None:
         """A helper to register and configure the node
