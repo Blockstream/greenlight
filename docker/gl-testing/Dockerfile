@@ -58,6 +58,7 @@ RUN poetry self add poetry-plugin-export
 ADD pyproject.toml /repo/pyproject.toml
 ADD libs/gl-client-py/pyproject.toml /repo/libs/gl-client-py/pyproject.toml
 ADD libs/gl-testing/pyproject.toml /repo/libs/gl-testing/pyproject.toml
+ADD libs/cln-version-manager/pyproject.toml /repo/libs/cln-version-manager/pyproject.toml
 
 WORKDIR repo
 
@@ -72,7 +73,7 @@ WORKDIR repo
 # don't have the code in the Docker-repo yet.
 RUN poetry lock
 RUN poetry export -f requirements.txt -o requirements.txt --with=dev
-RUN cat requirements.txt | sed '/gl\-testing/d' | sed '/gl\-client/d' > requirements2.txt
+RUN cat requirements.txt | sed '/@ file:\/\/\//d' > requirements2.txt
 RUN python -m pip install --upgrade pip && pip install wheel && pip install -r requirements2.txt
 
 # Later we will run this image under another user
