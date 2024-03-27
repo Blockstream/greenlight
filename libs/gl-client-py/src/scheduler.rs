@@ -91,47 +91,31 @@ where
 
     async fn add_outgoing_webhook(
         &self,
-        node_id: Vec<u8>,
         uri: String,
     ) -> Result<pb::scheduler::AddOutgoingWebhookResponse> {
         let s = self.authenticated_scheduler()?;
-        let outgoing_webhook_request = pb::scheduler::AddOutgoingWebhookRequest {
-            node_id: node_id,
-            uri,
-        };
-        s.add_outgoing_webhook(outgoing_webhook_request).await
+        s.add_outgoing_webhook(uri).await
     }
 
     async fn list_outgoing_webhooks(
-        &self,
-        node_id: Vec<u8>,
+        &self
     ) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
         let s = self.authenticated_scheduler()?;
-        let list_outgoing_webhook_request =
-            pb::scheduler::ListOutgoingWebhooksRequest { node_id: node_id };
-        s.list_outgoing_webhooks(list_outgoing_webhook_request)
+        s.list_outgoing_webhooks()
             .await
     }
 
-    async fn delete_outgoing_webhooks(&self, node_id: Vec<u8>, ids: Vec<i64>) -> Result<pb::Empty> {
+    async fn delete_outgoing_webhooks(&self, ids: Vec<i64>) -> Result<pb::Empty> {
         let s = self.authenticated_scheduler()?;
-        let delete_outgoing_webhook_request =
-            pb::scheduler::DeleteOutgoingWebhooksRequest { node_id, ids };
-        s.delete_webhooks(delete_outgoing_webhook_request).await
+        s.delete_webhooks(ids).await
     }
 
     async fn rotate_outgoing_webhook_secret(
         &self,
-        node_id: Vec<u8>,
         webhook_id: i64,
     ) -> Result<pb::scheduler::WebhookSecretResponse> {
         let s = self.authenticated_scheduler()?;
-        let rotate_outgoing_webhool_secret_request =
-            pb::scheduler::RotateOutgoingWebhookSecretRequest {
-                node_id,
-                webhook_id,
-            };
-        s.rotate_outgoing_webhook_secret(rotate_outgoing_webhool_secret_request)
+        s.rotate_outgoing_webhook_secret(webhook_id)
             .await
     }
 
@@ -228,7 +212,7 @@ impl Scheduler {
     fn add_outgoing_webhook(&self, uri: String) -> PyResult<Vec<u8>> {
         convert(exec(async {
             self.inner
-                .add_outgoing_webhook(self.node_id.clone(), uri)
+                .add_outgoing_webhook(uri)
                 .await
         }))
     }
@@ -236,7 +220,7 @@ impl Scheduler {
     fn list_outgoing_webhooks(&self) -> PyResult<Vec<u8>> {
         convert(exec(async {
             self.inner
-                .list_outgoing_webhooks(self.node_id.clone())
+                .list_outgoing_webhooks()
                 .await
         }))
     }
@@ -244,7 +228,7 @@ impl Scheduler {
     fn delete_outgoing_webhooks(&self, webhook_ids: Vec<i64>) -> PyResult<Vec<u8>> {
         convert(exec(async {
             self.inner
-                .delete_outgoing_webhooks(self.node_id.clone(), webhook_ids)
+                .delete_outgoing_webhooks(webhook_ids)
                 .await
         }))
     }
@@ -252,7 +236,7 @@ impl Scheduler {
     fn rotate_outgoing_webhook_secret(&self, webhook_id: i64) -> PyResult<Vec<u8>> {
         convert(exec(async {
             self.inner
-                .rotate_outgoing_webhook_secret(self.node_id.clone(), webhook_id)
+                .rotate_outgoing_webhook_secret(webhook_id)
                 .await
         }))
     }
