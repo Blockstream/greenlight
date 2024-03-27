@@ -465,48 +465,62 @@ where
 
     pub async fn add_outgoing_webhook(
         &self,
-        outgoing_webhook_request: pb::scheduler::AddOutgoingWebhookRequest,
+        uri: String
     ) -> Result<pb::scheduler::AddOutgoingWebhookResponse> {
+        let node_id = self.get_node_id_from_tls_config()?;
         let res = self
             .client
             .clone()
-            .add_outgoing_webhook(outgoing_webhook_request)
+            .add_outgoing_webhook(pb::scheduler::AddOutgoingWebhookRequest {
+                node_id,
+                uri
+            })
             .await?;
         Ok(res.into_inner())
     }
 
     pub async fn list_outgoing_webhooks(
         &self,
-        list_outgoing_webhooks_request: pb::scheduler::ListOutgoingWebhooksRequest,
     ) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
+        let node_id = self.get_node_id_from_tls_config()?;
         let res = self
             .client
             .clone()
-            .list_outgoing_webhooks(list_outgoing_webhooks_request)
+            .list_outgoing_webhooks(pb::scheduler::ListOutgoingWebhooksRequest {
+                node_id
+            })
             .await?;
         Ok(res.into_inner())
     }
 
     pub async fn delete_webhooks(
         &self,
-        delete_webhooks_request: pb::scheduler::DeleteOutgoingWebhooksRequest,
+        webhook_ids: Vec<i64>
     ) -> Result<pb::greenlight::Empty> {
+        let node_id = self.get_node_id_from_tls_config()?;
         let res = self
             .client
             .clone()
-            .delete_webhooks(delete_webhooks_request)
+            .delete_webhooks(pb::scheduler::DeleteOutgoingWebhooksRequest {
+                node_id,
+                ids: webhook_ids
+            })
             .await?;
         Ok(res.into_inner())
     }
 
     pub async fn rotate_outgoing_webhook_secret(
         &self,
-        rotate_outgoing_webhook_secret_request: pb::scheduler::RotateOutgoingWebhookSecretRequest,
+        webhook_id: i64,
     ) -> Result<pb::scheduler::WebhookSecretResponse> {
+        let node_id = self.get_node_id_from_tls_config()?;
         let res = self
             .client
             .clone()
-            .rotate_outgoing_webhook_secret(rotate_outgoing_webhook_secret_request)
+            .rotate_outgoing_webhook_secret(pb::scheduler::RotateOutgoingWebhookSecretRequest {
+                node_id,
+                webhook_id
+            })
             .await?;
         Ok(res.into_inner())
     }
