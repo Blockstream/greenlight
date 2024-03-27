@@ -46,7 +46,7 @@ DOCKER_OPTIONS= \
 	--user $(shell id -u):$(shell id -g) \
 	-e TMPDIR=/tmp/gltesting/tmp \
 	-v /tmp/gltesting/tmp:/tmp/gltesting/tmp \
-	-e CARGO_TARGET_DIR=/tmp/gltesting/target \
+	-e CARGO_TARGET_DIR=/tmp/gltesting/target/target \
 	-v /tmp/gltesting/target:/tmp/gltesting/target \
 	-v /tmp/gltesting/cargo/registry:/opt/cargo/registry \
 	-v ${REPO_ROOT}:/repo
