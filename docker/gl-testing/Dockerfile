@@ -267,7 +267,8 @@ ADD . /repo
 WORKDIR /repo
 
 # Add the remaining repositories to the python-path
-ENV PYTHONPATH=/repo/libs/gl-testing:/repo/libs/gl-client-py
+RUN poetry install
+RUN chmod -R a+rw /tmp/venv
 
 
 
