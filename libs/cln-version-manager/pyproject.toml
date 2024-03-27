@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "cln-version-manager"
+version = "0.1.0"
+description = "A version manager for Core Lightning Binaries"
+authors = ["Erik De Smedt <edesmedt@blockstream.com>"]
+license = "MIT"
+readme = "README.md"
+
+packages = [
+    { include = "clnvm" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2"
+click = "^8"
+
+[tool.poetry.group.dev.dependencies]
+types-requests = "^2.31"
+pytest = "^8"
+mypy = "^1.8.0"
+types-click = "^7"
+black = "^24.2.0"
+
+[tool.poetry.group.lsp_ide.dependencies]
+python-lsp-server = "^1.10.0"
+
+[tool.poetry.scripts]
+clnvm = "clnvm.cli:run"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
