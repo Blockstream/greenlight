@@ -259,6 +259,10 @@ RUN groupadd -g $GID -o $DOCKER_USER &&\
     useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+# Configure clnvm
+RUN mkdir -p /opt/clnvm; chmod a+rw /opt/clnvm
+ENV CLNVM_CACHE_DIR=/opt/clnvm
+
 # Create the required tmp-dicts
 RUN chmod a+rw /tmp
 RUN mkdir -p /tmp/gltesting/cargo && mkdir -p /tmp/gltesting/tmp
