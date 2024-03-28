@@ -82,7 +82,7 @@ class NodeProcess(TailableProc):
             '--log-level=debug',
             '--bitcoin-rpcuser=rpcuser',
             '--bitcoin-rpcpassword=rpcpass',
-            f'--bitcoin-rpcconnect=localhost:{self.bitcoind.rpcport}',
+            f'--bitcoin-rpcconnect=127.0.0.1:{self.bitcoind.rpcport}',
             "--disable-plugin=commando",
             '--rescan=1',
             "--log-timestamps=false",
