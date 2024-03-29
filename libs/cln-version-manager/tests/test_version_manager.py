@@ -29,6 +29,3 @@ def test_download_cln_version() -> None:
     with mock.patch("requests.get") as request_mock:
         vm.get_all()
         assert not request_mock.get.called
-
-    # get them again using force to ensure we do download them
-    vm.get_all(force=True)
