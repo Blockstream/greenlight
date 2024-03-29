@@ -6,7 +6,7 @@ on:
       - synchronize
       - opened
     workflow_dispatch:
-    merge_roup:
+    merge_group:
     push:
       branches:
         - master
