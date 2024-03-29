@@ -72,9 +72,18 @@ def enumerate_cln_versions():
 
     versions = {}
     for v in version_paths:
+        lightningd = Path(v).resolve()
+        path_parts = lightningd.parts
+        bin_path = Path(*path_parts[:-1])
+        root_path = Path(*path_parts[:-4])
+
         logging.debug(f"Detecting version of lightningd at {v}")
         vs = subprocess.check_output([v, "--version"]).strip().decode("ASCII")
-        versions[vs] = NodeVersion(path=Path(v).resolve(), name=vs)
+        versions[vs] = NodeVersion(
+            lightningd=lightningd,
+            bin_path=bin_path,
+            root_path=root_path,
+            name=vs)
         logging.debug(f"Determined version {vs} for executable {v}")
 
     logging.info(f"Found {len(versions)} versions: {versions}")
