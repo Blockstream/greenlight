@@ -16,7 +16,7 @@ To download all binaries
 clnvm get-all
 ```
 
-To download a specific binarie
+To download a specific binary
 
 ```
 clnvm get --tag 23.01
