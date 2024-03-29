@@ -30,7 +30,7 @@ def get_all(force: bool) -> None:
     for version in versions:
         try:
             result = version_manager.get(version, force)
-            click.echo(result.path)
+            click.echo(result.lightningd)
         except Exception as e:
             click.echo(click.style(str(e), fg="red"), err=True)
 
@@ -43,7 +43,7 @@ def get(tag: str, force: bool) -> None:
         version_manager = ClnVersionManager()
         descriptor = version_manager.get_descriptor_from_tag(tag)
         node_version = version_manager.get(descriptor, force)
-        click.echo(node_version.path)
+        click.echo(node_version.lightningd)
     except Exception as e:
         # Print the error and return a non-zero status-code
         click.echo(click.style(str(e), fg="red"), err=True)
@@ -53,24 +53,20 @@ def get(tag: str, force: bool) -> None:
 @cli.command()
 @click.option("--tag", is_flag=True)
 @click.option("--lightningd", is_flag=True)
-@click.option("--path", is_flag=True)
+@click.option("--root-path", is_flag=True)
 @click.option("--bin-path", is_flag=True)
-def latest(tag: bool, lightningd: bool, path: bool, bin_path: bool) -> None:
+def latest(tag: bool, lightningd: bool, root_path: bool, bin_path: bool) -> None:
     version_manager = ClnVersionManager()
     latest = version_manager.latest()
 
     if tag:
         click.echo(latest.name)
     elif lightningd:
-        click.echo(latest.path)
+        click.echo(latest.lightningd)
     elif bin_path:
-        head, tail = os.path.split(latest.path)
-        click.echo(head)
-    elif path:
-        # Drop the /usr/local/bin/lightningd part
-        parts = latest.path.parts[:-4]
-        my_path = os.path.join(*parts)
-        click.echo(my_path)
+        click.echo(latest.bin_path)
+    elif root_path:
+        click.echo(latest.root_path)
     else:
         click.echo(latest.name)
 

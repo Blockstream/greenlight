@@ -48,12 +48,12 @@ class NodeProcess(TailableProc):
         TailableProc.__init__(self, str(directory), verbose=True)
         self.logger = logging.getLogger("gltesting.node.Node")
         self.identity = identity
-        self.version  = version
+        self.version = version
         self.proc: Optional[subprocess.Popen] = None
         self.directory = directory
         self.node_id = node_id
         self.init_msg = init_msg
-        self.executable = self.version.path
+        self.executable = self.version.lightningd
         self.bind: Optional[str] = None
         self.grpc_uri: Optional[str] = None
         self.network = network
@@ -120,14 +120,14 @@ class NodeProcess(TailableProc):
         path = os.environ.get('PATH')
         # Need to add the subdaemon directory to PATH so the
         # signerproxy can find the version.
-        libexec_path = self.executable.parent / '..' / 'libexec' / 'c-lightning'
+        libexec_path = self.executable.parent.parent / 'libexec' / 'c-lightning'
 
         self.grpc_port = reserve()
         self.bind = f"127.0.0.1:{self.grpc_port}"
         self.grpc_uri = f"https://localhost:{self.grpc_port}"
         self.env.update({
             "GL_CERT_PATH": self.directory / "certs",
-            "PATH": f"{self.version.path}:{libexec_path}:{path}",
+            "PATH": f"{self.version.lightningd}:{libexec_path}:{path}",
             "CLN_VERSION": self.version.name,
             "GL_NODE_NETWORK": self.network,
             "GL_NODE_ID": self.node_id.hex(),

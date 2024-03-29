@@ -72,6 +72,10 @@ CLN_VERSIONS = [
 ]
 
 
+_LIGHTNINGD_REL_PATH = Path("usr/local/bin/lightningd")
+_BIN_REL_PATH = Path("usr/local/bin")
+
+
 def _get_cln_version_path(cln_path: Optional[PathLike] = None) -> Path:
     """
     Retrieve the path where all cln-versions are stored
@@ -179,7 +183,9 @@ class ClnVersionManager:
 
         return NodeVersion(
             name=cln_version.tag,
-            path=target_path / "usr" / "local" / "bin" / "lightningd",
+            lightningd=target_path / _LIGHTNINGD_REL_PATH,
+            bin_path=target_path / _BIN_REL_PATH,
+            root_path=target_path,
         )
 
     def _download(self, cln_version: VersionDescriptor, target_path: Path) -> None:
@@ -210,7 +216,8 @@ class ClnVersionManager:
         ignore_hash = bool(os.environ.get("GL_TESTING_IGNORE_HASH", False))
         if ignore_hash:
             logger.warning(
-                "Checking the has of remote versions is disabled which is unsafe. Try to unset GL_TESTING_IGNORE_HASH"
+                "Checking the hash of remote versions is disabled which is unsafe. "
+                "Try to unset GL_TESTING_IGNORE_HASH"
             )
 
         if (not ignore_hash) and content_sha != cln_version.checksum:
@@ -244,7 +251,7 @@ class ClnVersionManager:
 
         try:
             # We verify if the path matches the version
-            lightningd_path = target_path / "usr" / "local" / "bin" / "lightningd"
+            lightningd_path = target_path / _LIGHTNINGD_REL_PATH
             version = (
                 subprocess.check_output([lightningd_path, "--version"])
                 .strip()
