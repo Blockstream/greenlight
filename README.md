@@ -139,7 +139,7 @@ $ glcli hsmd
 [2021-06-07 18:38:02,574 - DEBUG] Found existing hsm_secret file, loading secret from it
 [2021-06-07 18:38:02,575 - DEBUG] Initializing libhsmd with secret
 [2021-06-07 18:38:02,583 - DEBUG] libhsmd initialized for node_id=036ec3b729024bb123be7954081d328eb48ccf82923789063a8d079b619dfa56e2
-[2021-06-07 18:38:02,584 - DEBUG] Contacting scheduler at 35.236.110.178:2601 to wait for the node to be scheduled.
+[2021-06-07 18:38:02,584 - DEBUG] Contacting scheduler at 35.236.110.178:443 to wait for the node to be scheduled.
 [2021-06-07 18:38:02,594 - DEBUG] Waiting for node 036ec3b729024bb123be7954081d328eb48ccf82923789063a8d079b619dfa56e2 to be scheduled
 [2021-06-07 18:38:03,229 - INFO] Node was scheduled at https://35.236.110.178:6019, opening direct connection
 [2021-06-07 18:38:03,230 - DEBUG] Streaming HSM requests

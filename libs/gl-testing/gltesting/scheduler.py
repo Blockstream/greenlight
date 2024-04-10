@@ -96,7 +96,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
     """A mock scheduler to test against."""
 
     def __init__(
-        self, bitcoind: BitcoinD, grpc_port=2601, identity=None, node_directory=None
+        self, bitcoind: BitcoinD, grpc_port=443, identity=None, node_directory=None
     ):
         self.grpc_port = grpc_port
         self.server = None
