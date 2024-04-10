@@ -145,7 +145,7 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
         ],
         string: Some(serde_json::to_string(&call.peer).unwrap()),
         hex: None,
-        mode: None,
+        mode: Some(cln_rpc::model::requests::DatastoreMode::CREATE_OR_REPLACE),
         generation: None,
     };
 
