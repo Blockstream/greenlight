@@ -72,20 +72,20 @@ JgcYMvjjEsb17Lxhl9Ni6VgDqeXUaOFgUwkDewyarml2yY1oDv6CdrxV
 
 prod = {
     # Used by glcli
-    "GL_GRPC_URI": "scheduler.gl.blckstrm.com:2601",
+    "GL_GRPC_URI": "scheduler.gl.blckstrm.com:443",
 
     # Used by hagrid internally
-    "GL_SCHEDULER_GRPC_URI": "https://scheduler.gl.blckstrm.com:2601",
+    "GL_SCHEDULER_GRPC_URI": "https://scheduler.gl.blckstrm.com:443",
 
     "GL_CERT_PATH": ".",
 }
 
 test = {
     # Used by glcli
-    "GL_GRPC_URI": "scheduler.testing.gl.blckstrm.com:2601",
+    "GL_GRPC_URI": "scheduler.testing.gl.blckstrm.com:443",
 
     # Used by hagrid internally
-    "GL_SCHEDULER_GRPC_URI": "https://scheduler.testing.gl.blckstrm.com:2601",
+    "GL_SCHEDULER_GRPC_URI": "https://scheduler.testing.gl.blckstrm.com:443",
 
     "GL_CERT_PATH": ".",
 }
