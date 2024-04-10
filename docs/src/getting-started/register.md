@@ -58,7 +58,7 @@ phrase and then convert it into a seed secret we can use:
 	
 	// Prompt user to safely store the phrase
 	
-	let seed = m.to_seed("")[0..32];  // Only need the first 32 bytes
+	let seed = &m.to_seed("")[0..32];  // Only need the first 32 bytes
 
 	let secret = seed[0..32].to_vec();
 
@@ -97,10 +97,10 @@ nodes.
 	```rust
 	use gl_client::tls::TlsConfig;
 
-	# Creating a new `TlsConfig` object using your developer certificate
-	# - cert: contains the content of `client.crt`
-	# - key: contains the content of `client-key.pem`
-	let tls = TlsConfig::new().identity(cert, key);
+	// Creating a new `TlsConfig` object using your developer certificate
+	// cert: contains the content of `client.crt`
+	// key: contains the content of `client-key.pem`
+	let tls = TlsConfig::new().unwrap().identity(cert, key);
 	```
 	
 === "Python"
@@ -193,8 +193,9 @@ going forward to talk to the scheduler and the node itself.
 	
 	// Use the configured `tls` instance when creating `Scheduler` and `Signer`
 	// instance going forward
-	let signer = Signer(seed, Network::Bitcoin, tls);
-	let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, "uri", &tls).await?;
+	let signer = Signer::new(seed.to_vec(), Network::Bitcoin, tls.clone()).unwrap();
+	let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, "uri".to_string(), &tls).await.unwrap();
+	let mut node: ClnClient = scheduler.schedule(tls.clone()).await.unwrap();
 	```
 
 === "Python"
@@ -204,7 +205,8 @@ going forward to talk to the scheduler and the node itself.
 	# Use the configured `tls` instance when creating `Scheduler` and `Signer`
 	# instance going forward
 	signer = Signer(seed, network="bitcoin", tls=tls)
-	node = Scheduler(node_id=signer.node_id(), network="bitcoin", tls=tls).node()
+	scheduler = Scheduler(node_id=signer.node_id(), network="bitcoin", tls=tls)
+	node = scheduler.node()
 	```
 
 If you get an error about a certificate verification failure when

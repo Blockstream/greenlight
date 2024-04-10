@@ -11,16 +11,27 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 
 === "Rust"
 	```rust
-	use gl_client::{Signer, TlsConfig, Scheduler, Bitcoin};
+	use gl_client::{signer::Signer, tls::TlsConfig, scheduler::Scheduler, bitcoin::Network};
 	
 	let cert = ...; // Your developer certificate (client.crt)
 	let key = ...; // Your developer key (client-key.pem)
+	let seed = ...; // Load seed from file
 
-	let tls = TlsConfig().identity(cert, key);
-	let signer = Signer(seed, Network::Bitcoin, tls);
-	let scheduler = Scheduler::new(signer.node_id(), Network::Bitcoin).await;
-	
-	let res = scheduler.recover(&signer).await?;
+	let tls = TlsConfig::new()
+        .unwrap()
+        .identity(cert, key);
+
+    let signer =
+        Signer::new(seed, Network::Bitcoin, tls).unwrap();
+				
+    let scheduler = Scheduler::new(
+        signer.node_id(),
+        Network::Bitcoin
+    )
+    .await
+    .unwrap();
+
+    let res = scheduler.recover(&signer).await.unwrap();
 	```
 	
 === "Python"
@@ -29,11 +40,12 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 	
 	cert = ... // Your developer certificate
 	key = ... // Your developer key
+	seed = ... // Load seed from file
 
 	tls = TlsConfig().identity(cert, key);
 	signer = Signer(seed, network="bitcoin", tls=tls)
 	scheduler = Scheduler(
-	    node_id=signer.node_id(),
+	  node_id=signer.node_id(),
 		network="bitcoin",
 		tls=tls,
 	)
