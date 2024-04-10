@@ -574,18 +574,23 @@ impl PluginNodeServer {
             ));
         }
 
-        log::info!("Reconnecting all peers");
+        log::info!("Reconnecting all peers (plugin)");
         let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await?;
         let peers = self.get_reconnect_peers().await?;
+        log::info!(
+            "Found {} peers to reconnect: {:?} (plugin)",
+            peers.len(),
+            peers.iter().map(|p| p.id.clone())
+        );
 
         for r in peers {
-            trace!("Calling connect: {:?}", &r.id);
+            trace!("Calling connect: {:?} (plugin)", &r.id);
             let res = rpc.call_typed(&r).await;
-            trace!("Connect returned: {:?} -> {:?}", &r.id, res);
+            trace!("Connect returned: {:?} -> {:?} (plugin)", &r.id, res);
 
             match res {
-                Ok(r) => info!("Connection to {} established: {:?}", &r.id, r),
-                Err(e) => warn!("Could not connect to {}: {:?}", &r.id, e),
+                Ok(r) => info!("Connection to {} established: {:?} (plugin)", &r.id, r),
+                Err(e) => warn!("Could not connect to {}: {:?} (plugin)", &r.id, e),
             }
         }
         return Ok(());
