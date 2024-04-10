@@ -1,6 +1,6 @@
 from binascii import hexlify, unhexlify
 from glcli import environment as env
-from glclient import TlsConfig, Scheduler, Credentials
+from glclient import Scheduler, Credentials
 from pyln.grpc import Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
@@ -31,40 +31,31 @@ class Creds:
 
     def __init__(self) -> "Creds":
         """Initialize the credentials."""
-        self.creds = Credentials.as_nobody().with_default().build()
+        self.creds = Credentials()
         creds_path = Path("credentials.gfs")
+        # legacy paths used by TlsConfig
+        cert_path = Path("device.crt")
+        key_path = Path("device-key.pem")
+        ca_path = Path("ca.pem")
+        have_certs = cert_path.exists() and key_path.exists() and ca_path.exists()
         if creds_path.exists():
-            self.creds = Credentials.as_device().from_path(str(creds_path)).build()
+            self.creds = Credentials.from_path(str(creds_path))
             logger.info("Configuring client with device credentials")
+        elif have_certs:
+            logger.info("Configuring client with device credentials (legacy)")
+            device_cert = open(str(cert_path), "rb").read()
+            device_key = open(str(key_path), "rb").read()
+            ca = open(str(ca_path), "rb").read()
+            rune = ""
+            if Path("rune").exists():
+                rune = open("rune", "r").read()
+            self.creds = Credentials.from_parts(device_cert, device_key, ca, rune)
         else:
             logger.info("Configuring client with NOBODY credentials.")
 
 
-class Tls:
-    """Encapsulation of the fs convention followed by glcli."""
-
-    def __init__(self, creds: Optional[Creds] = None):
-        """Initialize an mTLS identity."""
-        if creds is not None:
-            self.tls = TlsConfig(creds.creds)
-            logger.info("Configuring client identity from Credentials.")
-            return
-
-        self.tls = TlsConfig()
-        cert_path = Path("device.crt")
-        key_path = Path("device-key.pem")
-        have_certs = cert_path.exists() and key_path.exists()
-        if have_certs:
-            device_cert = open("device.crt", "rb").read()
-            device_key = open("device-key.pem", "rb").read()
-            self.tls = self.tls.identity(device_cert, device_key)
-            logger.info("Configuring client with user identity.")
-        else:
-            logger.info("Configuring client with the NOBODY identity.")
-
-
 class Signer:
-    def __init__(self, tls: Tls, network='testnet'):
+    def __init__(self, creds: Creds, network='testnet'):
         """Initialize the signer based on the cwd
         """
         secrets_file = Path("hsm_secret")
@@ -80,11 +71,11 @@ class Signer:
             with open(secrets_file, "rb") as f:
                 secret = f.read(32)
 
-        self.inner = glclient.Signer(secret, network, tls.tls)
+        self.inner = glclient.Signer(secret, network, creds.creds)
 
 
 class Context:
-    def load_metadata(self, tls):
+    def load_metadata(self, creds):
         """Load the metadata from the metadata.toml file if it exists.
 
         If it doesn't exist, create it by instantiating a signer
@@ -94,7 +85,7 @@ class Context:
         """
         path = Path("metadata.json")
         if not path.exists():
-            signer = Signer(self.tls)
+            signer = Signer(creds)
             node_id = signer.inner.node_id()
             self.metadata = {
                 'hex_node_id': signer.inner.node_id().hex(),
@@ -109,17 +100,15 @@ class Context:
 
     def __init__(self, network='testnet', start_hsmd=False):
         self.creds = Creds()
-        self.tls = Tls(self.creds)
-        self.load_metadata(self.tls.tls)
-        self.scheduler = Scheduler(self.metadata['node_id'], network, self.tls.tls)
-        self.scheduler.tls = self.tls.tls
+        self.load_metadata(self.creds)
+        self.scheduler = Scheduler(self.metadata['node_id'], network, creds=self.creds.creds)
         self.node = None
         self.scheduler_chan = None
         self.node_id = self.metadata['node_id']
 
     def get_node(self):
         if self.node is None:
-            self.node = self.scheduler.node(self.creds.creds)
+            self.node = self.scheduler.node()
         return self.node
 
 
@@ -284,12 +273,12 @@ def scheduler():
 @click.pass_context
 def register(ctx, network, invite):
     # Reinitialize the signer with the right network, so register will pick that up
-    signer = Signer(ctx.obj.tls, network=network)
+    signer = Signer(creds=ctx.obj.creds, network=network)
     node_id = ctx.obj.node_id
     hex_node_id = hexlify(node_id).decode("ASCII")
     logger.debug(f"Registering new node with node_id={hex_node_id} for {network}")
     # Reinitialize the Scheduler with the passed network for register.
-    scheduler = Scheduler(node_id, network=network, tls=ctx.obj.scheduler.tls)
+    scheduler = Scheduler(node_id, network=network, creds=ctx.obj.scheduler.creds)
     res = scheduler.register(signer.inner, invite_code=invite)
 
     with open("credentials.gfs", "wb") as f:
@@ -310,7 +299,7 @@ def register(ctx, network, invite):
 @scheduler.command()
 @click.pass_context
 def recover(ctx):
-    signer = Signer(Tls(Creds()))
+    signer = Signer(Creds())
     node_id = ctx.obj.node_id
     logger.debug(f"Recovering access to node_id={hexlify(node_id).decode('ASCII')}")
     scheduler = ctx.obj.scheduler
@@ -334,8 +323,8 @@ def recover(ctx):
 @scheduler.command()
 @click.pass_context
 def upgradecreds(ctx):
-    signer = Signer(Tls(Creds()))
-    creds = Credentials.as_device().upgrade(ctx.obj.scheduler.inner, signer.inner.inner).build()
+    signer = Signer(Creds())
+    creds = ctx.obj.creds.creds.upgrade(ctx.obj.scheduler.inner, signer.inner.inner)
 
     with open("credentials.gfs", "wb") as f:
         f.write(creds.to_bytes())
@@ -365,7 +354,7 @@ def schedule(ctx):
 @click.pass_context
 def hsmd(ctx):
     """Run the hsmd against the scheduler."""
-    signer = Signer(Tls(Creds()))
+    signer = Signer(Creds())
     signer_handle = signer.inner.run_in_thread()
     
     def signal_handler(_signal, _frame):
