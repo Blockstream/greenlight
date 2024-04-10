@@ -82,6 +82,7 @@ nav:
     - Certificates: reference/certs.md
     - Security: reference/security.md
     - LSP Integration: reference/lsp.md
+    - Webhooks: reference/webhooks.md
   - About:
     - About: about/index.md
     - Frequently Asked Questions: about/faq.md
