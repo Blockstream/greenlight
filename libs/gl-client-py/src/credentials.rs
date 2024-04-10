@@ -104,6 +104,12 @@ impl Credentials {
         Self { inner }
     }
 
+    #[staticmethod]
+    pub fn from_parts(cert: &[u8], key: &[u8], ca: &[u8], rune: &str) -> Self {
+        let inner = UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, ca, rune));
+        Self { inner }
+    }
+
     pub fn upgrade(&self, scheduler: &Scheduler, signer: &Signer) -> Result<Credentials> {
         match &self.inner {
             UnifiedCredentials::Nobody(_) => Err(credentials::Error::IsIdentityError(
