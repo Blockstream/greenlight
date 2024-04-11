@@ -50,19 +50,7 @@ phrase and then convert it into a seed secret we can use:
 
 === "Rust"
 	```rust
-	use bip39::{Mnemonic, Language};
-
-	let mut rng = rand::thread_rng();
-	let m = Mnemonic::generate_in_with(&mut rng, Language::English, 24).unwrap();
-	let phrase = m.word_iter().fold("".to_string(), |c, n| c + " " + n);
-	
-	// Prompt user to safely store the phrase
-	
-	let seed = &m.to_seed("")[0..32];  // Only need the first 32 bytes
-
-	let secret = seed[0..32].to_vec();
-
-	// Store the seed on the filesystem, or secure configuration system
+--8<-- "main.rs:70:82"
 	```
 
 === "Python"
