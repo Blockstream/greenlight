@@ -2,6 +2,8 @@ use crate::runtime::exec;
 use crate::scheduler::Scheduler;
 use crate::signer::Signer;
 use gl_client::credentials::{self, RuneProvider, TlsConfigProvider};
+use gl_client::tls::TlsConfig;
+use gl_client::utils::get_node_id_from_tls_config;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -55,6 +57,25 @@ where
             UnifiedCredentials::Device(d) => d.tls_config(),
         }
     }
+
+    fn with_identity<V>(device_cert: V, device_key: V) -> Self
+    where
+        V: Into<Vec<u8>>,
+    {
+        let device_cert: Vec<u8> = device_cert.into();
+        let device_key: Vec<u8> = device_key.into();
+        let tls_config = TlsConfig::new().identity(device_cert.clone(), device_key.clone());
+        match get_node_id_from_tls_config(&tls_config) {
+            Ok(n) => {
+                debug!("Initializing device credentials with node_id {}", hex::encode(n));
+                UnifiedCredentials::Device(R::with_identity(device_cert, device_key))
+            },
+            Err(e) => {
+                debug!("Device credentials could not be initialized with this certificate: {}.\nFalling back to NOBODY credentials.", e.to_string());
+                UnifiedCredentials::Nobody(T::with_identity(device_cert, device_key))
+            }
+        }
+    }
 }
 
 impl<T, R> RuneProvider for UnifiedCredentials<T, R>
@@ -65,7 +86,7 @@ where
     fn rune(&self) -> String {
         match self {
             UnifiedCredentials::Nobody(_) => panic!(
-                "can not provide rune from nobody credentials! something really bad happended."
+                "can not provide rune from nobody credentials! something really bad happened."
             ),
             UnifiedCredentials::Device(d) => d.rune(),
         }
@@ -95,6 +116,13 @@ impl Credentials {
     }
 
     #[staticmethod]
+    pub fn with_identity(cert: &[u8], key: &[u8]) -> Self {
+        let inner =
+            UnifiedCredentials::with_identity(cert, key);
+        Self { inner }
+    }
+
+    #[staticmethod]
     pub fn from_path(path: &str) -> Self {
         let inner = UnifiedCredentials::Device(gl_client::credentials::Device::from_path(path));
         log::debug!("Created device credentials");
@@ -110,7 +138,8 @@ impl Credentials {
 
     #[staticmethod]
     pub fn from_parts(cert: &[u8], key: &[u8], ca: &[u8], rune: &str) -> Self {
-        let inner = UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, ca, rune));
+        let inner =
+            UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, ca, rune));
         Self { inner }
     }
 
