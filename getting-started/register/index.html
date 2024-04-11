@@ -1173,7 +1173,7 @@ phrase and then convert it into a seed secret we can use:</p>
 
 <span class="c1">// Prompt user to safely store the phrase</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">seed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="p">.</span><span class="n">to_seed</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="o">..</span><span class="mi">32</span><span class="p">];</span><span class="w">  </span><span class="c1">// Only need the first 32 bytes</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">seed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">m</span><span class="p">.</span><span class="n">to_seed</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="o">..</span><span class="mi">32</span><span class="p">];</span><span class="w">  </span><span class="c1">// Only need the first 32 bytes</span>
 
 <span class="kd">let</span><span class="w"> </span><span class="n">secret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">seed</span><span class="p">[</span><span class="mi">0</span><span class="o">..</span><span class="mi">32</span><span class="p">].</span><span class="n">to_vec</span><span class="p">();</span>
 
@@ -1212,10 +1212,10 @@ nodes.</p>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span>::<span class="n">tls</span>::<span class="n">TlsConfig</span><span class="p">;</span>
 
-#<span class="w"> </span><span class="n">Creating</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="err">`</span><span class="n">TlsConfig</span><span class="err">`</span><span class="w"> </span><span class="n">object</span><span class="w"> </span><span class="n">using</span><span class="w"> </span><span class="n">your</span><span class="w"> </span><span class="n">developer</span><span class="w"> </span><span class="n">certificate</span>
-#<span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">cert</span>: <span class="nc">contains</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">content</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="err">`</span><span class="n">client</span><span class="p">.</span><span class="n">crt</span><span class="err">`</span>
-#<span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">key</span>: <span class="nc">contains</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">content</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="err">`</span><span class="n">client</span><span class="o">-</span><span class="n">key</span><span class="p">.</span><span class="n">pem</span><span class="err">`</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">tls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TlsConfig</span>::<span class="n">new</span><span class="p">().</span><span class="n">identity</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
+<span class="c1">// Creating a new `TlsConfig` object using your developer certificate</span>
+<span class="c1">// cert: contains the content of `client.crt`</span>
+<span class="c1">// key: contains the content of `client-key.pem`</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">tls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TlsConfig</span>::<span class="n">new</span><span class="p">().</span><span class="n">unwrap</span><span class="p">().</span><span class="n">identity</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1304,8 +1304,9 @@ these credentials can access your node.</p>
 
 // Use the configured `tls` instance when creating `Scheduler` and `Signer`
 // instance going forward
-let signer = Signer(seed, Network::Bitcoin, tls);
-let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, &quot;uri&quot;, &amp;tls).await?;
+let signer = Signer::new(seed.to_vec(), Network::Bitcoin, tls.clone()).unwrap();
+let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, &quot;uri&quot;.to_string(), &amp;tls).await.unwrap();
+let mut node: ClnClient = scheduler.schedule(tls.clone()).await.unwrap();
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1314,7 +1315,8 @@ let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, &quot;uri&qu
 <span class="c1"># Use the configured `tls` instance when creating `Scheduler` and `Signer`</span>
 <span class="c1"># instance going forward</span>
 <span class="n">signer</span> <span class="o">=</span> <span class="n">Signer</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">)</span>
-<span class="n">node</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span><span class="n">node_id</span><span class="o">=</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">(),</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">)</span><span class="o">.</span><span class="n">node</span><span class="p">()</span>
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span><span class="n">node_id</span><span class="o">=</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">(),</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">)</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">node</span><span class="p">()</span>
 </code></pre></div>
 </div>
 </div>

@@ -1040,16 +1040,27 @@ corresponds to that node.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Rust</label><label for="__tabbed_1_2">Python</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span>::<span class="p">{</span><span class="n">Signer</span><span class="p">,</span><span class="w"> </span><span class="n">TlsConfig</span><span class="p">,</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">,</span><span class="w"> </span><span class="n">Bitcoin</span><span class="p">};</span>
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span>::<span class="p">{</span><span class="n">signer</span>::<span class="n">Signer</span><span class="p">,</span><span class="w"> </span><span class="n">tls</span>::<span class="n">TlsConfig</span><span class="p">,</span><span class="w"> </span><span class="n">scheduler</span>::<span class="n">Scheduler</span><span class="p">,</span><span class="w"> </span><span class="n">bitcoin</span>::<span class="n">Network</span><span class="p">};</span>
 
 <span class="kd">let</span><span class="w"> </span><span class="n">cert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">..</span><span class="p">.;</span><span class="w"> </span><span class="c1">// Your developer certificate (client.crt)</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">..</span><span class="p">.;</span><span class="w"> </span><span class="c1">// Your developer key (client-key.pem)</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">seed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">..</span><span class="p">.;</span><span class="w"> </span><span class="c1">// Load seed from file</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">tls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TlsConfig</span><span class="p">().</span><span class="n">identity</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">signer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Signer</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span><span class="w"> </span><span class="n">Network</span>::<span class="n">Bitcoin</span><span class="p">,</span><span class="w"> </span><span class="n">tls</span><span class="p">);</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span>::<span class="n">new</span><span class="p">(</span><span class="n">signer</span><span class="p">.</span><span class="n">node_id</span><span class="p">(),</span><span class="w"> </span><span class="n">Network</span>::<span class="n">Bitcoin</span><span class="p">).</span><span class="k">await</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">tls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TlsConfig</span>::<span class="n">new</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">unwrap</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">identity</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">recover</span><span class="p">(</span><span class="o">&amp;</span><span class="n">signer</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">signer</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">Signer</span>::<span class="n">new</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span><span class="w"> </span><span class="n">Network</span>::<span class="n">Bitcoin</span><span class="p">,</span><span class="w"> </span><span class="n">tls</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span>::<span class="n">new</span><span class="p">(</span>
+<span class="w">    </span><span class="n">signer</span><span class="p">.</span><span class="n">node_id</span><span class="p">(),</span>
+<span class="w">    </span><span class="n">Network</span>::<span class="n">Bitcoin</span>
+<span class="p">)</span>
+<span class="p">.</span><span class="k">await</span>
+<span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">recover</span><span class="p">(</span><span class="o">&amp;</span><span class="n">signer</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1057,11 +1068,12 @@ corresponds to that node.</p>
 
 <span class="n">cert</span> <span class="o">=</span> <span class="o">...</span> <span class="o">//</span> <span class="n">Your</span> <span class="n">developer</span> <span class="n">certificate</span>
 <span class="n">key</span> <span class="o">=</span> <span class="o">...</span> <span class="o">//</span> <span class="n">Your</span> <span class="n">developer</span> <span class="n">key</span>
+<span class="n">seed</span> <span class="o">=</span> <span class="o">...</span> <span class="o">//</span> <span class="n">Load</span> <span class="n">seed</span> <span class="kn">from</span> <span class="nn">file</span>
 
 <span class="n">tls</span> <span class="o">=</span> <span class="n">TlsConfig</span><span class="p">()</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span> <span class="n">key</span><span class="p">);</span>
 <span class="n">signer</span> <span class="o">=</span> <span class="n">Signer</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">)</span>
 <span class="n">scheduler</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span>
-    <span class="n">node_id</span><span class="o">=</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">(),</span>
+  <span class="n">node_id</span><span class="o">=</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">(),</span>
     <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span>
     <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">,</span>
 <span class="p">)</span>
