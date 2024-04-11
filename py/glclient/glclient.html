@@ -103,10 +103,10 @@
                                 <a class="function" href="#Scheduler.recover">recover</a>
                         </li>
                         <li>
-                                <a class="function" href="#Scheduler.export_node">export_node</a>
+                                <a class="function" href="#Scheduler.authenticate">authenticate</a>
                         </li>
                         <li>
-                                <a class="function" href="#Scheduler.get_node_info">get_node_info</a>
+                                <a class="function" href="#Scheduler.export_node">export_node</a>
                         </li>
                         <li>
                                 <a class="function" href="#Scheduler.schedule">schedule</a>
@@ -166,61 +166,28 @@
                     <a class="class" href="#Credentials">Credentials</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Credentials.as_device">as_device</a>
+                                <a class="function" href="#Credentials.nobody_with">nobody_with</a>
                         </li>
                         <li>
-                                <a class="function" href="#Credentials.as_nobody">as_nobody</a>
+                                <a class="function" href="#Credentials.from_path">from_path</a>
                         </li>
                         <li>
-                                <a class="function" href="#Credentials.tls_config">tls_config</a>
+                                <a class="function" href="#Credentials.from_bytes">from_bytes</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Credentials.from_parts">from_parts</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Credentials.upgrade">upgrade</a>
                         </li>
                         <li>
                                 <a class="function" href="#Credentials.to_bytes">to_bytes</a>
                         </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#DeviceBuilder">DeviceBuilder</a>
-                            <ul class="memberlist">
                         <li>
-                                <a class="function" href="#DeviceBuilder.from_path">from_path</a>
+                                <a class="function" href="#Credentials.ensure_device">ensure_device</a>
                         </li>
                         <li>
-                                <a class="function" href="#DeviceBuilder.from_bytes">from_bytes</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DeviceBuilder.with_identity">with_identity</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DeviceBuilder.with_ca">with_ca</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DeviceBuilder.with_rune">with_rune</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DeviceBuilder.upgrade">upgrade</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#DeviceBuilder.build">build</a>
-                        </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#NobodyBuilder">NobodyBuilder</a>
-                            <ul class="memberlist">
-                        <li>
-                                <a class="function" href="#NobodyBuilder.with_default">with_default</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#NobodyBuilder.with_identity">with_identity</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#NobodyBuilder.with_ca">with_ca</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#NobodyBuilder.build">build</a>
+                                <a class="function" href="#Credentials.ensure_nobody">ensure_nobody</a>
                         </li>
                 </ul>
 
@@ -523,6 +490,19 @@
     
 
                             </div>
+                            <div id="Scheduler.authenticate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">authenticate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">creds</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Scheduler.authenticate"></a>
+    
+    
+
+                            </div>
                             <div id="Scheduler.export_node" class="classattr">
                                 <div class="attr function">
             
@@ -532,19 +512,6 @@
         
     </div>
     <a class="headerlink" href="#Scheduler.export_node"></a>
-    
-    
-
-                            </div>
-                            <div id="Scheduler.get_node_info" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_node_info</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Scheduler.get_node_info"></a>
     
     
 
@@ -757,41 +724,67 @@
     
     
 
-                            <div id="Credentials.as_device" class="classattr">
+                            <div id="Credentials.nobody_with" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">as_device</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+        <span class="name">nobody_with</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">cert</span>, </span><span class="param"><span class="n">key</span>, </span><span class="param"><span class="n">ca</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Credentials.as_device"></a>
+    <a class="headerlink" href="#Credentials.nobody_with"></a>
     
     
 
                             </div>
-                            <div id="Credentials.as_nobody" class="classattr">
+                            <div id="Credentials.from_path" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">as_nobody</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+        <span class="name">from_path</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">path</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Credentials.as_nobody"></a>
+    <a class="headerlink" href="#Credentials.from_path"></a>
     
     
 
                             </div>
-                            <div id="Credentials.tls_config" class="classattr">
+                            <div id="Credentials.from_bytes" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">tls_config</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_bytes</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">data</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Credentials.tls_config"></a>
+    <a class="headerlink" href="#Credentials.from_bytes"></a>
+    
+    
+
+                            </div>
+                            <div id="Credentials.from_parts" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_parts</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">cert</span>, </span><span class="param"><span class="n">key</span>, </span><span class="param"><span class="n">ca</span>, </span><span class="param"><span class="n">rune</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Credentials.from_parts"></a>
+    
+    
+
+                            </div>
+                            <div id="Credentials.upgrade" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">upgrade</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">scheduler</span>, </span><span class="param"><span class="n">signer</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Credentials.upgrade"></a>
     
     
 
@@ -809,171 +802,28 @@
     
 
                             </div>
-                </section>
-                <section id="DeviceBuilder">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">DeviceBuilder</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#DeviceBuilder"></a>
-    
-    
-
-                            <div id="DeviceBuilder.from_path" class="classattr">
+                            <div id="Credentials.ensure_device" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_path</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">path</span></span><span class="return-annotation">):</span></span>
+        <span class="name">ensure_device</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#DeviceBuilder.from_path"></a>
+    <a class="headerlink" href="#Credentials.ensure_device"></a>
     
     
 
                             </div>
-                            <div id="DeviceBuilder.from_bytes" class="classattr">
+                            <div id="Credentials.ensure_nobody" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_bytes</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">data</span></span><span class="return-annotation">):</span></span>
+        <span class="name">ensure_nobody</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#DeviceBuilder.from_bytes"></a>
-    
-    
-
-                            </div>
-                            <div id="DeviceBuilder.with_identity" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">with_identity</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">cert</span>, </span><span class="param"><span class="n">key</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#DeviceBuilder.with_identity"></a>
-    
-    
-
-                            </div>
-                            <div id="DeviceBuilder.with_ca" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">with_ca</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">ca</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#DeviceBuilder.with_ca"></a>
-    
-    
-
-                            </div>
-                            <div id="DeviceBuilder.with_rune" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">with_rune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">rune</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#DeviceBuilder.with_rune"></a>
-    
-    
-
-                            </div>
-                            <div id="DeviceBuilder.upgrade" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">upgrade</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">scheduler</span>, </span><span class="param"><span class="n">signer</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#DeviceBuilder.upgrade"></a>
-    
-    
-
-                            </div>
-                            <div id="DeviceBuilder.build" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">build</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#DeviceBuilder.build"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="NobodyBuilder">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">NobodyBuilder</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#NobodyBuilder"></a>
-    
-    
-
-                            <div id="NobodyBuilder.with_default" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">with_default</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#NobodyBuilder.with_default"></a>
-    
-    
-
-                            </div>
-                            <div id="NobodyBuilder.with_identity" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">with_identity</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">cert</span>, </span><span class="param"><span class="n">key</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#NobodyBuilder.with_identity"></a>
-    
-    
-
-                            </div>
-                            <div id="NobodyBuilder.with_ca" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">with_ca</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">ca</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#NobodyBuilder.with_ca"></a>
-    
-    
-
-                            </div>
-                            <div id="NobodyBuilder.build" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">build</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#NobodyBuilder.build"></a>
+    <a class="headerlink" href="#Credentials.ensure_nobody"></a>
     
     
 
