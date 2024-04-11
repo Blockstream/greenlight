@@ -46,13 +46,7 @@ pub mod tls;
 pub mod export;
 
 /// Tools to interact with a node running on greenlight.
-pub mod utils {
-
-    pub fn scheduler_uri() -> String {
-        std::env::var("GL_SCHEDULER_GRPC_URI")
-            .unwrap_or_else(|_| "https://scheduler.gl.blckstrm.com".to_string())
-    }
-}
+pub mod utils;
 
 pub mod credentials;
 

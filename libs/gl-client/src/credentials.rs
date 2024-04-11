@@ -2,6 +2,7 @@ use crate::{
     scheduler::Scheduler,
     signer::Signer,
     tls::{self, TlsConfig},
+    utils::get_node_id_from_tls_config,
 };
 /// Credentials is a collection of all relevant keys and attestations
 /// required to authenticate a device and authorize a command on the node.
@@ -44,6 +45,9 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub trait TlsConfigProvider: Send + Sync {
     fn tls_config(&self) -> TlsConfig;
+    fn with_identity<V>(device_cert: V, device_key: V) -> Self
+    where
+        V: Into<Vec<u8>>;
 }
 pub trait RuneProvider {
     fn rune(&self) -> String;
@@ -98,6 +102,22 @@ impl Nobody {
 impl TlsConfigProvider for Nobody {
     fn tls_config(&self) -> TlsConfig {
         tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
+    }
+
+    /// Returns a new Nobody instance with a custom set of parameters.
+    /// Tries to load the CA from file and defaults to CA_RAW.
+    fn with_identity<V>(cert: V, key: V) -> Self
+    where
+        V: Into<Vec<u8>>,
+    {
+        let ca =
+            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
+
+        Self {
+            cert: cert.into(),
+            key: key.into(),
+            ca,
+        }
     }
 }
 
@@ -177,31 +197,30 @@ impl Device {
 
     /// Asynchronously upgrades the credentials using the provided scheduler and
     /// signer, potentially involving network operations or other async tasks.
-    pub async fn upgrade<T>(mut self, scheduler: &Scheduler<T>, signer: &Signer) -> Result<Self>
+    pub async fn upgrade<T>(mut self, _scheduler: &Scheduler<T>, signer: &Signer) -> Result<Self>
     where
         T: TlsConfigProvider,
     {
         use Error::*;
 
-        // For now, upgrade is covered by recover
-        let res = scheduler
-            .recover(signer)
-            .await
+        self.version = CRED_VERSION;
+
+        if self.rune != String::default() {
+            let node_id = self
+                .node_id()
+                .map_err(|e| UpgradeCredentialsError(e.to_string()))?;
+
+            let alt = runeauth::Alternative::new(
+                "pubkey".to_string(),
+                runeauth::Condition::Equal,
+                hex::encode(node_id),
+                false,
+            )
             .map_err(|e| UpgradeCredentialsError(e.to_string()))?;
-        let mut data = model::Data::try_from(&res.creds[..])
-            .map_err(|e| UpgradeCredentialsError(e.to_string()))?;
-        data.version = CRED_VERSION;
-        if let Some(cert) = data.cert {
-            self.cert = cert
-        }
-        if let Some(key) = data.key {
-            self.key = key
-        }
-        if let Some(ca) = data.ca {
-            self.ca = ca
-        }
-        if let Some(rune) = data.rune {
-            self.rune = rune
+
+            self.rune = signer
+                .create_rune(None, vec![vec![&alt.encode()]])
+                .map_err(|e| UpgradeCredentialsError(e.to_string()))?;
         };
         Ok(self)
     }
@@ -211,11 +230,33 @@ impl Device {
     pub fn to_bytes(&self) -> Vec<u8> {
         self.to_owned().into()
     }
+
+    pub fn node_id(&self) -> anyhow::Result<Vec<u8>> {
+        get_node_id_from_tls_config(&self.tls_config())
+    }
 }
 
 impl TlsConfigProvider for Device {
     fn tls_config(&self) -> TlsConfig {
         tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
+    }
+
+    /// Returns a new Device instance with a custom identity.
+    /// Tries to load the CA from file and defaults to CA_RAW.
+    /// Rune is initialized to the default value.
+    fn with_identity<V>(cert: V, key: V) -> Self
+    where
+        V: Into<Vec<u8>>,
+    {
+        let ca =
+            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
+
+        Self {
+            cert: cert.into(),
+            key: key.into(),
+            ca,
+            ..Default::default()
+        }
     }
 }
 

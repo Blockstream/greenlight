@@ -2,6 +2,7 @@ use crate::credentials::{self, RuneProvider, TlsConfigProvider};
 use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self};
+use crate::utils::get_node_id_from_tls_config;
 use crate::utils::scheduler_uri;
 use crate::{pb, signer::Signer};
 use anyhow::{anyhow, Result};
@@ -433,10 +434,10 @@ where
     where
         T: GrpcClient,
     {
-        let cert_node_id = self.get_node_id_from_tls_config()?;
+        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
 
-        if cert_node_id != self.node_id {
-            return Err(anyhow!("The node_id defined on the Credential's certificate does not match the node_id the scheduler was initialized with\nExpected {}, got {}", hex::encode(&self.node_id), hex::encode(&cert_node_id)));
+        if node_id != self.node_id {
+            return Err(anyhow!("The node_id defined on the Credential's certificate does not match the node_id the scheduler was initialized with\nExpected {}, got {}", hex::encode(&self.node_id), hex::encode(&node_id)));
         }
 
         let res = self.schedule().await?;
@@ -479,7 +480,7 @@ where
         &self,
         uri: String,
     ) -> Result<pb::scheduler::AddOutgoingWebhookResponse> {
-        let node_id = self.get_node_id_from_tls_config()?;
+        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
         let res = self
             .client
             .clone()
@@ -491,7 +492,7 @@ where
     pub async fn list_outgoing_webhooks(
         &self,
     ) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
-        let node_id = self.get_node_id_from_tls_config()?;
+        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
         let res = self
             .client
             .clone()
@@ -501,7 +502,7 @@ where
     }
 
     pub async fn delete_webhooks(&self, webhook_ids: Vec<i64>) -> Result<pb::greenlight::Empty> {
-        let node_id = self.get_node_id_from_tls_config()?;
+        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
         let res = self
             .client
             .clone()
@@ -517,7 +518,7 @@ where
         &self,
         webhook_id: i64,
     ) -> Result<pb::scheduler::WebhookSecretResponse> {
-        let node_id = self.get_node_id_from_tls_config()?;
+        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
         let res = self
             .client
             .clone()
@@ -527,31 +528,6 @@ where
             })
             .await?;
         Ok(res.into_inner())
-    }
-
-    fn get_node_id_from_tls_config(&self) -> Result<Vec<u8>> {
-        let tls_config = self.creds.tls_config();
-        let subject_common_name = match &tls_config.x509_cert {
-            Some(x) => match x.subject_common_name() {
-                Some(cn) => cn,
-                None => {
-                    return Err(anyhow!(
-                        "Failed to parse the subject common name in the provided x509 certificate"
-                    ))
-                }
-            },
-            None => {
-                return Err(anyhow!(
-                    "The certificate could not be parsed in the x509 format"
-                ))
-            }
-        };
-
-        let split_subject_common_name = subject_common_name.split("/").collect::<Vec<&str>>();
-
-        assert!(split_subject_common_name[1] == "users");
-        Ok(hex::decode(split_subject_common_name[2])
-            .expect("Failed to parse the node_id from the TlsConfig to bytes"))
     }
 }
 
