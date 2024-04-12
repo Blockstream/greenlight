@@ -96,10 +96,11 @@ class Scheduler(object):
         return res.FromString(bytes(self.inner.export_node()))
 
     def node(self) -> "Node":
-        res = self.schedule()
+        res = self.inner.node()
+        info = schedpb.NodeInfoResponse.FromString(bytes(res))
         return Node(
             node_id=self.node_id,
-            grpc_uri=res.grpc_uri,
+            grpc_uri=info.grpc_uri,
             creds=self.creds,
         )
 
