@@ -84,6 +84,11 @@ where
         s.schedule().await
     }
 
+    async fn node(&self) -> Result<pb::scheduler::NodeInfoResponse> {
+        let s = self.authenticated_scheduler()?;
+        s.schedule().await
+    }
+
     async fn get_node_info(&self, wait: bool) -> Result<pb::scheduler::NodeInfoResponse> {
         let s = self.authenticated_scheduler()?;
         s.get_node_info(wait).await
@@ -102,12 +107,9 @@ where
         s.add_outgoing_webhook(uri).await
     }
 
-    async fn list_outgoing_webhooks(
-        &self
-    ) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
+    async fn list_outgoing_webhooks(&self) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
         let s = self.authenticated_scheduler()?;
-        s.list_outgoing_webhooks()
-            .await
+        s.list_outgoing_webhooks().await
     }
 
     async fn delete_outgoing_webhooks(&self, ids: Vec<i64>) -> Result<pb::Empty> {
@@ -120,8 +122,7 @@ where
         webhook_id: i64,
     ) -> Result<pb::scheduler::WebhookSecretResponse> {
         let s = self.authenticated_scheduler()?;
-        s.rotate_outgoing_webhook_secret(webhook_id)
-            .await
+        s.rotate_outgoing_webhook_secret(webhook_id).await
     }
 
     fn authenticated_scheduler(&self) -> Result<&scheduler::Scheduler<R>> {
@@ -210,6 +211,10 @@ impl Scheduler {
         convert(exec(async { self.inner.schedule().await }))
     }
 
+    fn node(&self) -> PyResult<Vec<u8>> {
+        convert(exec(async { self.inner.node().await }))
+    }
+
     fn get_invite_codes(&self) -> PyResult<Vec<u8>> {
         convert(exec(async { self.inner.get_invite_codes().await }))
     }
@@ -219,34 +224,22 @@ impl Scheduler {
     }
 
     fn add_outgoing_webhook(&self, uri: String) -> PyResult<Vec<u8>> {
-        convert(exec(async {
-            self.inner
-                .add_outgoing_webhook(uri)
-                .await
-        }))
+        convert(exec(async { self.inner.add_outgoing_webhook(uri).await }))
     }
 
     fn list_outgoing_webhooks(&self) -> PyResult<Vec<u8>> {
-        convert(exec(async {
-            self.inner
-                .list_outgoing_webhooks()
-                .await
-        }))
+        convert(exec(async { self.inner.list_outgoing_webhooks().await }))
     }
 
     fn delete_outgoing_webhooks(&self, webhook_ids: Vec<i64>) -> PyResult<Vec<u8>> {
         convert(exec(async {
-            self.inner
-                .delete_outgoing_webhooks(webhook_ids)
-                .await
+            self.inner.delete_outgoing_webhooks(webhook_ids).await
         }))
     }
 
     fn rotate_outgoing_webhook_secret(&self, webhook_id: i64) -> PyResult<Vec<u8>> {
         convert(exec(async {
-            self.inner
-                .rotate_outgoing_webhook_secret(webhook_id)
-                .await
+            self.inner.rotate_outgoing_webhook_secret(webhook_id).await
         }))
     }
 }
