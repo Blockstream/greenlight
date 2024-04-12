@@ -11,3 +11,5 @@ rand = "*"
 bip39 = { version = "*", features=["rand_core"] }
 tokio = {version="1.29.1", features=["rt", "macros"]}
 hex = "0.4.3"
+runeauth = "0.1"
+anyhow.workspace = true
