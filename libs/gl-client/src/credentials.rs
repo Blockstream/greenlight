@@ -59,8 +59,8 @@ struct Identity {
 
 impl Default for Identity {
     fn default() -> Self {
-        let key = NOBODY_KEY.to_vec();
-        let cert = NOBODY_CRT.to_vec();
+        let key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY);
+        let cert = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT);
         Self { cert, key }
     }
 }
@@ -101,7 +101,7 @@ impl TlsConfigProvider for Nobody {
 
 impl Default for Nobody {
     fn default() -> Self {
-        let ca = CA_RAW.to_vec();
+        let ca = load_file_or_default("GL_CA_CRT", CA_RAW);
         let identity = Identity::default();
 
         Self {
@@ -243,7 +243,7 @@ impl From<Device> for model::Data {
 
 impl Default for Device {
     fn default() -> Self {
-        let ca = CA_RAW.to_vec();
+        let ca = load_file_or_default("GL_CA_CRT", CA_RAW);
         let identity = Identity::default();
         Self {
             version: 0,
@@ -291,8 +291,32 @@ mod model {
     }
 }
 
+/// Tries to load nobody credentials from a file that is passed by an envvar and
+/// defaults to the nobody cert and key paths that have been set during build-
+/// time.
+fn load_file_or_default(varname: &str, default: &[u8]) -> Vec<u8> {
+    match std::env::var(varname) {
+        Ok(fname) => {
+            debug!("Loading file {} for envvar {}", fname, varname);
+            let f = std::fs::read(fname.clone());
+            if f.is_err() {
+                debug!(
+                    "Could not find file {} for var {}, loading from default",
+                    fname, varname
+                );
+                default.to_vec()
+            } else {
+                f.unwrap()
+            }
+        }
+        Err(_) => default.to_vec(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::{env, io::Write};
+
     use super::*;
 
     #[test]
@@ -336,5 +360,18 @@ mod tests {
         assert!(data.key.is_some_and(|d| d == vec![97, 96]));
         assert!(data.ca.is_some_and(|d| d == vec![95, 94]));
         assert!(data.rune.is_some_and(|d| d == *"non_functional_rune"));
+    }
+
+    #[test]
+    fn test_load_from_envvar() {
+        let key = "GL_NOBODY_CRT";
+        let value = "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n";
+
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(value.as_bytes()).unwrap();
+
+        env::set_var(key, tmp.path());
+        let data = load_file_or_default(key, NOBODY_CRT);
+        assert!(value.as_bytes() == data);
     }
 }
