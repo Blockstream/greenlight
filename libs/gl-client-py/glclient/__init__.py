@@ -74,6 +74,10 @@ class Scheduler(object):
         res = self.inner.schedule()
         return schedpb.NodeInfoResponse.FromString(bytes(res))
 
+    def get_node_info(self, wait: bool = False):
+        res = self.inner.get_node_info(wait)
+        return schedpb.NodeInfoResponse.FromString(bytes(res))
+
     def register(self, signer: Signer, invite_code: Optional[str] = None) -> schedpb.RegistrationResponse:
         res = self.inner.register(signer.inner, invite_code)
         return schedpb.RegistrationResponse.FromString(bytes(res))
@@ -81,7 +85,7 @@ class Scheduler(object):
     def recover(self, signer: Signer) -> schedpb.RecoveryResponse:
         res = self.inner.recover(signer.inner)
         return schedpb.RecoveryResponse.FromString(bytes(res))
-    
+
     def authenticate(self, creds: Credentials):
         self.creds = creds
         self.inner = self.inner.authenticate(creds)
@@ -102,21 +106,21 @@ class Scheduler(object):
     def get_invite_codes(self) -> schedpb.ListInviteCodesResponse:
         cls = schedpb.ListInviteCodesResponse
         return cls.FromString(bytes(self.inner.get_invite_codes()))
-    
+
     def add_outgoing_webhook(self, uri: str) -> schedpb.AddOutgoingWebhookResponse:
         res = self.inner.add_outgoing_webhook(uri)
         return schedpb.AddOutgoingWebhookResponse.FromString(bytes(res))
-    
+
     def list_outgoing_webhooks(self) -> schedpb.ListOutgoingWebhooksResponse:
         res = self.inner.list_outgoing_webhooks()
         return schedpb.ListOutgoingWebhooksResponse.FromString(bytes(res))
-    
+
     def delete_outgoing_webhook(self, webhook_id: int) -> None:
         res = self.inner.delete_outgoing_webhooks([webhook_id])
-    
+
     def delete_outgoing_webhooks(self, webhook_ids: List[int]) -> None:
         res = self.inner.delete_outgoing_webhooks(webhook_ids)
-    
+
     def rotate_outgoing_webhook_secret(self, webhook_id: int) -> schedpb.WebhookSecretResponse:
         res = self.inner.rotate_outgoing_webhook_secret(webhook_id)
         return schedpb.WebhookSecretResponse.FromString(bytes(res))

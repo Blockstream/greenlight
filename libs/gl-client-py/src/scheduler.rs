@@ -84,6 +84,11 @@ where
         s.schedule().await
     }
 
+    async fn get_node_info(&self, wait: bool) -> Result<pb::scheduler::NodeInfoResponse> {
+        let s = self.authenticated_scheduler()?;
+        s.get_node_info(wait).await
+    }
+
     async fn get_invite_codes(&self) -> Result<pb::scheduler::ListInviteCodesResponse> {
         let s = self.authenticated_scheduler()?;
         s.get_invite_codes().await
@@ -207,6 +212,10 @@ impl Scheduler {
 
     fn get_invite_codes(&self) -> PyResult<Vec<u8>> {
         convert(exec(async { self.inner.get_invite_codes().await }))
+    }
+
+    fn get_node_info(&self, wait: bool) -> PyResult<Vec<u8>> {
+        convert(exec(async { self.inner.get_node_info(wait).await }))
     }
 
     fn add_outgoing_webhook(&self, uri: String) -> PyResult<Vec<u8>> {

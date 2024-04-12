@@ -445,6 +445,18 @@ where
             .await
     }
 
+    pub async fn get_node_info(&self, wait: bool) -> Result<pb::scheduler::NodeInfoResponse> {
+        Ok(self
+            .client
+            .clone()
+            .get_node_info(pb::scheduler::NodeInfoRequest {
+                node_id: self.node_id.clone(),
+                wait: wait,
+            })
+            .await?
+            .into_inner())
+    }
+
     pub async fn export_node(&self) -> Result<pb::scheduler::ExportNodeResponse> {
         Ok(self
             .client
@@ -465,16 +477,13 @@ where
 
     pub async fn add_outgoing_webhook(
         &self,
-        uri: String
+        uri: String,
     ) -> Result<pb::scheduler::AddOutgoingWebhookResponse> {
         let node_id = self.get_node_id_from_tls_config()?;
         let res = self
             .client
             .clone()
-            .add_outgoing_webhook(pb::scheduler::AddOutgoingWebhookRequest {
-                node_id,
-                uri
-            })
+            .add_outgoing_webhook(pb::scheduler::AddOutgoingWebhookRequest { node_id, uri })
             .await?;
         Ok(res.into_inner())
     }
@@ -486,24 +495,19 @@ where
         let res = self
             .client
             .clone()
-            .list_outgoing_webhooks(pb::scheduler::ListOutgoingWebhooksRequest {
-                node_id
-            })
+            .list_outgoing_webhooks(pb::scheduler::ListOutgoingWebhooksRequest { node_id })
             .await?;
         Ok(res.into_inner())
     }
 
-    pub async fn delete_webhooks(
-        &self,
-        webhook_ids: Vec<i64>
-    ) -> Result<pb::greenlight::Empty> {
+    pub async fn delete_webhooks(&self, webhook_ids: Vec<i64>) -> Result<pb::greenlight::Empty> {
         let node_id = self.get_node_id_from_tls_config()?;
         let res = self
             .client
             .clone()
             .delete_webhooks(pb::scheduler::DeleteOutgoingWebhooksRequest {
                 node_id,
-                ids: webhook_ids
+                ids: webhook_ids,
             })
             .await?;
         Ok(res.into_inner())
@@ -519,7 +523,7 @@ where
             .clone()
             .rotate_outgoing_webhook_secret(pb::scheduler::RotateOutgoingWebhookSecretRequest {
                 node_id,
-                webhook_id
+                webhook_id,
             })
             .await?;
         Ok(res.into_inner())
