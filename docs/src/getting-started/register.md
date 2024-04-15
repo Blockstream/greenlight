@@ -24,7 +24,7 @@ creative way of storing it they can think of.
 
 !!! note
 	The following code-snippets build on each other. By copying each snippet
-	after the other you should get a working example.
+	after the other you should get a working example. See the getting started project in [examples](https://github.com/Blockstream/greenlight/tree/main/examples/rust) to view the code in one file.
 
 === "Rust"
 	
