@@ -59,8 +59,10 @@ struct Identity {
 
 impl Default for Identity {
     fn default() -> Self {
-        let key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY);
-        let cert = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT);
+        let key = load_file_or_default("GL_NOBODY_KEY", NOBODY_KEY)
+            .expect("Could not load file from GL_NOBODY_KEY");
+        let cert = load_file_or_default("GL_NOBODY_CRT", NOBODY_CRT)
+            .expect("Could not load file from GL_NOBODY_CRT");
         Self { cert, key }
     }
 }
@@ -101,7 +103,8 @@ impl TlsConfigProvider for Nobody {
 
 impl Default for Nobody {
     fn default() -> Self {
-        let ca = load_file_or_default("GL_CA_CRT", CA_RAW);
+        let ca =
+            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
         let identity = Identity::default();
 
         Self {
@@ -243,7 +246,8 @@ impl From<Device> for model::Data {
 
 impl Default for Device {
     fn default() -> Self {
-        let ca = load_file_or_default("GL_CA_CRT", CA_RAW);
+        let ca =
+            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
         let identity = Identity::default();
         Self {
             version: 0,
@@ -294,22 +298,14 @@ mod model {
 /// Tries to load nobody credentials from a file that is passed by an envvar and
 /// defaults to the nobody cert and key paths that have been set during build-
 /// time.
-fn load_file_or_default(varname: &str, default: &[u8]) -> Vec<u8> {
+fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
     match std::env::var(varname) {
         Ok(fname) => {
             debug!("Loading file {} for envvar {}", fname, varname);
-            let f = std::fs::read(fname.clone());
-            if f.is_err() {
-                debug!(
-                    "Could not find file {} for var {}, loading from default",
-                    fname, varname
-                );
-                default.to_vec()
-            } else {
-                f.unwrap()
-            }
+            let f = std::fs::read(fname.clone())?;
+            Ok(f)
         }
-        Err(_) => default.to_vec(),
+        Err(_) => Ok(default.to_vec()),
     }
 }
 
@@ -371,7 +367,7 @@ mod tests {
         tmp.write_all(value.as_bytes()).unwrap();
 
         env::set_var(key, tmp.path());
-        let data = load_file_or_default(key, NOBODY_CRT);
+        let data = load_file_or_default(key, NOBODY_CRT).unwrap();
         assert!(value.as_bytes() == data);
     }
 }
