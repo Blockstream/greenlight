@@ -222,6 +222,11 @@ ENV GRPC_ENABLE_FORK_SUPPORT=0
 # Install cln-versions
 COPY --from=cln-downloader /opt/cln /opt/cln
 ENV CLNVM_CACHE_DIR=/opt/cln
+RUN ln -s /opt/cln/v24.02.1gl1 /opt/cln-latest
+ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
+
+# Enumerate all versions that gl-testing should find
+ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/:/opt/cln/v24.02gl1/usr/local/bin/
 
 # Install bitcoin-core
 COPY --from=bitcoin-downloader /opt/bitcoin/bin /opt/bitcoin/bin
