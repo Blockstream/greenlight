@@ -1061,10 +1061,12 @@ dependencies = [
 name = "getting-started"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bip39",
  "gl-client",
  "hex",
  "rand 0.8.5",
+ "runeauth",
  "tokio 1.37.0",
 ]
 

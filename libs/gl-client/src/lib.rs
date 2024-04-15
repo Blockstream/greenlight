@@ -53,7 +53,7 @@ pub mod credentials;
 /// Functionality to integrate greenlight with a Lightning Service Provider
 pub mod lsps;
 
-mod util;
+pub mod util;
 
 use thiserror::Error;
 
