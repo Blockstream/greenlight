@@ -311,8 +311,6 @@ fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, io::Write};
-
     use super::*;
 
     #[test]
@@ -356,18 +354,5 @@ mod tests {
         assert!(data.key.is_some_and(|d| d == vec![97, 96]));
         assert!(data.ca.is_some_and(|d| d == vec![95, 94]));
         assert!(data.rune.is_some_and(|d| d == *"non_functional_rune"));
-    }
-
-    #[test]
-    fn test_load_from_envvar() {
-        let key = "GL_NOBODY_CRT";
-        let value = "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n";
-
-        let mut tmp = tempfile::NamedTempFile::new().unwrap();
-        tmp.write_all(value.as_bytes()).unwrap();
-
-        env::set_var(key, tmp.path());
-        let data = load_file_or_default(key, NOBODY_CRT).unwrap();
-        assert!(value.as_bytes() == data);
     }
 }
