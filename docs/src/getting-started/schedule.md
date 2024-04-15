@@ -26,17 +26,7 @@ Greenlight infrastructure:
 
 === "Rust"
 	```rust
-	use hex;
-	use gl_client::bitcoin::Network;
-	use gl_client::{tls::TlsConfig, scheduler::Scheduler, node::ClnClient};
-
-	let node_id = hex::decode("02058e8b6c2ad363ec59aa136429256d745164c2bdc87f98f0a68690ec2c5c9b0b").unwrap();
-	let network = Network::Testnet;
-	
-	let tls = TlsConfig::new().unwrap().identity(device_cert, device_key);
-
-	let scheduler = Scheduler::new(node_id, network).await.unwrap();
-	let mut node: ClnClient = scheduler.schedule(tls).await.unwrap();
+--8<-- "main.rs:start_node"
 	```
 
 === "Python"
@@ -55,9 +45,7 @@ Once we have an instance of the `Node` we can start interacting with it via the 
 
 === "Rust"
     ```rust
-    use gl_client::pb::cln;
-	let info = node.getinfo(cln::GetinfoRequest::default()).await?;
-	let peers = node.list_peers(gl_client::pb::cln::ListpeersRequest::default()).await?;
+--8<-- "main.rs:list_peers"
 	```
 === "Python"
 	```python
@@ -74,11 +62,7 @@ only component with access to your key.
 
 === "Rust"
 	```rust
-    node.invoice(cln::InvoiceRequest {
-	    label: "label".to_string(),
-		description: "description".to_string(),
-		..Default::default()
-	}).await.unwrap();
+--8<-- "main.rs:create_invoice"
 	```
 
 === "Python"
@@ -103,16 +87,7 @@ in the last chapter, instantiate the signer with it and then start it.
 
 === "Rust"
 	```rust
-	let seed = ... // Load from wherever you stored it
-	let (cert, key) = ... // Load the cert and key you got from the `register` call
-	
-	// The signer task will run until we send a shutdown signal on this channel
-	// Note: The sender 'tx' must be kept alive or the channel will be closed
-	let (tx, mut rx) = tokio::sync::mpsc::channel(1);
-	
-	let tls = TlsConfig::new().unwrap().identity(device_cert, device_key);
-	let signer = Signer::new(seed, Network::Bitcoin, tls).unwrap();
-	signer.run_forever(rx).await.unwrap();
+--8<-- "main.rs:start_signer"
 	```
 	
 	Notice that `signer.run_forever()` returns a `Future` which you can spawn a

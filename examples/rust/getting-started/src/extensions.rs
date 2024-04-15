@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
 use gl_client::{
-    credentials::{Device, Nobody},
+    credentials::{Device, Nobody, TlsConfigProvider},
     signer::Signer,
+    util::get_node_id_from_tls_config,
 };
 
 pub trait CredentialExt {
@@ -34,12 +35,23 @@ impl CredentialExt for Device {
     }
 }
 
+pub trait DeviceExt {
+    fn node_id(&self) -> Result<Vec<u8>>;
+}
+
+impl DeviceExt for Device {
+    fn node_id(&self) -> Result<Vec<u8>> {
+        get_node_id_from_tls_config(&self.tls_config())
+    }
+}
+
 pub trait SignerExt {
     // I would name this create_default_rune but it might cause confusion
     // with the Default::default() used in the Device's default
     fn add_base_rune_to_device_credentials(&self, creds: Device) -> Result<Device>;
 }
 
+//TODO: Delete after Device::upgrade is made idempotent
 impl SignerExt for Signer {
     fn add_base_rune_to_device_credentials(&self, mut creds: Device) -> Result<Device> {
         if creds.rune != String::default() {

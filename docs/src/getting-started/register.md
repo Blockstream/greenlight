@@ -50,7 +50,7 @@ phrase and then convert it into a seed secret we can use:
 
 === "Rust"
 	```rust
---8<-- "main.rs:70:82"
+--8<-- "main.rs:create_seed"
 	```
 
 === "Python"
@@ -75,20 +75,15 @@ phrase and then convert it into a seed secret we can use:
 	funds on the node will be lost forever! We mean it when we say _you're
 	the only one with access to the seed_!
 
-## Registering the node
+## Initializing the signer
 
-We'll configure mTLS using our developer identity. Any connection using the
-`TlsConfig`-object specified below will allow you to register new Greenlight
+To initialize a signer we'll first need to configure `Nobody` credentials so we can talk to the scheduler using mTLS. Nobody credentials require data from the files downloaded from the Greenlight Developer Console, so the files must be accessible from wherever the node registration program is run. Any connection using the
+`developer_creds` object will allow you to register new Greenlight
 nodes.
 
 === "Rust"
 	```rust
-	use gl_client::tls::TlsConfig;
-
-	// Creating a new `TlsConfig` object using your developer certificate
-	// cert: contains the content of `client.crt`
-	// key: contains the content of `client-key.pem`
-	let tls = TlsConfig::new().unwrap().identity(cert, key);
+--8<-- "main.rs:dev_creds"
 	```
 	
 === "Python"
@@ -115,9 +110,7 @@ We'll pick `bitcoin`, because ... reckless 😉
 
 === "Rust"
 	```rust
-	use gl_client::signer::Signer;
-	use gl_client::bitcoin::Network;
-	let signer = Signer::new(secret, Network::Bitcoin, tls).unwrap();
+--8<-- "main.rs:init_signer"
 	```
 
 === "Python"
@@ -142,15 +135,7 @@ node's private key. Since the private key is managed exclusively by the
 
 === "Rust"
 	```rust
-	use gl_client::scheduler::Scheduler;
-	use gl_client::bitcoin::Network;
-
-	let scheduler = Scheduler::new(signer.node_id(), Network::Bitcoin).await.unwrap();
-
-	// Passing in the signer is required because the client needs to prove
-	// ownership of the `node_id`
-	scheduler.register(&signer, None).await.unwrap();
-
+--8<-- "main.rs:register_node"
 	```
 
 === "Python"
@@ -176,14 +161,8 @@ going forward to talk to the scheduler and the node itself.
 	these credentials can access your node.
 
 === "Rust"
-	```
-	let tls = TlsConfig::new().unwrap().identity(res.device_cert, res.device_key);
-	
-	// Use the configured `tls` instance when creating `Scheduler` and `Signer`
-	// instance going forward
-	let signer = Signer::new(seed.to_vec(), Network::Bitcoin, tls.clone()).unwrap();
-	let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, "uri".to_string(), &tls).await.unwrap();
-	let mut node: ClnClient = scheduler.schedule(tls.clone()).await.unwrap();
+	```rust
+--8<-- "main.rs:get_node"
 	```
 
 === "Python"
