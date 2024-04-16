@@ -56,17 +56,7 @@ phrase and then convert it into a seed secret we can use:
 === "Python"
 
 	```python
-	import bip39
-	import secrets  # Make sure to use cryptographically sound randomness
-	
-	rand = secrets.randbits(256).to_bytes(32, 'big')  # 32 bytes of randomness
-	phrase = bip39.encode_bytes(rand)
-	
-	# Prompt user to safely store the phrase
-	
-	seed = bip39.phrase_to_seed(phrase)[:32]  # Only need 32 bytes
-	
-	# Store the seed on the filesystem, or secure configuration system
+--8<-- "main.py:create_seed"
 	```
 
 !!! important
@@ -89,12 +79,7 @@ nodes.
 === "Python"
 
 	```python
-	from glclient import TlsConfig
-	
-	# Creating a new `TlsConfig` object using your developer certificate
-	# - cert: contains the content of `client.crt`
-	# - key: contains the content of `client-key.pem`
-	tls = TlsConfig().identity(cert, key)
+--8<-- "main.py:dev_creds"
 	```
 	
 
@@ -115,9 +100,7 @@ We'll pick `bitcoin`, because ... reckless 😉
 
 === "Python"
 	```python
-	from glclient import Signer
-	
-	signer = Signer(seed, network="bitcoin", tls=tls)
+--8<-- "main.py:init_signer"
 	```
 	
 [bip39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
@@ -140,17 +123,7 @@ node's private key. Since the private key is managed exclusively by the
 
 === "Python"
 	```python
-	from glclient import Scheduler
-	
-	scheduler = Scheduler(
-	    node_id=signer.node_id(),
-		network="bitcoin",
-		tls=tls,
-	)
-	
-	# Passing in the signer is required because the client needs to prove
-	# ownership of the `node_id`
-	res = scheduler.register(signer)
+--8<-- "main.py:register_node"
 	```
 
 The result of `register` contains the credentials that can be used
@@ -167,13 +140,7 @@ going forward to talk to the scheduler and the node itself.
 
 === "Python"
 	```python
-	tls = TlsConfig().identity(res.device_cert, res.device_key)
-	
-	# Use the configured `tls` instance when creating `Scheduler` and `Signer`
-	# instance going forward
-	signer = Signer(seed, network="bitcoin", tls=tls)
-	scheduler = Scheduler(node_id=signer.node_id(), network="bitcoin", tls=tls)
-	node = scheduler.node()
+--8<-- "main.py:get_node"
 	```
 
 If you get an error about a certificate verification failure when

@@ -150,6 +150,8 @@ cln-versions/lightningd-%.tar.bz2:
 cln: ${CLN_TARGETS}
 
 docs:
+	mypy examples/python
+	cargo build --manifest-path=./examples/rust/getting-started/Cargo.toml
 	mkdir -p ${REPO_ROOT}/site/
 	(cd docs; mkdocs build --strict --clean --site-dir=${REPO_ROOT}/site/ --verbose)
 	pdoc -o site/py glclient

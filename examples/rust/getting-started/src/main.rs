@@ -1,10 +1,9 @@
-use std::fs::{self, File};
-use std::io::Write;
-
-use anyhow::{anyhow, Result};
+use std::fs::{self};
+use anyhow::{Result};
 use bip39::{Language, Mnemonic};
-use gl_client::credentials::{Device, Nobody, RuneProvider, TlsConfigProvider};
+use gl_client::credentials::{Device, Nobody};
 use gl_client::node::ClnClient;
+use gl_client::pb::cln::{amount_or_any, Amount, AmountOrAny};
 use gl_client::pb::{self, cln};
 use gl_client::scheduler::Scheduler;
 use gl_client::{bitcoin::Network, signer::Signer};
@@ -20,7 +19,7 @@ fn save_to_file(file_name: &str, data: Vec<u8>) {
     fs::write(file_name, data).unwrap();
 }
 
-fn read_file(file_name: &str) -> Vec<u8>{
+fn read_file(file_name: &str) -> Vec<u8> {
     fs::read(file_name).unwrap()
 }
 
@@ -30,7 +29,7 @@ async fn create_seed() -> Vec<u8> {
     let m = Mnemonic::generate_in_with(&mut rng, Language::English, 24).unwrap();
 
     //Show seed phrase to user
-    let phrase = m.word_iter().fold("".to_string(), |c, n| c + " " + n);
+    let _phrase = m.word_iter().fold("".to_string(), |c, n| c + " " + n);
 
     const EMPTY_PASSPHRASE: &str = "";
     let seed = &m.to_seed(EMPTY_PASSPHRASE)[0..32]; // Only need the first 32 bytes
@@ -69,16 +68,17 @@ async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key
 
     // ---8<--- [start: get_node]
     let scheduler = scheduler.authenticate(device_creds).await.unwrap();
-    let mut node: ClnClient = scheduler.node().await.unwrap();
+    let _node: ClnClient = scheduler.node().await.unwrap();
     // ---8<--- [end: get_node]
 }
 
 async fn start_node(device_creds_path: String) {
     // ---8<--- [start: start_node]
+    let network = Network::Bitcoin;
     let device_creds = Device::from_path(device_creds_path);
     let scheduler = gl_client::scheduler::Scheduler::new(
         device_creds.node_id().unwrap(),
-        gl_client::bitcoin::Network::Bitcoin,
+        network,
         device_creds.clone(),
     )
     .await
@@ -88,15 +88,14 @@ async fn start_node(device_creds_path: String) {
     // ---8<--- [end: start_node]
 
     // ---8<--- [start: list_peers]
-    let info = node.getinfo(cln::GetinfoRequest::default()).await.unwrap();
-    let peers = node
+    let _info = node.getinfo(cln::GetinfoRequest::default()).await.unwrap();
+    let _peers = node
         .list_peers(gl_client::pb::cln::ListpeersRequest::default())
         .await
         .unwrap();
     // ---8<--- [end: list_peers]
 
     // ---8<--- [start: start_signer]
-    let network = Network::Bitcoin;
     let seed = read_file("seed");
     let signer = Signer::new(seed, network, device_creds.clone()).unwrap();
 
@@ -107,9 +106,14 @@ async fn start_node(device_creds_path: String) {
     // ---8<--- [end: start_signer]
 
     // ---8<--- [start: create_invoice]
+    let amount = AmountOrAny {
+        value: Some(amount_or_any::Value::Amount(Amount { msat: 10000 })),
+    };
+
     node.invoice(cln::InvoiceRequest {
-        label: "label".to_string(),
+        amount_msat: Some(amount),
         description: "description".to_string(),
+        label: "label".to_string(),
         ..Default::default()
     })
     .await
@@ -130,7 +134,7 @@ async fn recover_node(
     let scheduler_creds = signer
         .add_base_rune_to_device_credentials(signer_creds)
         .unwrap();
-    
+
     let scheduler = gl_client::scheduler::Scheduler::new(
         signer.node_id(),
         gl_client::bitcoin::Network::Bitcoin,
