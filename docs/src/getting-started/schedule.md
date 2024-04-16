@@ -31,14 +31,7 @@ Greenlight infrastructure:
 
 === "Python"
 	```python
-	from glclient import TlsConfig, Scheduler
-	cert, key = b'...', b'...'
-	node_id = bytes.fromhex("02058e8b6c2ad363ec59aa136429256d745164c2bdc87f98f0a68690ec2c5c9b0b")
-	network = "testnet"
-	tls = TlsConfig().identity(cert, key)
-	
-	scheduler = Scheduler(node_id, network, tls)
-	node = scheduler.node()
+--8<-- "main.py:start_node"
 	```
 
 Once we have an instance of the `Node` we can start interacting with it via the GRPC interface:
@@ -49,8 +42,7 @@ Once we have an instance of the `Node` we can start interacting with it via the 
 	```
 === "Python"
 	```python
-	info = node.get_info()
-	peers = node.list_peers()
+--8<-- "main.py:list_peers"
 	```
 	
 The above snippet will read the metadata and list the peers from the
@@ -67,12 +59,7 @@ only component with access to your key.
 
 === "Python"
 	```python
-	from glclient import clnpb
-	node.invoice(
-	    amount_msat=clnpb.AmountOrAny(any=True),
-		label="label",
-		description="description",
-	)
+--8<-- "main.py:create_invoice"
 	```
 	
 You'll notice that these calls hang indefinitely. This is because the
@@ -96,12 +83,7 @@ in the last chapter, instantiate the signer with it and then start it.
 	
 === "Python"
 	```python
-	seed = ... # Load from wherever you stored it
-	cert, key = ... // Load the cert and key you got from the `register` call
-	
-	tls = TlsConfig().identity(device_cert, device_key)
-	signer = Signer(seed, network="bitcoin", tls=tls)
-	signer.run_in_thread()
+--8<-- "main.py:start_signer"
 	```
 
 If you kept the stuck commands above running, you should notice that

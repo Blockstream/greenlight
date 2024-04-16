@@ -16,20 +16,7 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 	
 === "Python"
 	```python
-	from glclient import Scheduler, Signer, TlsConfig
-	
-	cert = ... // Your developer certificate
-	key = ... // Your developer key
-	seed = ... // Load seed from file
-
-	tls = TlsConfig().identity(cert, key);
-	signer = Signer(seed, network="bitcoin", tls=tls)
-	scheduler = Scheduler(
-	  node_id=signer.node_id(),
-		network="bitcoin",
-		tls=tls,
-	)
-	res = scheduler.recover(signer)
+--8<-- "main.py:recover_node"
 	```
 
 Notice that we are using a `TlsConfig` that is not configured with a
