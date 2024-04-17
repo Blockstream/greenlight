@@ -7,7 +7,7 @@ use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, H
 use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use base64::engine::general_purpose;
 use base64::Engine;
 use bytes::BufMut;
@@ -648,15 +648,9 @@ impl Signer {
         Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await
     }
 
-    pub async fn run_forever_with_uri(
-        &self,
-        mut shutdown: mpsc::Receiver<()>,
-        scheduler_uri: String,
-    ) -> Result<(), anyhow::Error> {
-        debug!(
-            "Contacting scheduler at {} to get the node address",
-            &scheduler_uri
-        );
+    /// Create and, if necessary, upgrade the scheduler
+    async fn init_scheduler(&self, scheduler_uri: String) -> Result<SchedulerClient<tonic::transport::channel::Channel>> {
+        debug!("Connecting to scheduler at {scheduler_uri}");
 
         let channel = Endpoint::from_shared(scheduler_uri)?
             .tls_config(self.tls.inner.clone())?
@@ -698,6 +692,15 @@ impl Signer {
 
             break;
         }
+        Ok(scheduler)
+    }
+
+    pub async fn run_forever_with_uri(
+        &self,
+        mut shutdown: mpsc::Receiver<()>,
+        scheduler_uri: String,
+    ) -> Result<(), anyhow::Error> {
+        let mut scheduler = self.init_scheduler(scheduler_uri).await?;
 
         loop {
             debug!("Calling scheduler.get_node_info");
