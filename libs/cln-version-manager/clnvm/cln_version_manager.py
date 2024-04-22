@@ -188,7 +188,7 @@ class ClnVersionManager:
             root_path=target_path,
         )
 
-    def _download(self, cln_version: VersionDescriptor, target_path: Path) -> None:
+    def _download(self, cln_version: VersionDescriptor, target_path: Path, verify_tag=False) -> None:
         """Downloads the provided cln_version"""
         tag = cln_version.tag
         logger.info("Downloading version %s to %s", tag, target_path)
@@ -249,22 +249,23 @@ class ClnVersionManager:
         else:
             tf.extractall(path=target_path)
 
-        try:
-            # We verify if the path matches the version
-            lightningd_path = target_path / _LIGHTNINGD_REL_PATH
-            version = (
-                subprocess.check_output([lightningd_path, "--version"])
-                .strip()
-                .decode("ASCII")
-            )
-        except Exception as e:
-            # Clean-up the bad version
-            shutil.rmtree(target_path)
-            raise UnrunnableVersion(tag=cln_version.tag) from e
+        if verify_tag:
+            try:
+                # We verify if the path matches the version
+                lightningd_path = target_path / _LIGHTNINGD_REL_PATH
+                version = (
+                    subprocess.check_output([lightningd_path, "--version"])
+                    .strip()
+                    .decode("ASCII")
+                )
+            except Exception as e:
+                # Clean-up the bad version
+                shutil.rmtree(target_path)
+                raise UnrunnableVersion(tag=cln_version.tag) from e
 
-        if version != tag:
-            # Clean-up teh bad version
-            shutil.rmtree(target_path)
-            raise VersionMismatch(expected=tag, actual=version)
+            if version != tag:
+                # Clean-up the bad version
+                shutil.rmtree(target_path)
+                raise VersionMismatch(expected=tag, actual=version)
 
         return
