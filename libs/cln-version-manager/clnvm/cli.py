@@ -1,10 +1,19 @@
 import importlib
+import logging
+import logging.config
+from pathlib import Path
+
 import os
 import sys
 from typing import Optional
 
 import clnvm
 from clnvm.cln_version_manager import ClnVersionManager, VersionDescriptor
+
+def configure_logging():
+    dirname, _ = os.path.split(__file__)
+    breakpoint()
+    logging.config.fileConfig(Path(dirname) / "logging.conf")
 
 # Handle the optional import and provide a nice error message if it fails
 _click = importlib.util.find_spec("click")
@@ -18,8 +27,10 @@ import click
 
 
 @click.group()
-def cli() -> None:
-    pass
+@click.option("--verbose", is_flag=True)
+def cli(verbose: bool) -> None:
+    if verbose:
+        configure_logging()
 
 
 @cli.command()
