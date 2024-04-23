@@ -110,20 +110,15 @@ RUN chmod a+rwx -R $CARGO_HOME
 # -----------------------------------------
 # gl-testing requires multiple versions of Core Lightning
 # Download all versions so they can be copied to our dev-container
-FROM ubuntu:20.04 as cln-downloader
-RUN apt update && apt install wget make git -qqy
+FROM python-builder as cln-downloader
 
-# Add all the makefiles
-# Althoug we only need the main one here we have to include all of them
-ADD Makefile /repo/Makefile
-ADD libs/gl-testing/Makefile /repo/libs/gl-testing/Makefile
-ADD libs/gl-client-py/Makefile /repo/libs/gl-client-py/Makefile
-ADD libs/gl-client/Makefile /repo/libs/gl-client/Makefile
+RUN mkdir -p /opt/cln/
+ENV CLNVM_CACHE_DIR=/opt/cln
 
-WORKDIR /repo
+ADD libs/cln-version-manager /repo/libs/cln-version-manager
+RUN cd /repo/libs/cln-version-manager; python -m pip install .
 
-RUN git init && make cln
-RUN chmod a+x -R /repo/cln-versions/
+# RUN /tmp/venv/bin/python -m clnvm get -all
 
 # -------------------------------------
 # STAGE: bitcoin-downloader
