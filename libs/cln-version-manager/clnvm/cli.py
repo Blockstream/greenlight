@@ -12,7 +12,7 @@ if _click is None:
     print("To use clnvm the `cli` feature must be installed")
     print("You can install the feature using")
     print("> pip install gltesting[cli]")
-    exit()
+    sys.exit(1)
 
 import click
 
@@ -33,6 +33,7 @@ def get_all(force: bool) -> None:
             click.echo(result.lightningd)
         except Exception as e:
             click.echo(click.style(str(e), fg="red"), err=True)
+            sys.exit(1)
 
 
 @cli.command()
