@@ -67,7 +67,7 @@ CLN_VERSIONS = [
     VersionDescriptor(
         tag="v23.08gl1",
         url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v23.08gl1.tar.bz2",
-        checksum="700e2f4765ba2f8d83ea26e0dc5b47c7176b665c7d6945bdfed2207c90ed9ebd",
+        checksum="724a5ae70e1e5fda67751a37dbb56648735b6d55394dcfe2193f15892c483d55",
     ),
 ]
 
