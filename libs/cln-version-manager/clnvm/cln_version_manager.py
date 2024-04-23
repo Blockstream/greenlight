@@ -188,7 +188,7 @@ class ClnVersionManager:
             root_path=target_path,
         )
 
-    def _download(self, cln_version: VersionDescriptor, target_path: Path, verify_tag=False) -> None:
+    def _download(self, cln_version: VersionDescriptor, target_path: Path, verify_tag:bool = False) -> None:
         """Downloads the provided cln_version"""
         tag = cln_version.tag
         logger.info("Downloading version %s to %s", tag, target_path)
