@@ -31,16 +31,6 @@ CHANGED_RUST_SOURCES=$(shell git diff --name-only origin/main | grep '\.rs')
 # rebuild them easily.
 GENALL =
 
-CLN_VERSIONS = \
-	v0.10.1 \
-	v0.10.2 \
-	v0.11.0.1 \
-	v0.11.2gl2 \
-	v0.11.2 \
-	v22.11gl1 \
-	v23.05gl1 \
-	v23.08gl1
-
 DOCKER_OPTIONS= \
 	--rm \
 	--user $(shell id -u):$(shell id -g) \
@@ -50,8 +40,6 @@ DOCKER_OPTIONS= \
 	-v /tmp/gltesting/target:/tmp/gltesting/target \
 	-v /tmp/gltesting/cargo/registry:/opt/cargo/registry \
 	-v ${REPO_ROOT}:/repo
-
-CLN_TARGETS = $(foreach VERSION,$(CLN_VERSIONS),cln-versions/$(VERSION)/usr/local/bin/lightningd)
 
 .PHONY: ensure-docker build-self check-self docker-image docs wheels
 
@@ -137,16 +125,6 @@ docker-check-py: docker-volumes
 		-t \
 		${DOCKER_OPTIONS} \
 		gltesting make build-self check-py
-
-cln-versions/%/usr/local/bin/lightningd: cln-versions/lightningd-%.tar.bz2
-	@echo "Extracting $* from tarball $< into cln-versions/$*/"
-	mkdir -p "cln-versions/$*"
-	tar -xjf $< -C "cln-versions/$*/"
-
-cln-versions/lightningd-%.tar.bz2:
-	mkdir -p cln-versions
-	wget -q "https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-$*.tar.bz2" -O $@
-
 
 cln: ${CLN_TARGETS}
 
