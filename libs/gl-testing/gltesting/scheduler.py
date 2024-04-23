@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import anyio
 import purerpc
@@ -26,6 +26,7 @@ from gltesting.identity import Identity
 from gltesting.node import NodeProcess
 from gltesting.utils import Network, NodeVersion, SignerVersion
 
+from clnvm import ClnVersionManager
 
 @dataclass
 class Node:
@@ -59,35 +60,11 @@ class InviteCode:
     is_redeemed: bool
 
 
-def enumerate_cln_versions():
+def enumerate_cln_versions() -> Dict[str, NodeVersion]:
     """Search `$PATH` and `$CLN_PATH` for CLN versions."""
-    path = os.environ["PATH"].split(":")
-    path += os.environ.get("CLN_PATH", "").split(":")
-    path = [p for p in path if p != ""]
-
-    logging.debug(f"Looking for CLN versions in {path}")
-
-    version_paths = [shutil.which("lightningd", path=p) for p in path]
-    version_paths = [p for p in version_paths if p is not None]
-
-    versions = {}
-    for v in version_paths:
-        lightningd = Path(v).resolve()
-        path_parts = lightningd.parts
-        bin_path = Path(*path_parts[:-1])
-        root_path = Path(*path_parts[:-4])
-
-        logging.debug(f"Detecting version of lightningd at {v}")
-        vs = subprocess.check_output([v, "--version"]).strip().decode("ASCII")
-        versions[vs] = NodeVersion(
-            lightningd=lightningd,
-            bin_path=bin_path,
-            root_path=root_path,
-            name=vs)
-        logging.debug(f"Determined version {vs} for executable {v}")
-
-    logging.info(f"Found {len(versions)} versions: {versions}")
-    return versions
+    manager = ClnVersionManager()
+    return manager.get_all()
+    
 
 def generate_secret(len=5):
     return "".join(random.choices(string.ascii_uppercase, k=len))
