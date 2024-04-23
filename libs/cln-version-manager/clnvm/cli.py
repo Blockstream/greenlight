@@ -10,9 +10,8 @@ from typing import Optional
 import clnvm
 from clnvm.cln_version_manager import ClnVersionManager, VersionDescriptor
 
-def configure_logging():
+def configure_logging() -> None:
     dirname, _ = os.path.split(__file__)
-    breakpoint()
     logging.config.fileConfig(Path(dirname) / "logging.conf")
 
 # Handle the optional import and provide a nice error message if it fails
