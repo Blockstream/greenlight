@@ -116,9 +116,9 @@ RUN mkdir -p /opt/cln/
 ENV CLNVM_CACHE_DIR=/opt/cln
 
 ADD libs/cln-version-manager /repo/libs/cln-version-manager
-RUN cd /repo/libs/cln-version-manager; python -m pip install .
+RUN cd /repo/libs/cln-version-manager; python -m pip install -e .
 
-# RUN /tmp/venv/bin/python -m clnvm get -all
+RUN python -m clnvm get-all
 
 # -------------------------------------
 # STAGE: bitcoin-downloader
@@ -220,12 +220,8 @@ ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,l
 ENV GRPC_ENABLE_FORK_SUPPORT=0
 
 # Install cln-versions
-COPY --from=cln-downloader /repo/cln-versions/ /opt/cln
-RUN ln -s /opt/cln/v23.08gl1 /opt/cln-latest
-ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
-
-# Enumerate all versions that gl-testing should find
-ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/
+COPY --from=cln-downloader /opt/cln /opt/cln
+ENV CLNVM_CACHE_DIR=/opt/cln
 
 # Install bitcoin-core
 COPY --from=bitcoin-downloader /opt/bitcoin/bin /opt/bitcoin/bin
@@ -254,10 +250,6 @@ RUN groupadd -g $GID -o $DOCKER_USER &&\
     useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Configure clnvm
-RUN mkdir -p /opt/clnvm; chmod a+rw /opt/clnvm
-ENV CLNVM_CACHE_DIR=/opt/clnvm
-
 # Create the required tmp-dicts
 RUN chmod a+rw /tmp
 RUN mkdir -p /tmp/gltesting/cargo && mkdir -p /tmp/gltesting/tmp
@@ -269,6 +261,9 @@ WORKDIR /repo
 RUN poetry install
 RUN chmod -R a+rw /tmp/venv
 
+# Create a symlink to the latest cln-version and add it to the path
+RUN ln -s $(clnvm latest --root-path) /opt/cln-latest
+ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
 
 
 
