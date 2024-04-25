@@ -1,0 +1,18 @@
+variables:
+  CI_IMAGE: blockstream/gli-ci
+
+stages:
+  - build
+
+default:
+  image: ${CI_IMAGE}:${CI_IMAGE_VER} # set in CI env vars
+
+include:
+  - gitlab/**.yml
+
+## disables MR-triggered pipelines and allows only branch-triggered pipelines
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - when: always
