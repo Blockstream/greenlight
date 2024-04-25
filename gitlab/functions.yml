@@ -31,9 +31,10 @@ build_ci_image:
   script:
     - docker pull ${CI_IMAGE}:latest || true
     - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}-$(date +%Y%m%d)
+    - cd docker
     - >
       docker build
-      -f docker/ci.Dockerfile
+      -f ci.Dockerfile
       --network=host
       --build-arg BUILDKIT_INLINE_CACHE=1
       --cache-from ${CI_IMAGE}:latest
