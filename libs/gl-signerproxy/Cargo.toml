@@ -25,6 +25,6 @@ tonic = { version = "0.3", features = ["tls", "transport"] }
 prost = "0.6"
 log = "0.4"
 tower = "0.3"
-which = "4.0.2"
+which = "4.4.2"
 libc = "0.2"
-byteorder = "1.3.4"
+byteorder = "1.5.0"
