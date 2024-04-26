@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cln-version-manager"
-version = "0.1.0"
+version = "0.1.1"
 description = "A version manager for Core Lightning Binaries"
 authors = ["Erik De Smedt <edesmedt@blockstream.com>"]
 license = "MIT"
