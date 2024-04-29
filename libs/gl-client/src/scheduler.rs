@@ -1,11 +1,10 @@
-use crate::credentials::{self, RuneProvider, TlsConfigProvider};
+use crate::credentials::{self, RuneProvider, NodeIdProvider, TlsConfigProvider};
 use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self};
-use crate::utils::get_node_id_from_tls_config;
 use crate::utils::scheduler_uri;
 use crate::{pb, signer::Signer};
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use lightning_signer::bitcoin::Network;
 use log::debug;
 use runeauth;
@@ -17,7 +16,6 @@ type Client = SchedulerClient<Channel>;
 /// different implementations depending on the implementations
 #[derive(Clone)]
 pub struct Scheduler<Creds> {
-    node_id: Vec<u8>,
     client: Client,
     network: Network,
     grpc_uri: String,
@@ -46,9 +44,9 @@ where
     /// let scheduler = Scheduler::new(node_id, network, creds).await.unwrap();
     /// # }
     /// ```
-    pub async fn new(node_id: Vec<u8>, network: Network, creds: Creds) -> Result<Scheduler<Creds>> {
+    pub async fn new(network: Network, creds: Creds) -> Result<Scheduler<Creds>> {
         let grpc_uri = scheduler_uri();
-        Self::with(node_id, network, creds, grpc_uri).await
+        Self::with(network, creds, grpc_uri).await
     }
 
     /// Creates a new scheduler client with the provided parameters and
@@ -71,7 +69,6 @@ where
     /// # }
     /// ```
     pub async fn with(
-        node_id: Vec<u8>,
         network: Network,
         creds: Creds,
         uri: impl Into<String>,
@@ -91,7 +88,6 @@ where
 
         Ok(Scheduler {
             client,
-            node_id,
             network,
             creds,
             grpc_uri: uri,
@@ -148,7 +144,7 @@ impl<Creds> Scheduler<Creds> {
             .clone()
             .get_challenge(pb::scheduler::ChallengeRequest {
                 scope: pb::scheduler::ChallengeScope::Register as i32,
-                node_id: self.node_id.clone(),
+                node_id: signer.node_id(),
             })
             .await?
             .into_inner();
@@ -157,7 +153,7 @@ impl<Creds> Scheduler<Creds> {
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let device_cert = tls::generate_self_signed_device_cert(
-            &hex::encode(self.node_id.clone()),
+            &hex::encode(signer.node_id()),
             "default",
             vec!["localhost".into()],
         );
@@ -174,7 +170,7 @@ impl<Creds> Scheduler<Creds> {
             .client
             .clone()
             .register(pb::scheduler::RegistrationRequest {
-                node_id: self.node_id.clone(),
+                node_id: signer.node_id(),
                 bip32_key: signer.bip32_ext_key(),
                 network: self.network.to_string(),
                 challenge: challenge.challenge,
@@ -258,7 +254,7 @@ impl<Creds> Scheduler<Creds> {
             .clone()
             .get_challenge(pb::scheduler::ChallengeRequest {
                 scope: pb::scheduler::ChallengeScope::Recover as i32,
-                node_id: self.node_id.clone(),
+                node_id: signer.node_id(),
             })
             .await?
             .into_inner();
@@ -266,7 +262,7 @@ impl<Creds> Scheduler<Creds> {
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let name = format!("recovered-{}", hex::encode(&challenge.challenge[0..8]));
         let device_cert = tls::generate_self_signed_device_cert(
-            &hex::encode(self.node_id.clone()),
+            &hex::encode(signer.node_id()),
             &name,
             vec!["localhost".into()],
         );
@@ -277,7 +273,7 @@ impl<Creds> Scheduler<Creds> {
             .client
             .clone()
             .recover(pb::scheduler::RecoveryRequest {
-                node_id: self.node_id.clone(),
+                node_id: signer.node_id(),
                 challenge: challenge.challenge,
                 signature,
                 csr: device_csr.into_bytes(),
@@ -369,7 +365,6 @@ impl<Creds> Scheduler<Creds> {
         let client = SchedulerClient::new(channel);
 
         Ok(Scheduler {
-            node_id: self.node_id.clone(),
             client,
             network: self.network,
             creds,
@@ -381,7 +376,7 @@ impl<Creds> Scheduler<Creds> {
 
 impl<Creds> Scheduler<Creds>
 where
-    Creds: TlsConfigProvider + RuneProvider + Clone,
+    Creds: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     /// Schedules a node at the scheduler service. Once a node is
     /// scheduled one can access it through the node client.
@@ -406,7 +401,7 @@ where
             .client
             .clone()
             .schedule(pb::scheduler::ScheduleRequest {
-                node_id: self.node_id.clone(),
+                node_id: self.creds.node_id()?,
             })
             .await?;
         Ok(res.into_inner())
@@ -434,14 +429,8 @@ where
     where
         T: GrpcClient,
     {
-        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
-
-        if node_id != self.node_id {
-            return Err(anyhow!("The node_id defined on the Credential's certificate does not match the node_id the scheduler was initialized with\nExpected {}, got {}", hex::encode(&self.node_id), hex::encode(&node_id)));
-        }
-
         let res = self.schedule().await?;
-        node::Node::new(self.node_id.clone(), self.creds.clone())?
+        node::Node::new(self.creds.node_id()?, self.creds.clone())?
             .connect(res.grpc_uri)
             .await
     }
@@ -451,7 +440,7 @@ where
             .client
             .clone()
             .get_node_info(pb::scheduler::NodeInfoRequest {
-                node_id: self.node_id.clone(),
+                node_id: self.creds.node_id()?,
                 wait: wait,
             })
             .await?
@@ -480,7 +469,7 @@ where
         &self,
         uri: String,
     ) -> Result<pb::scheduler::AddOutgoingWebhookResponse> {
-        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
+        let node_id = self.creds.node_id()?;
         let res = self
             .client
             .clone()
@@ -492,7 +481,7 @@ where
     pub async fn list_outgoing_webhooks(
         &self,
     ) -> Result<pb::scheduler::ListOutgoingWebhooksResponse> {
-        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
+        let node_id = self.creds.node_id()?;
         let res = self
             .client
             .clone()
@@ -502,7 +491,7 @@ where
     }
 
     pub async fn delete_webhooks(&self, webhook_ids: Vec<i64>) -> Result<pb::greenlight::Empty> {
-        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
+        let node_id = self.creds.node_id()?;
         let res = self
             .client
             .clone()
@@ -518,7 +507,7 @@ where
         &self,
         webhook_id: i64,
     ) -> Result<pb::scheduler::WebhookSecretResponse> {
-        let node_id = get_node_id_from_tls_config(&self.creds.tls_config())?;
+        let node_id = self.creds.node_id()?;
         let res = self
             .client
             .clone()

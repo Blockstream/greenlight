@@ -1,9 +1,7 @@
 use crate::runtime::exec;
 use crate::scheduler::Scheduler;
 use crate::signer::Signer;
-use gl_client::credentials::{self, RuneProvider, TlsConfigProvider};
-use gl_client::tls::TlsConfig;
-use gl_client::utils::get_node_id_from_tls_config;
+use gl_client::credentials::{self, NodeIdProvider, RuneProvider, TlsConfigProvider};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -14,7 +12,7 @@ pub type PyCredentials = UnifiedCredentials<credentials::Nobody, credentials::De
 pub enum UnifiedCredentials<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     Nobody(T),
     Device(R),
@@ -23,7 +21,7 @@ where
 impl<T, R> UnifiedCredentials<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     pub fn ensure_nobody(&self) -> Result<()> {
         if let Self::Nobody(_) = self {
@@ -49,7 +47,7 @@ where
 impl<T, R> TlsConfigProvider for UnifiedCredentials<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     fn tls_config(&self) -> gl_client::tls::TlsConfig {
         match self {
@@ -57,31 +55,12 @@ where
             UnifiedCredentials::Device(d) => d.tls_config(),
         }
     }
-
-    fn with_identity<V>(device_cert: V, device_key: V) -> Self
-    where
-        V: Into<Vec<u8>>,
-    {
-        let device_cert: Vec<u8> = device_cert.into();
-        let device_key: Vec<u8> = device_key.into();
-        let tls_config = TlsConfig::new().identity(device_cert.clone(), device_key.clone());
-        match get_node_id_from_tls_config(&tls_config) {
-            Ok(n) => {
-                debug!("Initializing device credentials with node_id {}", hex::encode(n));
-                UnifiedCredentials::Device(R::with_identity(device_cert, device_key))
-            },
-            Err(e) => {
-                debug!("Device credentials could not be initialized with this certificate: {}.\nFalling back to NOBODY credentials.", e.to_string());
-                UnifiedCredentials::Nobody(T::with_identity(device_cert, device_key))
-            }
-        }
-    }
 }
 
 impl<T, R> RuneProvider for UnifiedCredentials<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     fn rune(&self) -> String {
         match self {
@@ -89,6 +68,21 @@ where
                 "can not provide rune from nobody credentials! something really bad happened."
             ),
             UnifiedCredentials::Device(d) => d.rune(),
+        }
+    }
+}
+
+impl<T, R> NodeIdProvider for UnifiedCredentials<T, R>
+where
+    T: TlsConfigProvider,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
+{
+    fn node_id(&self) -> credentials::Result<Vec<u8>> {
+        match self {
+            UnifiedCredentials::Nobody(_) => panic!(
+                "can not provide node_id from nobody credentials! something really bad happened."
+            ),
+            UnifiedCredentials::Device(d) => d.node_id(),
         }
     }
 }
@@ -112,13 +106,6 @@ impl Credentials {
     pub fn nobody_with(cert: &[u8], key: &[u8], ca: &[u8]) -> Self {
         let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::with(cert, key, ca));
         log::debug!("Created NOBODY credentials");
-        Self { inner }
-    }
-
-    #[staticmethod]
-    pub fn with_identity(cert: &[u8], key: &[u8]) -> Self {
-        let inner =
-            UnifiedCredentials::with_identity(cert, key);
         Self { inner }
     }
 
