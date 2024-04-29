@@ -41,16 +41,18 @@ pub enum Error {
     FetchDefaultNobodyCredentials(#[source] anyhow::Error),
 }
 
-type Result<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub trait TlsConfigProvider: Send + Sync {
     fn tls_config(&self) -> TlsConfig;
-    fn with_identity<V>(device_cert: V, device_key: V) -> Self
-    where
-        V: Into<Vec<u8>>;
 }
+
 pub trait RuneProvider {
     fn rune(&self) -> String;
+}
+
+pub trait NodeIdProvider {
+    fn node_id(&self) -> Result<Vec<u8>>;
 }
 
 /// A helper struct to combine the Tls certificate and the corresponding private
@@ -102,22 +104,6 @@ impl Nobody {
 impl TlsConfigProvider for Nobody {
     fn tls_config(&self) -> TlsConfig {
         tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
-    }
-
-    /// Returns a new Nobody instance with a custom set of parameters.
-    /// Tries to load the CA from file and defaults to CA_RAW.
-    fn with_identity<V>(cert: V, key: V) -> Self
-    where
-        V: Into<Vec<u8>>,
-    {
-        let ca =
-            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
-
-        Self {
-            cert: cert.into(),
-            key: key.into(),
-            ca,
-        }
     }
 }
 
@@ -205,7 +191,7 @@ impl Device {
 
         self.version = CRED_VERSION;
 
-        if self.rune != String::default() {
+        if self.rune.is_empty() {
             let node_id = self
                 .node_id()
                 .map_err(|e| UpgradeCredentialsError(e.to_string()))?;
@@ -230,10 +216,6 @@ impl Device {
     pub fn to_bytes(&self) -> Vec<u8> {
         self.to_owned().into()
     }
-
-    pub fn node_id(&self) -> anyhow::Result<Vec<u8>> {
-        get_node_id_from_tls_config(&self.tls_config())
-    }
 }
 
 impl TlsConfigProvider for Device {
@@ -241,28 +223,21 @@ impl TlsConfigProvider for Device {
         tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
     }
 
-    /// Returns a new Device instance with a custom identity.
-    /// Tries to load the CA from file and defaults to CA_RAW.
-    /// Rune is initialized to the default value.
-    fn with_identity<V>(cert: V, key: V) -> Self
-    where
-        V: Into<Vec<u8>>,
-    {
-        let ca =
-            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
-
-        Self {
-            cert: cert.into(),
-            key: key.into(),
-            ca,
-            ..Default::default()
-        }
-    }
 }
 
 impl RuneProvider for Device {
     fn rune(&self) -> String {
         self.to_owned().rune
+    }
+}
+
+impl NodeIdProvider for Device {
+    fn node_id(&self) -> Result<Vec<u8>> {
+        get_node_id_from_tls_config(&self.tls_config()).map_err(|_e| {
+            Error::GetFromIdentityError(
+                "node_id could not be retrieved from the certificate".to_string(),
+            )
+        })
     }
 }
 

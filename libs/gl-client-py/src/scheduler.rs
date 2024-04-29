@@ -3,7 +3,7 @@ use crate::runtime::exec;
 use crate::Signer;
 use anyhow::{anyhow, Result};
 use gl_client::bitcoin::Network;
-use gl_client::credentials::RuneProvider;
+use gl_client::credentials::{NodeIdProvider, RuneProvider};
 use gl_client::credentials::TlsConfigProvider;
 use gl_client::pb;
 use gl_client::scheduler;
@@ -15,7 +15,7 @@ use pyo3::prelude::*;
 pub enum UnifiedScheduler<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     Unauthenticated(scheduler::Scheduler<T>),
     Authenticated(scheduler::Scheduler<R>),
@@ -24,7 +24,7 @@ where
 impl<T, R> UnifiedScheduler<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     pub fn is_authenticated(&self) -> Result<()> {
         if let Self::Authenticated(_) = self {
@@ -72,7 +72,7 @@ where
 impl<T, R> UnifiedScheduler<T, R>
 where
     T: TlsConfigProvider,
-    R: TlsConfigProvider + RuneProvider + Clone,
+    R: TlsConfigProvider + RuneProvider + NodeIdProvider + Clone,
 {
     async fn export_node(&self) -> Result<pb::scheduler::ExportNodeResponse> {
         let s = self.authenticated_scheduler()?;
@@ -137,25 +137,23 @@ where
 
 #[pyclass]
 pub struct Scheduler {
-    node_id: Vec<u8>,
     pub inner: UnifiedScheduler<PyCredentials, PyCredentials>,
 }
 
 #[pymethods]
 impl Scheduler {
     #[new]
-    fn new(node_id: Vec<u8>, network: &str, creds: Credentials) -> PyResult<Scheduler> {
+    fn new(network: &str, creds: Credentials) -> PyResult<Scheduler> {
         let network: Network = network
             .parse()
             .map_err(|_| PyValueError::new_err("Error parsing the network"))?;
 
-        let id = node_id.clone();
         let uri = gl_client::utils::scheduler_uri();
 
         let inner = match creds.inner {
             crate::credentials::UnifiedCredentials::Nobody(_) => {
                 let scheduler = exec(async move {
-                    gl_client::scheduler::Scheduler::with(id, network, creds.inner.clone(), uri)
+                    gl_client::scheduler::Scheduler::with(network, creds.inner.clone(), uri)
                         .await
                 })
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -163,7 +161,7 @@ impl Scheduler {
             }
             crate::credentials::UnifiedCredentials::Device(_) => {
                 let scheduler = exec(async move {
-                    gl_client::scheduler::Scheduler::with(id, network, creds.inner.clone(), uri)
+                    gl_client::scheduler::Scheduler::with(network, creds.inner.clone(), uri)
                         .await
                 })
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -171,7 +169,7 @@ impl Scheduler {
             }
         };
 
-        Ok(Scheduler { node_id, inner })
+        Ok(Scheduler { inner })
     }
 
     fn register(&self, signer: &Signer, invite_code: Option<String>) -> PyResult<Vec<u8>> {
@@ -198,7 +196,6 @@ impl Scheduler {
                 ))
             })?;
         Ok(Scheduler {
-            node_id: self.node_id.clone(),
             inner: s,
         })
     }
