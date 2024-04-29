@@ -42,7 +42,7 @@ jobs:
         if: steps.cached-poetry.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry update && poetry install --no-interaction
       - name: Run mypy
         run: poetry run mypy
       - name: Run tests
