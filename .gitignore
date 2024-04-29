@@ -17,3 +17,6 @@ tls/users-nobody.pem
 .coverage.*
 .python-version
 docs/.cache
+
+# Don't store poetry.lock file
+libs/cln-version-manager/poetry.lock
