@@ -41,7 +41,7 @@ where
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
-    /// let scheduler = Scheduler::new(node_id, network, creds).await.unwrap();
+    /// let scheduler = Scheduler::new(network, creds).await.unwrap();
     /// # }
     /// ```
     pub async fn new(network: Network, creds: Creds) -> Result<Scheduler<Creds>> {
@@ -65,7 +65,7 @@ where
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
     /// let uri = "https://example.com".to_string();
-    /// let scheduler = Scheduler::with(node_id, network, creds, uri).await.unwrap();
+    /// let scheduler = Scheduler::with(network, creds, uri).await.unwrap();
     /// # }
     /// ```
     pub async fn with(
@@ -114,7 +114,7 @@ impl<Creds> Scheduler<Creds> {
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
-    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let scheduler = Scheduler::new(network, creds.clone()).await.unwrap();
     /// let secret = vec![0, 0, 0, 0];
     /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
     /// let registration_response = scheduler.register(&signer, None).await.unwrap();
@@ -242,7 +242,7 @@ impl<Creds> Scheduler<Creds> {
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
-    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let scheduler = Scheduler::new(network, creds.clone()).await.unwrap();
     /// let secret = vec![0, 0, 0, 0];
     /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
     /// let recovery_response = scheduler.recover(&signer).await.unwrap();
@@ -341,7 +341,7 @@ impl<Creds> Scheduler<Creds> {
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
-    /// let scheduler_unauthed = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let scheduler_unauthed = Scheduler::new(network, creds.clone()).await.unwrap();
     /// let secret = vec![0, 0, 0, 0];
     /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
     /// let registration_response = scheduler_unauthed.register(&signer, None).await.unwrap();
@@ -391,7 +391,7 @@ where
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Device::from_path("my/path/to/credentials.glc");
-    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let scheduler = Scheduler::new(network, creds.clone()).await.unwrap();
     /// let info = scheduler.schedule().await.unwrap();
     /// let node_client: Client  = Node::new(node_id, creds).unwrap().connect(info.grpc_uri).await.unwrap();
     /// # }
@@ -421,7 +421,7 @@ where
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Device::from_path("my/path/to/credentials.glc");
-    /// let scheduler = Scheduler::new(node_id.clone(), network, creds.clone()).await.unwrap();
+    /// let scheduler = Scheduler::new(network, creds.clone()).await.unwrap();
     /// let node_client: Client  = scheduler.node().await.unwrap();
     /// # }
     /// ```
@@ -517,34 +517,5 @@ where
             })
             .await?;
         Ok(res.into_inner())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::credentials::Device;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_node_returns_error_on_node_id_mismatch() {
-        let cert_node_id: [u8; 32] = rand::random();
-        let device_cert = tls::generate_self_signed_device_cert(
-            &hex::encode(cert_node_id.clone()),
-            "default".into(),
-            vec!["localhost".into()],
-        );
-
-        let device_crt = device_cert.serialize_pem().unwrap();
-        let device_key = device_cert.serialize_private_key_pem();
-
-        let creds = Device::with(device_crt, device_key, String::new(), "");
-
-        let scheduler_node_id: [u8; 32] = rand::random();
-        let sched = Scheduler::new(scheduler_node_id.to_vec(), Network::Bitcoin, creds)
-            .await
-            .unwrap();
-
-        assert!(sched.node::<node::ClnClient>().await.is_err_and(|e| e.to_string().contains("The node_id defined on the Credential's certificate does not match the node_id the scheduler was initialized with")));
     }
 }

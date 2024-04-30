@@ -100,7 +100,7 @@ class Client:
 
     def scheduler(self, authenticate: bool = False) -> glclient.Scheduler:
         """Return a scheduler stub configured with our identity if configured."""
-        scheduler = glclient.Scheduler(self.node_id, network=NETWORK, creds=self.creds())
+        scheduler = glclient.Scheduler(network=NETWORK, creds=self.creds())
         if authenticate:
             scheduler.authenticate(creds=self.creds())
         return scheduler

@@ -166,6 +166,10 @@ impl Credentials {
     pub fn ensure_nobody(&self) -> Result<()> {
         self.inner.ensure_nobody()
     }
+
+    pub fn node_id(&self) -> Result<Vec<u8>> {
+        Ok(self.inner.node_id()?)
+    }
 }
 
 type Result<T, E = ErrorWrapper> = std::result::Result<T, E>;
