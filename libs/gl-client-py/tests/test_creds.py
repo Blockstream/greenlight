@@ -21,7 +21,7 @@ def test_upgrade_credentials(scheduler, sclient, signer):
 
     c = Credentials.from_bytes(creds).upgrade(
         Scheduler(
-            node_id=signer.node_id(), network="regtest", creds=screds
+            network="regtest", creds=screds
         ).inner,
         signer.inner,
     )

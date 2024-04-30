@@ -27,7 +27,7 @@ def sclient(signer, creds):
     registration and recovery, but no mTLS certificate yet.
     """
     network = "regtest"
-    return Scheduler(signer.node_id(), network=network, creds=creds)
+    return Scheduler(network=network, creds=creds)
 
 
 @pytest.fixture

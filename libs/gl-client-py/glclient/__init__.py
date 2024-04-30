@@ -64,11 +64,10 @@ class Signer(object):
 
 class Scheduler(object):
 
-    def __init__(self, node_id: bytes, network: str, creds: Optional[Credentials] = None):
-        self.node_id = node_id
+    def __init__(self, network: str, creds: Optional[Credentials] = None):
         self.network = network
         self.creds = creds if creds is not None else native.Credentials()
-        self.inner = native.Scheduler(node_id, network, self.creds)
+        self.inner = native.Scheduler(network, self.creds)
 
     def schedule(self) -> schedpb.NodeInfoResponse:
         res = self.inner.schedule()
@@ -99,7 +98,7 @@ class Scheduler(object):
         res = self.inner.node()
         info = schedpb.NodeInfoResponse.FromString(bytes(res))
         return Node(
-            node_id=self.node_id,
+            node_id=self.creds.node_id(),
             grpc_uri=info.grpc_uri,
             creds=self.creds,
         )

@@ -8,7 +8,7 @@ def test_connect(scheduler, creds):
     """Test that we can connect to the scheduler."""
     sig = Signer(b"\x00" * 32, network="regtest", creds=creds)
     node_id = sig.node_id()
-    s = Scheduler(node_id, network="regtest", creds=creds)
+    s = Scheduler(network="regtest", creds=creds)
     with pytest.raises(ValueError):
         s.recover(sig)
 
