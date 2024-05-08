@@ -38,8 +38,12 @@ class SignerVersion:
 
 
 class Network(Enum):
-    """Supported networks."""
+    """Supported networks.
+
+    Matches the enum in the `bitcoin::Network` rust code.
+    """
 
     BITCOIN = 0
     TESTNET = 1
-    REGTEST = 2
+    SIGNET = 2
+    REGTEST = 3
