@@ -131,7 +131,7 @@ impl Device {
     /// credentials data blob. It defaults to the nobody credentials set.
     pub fn from_bytes(data: impl AsRef<[u8]>) -> Self {
         let mut creds = Self::default();
-        debug!("Build authenticated credentials from: {:?}", data.as_ref());
+        log::trace!("Build authenticated credentials from: {:?}", data.as_ref());
         if let Ok(data) = model::Data::try_from(data.as_ref()) {
             creds.version = data.version;
             if let Some(cert) = data.cert {
