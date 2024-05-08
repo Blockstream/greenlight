@@ -83,28 +83,28 @@ impl Credentials {
     #[new]
     pub fn new() -> Self {
         let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::default());
-        log::debug!("Created NOBODY credentials {:?}", inner.tls_config().client_tls_config());
+        log::debug!("Created NOBODY credentials");
         Self { inner }
     }
 
     #[staticmethod]
     pub fn nobody_with(cert: &[u8], key: &[u8], ca: &[u8]) -> Self {
         let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::with(cert, key, ca));
-        log::debug!("Created NOBODY credentials {:?}", inner.tls_config());
+        log::debug!("Created NOBODY credentials");
         Self { inner }
     }
 
     #[staticmethod]
     pub fn from_path(path: &str) -> Self {
         let inner = UnifiedCredentials::Device(gl_client::credentials::Device::from_path(path));
-        log::debug!("Created device credentials {:?}", inner.tls_config());
+        log::debug!("Created device credentials");
         Self { inner }
     }
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> Self {
         let inner = UnifiedCredentials::Device(gl_client::credentials::Device::from_bytes(data));
-        log::debug!("Created device credentials {:?}", inner.tls_config());
+        log::debug!("Created device credentials");
         Self { inner }
     }
 
