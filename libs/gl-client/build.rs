@@ -1,5 +1,5 @@
-const NOBODY_CRT: &'static str = "../../tls/users-nobody.pem";
-const NOBODY_KEY: &'static str = "../../tls/users-nobody-key.pem";
+const NOBODY_CRT: &'static str = "../resources/tls/users-nobody.pem";
+const NOBODY_KEY: &'static str = "../resources/tls/users-nobody-key.pem";
 
 use std::env::var;
 use std::path::Path;
@@ -66,11 +66,11 @@ fn main() {
         .protoc_arg("--experimental_allow_proto3_optional")
         .compile(
             &[
-                "../proto/glclient/greenlight.proto",
-                "../proto/glclient/scheduler.proto",
-                "../proto/node.proto",
+                ".resources/proto/glclient/greenlight.proto",
+                ".resources/proto/glclient/scheduler.proto",
+                ".resources/proto/node.proto",
             ],
-            &["../proto"],
+            &[".resources/proto"],
         )
         .unwrap();
 }

@@ -1,0 +1,3 @@
+.resources/proto/**	linguist-vendored -diff
+.resources/tls/**	linguist-vendored -diff
+
