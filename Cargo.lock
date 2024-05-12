@@ -1079,7 +1079,7 @@ dependencies = [
  "rustls-pemfile",
  "secp256k1 0.26.0",
  "serde",
- "serde_bolt 0.2.6",
+ "serde_bolt",
  "serde_json",
  "sha256",
  "tempfile",
@@ -2876,17 +2876,6 @@ dependencies = [
 
 [[package]]
 name = "serde_bolt"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99292690b804a2234f387403ccccbc201a9e5750f93b676eea0faadd9c4350f6"
-dependencies = [
- "hex",
- "serde",
- "serde_derive",
-]
-
-[[package]]
-name = "serde_bolt"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54f634eeb988ab754b0711815e13e6ad983bfc52f76e0af342d492c6cad4f681"
@@ -3735,7 +3724,7 @@ dependencies = [
  "bitcoin 0.29.2",
  "log",
  "serde",
- "serde_bolt 0.3.4",
+ "serde_bolt",
 ]
 
 [[package]]
@@ -3852,7 +3841,7 @@ dependencies = [
  "log",
  "scopeguard",
  "serde",
- "serde_bolt 0.3.4",
+ "serde_bolt",
  "serde_derive",
  "serde_with",
  "txoo",
@@ -3884,7 +3873,7 @@ dependencies = [
  "bolt-derive",
  "hex",
  "log",
- "serde_bolt 0.3.4",
+ "serde_bolt",
  "txoo",
 ]
 
