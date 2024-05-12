@@ -1,11 +1,13 @@
-const NOBODY_CRT: &'static str = "../resources/tls/users-nobody.pem";
-const NOBODY_KEY: &'static str = "../resources/tls/users-nobody-key.pem";
-
 use std::env::var;
 use std::path::Path;
 use std::process::Command;
 
 fn main() {
+    let manifest_dir = var("CARGO_MANIFEST_DIR").unwrap();
+
+    let nobody_crt: String = format!("{}/.resources/tls/users-nobody.pem", manifest_dir);
+    let nobody_key: String = format!("{}/.resources/tls/users-nobody-key.pem", manifest_dir);
+
     // It's a lot easier to help users if we have the exact version of
     // the Rust bindings that were used.
     let output = Command::new("git")
@@ -22,7 +24,7 @@ fn main() {
         (Err(_), Err(_)) => {
             println!("cargo:warning=Using default NOBODY cert.");
             println!("cargo:warning=Set \"GL_CUSTOM_NOBODY_KEY\" and \"GL_CUSTOM_NOBODY_CERT\" to use a custom cert.");
-            (NOBODY_KEY.to_owned(), NOBODY_CRT.to_owned())
+            (nobody_key.to_owned(), nobody_crt.to_owned())
         }
         (Ok(_), Err(_)) => {
             println!("Missing GL_CUSTOM_NOBODY_CERT, since you are using GL_CUSTOM_NOBODY_KEY");
