@@ -4,7 +4,7 @@ use std::path::Path;
 use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 use x509_certificate::X509Certificate;
 
-const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
+const CA_RAW: &[u8] = include_str!("../.resources/tls/ca.pem").as_bytes();
 const NOBODY_CRT: &[u8] = include_str!(env!("GL_NOBODY_CRT")).as_bytes();
 const NOBODY_KEY: &[u8] = include_str!(env!("GL_NOBODY_KEY")).as_bytes();
 

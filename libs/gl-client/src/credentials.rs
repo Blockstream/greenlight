@@ -13,7 +13,7 @@ use std::{convert::TryFrom, path::Path};
 use thiserror;
 
 const CRED_VERSION: u32 = 1u32;
-const CA_RAW: &[u8] = include_str!("../../tls/ca.pem").as_bytes();
+const CA_RAW: &[u8] = include_str!("../.resources/tls/ca.pem").as_bytes();
 const NOBODY_CRT: &[u8] = include_str!(env!("GL_NOBODY_CRT")).as_bytes();
 const NOBODY_KEY: &[u8] = include_str!(env!("GL_NOBODY_KEY")).as_bytes();
 
