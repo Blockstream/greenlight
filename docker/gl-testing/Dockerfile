@@ -73,7 +73,7 @@ WORKDIR repo
 # don't have the code in the Docker-repo yet.
 RUN poetry lock
 RUN poetry export -f requirements.txt -o requirements.txt --with=dev
-RUN cat requirements.txt | sed '/@ file:\/\/\//d' > requirements2.txt
+RUN cat requirements.txt | sed '/file:\/\/\//d' > requirements2.txt
 RUN python -m pip install --upgrade pip && pip install wheel && pip install -r requirements2.txt
 
 # Later we will run this image under another user
