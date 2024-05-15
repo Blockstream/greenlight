@@ -1,5 +1,6 @@
 use std::fs::{self};
-use anyhow::{Result};
+use std::path::{Path};
+use anyhow::{anyhow, Result};
 use bip39::{Language, Mnemonic};
 use gl_client::credentials::{Device, Nobody};
 use gl_client::node::ClnClient;
@@ -8,9 +9,6 @@ use gl_client::pb::{self, cln};
 use gl_client::scheduler::Scheduler;
 use gl_client::{bitcoin::Network, signer::Signer};
 use tokio;
-
-mod extensions;
-use extensions::*;
 
 #[tokio::main]
 async fn main() {}
@@ -45,7 +43,11 @@ async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key
     // ---8<--- [start: dev_creds]
     let developer_cert = std::fs::read(developer_cert_path).unwrap_or_default();
     let developer_key = std::fs::read(developer_key_path).unwrap_or_default();
-    let developer_creds = Nobody::with_identity(developer_cert, developer_key);
+    let developer_creds = Nobody{
+        cert: developer_cert, 
+        key: developer_key,
+        ..Nobody::default()
+    };
     // ---8<--- [end: dev_creds]
 
     // ---8<--- [start: init_signer]
@@ -54,7 +56,7 @@ async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key
     // ---8<--- [end: init_signer]
 
     // ---8<--- [start: register_node]
-    let scheduler = Scheduler::new(signer.node_id(), network, developer_creds)
+    let scheduler = Scheduler::new(network, developer_creds)
         .await
         .unwrap();
 
@@ -77,7 +79,6 @@ async fn start_node(device_creds_path: String) {
     let network = Network::Bitcoin;
     let device_creds = Device::from_path(device_creds_path);
     let scheduler = gl_client::scheduler::Scheduler::new(
-        device_creds.node_id().unwrap(),
         network,
         device_creds.clone(),
     )
@@ -122,23 +123,23 @@ async fn start_node(device_creds_path: String) {
 }
 
 async fn recover_node(
-    device_cert: Vec<u8>,
-    device_key: Vec<u8>,
+    nobody_cert: Vec<u8>,
+    nobody_key: Vec<u8>,
 ) -> Result<pb::scheduler::RecoveryResponse> {
     // ---8<--- [start: recover_node]
     let seed = read_file("seed");
     let network = gl_client::bitcoin::Network::Bitcoin;
-    let signer_creds = Device::with_identity(device_cert.clone(), device_key.clone());
-    let signer = gl_client::signer::Signer::new(seed, network, signer_creds.clone()).unwrap();
-
-    let scheduler_creds = signer
-        .add_base_rune_to_device_credentials(signer_creds)
-        .unwrap();
+    let creds = Nobody{
+        cert: nobody_cert,
+        key: nobody_key,
+        ..Nobody::default()
+    };
+    
+    let signer = gl_client::signer::Signer::new(seed, network, creds.clone()).unwrap();
 
     let scheduler = gl_client::scheduler::Scheduler::new(
-        signer.node_id(),
         gl_client::bitcoin::Network::Bitcoin,
-        scheduler_creds,
+        creds,
     )
     .await
     .unwrap();

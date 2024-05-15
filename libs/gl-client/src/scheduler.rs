@@ -2,7 +2,6 @@ use crate::credentials::{self, RuneProvider, NodeIdProvider, TlsConfigProvider};
 use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self};
-use crate::util::get_node_id_from_tls_config;
 use crate::utils::scheduler_uri;
 use crate::{pb, signer::Signer};
 use anyhow::{Result};
