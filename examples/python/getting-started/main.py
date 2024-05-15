@@ -35,17 +35,12 @@ def nobody_with_identity(developer_cert: bytes, developer_key: bytes) -> Credent
     ca = Path("ca.pem").open(mode="rb").read()
     return Credentials.nobody_with(developer_cert, developer_key, ca)
 
-
-Credentials.nobody_with_identity = nobody_with_identity
-
-
-# Validated against gl-testing
 def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str) -> None:
     # ---8<--- [start: dev_creds]
     developer_cert = Path(developer_cert_path).open(mode="rb").read()
     developer_key = Path(developer_key_path).open(mode="rb").read()
 
-    developer_creds = Credentials.nobody_with_identity(developer_cert, developer_key)
+    developer_creds = nobody_with_identity(developer_cert, developer_key)
     # ---8<--- [end: dev_creds]
 
     # ---8<--- [start: init_signer]
@@ -54,7 +49,7 @@ def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str
     # ---8<--- [end: init_signer]
 
     # ---8<--- [start: register_node]
-    scheduler = Scheduler(signer.node_id(), network, developer_creds)
+    scheduler = Scheduler(network, developer_creds)
 
     # Passing in the signer is required because the client needs to prove
     # ownership of the `node_id`
@@ -75,7 +70,7 @@ def start_node(device_creds_path: str, node_id: bytes) -> None:
     # ---8<--- [start: start_node]
     network = "bitcoin"
     device_creds = Credentials.from_path(device_creds_path)
-    scheduler = Scheduler(node_id, network, device_creds)
+    scheduler = Scheduler(network, device_creds)
 
     node = scheduler.node()
     # ---8<--- [end: start_node]
@@ -101,23 +96,21 @@ def start_node(device_creds_path: str, node_id: bytes) -> None:
     # ---8<--- [end: create_invoice]
 
 
-def recover_node(device_cert: bytes, device_key: bytes) -> None:
+def recover_node(developer_cert: bytes, developer_key: bytes) -> None:
     # ---8<--- [start: recover_node]
     seed = read_file("seed")
     network = "bitcoin"
-    signer_creds = Credentials.with_identity(device_cert, device_key)
+    signer_creds = nobody_with_identity(developer_cert, developer_key)
     signer = Signer(seed, network, signer_creds)
     
     scheduler = Scheduler(
-        signer.node_id(),
         network,
         signer_creds,
     )
 
-    scheduler_creds = signer_creds.upgrade(signer, scheduler)
+    scheduler_creds = signer_creds.upgrade(scheduler.inner, signer.inner)
 
     scheduler = Scheduler(
-        signer.node_id(),
         network,
         scheduler_creds,
     )
