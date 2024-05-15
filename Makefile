@@ -70,6 +70,7 @@ gen: ${GENALL}
 build-self: ensure-docker
 	cargo build --all
 	cd libs/gl-client-py; maturin develop
+	mypy examples/python
 
 check-all: check-self check-self-gl-client check-py
 
