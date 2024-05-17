@@ -58,7 +58,8 @@ jobs:
             pdoc \
             cairosvg \
             pillow \
-            typing_extensions
+            typing_extensions \
+            mypy
 
       - name: Build and install gl-client-py
         run: |
