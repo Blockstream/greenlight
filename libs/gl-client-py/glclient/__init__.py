@@ -180,6 +180,15 @@ class Node(object):
         return res.FromString(
             bytes(self.inner.call(uri, bytes(req)))
         )
+    
+    def list_peer_channels(self) -> clnpb.ListpeerchannelsResponse:
+        uri = "/cln.Node/ListPeerChannels"
+        req = clnpb.ListpeerchannelsRequest().SerializeToString()
+        res = clnpb.ListpeerchannelsResponse
+
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
 
     def list_closed_channels(self) -> clnpb.ListclosedchannelsResponse:
         uri = "/cln.Node/ListClosedChannels"
