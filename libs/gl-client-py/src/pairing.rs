@@ -1,6 +1,5 @@
 use crate::credentials::Credentials;
 use crate::runtime::exec;
-use crate::tls::TlsConfig;
 use bytes::BufMut;
 use gl_client::pairing::{attestation_device, new_device, PairingSessionData};
 use gl_client::pb::scheduler::GetPairingDataResponse;
@@ -17,8 +16,8 @@ pub struct NewDeviceClient {
 #[pymethods]
 impl NewDeviceClient {
     #[new]
-    fn new(tls: TlsConfig, uri: Option<String>) -> Result<Self> {
-        let mut client = new_device::Client::new(tls.inner);
+    fn new(creds: Credentials, uri: Option<String>) -> Result<Self> {
+        let mut client = new_device::Client::new(creds.inner);
 
         if let Some(uri) = uri {
             client = client.with_uri(uri);

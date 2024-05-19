@@ -16,7 +16,7 @@ def test_pairing_session(sclient, signer, creds):
     name = "new_device"
     desc = "my_description"
     restrs = "method^list"
-    ps = NewDeviceClient(TlsConfig(creds))
+    ps = NewDeviceClient(creds)
     session = ps.pair_device(name, desc, restrs)
     session_iter = iter(session)
 
@@ -72,7 +72,7 @@ def test_paring_data_validation(attestation_device, creds):
     desc = "my description"
     restrs = "method^list"
 
-    dc = NewDeviceClient(TlsConfig(creds))
+    dc = NewDeviceClient(creds)
     session = dc.pair_device(name, desc, restrs)
     session_iter = iter(session)
     m = next(session_iter)
