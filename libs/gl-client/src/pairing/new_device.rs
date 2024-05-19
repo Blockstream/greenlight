@@ -1,6 +1,6 @@
 use super::PairingSessionData;
 use crate::{
-    credentials::Device,
+    credentials::{Device, TlsConfigProvider},
     pb::scheduler::{pairing_client::PairingClient, PairDeviceRequest},
     tls::{self, TlsConfig},
 };
@@ -20,11 +20,14 @@ pub struct Client<T> {
 }
 
 impl Client<Unconnected> {
-    pub fn new(tls: TlsConfig) -> Client<Unconnected> {
+    pub fn new<T>(creds: T) -> Client<Unconnected>
+    where
+        T: TlsConfigProvider,
+    {
         Client {
             inner: Unconnected(),
             uri: crate::utils::scheduler_uri(),
-            tls,
+            tls: creds.tls_config(),
         }
     }
 }
