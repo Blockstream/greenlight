@@ -81,7 +81,8 @@ def test_node_network(node_factory, clients, bitcoind):
     bitcoind.generate_block(6, wait_for_mempool=1)
 
     # Now wait for the channel to confirm
-    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 'CHANNELD_NORMAL')
+    wait_for(lambda: len(gl1.list_peer_channels().channels) > 0)
+    wait_for(lambda: gl1.list_peer_channels().channels[0].state ==  2) # CHANNELD_NORMAL
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 2)
 
     inv = gl1.invoice(
@@ -163,7 +164,10 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
         amount=clnpb.AmountOrAll(amount=clnpb.Amount(msat=10**9))
     )
     bitcoind.generate_block(6, wait_for_mempool=1)
-    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 2)  # CHANNELD_NORMAL
+    
+    # the channels array is optional
+    wait_for(lambda: len(gl1.list_peer_channels().channels) > 0)
+    wait_for(lambda: gl1.list_peer_channels().channels[0].state ==  2)  # CHANNELD_NORMAL
 
     # Generate an invoice without amount:
     inv = l1.rpc.call('invoice', payload={
@@ -201,7 +205,10 @@ def test_node_listpays_preimage(clients, node_factory, bitcoind):
         amount=clnpb.AmountOrAll(amount=clnpb.Amount(msat=10**9))
     )
     bitcoind.generate_block(6, wait_for_mempool=1)
-    wait_for(lambda: gl1.list_peers().peers[0].channels[0].state == 2)  # CHANNELD_NORMAL
+
+    # the channels array is optional
+    wait_for(lambda: len(gl1.list_peer_channels().channels) > 0)
+    wait_for(lambda: gl1.list_peer_channels().channels[0].state ==  2)  # CHANNELD_NORMAL
 
     preimage = "00"*32
 
