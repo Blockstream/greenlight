@@ -9,8 +9,8 @@ from typing import Optional, Generator
 class NewDeviceClient(object):
     """A Pairing Client for the "new device" flow."""
 
-    def __init__(self, tls: TlsConfig, uri: Optional[str] = None):
-        self._inner = native.NewDeviceClient(tls=tls.inner, uri=uri)
+    def __init__(self, creds: Credentials, uri: Optional[str] = None):
+        self._inner = native.NewDeviceClient(creds=creds, uri=uri)
 
     def _recv(self, m):
         msgs = {
