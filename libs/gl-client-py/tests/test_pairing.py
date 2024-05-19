@@ -1,7 +1,6 @@
 import time
 from fixtures import *
 from glclient.pairing import NewDeviceClient, AttestationDeviceClient
-from glclient.tls import TlsConfig
 from glclient import Credentials
 import pytest
 
@@ -18,7 +17,7 @@ def test_pairing_session(sclient, signer, creds):
     name = "new_device"
     desc = "my_description"
     restrs = "method^list"
-    ps = NewDeviceClient(TlsConfig())
+    ps = NewDeviceClient(creds)
     session = ps.pair_device(name, desc, restrs)
     session_iter = iter(session)
 
@@ -63,7 +62,7 @@ def test_pairing_session(sclient, signer, creds):
     # FIXME: add a blocking shutdown call that waits for the signer to shutdown.
     time.sleep(2)
 
-def test_paring_data_validation(attestation_device):
+def test_paring_data_validation(attestation_device, creds):
     """A simple test to ensure that data validation works as intended.
 
     If the data is valid, the public key belongs to the private key that was
@@ -73,7 +72,7 @@ def test_paring_data_validation(attestation_device):
     desc = "my description"
     restrs = "method^list"
 
-    dc = NewDeviceClient(TlsConfig())
+    dc = NewDeviceClient(creds)
     session = dc.pair_device(name, desc, restrs)
     session_iter = iter(session)
     m = next(session_iter)
