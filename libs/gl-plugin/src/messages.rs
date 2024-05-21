@@ -74,12 +74,47 @@ pub struct CommitmentRevocationCall {
     pub commitnum: Option<u64>,
 }
 
+fn amt_from_str_or_int<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    struct JsonStringVisitor;
+
+    impl<'de> de::Visitor<'de> for JsonStringVisitor {
+        type Value = u64;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string containing json data")
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v)
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            eprintln!("XXX {}", v);
+            // unfortunately we lose some typed information
+            // from errors deserializing the json string
+            serde_json::from_str(v).map_err(E::custom)
+        }
+    }
+
+    // use our visitor to deserialize an `ActualValue`
+    deserializer.deserialize_any(JsonStringVisitor)
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InvoicePaymentCallPayment {
     pub label: String,
     pub preimage: String,
-    #[serde(rename = "msat")]
-    pub amount: String,
+    #[serde(rename = "msat", deserialize_with = "amt_from_str_or_int")]
+    pub amount: u64,
     pub extratlvs: Option<Vec<TlvField>>,
 }
 
