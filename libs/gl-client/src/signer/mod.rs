@@ -238,8 +238,8 @@ impl Signer {
             dev_bip32_seed: None,
             dev_channel_secrets: None,
             dev_channel_secrets_shaseed: None,
-            hsm_wire_min_version: 3,
-            hsm_wire_max_version: 4,
+            hsm_wire_min_version: 5,
+            hsm_wire_max_version: 5,
         })
     }
 
