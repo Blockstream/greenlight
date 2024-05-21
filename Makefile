@@ -31,6 +31,17 @@ CHANGED_RUST_SOURCES=$(shell git diff --name-only origin/main | grep '\.rs')
 # rebuild them easily.
 GENALL =
 
+CLN_VERSIONS = \
+	v0.10.1 \
+	v0.10.2 \
+	v0.11.0.1 \
+	v0.11.2gl2 \
+	v0.11.2 \
+	v22.11gl1 \
+	v23.05gl1 \
+	v23.08gl1 \
+	v24.02gl1
+
 DOCKER_OPTIONS= \
 	--rm \
 	--user $(shell id -u):$(shell id -g) \
