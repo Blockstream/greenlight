@@ -406,7 +406,7 @@ def test_vls_crash_repro(
         bitcoind) -> None:
     """Reproduce an overflow panic in VLS v0.10.0. """
     l1, = node_factory.line_graph(1, opts={'experimental-anchors': None})
-    assert(l1.rpc.getinfo()['version'] == 'v23.08gl1')
+    assert(l1.rpc.getinfo()['version'] == 'v24.02gl1')
 
     c = clients.new()
     c.register(configure=True)
