@@ -63,9 +63,12 @@ async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key
     // Passing in the signer is required because the client needs to prove
     // ownership of the `node_id`
     let registration_response = scheduler.register(&signer, None).await.unwrap();
-
+    
+    // ---8<--- [start: device_creds]
     let device_creds = Device::from_bytes(registration_response.creds);
     save_to_file("creds", device_creds.to_bytes());
+    // ---8<--- [end: device_creds]
+
     // ---8<--- [end: register_node]
 
     // ---8<--- [start: get_node]
