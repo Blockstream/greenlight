@@ -55,8 +55,11 @@ def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str
     # ownership of the `node_id`
     registration_response = scheduler.register(signer, invite_code=None)
 
+    # ---8<--- [start: device_creds]
     device_creds = Credentials.from_bytes(registration_response.creds)
-    # save_to_file("creds", device_creds.to_bytes());
+    save_to_file("creds", device_creds.to_bytes());
+    # ---8<--- [end: device_creds]
+    
     # ---8<--- [end: register_node]
 
     # ---8<--- [start: get_node]
