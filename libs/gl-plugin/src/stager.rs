@@ -23,6 +23,7 @@ pub struct Stage {
 pub struct Request {
     pub request: pb::HsmRequest,
     pub response: mpsc::Sender<pb::HsmResponse>,
+    pub start_time: tokio::time::Instant,
 }
 
 impl Stage {
@@ -45,7 +46,11 @@ impl Stage {
             mpsc::Receiver<pb::HsmResponse>,
         ) = mpsc::channel(1);
 
-        let r = Request { request, response };
+        let r = Request {
+            request,
+            response,
+            start_time: tokio::time::Instant::now(),
+        };
 
         requests.insert(r.request.request_id, r.clone());
 
@@ -71,8 +76,9 @@ impl Stage {
         match requests.remove(&response.request_id) {
             Some(req) => {
                 debug!(
-                    "Response for request_id={}, outstanding requests count={}",
+                    "Response for request_id={}, signer_rtt={}s, outstanding requests count={}",
                     response.request_id,
+                    req.start_time.elapsed().as_secs_f64(),
                     requests.len()
                 );
                 if let Err(e) = req.response.send(response).await {
