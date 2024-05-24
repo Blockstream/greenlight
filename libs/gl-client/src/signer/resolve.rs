@@ -50,6 +50,7 @@ impl Resolver {
             Message::SignAnyDelayedPaymentToUs(_) => true,
             Message::SignAnyLocalHtlcTx(_) => true,
             Message::SignAnyRemoteHtlcToUs(_) => true,
+	    Message::LockOutpoint(_) => true,
             // Default to rejecting, punting the decision to the next
             // step.
             _ => false,
