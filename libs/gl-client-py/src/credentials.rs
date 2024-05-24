@@ -103,8 +103,18 @@ impl Credentials {
     }
 
     #[staticmethod]
-    pub fn nobody_with(cert: &[u8], key: &[u8], ca: &[u8]) -> Self {
-        let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::with(cert, key, ca));
+    pub fn nobody_with(cert: &[u8], key: &[u8], ca: Option<&[u8]>) -> Self {
+        let ca = ca.map_or_else(
+            || credentials::Nobody::default().ca,
+            Into::into
+        );
+
+        let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::with(
+            cert, 
+            key, 
+            &ca
+        ));
+
         log::debug!("Created NOBODY credentials");
         Self { inner }
     }
@@ -124,9 +134,14 @@ impl Credentials {
     }
 
     #[staticmethod]
-    pub fn from_parts(cert: &[u8], key: &[u8], ca: &[u8], rune: &str) -> Self {
+    pub fn from_parts(cert: &[u8], key: &[u8], rune: &str, ca: Option<&[u8]>) -> Self {
+        let ca = ca.map_or_else(
+            || credentials::Nobody::default().ca,
+            Into::into
+        );
+
         let inner =
-            UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, ca, rune));
+            UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, &ca, rune));
         Self { inner }
     }
 

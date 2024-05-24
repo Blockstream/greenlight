@@ -1,5 +1,3 @@
-use std::fs::{self};
-use std::path::{Path};
 use anyhow::{anyhow, Result};
 use bip39::{Language, Mnemonic};
 use gl_client::credentials::{Device, Nobody};
@@ -8,19 +6,42 @@ use gl_client::pb::cln::{amount_or_any, Amount, AmountOrAny};
 use gl_client::pb::{self, cln};
 use gl_client::scheduler::Scheduler;
 use gl_client::{bitcoin::Network, signer::Signer};
+use std::fs::{self};
 use tokio;
 
 #[tokio::main]
 async fn main() {}
 
+#[allow(unused)]
+// ---8<--- [start: upgrade_device_certs_to_creds]
+async fn upgrade_device_certs_to_creds(
+    scheduler: &Scheduler<Nobody>,
+    signer: &Signer,
+    device_cert: Vec<u8>,
+    device_key: Vec<u8>,
+) -> Result<Device> {
+    Device {
+        cert: device_cert,
+        key: device_key,
+        ..Default::default()
+    }
+    .upgrade(scheduler, signer)
+    .await
+    .map_err(|e| anyhow!("{}", e.to_string()))
+}
+// ---8<--- [end: upgrade_device_certs_to_creds]
+
+#[allow(unused)]
 fn save_to_file(file_name: &str, data: Vec<u8>) {
     fs::write(file_name, data).unwrap();
 }
 
+#[allow(unused)]
 fn read_file(file_name: &str) -> Vec<u8> {
     fs::read(file_name).unwrap()
 }
 
+#[allow(unused)]
 async fn create_seed() -> Vec<u8> {
     // ---8<--- [start: create_seed]
     let mut rng = rand::thread_rng();
@@ -39,12 +60,13 @@ async fn create_seed() -> Vec<u8> {
     seed.to_vec()
 }
 
+#[allow(unused)]
 async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key_path: String) {
     // ---8<--- [start: dev_creds]
     let developer_cert = std::fs::read(developer_cert_path).unwrap_or_default();
     let developer_key = std::fs::read(developer_key_path).unwrap_or_default();
-    let developer_creds = Nobody{
-        cert: developer_cert, 
+    let developer_creds = Nobody {
+        cert: developer_cert,
         key: developer_key,
         ..Nobody::default()
     };
@@ -56,14 +78,12 @@ async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key
     // ---8<--- [end: init_signer]
 
     // ---8<--- [start: register_node]
-    let scheduler = Scheduler::new(network, developer_creds)
-        .await
-        .unwrap();
+    let scheduler = Scheduler::new(network, developer_creds).await.unwrap();
 
     // Passing in the signer is required because the client needs to prove
     // ownership of the `node_id`
     let registration_response = scheduler.register(&signer, None).await.unwrap();
-    
+
     // ---8<--- [start: device_creds]
     let device_creds = Device::from_bytes(registration_response.creds);
     save_to_file("creds", device_creds.to_bytes());
@@ -77,16 +97,14 @@ async fn register_node(seed: Vec<u8>, developer_cert_path: String, developer_key
     // ---8<--- [end: get_node]
 }
 
+#[allow(unused)]
 async fn start_node(device_creds_path: String) {
     // ---8<--- [start: start_node]
     let network = Network::Bitcoin;
     let device_creds = Device::from_path(device_creds_path);
-    let scheduler = gl_client::scheduler::Scheduler::new(
-        network,
-        device_creds.clone(),
-    )
-    .await
-    .unwrap();
+    let scheduler = gl_client::scheduler::Scheduler::new(network, device_creds.clone())
+        .await
+        .unwrap();
 
     let mut node: gl_client::node::ClnClient = scheduler.node().await.unwrap();
     // ---8<--- [end: start_node]
@@ -125,6 +143,7 @@ async fn start_node(device_creds_path: String) {
     // ---8<--- [end: create_invoice]
 }
 
+#[allow(unused)]
 async fn recover_node(
     nobody_cert: Vec<u8>,
     nobody_key: Vec<u8>,
@@ -132,20 +151,18 @@ async fn recover_node(
     // ---8<--- [start: recover_node]
     let seed = read_file("seed");
     let network = gl_client::bitcoin::Network::Bitcoin;
-    let creds = Nobody{
+    let creds = Nobody {
         cert: nobody_cert,
         key: nobody_key,
         ..Nobody::default()
     };
-    
+
     let signer = gl_client::signer::Signer::new(seed, network, creds.clone()).unwrap();
 
-    let scheduler = gl_client::scheduler::Scheduler::new(
-        gl_client::bitcoin::Network::Bitcoin,
-        creds,
-    )
-    .await
-    .unwrap();
+    let scheduler =
+        gl_client::scheduler::Scheduler::new(gl_client::bitcoin::Network::Bitcoin, creds)
+            .await
+            .unwrap();
 
     scheduler.recover(&signer).await
     // ---8<--- [end: recover_node]

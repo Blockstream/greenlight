@@ -7,7 +7,7 @@ from glclient import Signer, Scheduler, Credentials, TlsConfig
 def creds(nobody_id):
     """Nobody credentials for the tests."""
     creds = Credentials.nobody_with(
-        nobody_id.cert_chain, nobody_id.private_key, nobody_id.caroot
+        nobody_id.cert_chain, nobody_id.private_key
     )
     return creds
 
