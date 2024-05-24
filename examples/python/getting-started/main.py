@@ -1,8 +1,17 @@
-import bip39 # type: ignore
-from glclient import Credentials, Signer, Scheduler # type: ignore
+import bip39  # type: ignore
+from glclient import Credentials, Signer, Scheduler  # type: ignore
 from pathlib import Path
-from pyln import grpc as clnpb # type: ignore
+from pyln import grpc as clnpb  # type: ignore
 import secrets  # Make sure to use cryptographically sound randomness
+
+
+# ---8<--- [start: upgrade_device_certs_to_creds]
+def upgrade_device_certs_to_creds(
+    scheduler: Scheduler, signer: Signer, device_cert: bytes, device_key: bytes
+):
+    device_creds = Credentials.from_parts(device_cert, device_key)
+    return device_creds.upgrade(scheduler, signer)
+# ---8<--- [end: upgrade_device_certs_to_creds]
 
 
 def save_to_file(file_name: str, data: bytes) -> None:
@@ -31,16 +40,14 @@ def create_seed() -> bytes:
     return seed
 
 
-def nobody_with_identity(developer_cert: bytes, developer_key: bytes) -> Credentials:
-    ca = Path("ca.pem").open(mode="rb").read()
-    return Credentials.nobody_with(developer_cert, developer_key, ca)
-
-def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str) -> None:
+def register_node(
+    seed: bytes, developer_cert_path: str, developer_key_path: str
+) -> None:
     # ---8<--- [start: dev_creds]
     developer_cert = Path(developer_cert_path).open(mode="rb").read()
     developer_key = Path(developer_key_path).open(mode="rb").read()
 
-    developer_creds = nobody_with_identity(developer_cert, developer_key)
+    developer_creds = Credentials.nobody_with(developer_cert, developer_key)
     # ---8<--- [end: dev_creds]
 
     # ---8<--- [start: init_signer]
@@ -57,9 +64,9 @@ def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str
 
     # ---8<--- [start: device_creds]
     device_creds = Credentials.from_bytes(registration_response.creds)
-    save_to_file("creds", device_creds.to_bytes());
+    save_to_file("creds", device_creds.to_bytes())
     # ---8<--- [end: device_creds]
-    
+
     # ---8<--- [end: register_node]
 
     # ---8<--- [start: get_node]
@@ -103,9 +110,9 @@ def recover_node(developer_cert: bytes, developer_key: bytes) -> None:
     # ---8<--- [start: recover_node]
     seed = read_file("seed")
     network = "bitcoin"
-    signer_creds = nobody_with_identity(developer_cert, developer_key)
+    signer_creds = Credentials.nobody_with(developer_cert, developer_key)
     signer = Signer(seed, network, signer_creds)
-    
+
     scheduler = Scheduler(
         network,
         signer_creds,

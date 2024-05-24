@@ -89,12 +89,10 @@ class Client:
         else:
             certpath = self.directory / "nobody.crt"
             keypath = self.directory / "nobody-key.pem"
-            capath = self.directory / "ca.crt"
             self.log.info(f"Loading generic nobody credentials from {self.directory}")
             creds = glclient.Credentials.nobody_with(
                 certpath.open(mode="rb").read(),
                 keypath.open(mode="rb").read(),
-                capath.open(mode="rb").read(),
             )
             return creds
 

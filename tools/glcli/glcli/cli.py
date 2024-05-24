@@ -36,8 +36,7 @@ class Creds:
         # legacy paths used by TlsConfig
         cert_path = Path("device.crt")
         key_path = Path("device-key.pem")
-        ca_path = Path("ca.pem")
-        have_certs = cert_path.exists() and key_path.exists() and ca_path.exists()
+        have_certs = cert_path.exists() and key_path.exists()
         if creds_path.exists():
             self.creds = Credentials.from_path(str(creds_path))
             logger.info("Configuring client with device credentials")
@@ -45,11 +44,10 @@ class Creds:
             logger.info("Configuring client with device credentials (legacy)")
             device_cert = open(str(cert_path), "rb").read()
             device_key = open(str(key_path), "rb").read()
-            ca = open(str(ca_path), "rb").read()
             rune = ""
             if Path("rune").exists():
                 rune = open("rune", "r").read()
-            self.creds = Credentials.from_parts(device_cert, device_key, ca, rune)
+            self.creds = Credentials.from_parts(device_cert, device_key, rune)
         else:
             logger.info("Configuring client with NOBODY credentials.")
 
