@@ -99,7 +99,7 @@ class Context:
     def __init__(self, network='testnet', start_hsmd=False):
         self.creds = Creds()
         self.load_metadata(self.creds)
-        self.scheduler = Scheduler(self.metadata['node_id'], network, creds=self.creds.creds)
+        self.scheduler = Scheduler(network, creds=self.creds.creds)
         self.node = None
         self.scheduler_chan = None
         self.node_id = self.metadata['node_id']
@@ -276,7 +276,7 @@ def register(ctx, network, invite):
     hex_node_id = hexlify(node_id).decode("ASCII")
     logger.debug(f"Registering new node with node_id={hex_node_id} for {network}")
     # Reinitialize the Scheduler with the passed network for register.
-    scheduler = Scheduler(node_id, network=network, creds=ctx.obj.scheduler.creds)
+    scheduler = Scheduler(network=network, creds=ctx.obj.scheduler.creds)
     res = scheduler.register(signer.inner, invite_code=invite)
 
     with open("credentials.gfs", "wb") as f:
