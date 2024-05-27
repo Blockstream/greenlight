@@ -1,0 +1,35 @@
+.build_rust_prep:
+  extends: .build_setup
+  when: manual
+  before_script:
+    - export NEW_VER=$(echo ${CI_COMMIT_TAG} | cut -d'-' -f2)
+    - sed -i "s/^version = \".*\"/version = \"$NEW_VER\"/" libs/${PKG_NAME}/Cargo.toml
+    - . $HOME/.cargo/env # sh doesn't have the correct PATH
+  script:
+    - cargo test -p ${PKG_NAME} -- --test-threads=1 || sleep 3600
+    - cargo build --release -p ${PKG_NAME}
+    - cargo publish -p ${PKG_NAME} --allow-dirty # allow-dirty needed because we change the version in Cargo.toml
+  artifacts:
+    paths:
+      - "target/release/${PKG_NAME}"
+
+build_gl_client:
+  extends: .build_rust_prep
+  rules:
+    - if: $CI_COMMIT_TAG =~ /glclient_\d{8}(_[1-9][0-9]?)?\-.*/
+  variables:
+    PKG_NAME: gl-client
+
+build_gl_plugin:
+  extends: .build_rust_prep
+  rules:
+    - if: $CI_COMMIT_TAG =~ /glplugin_\d{8}(_[1-9][0-9]?)?\-.*/
+  variables:
+    PKG_NAME: gl-plugin
+
+build_gl_signerproxy:
+  extends: .build_rust_prep
+  rules:
+    - if: $CI_COMMIT_TAG =~ /glsignerproxy_\d{8}(_[1-9][0-9]?)?\-.*/
+  variables:
+    PKG_NAME: gl-signerproxy
