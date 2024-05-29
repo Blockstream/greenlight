@@ -9,8 +9,8 @@ import secrets  # Make sure to use cryptographically sound randomness
 def upgrade_device_certs_to_creds(
     scheduler: Scheduler, signer: Signer, device_cert: bytes, device_key: bytes
 ):
-    device_creds = Credentials.from_parts(device_cert, device_key)
-    return device_creds.upgrade(scheduler, signer)
+    device_creds = Credentials.from_parts(device_cert, device_key, "")
+    return device_creds.upgrade(scheduler.inner, signer.inner)
 # ---8<--- [end: upgrade_device_certs_to_creds]
 
 
