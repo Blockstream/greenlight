@@ -46,7 +46,13 @@ impl Signer {
 
         let (tx, rx) = mpsc::channel(1);
 
-        std::thread::spawn(move || runtime.block_on(async move { inner.run_forever(rx).await }));
+        std::thread::spawn(move || {
+            runtime.block_on(async move {
+                if let Err(e) = inner.run_forever(rx).await {
+                    log::error!("Error running signer in thread: {e}")
+                }
+            })
+        });
         Ok(SignerHandle { signal: tx })
     }
 
