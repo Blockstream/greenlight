@@ -359,7 +359,7 @@ def test_custommsg(clients, node_factory, bitcoind, executor):
     # notification
     import time
     time.sleep(1)
-    l1.rpc.sendcustommsg(node_id=c.node_id.hex(), msg="FFFFDEADBEEF")
+    l1.rpc.sendcustommsg(c.node_id.hex(), "FFFFDEADBEEF")
 
     res = f.result(1)
     assert res.payload == b'\xff\xff\xde\xad\xbe\xef'
