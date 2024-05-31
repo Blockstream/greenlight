@@ -96,6 +96,7 @@ class NodeProcess(TailableProc):
             '--dev-fast-gossip',
             '--offline',
             '--experimental-anchors',
+            '--developer',  # TODO Make this multi-version capable
         ]
 
     def write_node_config(self, network: str):
