@@ -97,7 +97,7 @@ def test_lsps_list_protocol(
     json_bytes = json_str.encode("utf-8")
     msg_str = "9419" + json_bytes.hex()
 
-    n1.rpc.sendcustommsg(node_id=gl1.get_info().id.hex(), msg=msg_str)
+    n1.rpc.sendcustommsg(gl1.get_info().id.hex(), msg_str)
 
     result = protocol_fut.await_result()
     assert result == ProtocolList([1, 2])
