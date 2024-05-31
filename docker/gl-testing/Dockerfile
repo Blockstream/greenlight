@@ -36,7 +36,7 @@
 #
 # Later, we'll copy this venv to our project
 FROM ubuntu:20.04 as python-builder
-RUN apt update && apt install -qqy curl python3 python3-pip python3-venv
+RUN apt update && apt install -qqy curl python3 python3-pip python3-venv libpq-dev
 
 # Create a python-venv that will include all dependencies
 ENV PATH=/tmp/venv/bin:$PATH
