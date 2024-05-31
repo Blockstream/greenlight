@@ -51,6 +51,10 @@ impl Resolver {
             Message::SignAnyLocalHtlcTx(_) => true,
             Message::SignAnyRemoteHtlcToUs(_) => true,
 	    Message::LockOutpoint(_) => true,
+	    Message::CheckOutpoint(_) => true,
+	    Message::SignAnyChannelAnnouncement(_) => true,
+	    Message::RevokeCommitmentTx(_) => true,
+	    Message::ForgetChannel(_) => true,
             // Default to rejecting, punting the decision to the next
             // step.
             _ => false,
