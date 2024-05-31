@@ -222,7 +222,6 @@ ENV GRPC_ENABLE_FORK_SUPPORT=0
 # Install cln-versions
 COPY --from=cln-downloader /opt/cln /opt/cln
 ENV CLNVM_CACHE_DIR=/opt/cln
-RUN ln -s /opt/cln/v24.02gl1 /opt/cln-latest
 ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
 
 # Enumerate all versions that gl-testing should find
