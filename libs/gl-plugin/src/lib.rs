@@ -214,14 +214,19 @@ fn _parse_gl_config_from_serialized_request(request: String) -> Option<pb::GlCon
     }
 }
 
-
 /// Notification handler that receives notifications on incoming
 /// payments, then looks up the invoice in the DB, and forwards the
 /// full information to the GRPC interface.
 async fn on_invoice_payment(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
-    debug!("Got an incoming payment via invoice_payment: {:?}", v);
+    log::info!("Got an incoming payment via invoice_payment: {:?}", v);
     let state = plugin.state();
-    let call: messages::InvoicePaymentCall = serde_json::from_value(v).unwrap();
+    let call: messages::InvoicePaymentCall = match serde_json::from_value(v) {
+        Ok(v) => v,
+        Err(e) => {
+            log::error!("Could not decode the invoice_payment_call: {e}");
+            return Ok(json!({"result": "continue"}));
+        }
+    };
 
     let rpc = state.rpc.lock().await.clone();
     let req = requests::ListInvoices {
