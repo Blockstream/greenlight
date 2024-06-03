@@ -98,10 +98,24 @@ where
         where
             E: de::Error,
         {
-            eprintln!("XXX {}", v);
-            // unfortunately we lose some typed information
-            // from errors deserializing the json string
-            serde_json::from_str(v).map_err(E::custom)
+            let (nums, exts): (Vec<char>, Vec<char>) = v.chars().partition(|c| c.is_digit(10));
+
+            let mut num = String::new();
+            num.extend(nums);
+            let mut ext = String::new();
+            ext.extend(exts);
+
+            // Conversion table from the unit to `msat`, since msat is
+            // the unit of account internally for off-chain payments.
+            let mult = match ext.as_str() {
+                "msat" => 1,
+                "sat" => 1000,
+                "btc" => 100_000_000_000,
+                _ => return Err(E::custom("unable to parse unit")),
+            };
+
+            let num: u64 = num.parse::<u64>().expect("converting chars to u64");
+            Ok(num * mult)
         }
     }
 
@@ -411,5 +425,14 @@ mod test {
             }
             _ => panic!("This was supposed to be a request"),
         }
+    }
+
+    /// We have a bit of trouble parsing some invoice payment hook
+    /// calls in 2024/06/03.
+    #[test]
+    fn test_invoice_payment_payload() {
+        let s = "{\"payment\": {\"extratlvs\": [], \"label\": \"{\\\"unix_milli\\\":1717422773673,\\\"payer_amount_msat\\\":null}\", \"msat\": \"42btc\", \"preimage\": \"243adf90767a5c3a8f6118e003c89b3e1ab5a2fd318d49cb41f4d42e92d3de41\"}}";
+        let v = serde_json::from_str(&s).expect("parsing generic value");
+        let _c: InvoicePaymentCall = serde_json::from_value(v).expect("parsing into struct");
     }
 }
