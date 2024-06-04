@@ -103,18 +103,8 @@ impl Credentials {
     }
 
     #[staticmethod]
-    pub fn nobody_with(cert: &[u8], key: &[u8], ca: Option<&[u8]>) -> Self {
-        let ca = ca.map_or_else(
-            || credentials::Nobody::default().ca,
-            Into::into
-        );
-
-        let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::with(
-            cert, 
-            key, 
-            &ca
-        ));
-
+    pub fn nobody_with(cert: &[u8], key: &[u8]) -> Self {
+        let inner = UnifiedCredentials::Nobody(gl_client::credentials::Nobody::with(cert, key));
         log::debug!("Created NOBODY credentials");
         Self { inner }
     }
@@ -134,14 +124,9 @@ impl Credentials {
     }
 
     #[staticmethod]
-    pub fn from_parts(cert: &[u8], key: &[u8], rune: &str, ca: Option<&[u8]>) -> Self {
-        let ca = ca.map_or_else(
-            || credentials::Nobody::default().ca,
-            Into::into
-        );
-
+    pub fn from_parts(cert: &[u8], key: &[u8], rune: &str) -> Self {
         let inner =
-            UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, &ca, rune));
+            UnifiedCredentials::Device(gl_client::credentials::Device::with(cert, key, rune));
         Self { inner }
     }
 
@@ -184,6 +169,21 @@ impl Credentials {
 
     pub fn node_id(&self) -> Result<Vec<u8>> {
         Ok(self.inner.node_id()?)
+    }
+
+    pub fn with_ca(&self, ca: &[u8]) -> Self {
+        match &self.inner {
+            UnifiedCredentials::Nobody(creds) => {
+                let n = creds.clone().with_ca(ca);
+                let inner = UnifiedCredentials::Nobody(n);
+                Self { inner }
+            }
+            UnifiedCredentials::Device(creds) => {
+                let d = creds.clone().with_ca(ca);
+                let inner = UnifiedCredentials::Device(d);
+                Self { inner }
+            },
+        }
     }
 }
 

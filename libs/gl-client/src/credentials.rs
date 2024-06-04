@@ -89,14 +89,27 @@ impl Nobody {
     }
 
     /// Returns a new Nobody instance with a custom set of parameters.
-    pub fn with<V>(cert: V, key: V, ca: V) -> Self
+    pub fn with<V>(cert: V, key: V) -> Self
     where
         V: Into<Vec<u8>>,
     {
+        let ca =
+            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
+
         Self {
             cert: cert.into(),
             key: key.into(),
+            ca,
+        }
+    }
+
+    pub fn with_ca<V>(self, ca: V) -> Self
+    where
+        V: Into<Vec<u8>>,
+    {
+        Nobody {
             ca: ca.into(),
+            ..self
         }
     }
 }
@@ -167,17 +180,30 @@ impl Device {
 
     /// Creates a new set of `Device` credentials from a complete set of
     /// credentials.
-    pub fn with<V, S>(cert: V, key: V, ca: V, rune: S) -> Self
+    pub fn with<V, S>(cert: V, key: V, rune: S) -> Self
     where
         V: Into<Vec<u8>>,
         S: Into<String>,
     {
+        let ca =
+            load_file_or_default("GL_CA_CRT", CA_RAW).expect("Could not load file from GL_CA_CRT");
+
         Self {
             version: CRED_VERSION,
             cert: cert.into(),
             key: key.into(),
-            ca: ca.into(),
             rune: rune.into(),
+            ca
+        }
+    }
+
+    pub fn with_ca<V>(self, ca: V) -> Self 
+    where
+        V: Into<Vec<u8>>,
+    {
+        Device {
+            ca: ca.into(),
+            ..self
         }
     }
 

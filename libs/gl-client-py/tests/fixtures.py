@@ -8,7 +8,7 @@ def creds(nobody_id):
     """Nobody credentials for the tests."""
     creds = Credentials.nobody_with(
         nobody_id.cert_chain, nobody_id.private_key
-    )
+    ).with_ca(nobody_id.caroot)
     return creds
 
 
