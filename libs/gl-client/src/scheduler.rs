@@ -218,7 +218,6 @@ impl<Creds> Scheduler<Creds> {
         let creds = credentials::Device::with(
             res.device_cert.clone().into_bytes(),
             res.device_key.clone().into_bytes(),
-            self.ca.clone(),
             res.rune.clone(),
         );
         res.creds = creds.to_bytes();
@@ -315,7 +314,6 @@ impl<Creds> Scheduler<Creds> {
         let creds = credentials::Device::with(
             res.device_cert.clone().into_bytes(),
             res.device_key.clone().into_bytes(),
-            self.ca.clone(),
             res.rune.clone(),
         );
         res.creds = creds.to_bytes();

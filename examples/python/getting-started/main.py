@@ -39,10 +39,7 @@ def create_seed() -> bytes:
     # ---8<--- [end: create_seed]
     return seed
 
-
-def register_node(
-    seed: bytes, developer_cert_path: str, developer_key_path: str
-) -> None:
+def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str) -> None:
     # ---8<--- [start: dev_creds]
     developer_cert = Path(developer_cert_path).open(mode="rb").read()
     developer_key = Path(developer_key_path).open(mode="rb").read()
