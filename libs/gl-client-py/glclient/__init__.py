@@ -17,7 +17,7 @@ backup_decrypt_with_seed = native.backup_decrypt_with_seed
 
 
 # Keep in sync with the libhsmd version, this is tested in unit tests.
-__version__ = "v23.08"
+__version__ = "v24.02"
 
 
 E = TypeVar('E', bound=PbMessage)
