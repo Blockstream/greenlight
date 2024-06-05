@@ -22,7 +22,7 @@ members = [
 [workspace.dependencies]
 anyhow = "1"
 env_logger = "0.10"
-cln-grpc = "0.1.8"
+cln-grpc = "=0.1.8"
 cln-rpc = "0.1.8"
 cln-plugin = "0.1.8"
 
