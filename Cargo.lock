@@ -1078,7 +1078,7 @@ checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
 name = "gl-client"
-version = "0.1.11"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1125,7 +1125,7 @@ dependencies = [
 
 [[package]]
 name = "gl-client-py"
-version = "0.1.11"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "bytes 1.6.0",
@@ -1144,7 +1144,7 @@ dependencies = [
 
 [[package]]
 name = "gl-plugin"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-stream 0.3.5",
@@ -1180,7 +1180,7 @@ dependencies = [
 
 [[package]]
 name = "gl-signerproxy"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "byteorder",
