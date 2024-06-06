@@ -28,6 +28,7 @@ jobs:
       - name: Setup venv
         run: |
           python3 -m venv .venv
+          .venv/bin/python -m pip install poetry
 
       - uses: dtolnay/rust-toolchain@nightly
 
@@ -40,27 +41,15 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v2
         with:
-          version: "23.2"
+          version: "27.1"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: |
-          .venv/bin/pip install \
-            grpcio \
-            grpcio-tools \
-            "protobuf==3.20.3" \
-            mkdocs \
-            pdoc \
-            mkdocs-material \
-            mkdocs-redirects \
-            pymdown-extensions \
-            ghp-import \
-            pdoc \
-            cairosvg \
-            pillow \
-            typing_extensions \
-            mypy
-
+          cd libs/gl-client-py/
+          poetry export --without-hashes --with=docs > /tmp/requirements.txt
+          .venv/bin/pip install -U -r /tmp/requirements.txt
+          
       - name: Build and install gl-client-py
         run: |
           (cd libs/gl-client-py; ../../.venv/bin/maturin develop)
