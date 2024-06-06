@@ -12,9 +12,10 @@ PROTODIR=${REPO}/libs/proto
 
 PYPROTOC_OPTS = \
 	-I ${PROTODIR} \
-	--python_out=. \
-	--grpc_python_out=. \
-	--mypy_out=. \
+	--python_out=${PYDIR} \
+	--grpc_python_out=${PYDIR} \
+	--mypy_out=${PYDIR} \
+	--mypy_grpc_out=${PYDIR} \
 	--experimental_allow_proto3_optional
 
 PYPROTOS = \
