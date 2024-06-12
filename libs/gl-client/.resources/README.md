@@ -7,4 +7,4 @@ duplicate the `diff` output when reviewing changes to TLS and protobuf
 file.
 
 These files are not to be updated manually, rather use the `make`
-target in `libs/gl-client/Makefile`: `make sync`.
+target in `libs/gl-client/Makefile`: `make sync-files`.
