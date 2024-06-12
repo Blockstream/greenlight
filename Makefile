@@ -58,6 +58,12 @@ include libs/gl-client/Makefile
 include libs/gl-client-py/Makefile
 include libs/gl-testing/Makefile
 
+check-rs:
+	cargo test --all -- --test-threads=1
+
+clean-rs:
+	cargo clean
+
 check: check-rs check-py
 
 clean: clean-rs

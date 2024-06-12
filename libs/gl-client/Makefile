@@ -7,12 +7,6 @@ endif
 LIBS=${REPO}/libs
 GL_CLIENT_DIR=${LIBS}/gl-client
 
-check-rs:
-	cd ${LIBS}; cargo test --all -- --test-threads=1
-
-clean-rs:
-	cd ${LIBS}; cargo clean
-
 check-gl-client:
 	(cd ${GL_CLIENT_DIR}; cargo test)
 
