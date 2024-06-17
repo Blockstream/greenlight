@@ -4,7 +4,7 @@ else
 REPO_ROOT=$(shell git rev-parse --show-toplevel)
 endif
 
-LIBS=${REPO}/libs
+LIBS=${REPO_ROOT}/libs
 GL_CLIENT_DIR=${LIBS}/gl-client
 
 check-gl-client:
