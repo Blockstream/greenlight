@@ -1,19 +1,16 @@
 # Pytest fixtures
-import tempfile
-from .scheduler import Scheduler
-from gltesting.clients import Clients, Client
-from ephemeral_port_reserve import reserve
-import pytest
-from gltesting import certs
-from gltesting.identity import Identity
-import os
-from pathlib import Path
 import logging
+import os
 import sys
-from pyln.testing.fixtures import bitcoind, teardown_checks, node_cls, test_name, executor, db_provider, test_base_dir, jsonschemas
-from gltesting.network import node_factory
-from pyln.testing.fixtures import directory as str_directory
 from decimal import Decimal
+from pathlib import Path
+
+import pytest
+from ephemeral_port_reserve import reserve
+from gltesting import certs
+from gltesting.clients import Clients
+from pyln.testing.fixtures import directory as str_directory
+from .scheduler import Scheduler
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -22,7 +19,7 @@ logging.getLogger("hpack").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 @pytest.fixture()
-def directory(str_directory : str) -> Path:
+def directory(str_directory: str) -> Path:
     return Path(str_directory) / "gl-testing"
 
 @pytest.fixture()
@@ -45,7 +42,7 @@ def root_id(cert_directory):
 
 
 @pytest.fixture()
-def scheduler_id(root_id):
+def scheduler_id():
     certs.genca("/services")
     id = certs.gencert("/services/scheduler")
     yield id
@@ -57,7 +54,7 @@ def users_id():
 
 
 @pytest.fixture()
-def nobody_id(users_id):
+def nobody_id():
     identity = certs.gencert("/users/nobody")
     os.environ.update(
         {
