@@ -10,7 +10,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: cargo build --manifest-path ./examples/rust/getting-started/Cargo.toml
+      
   build:
+    needs: test
     permissions:
       pages: write      # to deploy to Pages
       id-token: write   # to verify the deployment originates from an appropriate source
