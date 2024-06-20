@@ -10,7 +10,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  test-examples:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: |
+          mkdir /tmp/protoc && \
+            cd /tmp/protoc && \
+            wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
+            unzip protoc.zip && \
+            mv /tmp/protoc/bin/protoc /usr/local/bin && \
+            chmod a+x /usr/local/bin/protoc && \
+            rm -rf /tmp/protoc
+      - run: cargo build --manifest-path ./examples/rust/getting-started/Cargo.toml
+      
+  build-and-deplouy:
+    needs: test-examples
     permissions:
       pages: write      # to deploy to Pages
       id-token: write   # to verify the deployment originates from an appropriate source
