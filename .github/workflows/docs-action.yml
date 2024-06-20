@@ -29,7 +29,7 @@ jobs:
             rm -rf /tmp/protoc
       - run: cargo build --manifest-path ./examples/rust/getting-started/Cargo.toml
       
-  build-and-deplouy:
+  build-and-deploy:
     needs: test-examples
     permissions:
       pages: write      # to deploy to Pages
@@ -38,49 +38,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Github repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python Virtualenv
-        uses: actions/setup-python@v4
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: 3.9
 
-      - name: Setup venv
+      - name: Install poetry
         run: |
-          python3 -m venv .venv
-          .venv/bin/python -m pip install poetry
-
-      - uses: dtolnay/rust-toolchain@nightly
-
-      - name: Set up dependencies
-        run: |
-          .venv/bin/pip install -U maturin pip
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq make
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v2
-        with:
-          version: "27.1"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          curl -sSL https://install.python-poetry.org | python3 -
 
       - name: Install dependencies
         run: |
-          cd libs/gl-client-py/
-          poetry export --without-hashes --with=docs > /tmp/requirements.txt
-          .venv/bin/pip install -U -r /tmp/requirements.txt
-          
-      - name: Build and install gl-client-py
-        run: |
-          (cd libs/gl-client-py; ../../.venv/bin/maturin develop)
+          mkdir /tmp/protoc && \
+            cd /tmp/protoc && \
+            wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
+            unzip protoc.zip && \
+            mv /tmp/protoc/bin/protoc /usr/local/bin && \
+            chmod a+x /usr/local/bin/protoc && \
+            rm -rf /tmp/protoc \
 
+      - name: Install poetry dependencies
+        run: poetry install --with docs
+          
       - name: Build docs
         env:
           DOCSBRANCH: "gh-pages"
           DOCSREMOTE: "origin"
           GITHUB_TOKEN: "${{ secrets.GH_PAGES_PAT }}"
-        run: |
-          PATH=$(pwd)/.venv/bin:$PATH make docs
+        run: mkdir -p ${GITHUB_WORKSPACE}/site/
+      - run: cd docs && poetry run mkdocs build --verbose --strict --clean --site-dir=${GITHUB_WORKSPACE}/site/
+      - run: poetry run pdoc -o ${GITHUB_WORKSPACE}/site/py glclient
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
