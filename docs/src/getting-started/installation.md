@@ -17,13 +17,13 @@ common ones:
 
 	```toml
 	[dependencies]
-	gl-client = { git = "ssh://git@github.com/Blockstream/greenlight" }
+	gl-client = "0.2"
 	```
 
 	or by using `cargo add`:
 
 	```bash
-	cargo add --git https://github.com/Blockstream/greenlight.git
+	cargo add gl-client
 	```
 
 	Note: the rust library currently relies on `git` dependencies, which
