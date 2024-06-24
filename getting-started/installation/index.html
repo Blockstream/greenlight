@@ -1120,10 +1120,10 @@ common ones:</p>
 <p>Add the <code>gl-client</code> crate as a dependency by either editing the
 <code>Cargo.toml</code> and add the following lines</p>
 <div class="highlight"><pre><span></span><code><span class="k">[dependencies]</span>
-<span class="n">gl-client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;ssh://git@github.com/Blockstream/greenlight&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="n">gl-client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.2&quot;</span>
 </code></pre></div>
 <p>or by using <code>cargo add</code>:</p>
-<div class="highlight"><pre><span></span><code>cargo<span class="w"> </span>add<span class="w"> </span>--git<span class="w"> </span>https://github.com/Blockstream/greenlight.git
+<div class="highlight"><pre><span></span><code>cargo<span class="w"> </span>add<span class="w"> </span>gl-client
 </code></pre></div>
 <p>Note: the rust library currently relies on <code>git</code> dependencies, which
 crates.io does not allow. The <code>gl-client</code> library on crates.io is a
