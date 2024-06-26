@@ -1,0 +1,19 @@
+[package]
+name = "gl-client-bindings"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+name = "glclient"
+
+[dependencies]
+anyhow.workspace = true
+gl-client = { path = "../gl-client", features = ["permissive"] }
+thiserror = "1.0.56"
+tokio = { version = "1", features = [], default-features = false}
+uniffi = { version = "0.24" }
+once_cell = "*"
+
+[build-dependencies]
+uniffi = { version = "0.24", features = [ "build" ] }
