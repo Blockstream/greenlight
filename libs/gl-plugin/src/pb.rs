@@ -753,7 +753,7 @@ impl From<RouteHop> for requests::RoutehintHopDev {
     fn from(r: RouteHop) -> requests::RoutehintHopDev {
         requests::RoutehintHopDev {
             id: hex::encode(r.id),
-            short_channel_id: r.short_channel_id,
+            short_channel_id: r.scid,
             fee_base_msat: r.feebase.map(|f| f.msat).unwrap(),
             fee_proportional_millionths: r.feeprop,
             cltv_expiry_delta: r.expirydelta as u16,

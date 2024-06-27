@@ -58,6 +58,7 @@ pub struct PluginNodeServer {
     pub rpc: Arc<Mutex<LightningClient>>,
     rpc_path: PathBuf,
     events: tokio::sync::broadcast::Sender<super::Event>,
+    notifications: tokio::sync::broadcast::Sender<cln_rpc::Notification>,
     signer_state: Arc<Mutex<State>>,
     grpc_binding: String,
     signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
@@ -98,6 +99,8 @@ impl PluginNodeServer {
 
         let rrpc = rpc.clone();
 
+        let (notifications, _) = tokio::sync::broadcast::channel(1);
+
         let s = PluginNodeServer {
             ctx,
             tls,
@@ -108,6 +111,7 @@ impl PluginNodeServer {
             signer_state: Arc::new(Mutex::new(signer_state)),
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
+            notifications,
         };
 
         tokio::spawn(async move {

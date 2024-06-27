@@ -24,7 +24,6 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
 	"/cln.Node/Datastore" => Request::Datastore(DatastoreRequest::decode(p)?),
 	"/cln.Node/CreateOnion" => Request::CreateOnion(CreateonionRequest::decode(p)?),
 	"/cln.Node/DelDatastore" => Request::DelDatastore(DeldatastoreRequest::decode(p)?),
-	"/cln.Node/DelExpiredInvoice" => Request::DelExpiredInvoice(DelexpiredinvoiceRequest::decode(p)?),
 	"/cln.Node/DelInvoice" => Request::DelInvoice(DelinvoiceRequest::decode(p)?),
 	"/cln.Node/Invoice" => Request::Invoice(InvoiceRequest::decode(p)?),
 	"/cln.Node/ListDatastore" => Request::ListDatastore(ListdatastoreRequest::decode(p)?),
