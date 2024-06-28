@@ -156,6 +156,7 @@ impl<Creds> Scheduler<Creds> {
             &hex::encode(signer.node_id()),
             "default",
             vec!["localhost".into()],
+            None,
         );
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting registration with csr:\n{}", device_csr);
@@ -264,6 +265,7 @@ impl<Creds> Scheduler<Creds> {
             &hex::encode(signer.node_id()),
             &name,
             vec!["localhost".into()],
+            None,
         );
         let device_csr = device_cert.serialize_request_pem()?;
         debug!("Requesting recovery with csr:\n{}", device_csr);
