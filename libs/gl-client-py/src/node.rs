@@ -1,4 +1,5 @@
 use crate::runtime::exec;
+use crate::scheduler::convert;
 use crate::{credentials::Credentials, lsps::LspClient};
 use gl_client as gl;
 use gl_client::pb;
@@ -17,11 +18,7 @@ pub struct Node {
 #[pymethods]
 impl Node {
     #[new]
-    fn new(
-        node_id: Vec<u8>,
-        grpc_uri: String,
-        creds: Credentials,
-    ) -> PyResult<Self> {
+    fn new(node_id: Vec<u8>, grpc_uri: String, creds: Credentials) -> PyResult<Self> {
         creds.ensure_device()?;
         let inner = gl::node::Node::new(node_id, creds.inner)
             .map_err(|s| PyValueError::new_err(s.to_string()))?;
@@ -58,6 +55,31 @@ impl Node {
             .map(|x| x.into_inner())
             .map_err(error_starting_stream)?;
         Ok(CustommsgStream { inner: stream })
+    }
+
+    fn trampoline_pay(
+        &self,
+        bolt11: String,
+        trmp_node_id: Vec<u8>,
+        amount_msat: Option<u64>,
+        label: Option<String>,
+        maxfeepercent: Option<f32>,
+        maxdelay: Option<u32>,
+        description: Option<String>,
+    ) -> PyResult<Vec<u8>> {
+        let req = pb::TrampolinePayRequest {
+            bolt11,
+            trmp_node_id,
+            amount_msat: amount_msat.unwrap_or_default(),
+            label: label.unwrap_or_default(),
+            maxfeepercent: maxfeepercent.unwrap_or_default(),
+            maxdelay: maxdelay.unwrap_or_default(),
+            description: description.unwrap_or_default(),
+        };
+        let res = exec(async { self.client.clone().trampoline_pay(req).await })
+            .map_err(error_calling_remote_method)?
+            .into_inner();
+        convert(Ok(res))
     }
 
     fn get_lsp_client(&self) -> LspClient {

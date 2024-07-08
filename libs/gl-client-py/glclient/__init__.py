@@ -452,6 +452,15 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
+    def trampoline_pay(self, bolt11: str, trmp_node_id: bytes, amount_msat: Optional[int] = None, label: Optional[str] = None):
+        res = self.inner.trampoline_pay(
+            bolt11=bolt11,
+            trmp_node_id=trmp_node_id,
+            amount_msat=amount_msat,
+            label=label,
+        )
+        return nodepb.TrampolinePayResponse.FromString(bytes(res))
+
     def keysend(
             self,
             destination: bytes,
