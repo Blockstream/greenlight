@@ -7,6 +7,8 @@ use crate::{messages, Event};
 use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
+use cln_rpc::model::responses::PayResponse;
+use gl_client::bitcoin::hashes::hex::ToHex;
 use gl_client::persist::State;
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
@@ -564,9 +566,35 @@ impl Node for PluginNodeServer {
 
     async fn trampoline_pay(
         &self,
-        _r: Request<pb::TrampolinePayRequest>,
-    ) -> Result<Response<pb::TrampolinePayResponse>, Status> {
-        unimplemented!("Is currently not implemented by greenlight")
+        r: tonic::Request<pb::TrampolinePayRequest>,
+    ) -> Result<tonic::Response<pb::TrampolinePayResponse>, Status> {
+        debug!("Got a new trampoline pay request {:?}", r);
+        let req = serde_json::to_value(r.into_inner()).map_err(|e| {
+            Status::new(
+                Code::Internal,
+                format!("error parsing request to json {}", e),
+            )
+        })?;
+        debug!("Got a new trampoline pay request {:?}", req);
+        let rpc = self.get_rpc().await;
+        match rpc
+            .call::<serde_json::Value, PayResponse>("trampolinepay", req)
+            .await
+        {
+            Ok(res) => Ok(tonic::Response::new(pb::TrampolinePayResponse {
+                payment_preimage: res.payment_preimage.to_vec(),
+                payment_hash: res.payment_hash.to_hex().into_bytes(),
+                created_at: res.created_at,
+                parts: res.parts,
+                amount_msat: res.amount_msat.msat(),
+                amount_sent_msat: res.amount_sent_msat.msat(),
+                destination: res
+                    .destination
+                    .map(|d| d.to_hex().into_bytes())
+                    .unwrap_or_default(),
+            })),
+            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+        }
     }
 }
 
