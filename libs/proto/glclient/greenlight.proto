@@ -54,6 +54,7 @@ service Node {
 
 	rpc Configure(GlConfig) returns (Empty) {}
 
+	rpc TrampolinePay(TrampolinePayRequest) returns (TrampolinePayResponse) {}
 }
 
 message HsmRequestContext {
@@ -546,4 +547,28 @@ message StreamCustommsgRequest {}
 message Custommsg {
   bytes peer_id = 1;
   bytes payload = 2;
+}
+
+message TrampolinePayRequest {
+	string bolt11 = 1;
+	bytes trampoline_node_id = 2;
+	uint64 amount_msat = 3;
+	string label = 4;
+	float maxfeepercent	= 5;
+	uint32 maxdelay = 6;
+	string description = 7;
+}
+
+message TrampolinePayResponse {
+	enum PayStatus {
+		COMPLETE = 0;
+		FAILED = 2;
+	}
+	bytes payment_preimage = 1;
+	bytes payment_hash = 2;
+	double created_at = 3;
+	uint32 parts = 4;
+	uint64 amount_msat = 5;
+	uint64 amount_sent_msat = 6;
+	bytes destination = 7;
 }

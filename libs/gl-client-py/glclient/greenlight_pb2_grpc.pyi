@@ -95,6 +95,11 @@ class NodeStub:
         glclient.greenlight_pb2.Empty,
     ]
 
+    TrampolinePay: grpc.UnaryUnaryMultiCallable[
+        glclient.greenlight_pb2.TrampolinePayRequest,
+        glclient.greenlight_pb2.TrampolinePayResponse,
+    ]
+
 class NodeAsyncStub:
     """The node service represents your node running on greenlight's
     infrastructure. You can use the exposed RPC methods to interact
@@ -170,6 +175,11 @@ class NodeAsyncStub:
     Configure: grpc.aio.UnaryUnaryMultiCallable[
         glclient.greenlight_pb2.GlConfig,
         glclient.greenlight_pb2.Empty,
+    ]
+
+    TrampolinePay: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.greenlight_pb2.TrampolinePayRequest,
+        glclient.greenlight_pb2.TrampolinePayResponse,
     ]
 
 class NodeServicer(metaclass=abc.ABCMeta):
@@ -260,6 +270,13 @@ class NodeServicer(metaclass=abc.ABCMeta):
         request: glclient.greenlight_pb2.GlConfig,
         context: _ServicerContext,
     ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]: ...
+
+    @abc.abstractmethod
+    def TrampolinePay(
+        self,
+        request: glclient.greenlight_pb2.TrampolinePayRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.greenlight_pb2.TrampolinePayResponse, collections.abc.Awaitable[glclient.greenlight_pb2.TrampolinePayResponse]]: ...
 
 def add_NodeServicer_to_server(servicer: NodeServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
 

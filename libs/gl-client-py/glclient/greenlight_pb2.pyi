@@ -1607,3 +1607,82 @@ class Custommsg(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["payload", b"payload", "peer_id", b"peer_id"]) -> None: ...
 
 global___Custommsg = Custommsg
+
+@typing.final
+class TrampolinePayRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    BOLT11_FIELD_NUMBER: builtins.int
+    TRAMPOLINE_NODE_ID_FIELD_NUMBER: builtins.int
+    AMOUNT_MSAT_FIELD_NUMBER: builtins.int
+    LABEL_FIELD_NUMBER: builtins.int
+    MAXFEEPERCENT_FIELD_NUMBER: builtins.int
+    MAXDELAY_FIELD_NUMBER: builtins.int
+    DESCRIPTION_FIELD_NUMBER: builtins.int
+    bolt11: builtins.str
+    trampoline_node_id: builtins.bytes
+    amount_msat: builtins.int
+    label: builtins.str
+    maxfeepercent: builtins.float
+    maxdelay: builtins.int
+    description: builtins.str
+    def __init__(
+        self,
+        *,
+        bolt11: builtins.str = ...,
+        trampoline_node_id: builtins.bytes = ...,
+        amount_msat: builtins.int = ...,
+        label: builtins.str = ...,
+        maxfeepercent: builtins.float = ...,
+        maxdelay: builtins.int = ...,
+        description: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "bolt11", b"bolt11", "description", b"description", "label", b"label", "maxdelay", b"maxdelay", "maxfeepercent", b"maxfeepercent", "trampoline_node_id", b"trampoline_node_id"]) -> None: ...
+
+global___TrampolinePayRequest = TrampolinePayRequest
+
+@typing.final
+class TrampolinePayResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    class _PayStatus:
+        ValueType = typing.NewType("ValueType", builtins.int)
+        V: typing_extensions.TypeAlias = ValueType
+
+    class _PayStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[TrampolinePayResponse._PayStatus.ValueType], builtins.type):
+        DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
+        COMPLETE: TrampolinePayResponse._PayStatus.ValueType  # 0
+        FAILED: TrampolinePayResponse._PayStatus.ValueType  # 2
+
+    class PayStatus(_PayStatus, metaclass=_PayStatusEnumTypeWrapper): ...
+    COMPLETE: TrampolinePayResponse.PayStatus.ValueType  # 0
+    FAILED: TrampolinePayResponse.PayStatus.ValueType  # 2
+
+    PAYMENT_PREIMAGE_FIELD_NUMBER: builtins.int
+    PAYMENT_HASH_FIELD_NUMBER: builtins.int
+    CREATED_AT_FIELD_NUMBER: builtins.int
+    PARTS_FIELD_NUMBER: builtins.int
+    AMOUNT_MSAT_FIELD_NUMBER: builtins.int
+    AMOUNT_SENT_MSAT_FIELD_NUMBER: builtins.int
+    DESTINATION_FIELD_NUMBER: builtins.int
+    payment_preimage: builtins.bytes
+    payment_hash: builtins.bytes
+    created_at: builtins.float
+    parts: builtins.int
+    amount_msat: builtins.int
+    amount_sent_msat: builtins.int
+    destination: builtins.bytes
+    def __init__(
+        self,
+        *,
+        payment_preimage: builtins.bytes = ...,
+        payment_hash: builtins.bytes = ...,
+        created_at: builtins.float = ...,
+        parts: builtins.int = ...,
+        amount_msat: builtins.int = ...,
+        amount_sent_msat: builtins.int = ...,
+        destination: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "amount_sent_msat", b"amount_sent_msat", "created_at", b"created_at", "destination", b"destination", "parts", b"parts", "payment_hash", b"payment_hash", "payment_preimage", b"payment_preimage"]) -> None: ...
+
+global___TrampolinePayResponse = TrampolinePayResponse
