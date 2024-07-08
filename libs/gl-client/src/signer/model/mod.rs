@@ -75,4 +75,5 @@ pub enum Request {
     Stop(cln::StopRequest),
     ListClosedChannels(cln::ListclosedchannelsRequest),
     StaticBackup(cln::StaticbackupRequest),
+    TrampolinePay(greenlight::TrampolinePayRequest),
 }

@@ -50,11 +50,11 @@ impl Resolver {
             Message::SignAnyDelayedPaymentToUs(_) => true,
             Message::SignAnyLocalHtlcTx(_) => true,
             Message::SignAnyRemoteHtlcToUs(_) => true,
-	    Message::LockOutpoint(_) => true,
-	    Message::CheckOutpoint(_) => true,
-	    Message::SignAnyChannelAnnouncement(_) => true,
-	    Message::RevokeCommitmentTx(_) => true,
-	    Message::ForgetChannel(_) => true,
+            Message::LockOutpoint(_) => true,
+            Message::CheckOutpoint(_) => true,
+            Message::SignAnyChannelAnnouncement(_) => true,
+            Message::RevokeCommitmentTx(_) => true,
+            Message::ForgetChannel(_) => true,
             // Default to rejecting, punting the decision to the next
             // step.
             _ => false,
@@ -100,6 +100,9 @@ impl Resolver {
                     // always be allowed. The bolt11 string have to
                     // match.
                     l.invstring.0 == r.bolt11().as_bytes()
+                }
+                (Message::PreapproveInvoice(l), Request::TrampolinePay(r)) => {
+                    l.invstring.0 == r.bolt11.as_bytes()
                 }
                 (_, _) => false,
             };
