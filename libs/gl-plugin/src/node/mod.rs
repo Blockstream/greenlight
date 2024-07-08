@@ -568,14 +568,13 @@ impl Node for PluginNodeServer {
         &self,
         r: tonic::Request<pb::TrampolinePayRequest>,
     ) -> Result<tonic::Response<pb::TrampolinePayResponse>, Status> {
-        debug!("Got a new trampoline pay request {:?}", r);
         let req = serde_json::to_value(r.into_inner()).map_err(|e| {
             Status::new(
                 Code::Internal,
                 format!("error parsing request to json {}", e),
             )
         })?;
-        debug!("Got a new trampoline pay request {:?}", req);
+
         let rpc = self.get_rpc().await;
         match rpc
             .call::<serde_json::Value, PayResponse>("trampolinepay", req)
