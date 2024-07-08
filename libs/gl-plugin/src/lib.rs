@@ -20,6 +20,7 @@ pub mod rpc;
 pub mod stager;
 pub mod storage;
 pub mod tlv;
+mod tramp;
 #[cfg(unix)]
 mod unix;
 
@@ -106,12 +107,23 @@ pub async fn init(
         .hook("invoice_payment", on_invoice_payment)
         .hook("peer_connected", on_peer_connected)
         .hook("openchannel", on_openchannel)
-        .hook("custommsg", on_custommsg);
+        .hook("custommsg", on_custommsg)
+        .rpcmethod(
+            "trampolinepay",
+            "pay an invoice via a trampoline",
+            on_trampolinepay,
+        );
     Ok(Builder {
         state,
         inner,
         events,
     })
+}
+
+async fn on_trampolinepay(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
+    let req: pb::TrampolinePayRequest = serde_json::from_value(v)?;
+    let res = tramp::trampolinepay(req, plugin.configuration().rpc_file).await?;
+    Ok(serde_json::to_value(res)?)
 }
 
 async fn on_custommsg(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
