@@ -103,6 +103,7 @@ docker-image: ${REPO_ROOT}/docker/gl-testing/Dockerfile
 	  --build-arg DOCKER_USER=$(shell whoami) \
 	  --build-arg UID=$(shell id -u) \
 	  --build-arg GID=$(shell id -g) \
+	  --build-arg GL_TESTING_IGNORE_HASH=1 \
 	  -t gltesting \
 	  -f docker/gl-testing/Dockerfile \
 	  .

@@ -112,13 +112,15 @@ RUN chmod a+rwx -R $CARGO_HOME
 # Download all versions so they can be copied to our dev-container
 FROM python-builder as cln-downloader
 
+ARG GL_TESTING_IGNORE_HASH=0
+
 RUN mkdir -p /opt/cln/
 ENV CLNVM_CACHE_DIR=/opt/cln
 
 ADD libs/cln-version-manager /repo/libs/cln-version-manager
 RUN cd /repo/libs/cln-version-manager; python -m pip install -e .
 
-RUN python -m clnvm get-all
+RUN GL_TESTING_IGNORE_HASH=${GL_TESTING_IGNORE_HASH} python -m clnvm get-all
 
 # -------------------------------------
 # STAGE: bitcoin-downloader
