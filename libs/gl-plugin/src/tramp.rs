@@ -10,11 +10,18 @@ use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+// Feature bit used to signal trampoline support.
+const TRAMPOLINE_FEATURE_BIT: usize = 427;
 // BOLT#4 default value:
 // https://github.com/lightning/bolts/blob/master/04-onion-routing.md#max-htlc-cltv-selection
 const MAX_DELAY_DEFAULT: u32 = 2016;
 // The amount we overpay to allow the trampoline node to spend some fees.
 const DEFAULT_OVERPAY_PERCENT: f32 = 0.5;
+// Type used to address bolt11 in the onion payload.
+const TLV_BOLT11: u64 = 33001;
+// Type used to address the amount in msat in the onion payload, in case 
+// that the bolt11 does not have an amount set.
+const TLV_AMT_MSAT: u64 = 33003;
 
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
@@ -67,7 +74,6 @@ pub async fn trampolinepay(
         return Err(anyhow!("node with id {} is unknown", node_id.to_hex()));
     }
 
-    const TRAMPOLINE_FEATURE_BIT: usize = 427;
     let features = hex::decode(
         res.peers[0]
             .features
@@ -188,10 +194,7 @@ pub async fn trampolinepay(
         })
         .await?;
 
-    // Create TLV
-    const TLV_BOLT11: u64 = 33001;
-    const TLV_AMT_MSAT: u64 = 33003;
-
+    // Create TLV payload.
     use crate::tlv::{SerializedTlvStream, ToBytes};
     let mut payload: SerializedTlvStream = SerializedTlvStream::new();
     payload.set_bytes(TLV_BOLT11, req.bolt11.as_bytes());
