@@ -47,7 +47,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
 
     # Fund greenlight node.
     addr = n1.new_address().bech32
-    print(f"Send o address {addr}")
+    print(f"Send to address {addr}")
     txid = bitcoind.rpc.sendtoaddress(addr, 0.1)
     print(f"Generate a block to confirm {txid}")
     bitcoind.generate_block(1, wait_for_mempool=[txid])
