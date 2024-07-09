@@ -11,7 +11,7 @@ plugin = Plugin(
 def on_htlc_accepted(htlc, onion, plugin, **kwargs):
     plugin.log(f"Got onion {onion}")
 
-    # Stip off custom payload as we are the last hop.
+    # Strip off custom payload as we are the last hop.
     new_payload = onion["payload"][6:102]
     plugin.log(f"Replace onion payload with {new_payload}")
     return {"result": "continue", "payload": new_payload}
