@@ -97,7 +97,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     res2 = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l2.info["id"]))
     ch = n1.list_peer_channels(bytes.fromhex(l2.info["id"])).channels[0]
     assert res2 == res
-    
+
     assert ch.to_us_msat.msat == (1000000000 - (50000000 + 0.005 * 50000000))
     assert len(ch.htlcs) == 0
 
@@ -121,7 +121,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     # trampoline payments must fail.
     with pytest.raises(
         expected_exception=ValueError,
-        match=r"Features \\\\\\\"[a-f0-9]+\\\\\\\" do not contain feature bit 427",
+        match=r"Features \\\"[a-f0-9]+\\\" do not contain feature bit 427",
     ):
         res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l3.info["id"]))
 
