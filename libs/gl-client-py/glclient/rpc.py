@@ -282,6 +282,19 @@ class Node(object):
             bytes(self.inner.call(uri, bytes(req)))
         )
 
+    def del_expired_invoice(
+            self,
+            maxexpirytime=None
+    ):
+        uri = "/cln.Node/DelExpiredInvoice"
+        req = clnpb.DelexpiredinvoiceRequest(
+            maxexpirytime=maxexpirytime
+        ).SerializeToString()
+        res = clnpb.DelexpiredinvoiceResponse
+        return res.FromString(
+            bytes(self.inner.call(uri, bytes(req)))
+        )
+
     def del_invoice(
             self,
             label,

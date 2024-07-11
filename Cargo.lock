@@ -536,21 +536,17 @@ dependencies = [
 
 [[package]]
 name = "cln-grpc"
-version = "0.1.9"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d528ade112e169cbb79ceae2f235b4502fee6e939326bbaa36aafcdfd54cd91c"
+checksum = "85b7b9e8de980dba797a0885b99fda797638d8a207089cb98710d94285e871df"
 dependencies = [
  "anyhow",
  "bitcoin 0.30.2",
  "cln-rpc",
- "futures-core",
  "hex",
  "log",
  "prost 0.11.9",
  "serde",
- "tokio 1.37.0",
- "tokio-stream",
- "tokio-util 0.7.11",
  "tonic 0.8.3",
  "tonic-build 0.8.4",
 ]
@@ -576,9 +572,9 @@ dependencies = [
 
 [[package]]
 name = "cln-rpc"
-version = "0.1.9"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974dac6f40275b7b828087f4f9973c39658f9b4a46cc589c083a2c6c27cf67cb"
+checksum = "2653217d27aee65a670f0c4f340b8f70b1f0b4e1c2fa085afe1b8e24ba12c069"
 dependencies = [
  "anyhow",
  "bitcoin 0.30.2",
@@ -3459,7 +3455,6 @@ dependencies = [
  "futures-core",
  "pin-project-lite 0.2.14",
  "tokio 1.37.0",
- "tokio-util 0.7.11",
 ]
 
 [[package]]

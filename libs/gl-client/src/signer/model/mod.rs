@@ -38,6 +38,7 @@ pub enum Request {
     Datastore(cln::DatastoreRequest),
     CreateOnion(cln::CreateonionRequest),
     DelDatastore(cln::DeldatastoreRequest),
+    DelExpiredInvoice(cln::DelexpiredinvoiceRequest),
     DelInvoice(cln::DelinvoiceRequest),
     Invoice(cln::InvoiceRequest),
     ListDatastore(cln::ListdatastoreRequest),

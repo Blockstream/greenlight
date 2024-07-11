@@ -99,7 +99,7 @@ impl Resolver {
                     // Manually calling preapproveinvoice should
                     // always be allowed. The bolt11 string have to
                     // match.
-                    l.invstring.0 == r.bolt11.as_bytes()
+                    l.invstring.0 == r.bolt11().as_bytes()
                 }
                 (_, _) => false,
             };
