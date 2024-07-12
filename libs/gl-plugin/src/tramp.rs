@@ -114,6 +114,7 @@ pub async fn trampolinepay(
 
     // We need to add some sats to the htlcs to allow the trampoline node
     // to pay fees on routing.
+    let tlv_amount_msat = amount_msat;
     let overpay = amount_msat as f64
         * (as_option(req.maxfeepercent).unwrap_or(DEFAULT_OVERPAY_PERCENT) as f64 / 100 as f64);
     let amount_msat = amount_msat + overpay as u64;
@@ -198,7 +199,7 @@ pub async fn trampolinepay(
     use crate::tlv::{SerializedTlvStream, ToBytes};
     let mut payload: SerializedTlvStream = SerializedTlvStream::new();
     payload.set_bytes(TLV_BOLT11, req.bolt11.as_bytes());
-    payload.set_tu64(TLV_AMT_MSAT, amount_msat);
+    payload.set_tu64(TLV_AMT_MSAT, tlv_amount_msat);
     let payload_hex = hex::encode(SerializedTlvStream::to_bytes(payload));
 
     let mut part_id = if choosen.len() == 1 { 0 } else { 1 };

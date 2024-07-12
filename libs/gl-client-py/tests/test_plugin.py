@@ -75,13 +75,23 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     # create invoice and pay via trampoline. Trampoline is actually the
     # same node as the destination but we don't care as we just want to
     # test the business logic.
+    invoice_preimage = (
+        "17b08f669513b7379728fc1abcea5eaf3448bc1eba55a68ca2cd1843409cdc04"
+    )
     inv = l2.rpc.invoice(
         amount_msat=50000000,
         label="trampoline-pay-test",
         description="trampoline-pay-test",
+        preimage=invoice_preimage,
     )
+    l2.rpc.setpaymentkey(invoice_preimage)
+    l2.rpc.setcheckinvoice(inv["bolt11"])
+    l2.rpc.setcheckamount(50000000)
+
     res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l2.info["id"]))
     assert res
+
+    l2.rpc.unsetchecks()
 
     # settle channel htlcs
     bitcoind.generate_block(10)

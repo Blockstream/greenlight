@@ -190,3 +190,20 @@ impl<'de> Deserialize<'de> for SerializedTlvStream {
         Self::from_bytes(b.into_inner()).map_err(|e| serde::de::Error::custom(e.to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tlv_stream() {
+        let raw_hex = "fd80e9fd01046c6e62633130306e31706e6670757a677070356a73376e653571727465326d707874666d7a703638667838676a7376776b3034366c76357a76707a7832766d687478683763777364717163717a7a737871797a3576717370357a6d6b78726539686d6864617378336b75357070336a38366472337778656b78336437383363706c6161363068783870357564733971787071797367717132646c68656177796c677534346567393363766e78666e64747a646a6e647465666b726861727763746b3368783766656e67346179746e6a3277686d74716665636a7930776777396c6665727072386b686d64667771736e386d6d7a3776643565776a34756370656439787076fd80eb022742";
+        let raw = hex::decode(&raw_hex).unwrap();
+        let tlv_stream = SerializedTlvStream::from_bytes(raw).unwrap();
+        let invoice = tlv_stream.get(33001);
+        let amount_msat = tlv_stream.get(33003);
+        assert!(invoice.is_some());
+        assert!(amount_msat
+            .is_some_and(|v| u16::from_be_bytes(v.value[..].try_into().unwrap()) == 10050));
+    }
+}
