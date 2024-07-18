@@ -316,7 +316,7 @@ impl Signer {
         }
 
         // Currently we only use a 0 unique_id and a pubkey field to allow
-        // for delegation in the future but we could also set the public 
+        // for delegation in the future but we could also set the public
         // key as the unique_id in the future and add a method that allows
         // to create new empty runes.
         let unique_id = rune.get_id();
@@ -527,7 +527,7 @@ impl Signer {
         log::trace!("State updated");
 
         // Match over root and client handler.
-        let response = match req.context {
+        let response = match req.context.clone() {
             Some(HsmRequestContext { dbid: 0, .. }) | None => {
                 // This is the main daemon talking to us.
                 root_handler.handle(msg)
@@ -539,15 +539,24 @@ impl Signer {
                     .for_new_client(1 as u64, pk, c.dbid)
                     .handle(msg)
             }
-        }
-        .map_err(|e| Error::Other(anyhow!("processing request: {e:?}")))?;
+        };
 
+        if let Err(e) = response {
+            report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                msg: format!("{:?}", e),
+                request: Some(req.clone()),
+                git_version: GITHASH.to_string(),
+            })
+            .await;
+            return Err(Error::Other(anyhow!("processing request: {e:?}")));
+        }
+
+        let response = response.unwrap();
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
             let state = self.state.lock().unwrap();
             state.clone().into()
         };
-
         Ok(HsmResponse {
             raw: response.0.as_vec(),
             request_id: req.request_id,
