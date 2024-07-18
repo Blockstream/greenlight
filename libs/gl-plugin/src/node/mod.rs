@@ -394,6 +394,13 @@ impl Node for PluginNodeServer {
         request: Request<pb::HsmResponse>,
     ) -> Result<Response<pb::Empty>, Status> {
         let req = request.into_inner();
+
+	if req.error != "" {
+	    log::error!("Signer reports an error: {}", req.error);
+	    log::warn!("The above error was returned instead of a response.");
+	    return Ok(Response::new(pb::Empty::default()));
+	}
+
         // Create a state from the key-value-version tuples. Need to
         // convert here, since `pb` is duplicated in the two different
         // crates.
