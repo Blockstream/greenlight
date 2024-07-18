@@ -397,6 +397,7 @@ impl Signer {
                     return Ok(());
                 }
             };
+            let request_id = req.request_id;
             let hex_req = hex::encode(&req.raw);
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
@@ -410,6 +411,16 @@ impl Signer {
                         .map_err(|e| Error::NodeDisconnect(e))?;
                 }
                 Err(e) => {
+                    let response = HsmResponse {
+                        raw: vec![],
+                        request_id,
+                        error: format!("{:?}", e),
+                        signer_state: vec![],
+                    };
+                    client
+                        .respond_hsm_request(response)
+                        .await
+                        .map_err(|e| Error::NodeDisconnect(e))?;
                     warn!(
                         "Ignoring error {} for request {} with state {:?}",
                         e, hex_req, signer_state,
@@ -561,6 +572,7 @@ impl Signer {
             raw: response.0.as_vec(),
             request_id: req.request_id,
             signer_state,
+            error: "".to_owned(),
         })
     }
 

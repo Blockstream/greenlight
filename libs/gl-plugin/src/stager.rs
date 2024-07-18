@@ -176,6 +176,7 @@ mod test {
                         request_id: r.request.request_id,
                         raw: vec![],
                         signer_state: vec![],
+                        error: "".into(),
                     })
                     .await
                 {
@@ -194,6 +195,7 @@ mod test {
                         request_id: r.request.request_id,
                         raw: vec![],
                         signer_state: vec![],
+                        error: "".into(),
                     })
                     .await
                 {
