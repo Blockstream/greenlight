@@ -2,6 +2,7 @@ import time
 from fixtures import *
 from glclient.pairing import NewDeviceClient, AttestationDeviceClient
 from glclient import Credentials
+import glclient.scheduler_pb2 as schedpb
 import pytest
 
 @pytest.fixture
@@ -35,6 +36,7 @@ def test_pairing_session(sclient, signer, creds):
     device_id = m.split(':')[1]
     ac = AttestationDeviceClient(creds=creds)
     m = ac.get_pairing_data(device_id)
+    assert(isinstance(m, schedpb.GetPairingDataResponse))
     assert m.device_id
     assert m.csr
     assert m.device_name == name
