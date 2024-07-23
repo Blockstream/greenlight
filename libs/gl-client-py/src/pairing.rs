@@ -1,4 +1,4 @@
-use crate::credentials::Credentials;
+use crate::credentials::{self, Credentials};
 use crate::runtime::exec;
 use bytes::BufMut;
 use gl_client::pairing::{attestation_device, new_device, PairingSessionData};
@@ -40,7 +40,7 @@ impl NewDeviceClient {
 
 #[pyclass]
 pub struct AttestationDeviceClient {
-    inner: attestation_device::Client<attestation_device::Connected>,
+    inner: attestation_device::Client<attestation_device::Connected, credentials::PyCredentials>,
 }
 
 #[pymethods]
@@ -64,20 +64,22 @@ impl AttestationDeviceClient {
     fn approve_pairing(
         &self,
         device_id: &str,
-        node_id: &[u8],
         device_name: &str,
         restrs: &str,
     ) -> Result<Vec<u8>> {
         Ok(convert(exec(async move {
             self.inner
-                .approve_pairing(device_id, node_id, device_name, restrs)
+                .approve_pairing(device_id, device_name, restrs)
                 .await
         }))?)
     }
 
     fn verify_pairing_data(&self, data: Vec<u8>) -> Result<()> {
         let pd = GetPairingDataResponse::decode(&data[..])?;
-        Ok(attestation_device::Client::verify_pairing_data(pd)?)
+        Ok(attestation_device::Client::<
+            attestation_device::Connected,
+            credentials::PyCredentials,
+        >::verify_pairing_data(pd)?)
     }
 }
 
