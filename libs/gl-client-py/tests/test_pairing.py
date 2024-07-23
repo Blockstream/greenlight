@@ -46,7 +46,6 @@ def test_pairing_session(sclient, signer, creds):
     # and with our rune.
     ac.approve_pairing(
         m.session_id,
-        signer.node_id(),
         m.device_name,
         m.restrictions
     )

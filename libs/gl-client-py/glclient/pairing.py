@@ -1,4 +1,3 @@
-from . import TlsConfig
 from . import scheduler_pb2 as schedpb
 from google.protobuf.wrappers_pb2 import StringValue
 import glclient.glclient as native
@@ -57,9 +56,9 @@ class AttestationDeviceClient(object):
         return schedpb.GetPairingDataResponse.FromString(bytes(res))
 
     def approve_pairing(
-        self, session_id: str, node_id: bytes, device_name: str, restrs: str
+        self, session_id: str, device_name: str, restrs: str
     ):
-        self.inner.approve_pairing(session_id, node_id, device_name, restrs)
+        self.inner.approve_pairing(session_id, device_name, restrs)
 
     def verify_pairing_data(self, data: schedpb.GetPairingDataRequest):
         self.inner.verify_pairing_data(data.SerializeToString())
