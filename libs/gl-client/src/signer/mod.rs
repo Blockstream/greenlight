@@ -99,6 +99,9 @@ pub enum Error {
 
     #[error("other: {0}")]
     Other(anyhow::Error),
+
+    #[error("could not approve pairing request: {0}")]
+    ApprovePairingRequestError(String),
 }
 
 impl Signer {
@@ -822,8 +825,12 @@ impl Signer {
                     trace!("Processing scheduler request {}", req_id);
                     match msg.request {
                         Some(signer_request::Request::ApprovePairing(req)) => {
-                            self.process_pairing_approval(req_id, req, sender.clone())
+                            if let Err(e) = self
+                                .process_pairing_approval(req_id, req, sender.clone())
                                 .await
+                            {
+                                debug!("Could not process pairing approval: {:?}", e);
+                            }
                         }
                         None => {
                             debug!("Received an empty signing request");
@@ -847,7 +854,7 @@ impl Signer {
         req_id: u32,
         req: ApprovePairingRequest,
         stream: mpsc::Sender<SignerResponse>,
-    ) -> () {
+    ) -> Result<()> {
         // Can only sign for it's own id!
         let node_id = self.node_id();
 
@@ -860,38 +867,23 @@ impl Signer {
 
         // Check that the signature matches
         let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, req.pubkey.clone());
-        if pk.verify(&data, &req.sig).is_err() {
-            debug!("Got an invalid signature processing pairing approval");
-            return;
-        }
+        pk.verify(&data, &req.sig)
+            .map_err(|e| Error::ApprovePairingRequestError(e.to_string()))?;
 
         // Decode rune as we expect it to be in byte format in the pending request.
-        let rune = match general_purpose::URL_SAFE.decode(req.rune.clone()) {
-            Ok(r) => r,
-            Err(e) => {
-                debug!("Could not decode rune processing pairing approval {}", e);
-                return;
-            }
-        };
+        let rune = general_purpose::URL_SAFE
+            .decode(req.rune.clone())
+            .map_err(|e| Error::ApprovePairingRequestError(e.to_string()))?;
 
         // Check that the rune matches
-        match self.verify_rune(PendingRequest {
+        self.verify_rune(PendingRequest {
             request: vec![],
             uri: "/cln.Node/ApprovePairing".to_string(),
             signature: req.sig,
             pubkey: req.pubkey,
             timestamp: req.timestamp,
             rune,
-        }) {
-            Ok(_) => (),
-            Err(e) => {
-                debug!(
-                    "Got an invalid rune {} processing pairing approval {}",
-                    req.rune, e
-                );
-                return;
-            }
-        };
+        })?;
 
         let restrs: Vec<Vec<&str>> = req
             .restrictions
@@ -900,15 +892,9 @@ impl Signer {
             .collect();
 
         // Create the rune that approves pairing
-        let rune = match self.create_rune(None, restrs) {
-            Ok(r) => r,
-            Err(e) => {
-                debug!("Could not create rune during pairing approval {}", e);
-                return;
-            }
-        };
+        let rune = self.create_rune(None, restrs)?;
 
-        match stream
+        let _ = stream
             .send(SignerResponse {
                 request_id: req_id,
                 response: Some(signer_response::Response::ApprovePairing(
@@ -919,14 +905,9 @@ impl Signer {
                     },
                 )),
             })
-            .await
-        {
-            Ok(_) => (),
-            Err(e) => debug!(
-                "Could not respond to stream during pairing approval {:?}",
-                e
-            ),
-        };
+            .await?;
+
+        Ok(())
     }
 
     // TODO See comment on `sign_device_key`.
