@@ -18,7 +18,6 @@ use ring::{
     rand,
     signature::{self, EcdsaKeyPair, KeyPair},
 };
-
 use rustls_pemfile as pemfile;
 use tonic::transport::Channel;
 
@@ -165,7 +164,7 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> 
                 Ok(())
             } else {
                 Err(Error::VerifyPairingDataError(format!(
-                    "public key {} does not match pk {}",
+                    "device id {} does not match public key {}",
                     data.device_id, pk
                 )))
             }
