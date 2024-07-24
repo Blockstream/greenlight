@@ -20,8 +20,6 @@ class NewDeviceClient(object):
         typ, msg = m[0], m[1:]
         conv = msgs.get(typ, None)
 
-        print(f"GOT m {m}, typ {typ}, msg {msg}")
-
         if conv is None:
             raise ValueError(f"Unknown message type {typ}")
         elif conv is str:
