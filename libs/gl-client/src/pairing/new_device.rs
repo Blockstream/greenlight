@@ -61,7 +61,7 @@ impl Client<Connected> {
         description: &str,
         restrictions: &str,
     ) -> Result<mpsc::Receiver<PairingSessionData>> {
-        debug!("start a new pairing request");
+        debug!("Start a new pairing request");
 
         let device_name = name.to_string();
         let description = description.to_string();
