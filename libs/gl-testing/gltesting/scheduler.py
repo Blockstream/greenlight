@@ -446,7 +446,8 @@ class PairingServicer(schedgrpc.PairingServicer):
         self.sessions[req.device_id] = data
 
         # Wait for the Approval from the signer.
-        await self.recv_once(self.stream_in)
+        data = await self.recv_once(self.stream_in)
+        assert(isinstance(data, schedpb.SignerResponse))
         
         device_cert = certs.gencert_from_csr(req.csr, recover=False, pairing=True)
         return schedpb.PairDeviceResponse(
