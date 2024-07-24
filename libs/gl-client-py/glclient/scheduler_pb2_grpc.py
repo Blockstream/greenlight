@@ -133,6 +133,11 @@ class SchedulerStub(object):
                 request_serializer=glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest.SerializeToString,
                 response_deserializer=glclient_dot_scheduler__pb2.WebhookSecretResponse.FromString,
                 _registered_method=True)
+        self.SignerRequestsStream = channel.stream_stream(
+                '/scheduler.Scheduler/SignerRequestsStream',
+                request_serializer=glclient_dot_scheduler__pb2.SignerResponse.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.SignerRequest.FromString,
+                _registered_method=True)
 
 
 class SchedulerServicer(object):
@@ -339,6 +344,18 @@ class SchedulerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def SignerRequestsStream(self, request_iterator, context):
+        """Attaches a Signer  via a bidirectional stream to the scheduler. 
+        This is a communication channel between greenlight and the signing
+        device that is used for requests that are not part of the node api.
+
+        The stream is used to hand out the ApprovePairingRequests that
+        the signer answers with a ApprovePairingResponse.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SchedulerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -401,6 +418,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     servicer.RotateOutgoingWebhookSecret,
                     request_deserializer=glclient_dot_scheduler__pb2.RotateOutgoingWebhookSecretRequest.FromString,
                     response_serializer=glclient_dot_scheduler__pb2.WebhookSecretResponse.SerializeToString,
+            ),
+            'SignerRequestsStream': grpc.stream_stream_rpc_method_handler(
+                    servicer.SignerRequestsStream,
+                    request_deserializer=glclient_dot_scheduler__pb2.SignerResponse.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.SignerRequest.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -770,6 +792,33 @@ class Scheduler(object):
             metadata,
             _registered_method=True)
 
+    @staticmethod
+    def SignerRequestsStream(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/scheduler.Scheduler/SignerRequestsStream',
+            glclient_dot_scheduler__pb2.SignerResponse.SerializeToString,
+            glclient_dot_scheduler__pb2.SignerRequest.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
 
 class DebugStub(object):
     """A service to collect debugging information from clients.
@@ -841,6 +890,176 @@ class Debug(object):
             target,
             '/scheduler.Debug/ReportSignerRejection',
             glclient_dot_scheduler__pb2.SignerRejection.SerializeToString,
+            glclient_dot_greenlight__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+
+class PairingStub(object):
+    """A service to pair signer-less clients with an existing signer.
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.PairDevice = channel.unary_unary(
+                '/scheduler.Pairing/PairDevice',
+                request_serializer=glclient_dot_scheduler__pb2.PairDeviceRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.PairDeviceResponse.FromString,
+                _registered_method=True)
+        self.GetPairingData = channel.unary_unary(
+                '/scheduler.Pairing/GetPairingData',
+                request_serializer=glclient_dot_scheduler__pb2.GetPairingDataRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.GetPairingDataResponse.FromString,
+                _registered_method=True)
+        self.ApprovePairing = channel.unary_unary(
+                '/scheduler.Pairing/ApprovePairing',
+                request_serializer=glclient_dot_scheduler__pb2.ApprovePairingRequest.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
+                _registered_method=True)
+
+
+class PairingServicer(object):
+    """A service to pair signer-less clients with an existing signer.
+    """
+
+    def PairDevice(self, request, context):
+        """Initiates a new Pairing Sessions. This is called by the new
+        device that wants to request a pairing from an existing device.
+        The session lifetime is bound to the stream so closing the
+        stream destroys the session.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetPairingData(self, request, context):
+        """Returns the pairing related data that belongs to a pairing
+        session. This is meant to be called from a device that can
+        approve a pairing request, we sometimes call it "old device".
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ApprovePairing(self, request, context):
+        """Approves a pairing request. The ApprovePairingRequest is
+        forwarded to a signer for further processing.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_PairingServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'PairDevice': grpc.unary_unary_rpc_method_handler(
+                    servicer.PairDevice,
+                    request_deserializer=glclient_dot_scheduler__pb2.PairDeviceRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.PairDeviceResponse.SerializeToString,
+            ),
+            'GetPairingData': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetPairingData,
+                    request_deserializer=glclient_dot_scheduler__pb2.GetPairingDataRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.GetPairingDataResponse.SerializeToString,
+            ),
+            'ApprovePairing': grpc.unary_unary_rpc_method_handler(
+                    servicer.ApprovePairing,
+                    request_deserializer=glclient_dot_scheduler__pb2.ApprovePairingRequest.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'scheduler.Pairing', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('scheduler.Pairing', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class Pairing(object):
+    """A service to pair signer-less clients with an existing signer.
+    """
+
+    @staticmethod
+    def PairDevice(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/scheduler.Pairing/PairDevice',
+            glclient_dot_scheduler__pb2.PairDeviceRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.PairDeviceResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetPairingData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/scheduler.Pairing/GetPairingData',
+            glclient_dot_scheduler__pb2.GetPairingDataRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.GetPairingDataResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ApprovePairing(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/scheduler.Pairing/ApprovePairing',
+            glclient_dot_scheduler__pb2.ApprovePairingRequest.SerializeToString,
             glclient_dot_greenlight__pb2.Empty.FromString,
             options,
             channel_credentials,
