@@ -1,4 +1,3 @@
-# from gltesting.fixtures import Client
 from gltesting.fixtures import *
 from pyln.testing.utils import wait_for
 from pyln import grpc as clnpb
