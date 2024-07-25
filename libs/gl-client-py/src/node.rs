@@ -60,7 +60,7 @@ impl Node {
     fn trampoline_pay(
         &self,
         bolt11: String,
-        trmp_node_id: Vec<u8>,
+        trampoline_node_id: Vec<u8>,
         amount_msat: Option<u64>,
         label: Option<String>,
         maxfeepercent: Option<f32>,
@@ -69,7 +69,7 @@ impl Node {
     ) -> PyResult<Vec<u8>> {
         let req = pb::TrampolinePayRequest {
             bolt11,
-            trmp_node_id,
+            trampoline_node_id,
             amount_msat: amount_msat.unwrap_or_default(),
             label: label.unwrap_or_default(),
             maxfeepercent: maxfeepercent.unwrap_or_default(),
