@@ -19,7 +19,7 @@ const MAX_DELAY_DEFAULT: u32 = 2016;
 const DEFAULT_OVERPAY_PERCENT: f32 = 0.5;
 // Type used to address bolt11 in the onion payload.
 const TLV_BOLT11: u64 = 33001;
-// Type used to address the amount in msat in the onion payload, in case 
+// Type used to address the amount in msat in the onion payload, in case
 // that the bolt11 does not have an amount set.
 const TLV_AMT_MSAT: u64 = 33003;
 
@@ -53,11 +53,11 @@ pub async fn trampolinepay(
     req: pb::TrampolinePayRequest,
     rpc_path: impl AsRef<Path>,
 ) -> Result<cln_rpc::model::responses::PayResponse> {
-    let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trmp_node_id[..])?;
+    let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trampoline_node_id[..])?;
 
     log::debug!(
         "New trampoline payment via {}: {} ",
-        hex::encode(req.trmp_node_id),
+        hex::encode(req.trampoline_node_id),
         req.bolt11.clone()
     );
 

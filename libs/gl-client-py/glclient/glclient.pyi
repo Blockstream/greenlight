@@ -76,7 +76,7 @@ class Node:
     def trampoline_pay(
         self,
         bolt11: str,
-        trmp_node_id: bytes,
+        trampoline_node_id: bytes,
         amount_msat: Optional[int] = None,
         label: Optional[str] = None,
     ) -> bytes: ...
