@@ -19,6 +19,8 @@ pub mod responses;
 pub mod rpc;
 pub mod stager;
 pub mod storage;
+pub mod tlv;
+mod tramp;
 #[cfg(unix)]
 mod unix;
 
@@ -106,6 +108,7 @@ pub async fn init(
         .hook("peer_connected", on_peer_connected)
         .hook("openchannel", on_openchannel)
         .hook("custommsg", on_custommsg);
+
     Ok(Builder {
         state,
         inner,

@@ -3,9 +3,13 @@ use crate::pb::cln::node_client as cln_client;
 use crate::pb::node_client::NodeClient;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, ScheduleRequest};
 use crate::tls::TlsConfig;
-use crate::utils;
+use crate::{pb, utils};
 use anyhow::{anyhow, Result};
+use futures::StreamExt;
 use log::{debug, info, trace};
+use std::ops::{Deref, DerefMut};
+use tokio::sync::oneshot;
+use tokio::task::JoinHandle;
 use tonic::transport::{Channel, Uri};
 use tower::ServiceBuilder;
 
@@ -13,7 +17,7 @@ use tower::ServiceBuilder;
 /// infrastructure. It is configured to authenticate itself with the
 /// device mTLS keypair and will sign outgoing requests with the same
 /// mTLS keypair.
-pub type Client = NodeClient<service::AuthService>;
+pub type GLClient = NodeClient<service::AuthService>;
 
 pub type GClient = GenericClient<service::AuthService>;
 
@@ -23,6 +27,84 @@ pub trait GrpcClient {
     fn new_with_inner(inner: service::AuthService) -> Self;
 }
 
+pub trait TrampolineClient {
+    fn trampoline_pay(&self) -> ();
+}
+
+/// A wrapper for a `pb::greenlight` grpc node client that adds some custom
+/// mehtods. It dereferences to the original tonic client stub.
+#[derive(Clone)]
+pub struct Client {
+    inner: GLClient,
+}
+
+impl Client {
+    /// Is the same as `trampoline_pay` but keeps the grpc connection busy by 
+    /// streaming the node logs as long as the trampoline_pay is inflight to
+    /// prevent an early timeout that would result in a transport error.
+    pub async fn trampoline_pay_keepalive(
+        &mut self,
+        request: impl tonic::IntoRequest<pb::greenlight::TrampolinePayRequest>,
+    ) -> Result<tonic::Response<pb::greenlight::TrampolinePayResponse>, tonic::Status> {
+        let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
+        let mut inner = self.inner.clone();
+
+        let keep_alive_handle: JoinHandle<Result<(), tonic::Status>> = tokio::spawn(async move {
+            let mut log_stream = inner
+                .stream_log(pb::greenlight::StreamLogRequest {})
+                .await?
+                .into_inner();
+
+            loop {
+                tokio::select! {
+                    _msg = &mut log_stream.next() => {
+                        continue;
+                    }
+                    _ = &mut stop_rx => {
+                        break;
+                    }
+                };
+            }
+
+            Ok(())
+        });
+
+        let res = self.inner.trampoline_pay(request).await;
+        if let Err(_) = stop_tx.send(()) {
+            debug!("could not send stop request to keep_alive_handle");
+        };
+        if let Err(err) = keep_alive_handle.await {
+            debug!("keep_alive_handle returned an error {}", err.to_string());
+        };
+        res
+    }
+
+    pub fn into_inner(self) -> GLClient {
+        self.inner
+    }
+}
+
+impl Deref for Client {
+    type Target = GLClient;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for Client {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl GrpcClient for Client {
+    fn new_with_inner(inner: service::AuthService) -> Self {
+        Self {
+            inner: GLClient::new(inner),
+        }
+    }
+}
 /// A builder to configure a [`Client`] that can either connect to a
 /// node directly, assuming you have the `grpc_uri` that the node is
 /// listening on, or it can talk to the
@@ -36,9 +118,9 @@ pub struct Node {
     rune: String,
 }
 
-impl GrpcClient for Client {
+impl GrpcClient for GLClient {
     fn new_with_inner(inner: service::AuthService) -> Self {
-        Client::new(inner)
+        GLClient::new(inner)
     }
 }
 

@@ -703,8 +703,8 @@ impl GlNode for WrappedNodeServer {
 
     async fn trampoline_pay(
         &self,
-        _request: Request<crate::pb::TrampolinePayRequest>,
-    ) -> Result<Response<crate::pb::TrampolinePayResponse>, Status> {
-        unimplemented!("Is currently not implemented by greenlight")
+        request: tonic::Request<crate::pb::TrampolinePayRequest>,
+    ) -> Result<tonic::Response<crate::pb::TrampolinePayResponse>, Status> {
+        self.node_server.trampoline_pay(request).await
     }
 }
