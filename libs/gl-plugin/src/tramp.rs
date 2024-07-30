@@ -22,6 +22,10 @@ const TLV_BOLT11: u64 = 33001;
 // Type used to address the amount in msat in the onion payload, in case
 // that the bolt11 does not have an amount set.
 const TLV_AMT_MSAT: u64 = 33003;
+// Error Message that CLN returns on an unknown onion error. This is the
+// case when the trampoline server rejected with a custom error type.
+const PAY_UNPARSEABLE_ONION_MSG: &str = "Malformed error reply";
+const PAY_UNPARSEABLE_ONION_CODE: i32 = 202;
 
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
@@ -324,8 +328,17 @@ async fn do_pay(
         })
         .await
     {
-        Ok(r) => Ok(r),
-        Err(e) => Err(anyhow!(e.to_string())),
+        Ok(v) => Ok(v),
+        Err(e) => {
+            if let Some(code) = e.code {
+                if code == PAY_UNPARSEABLE_ONION_CODE {
+                    return Err(anyhow!("trampoline payment failed by the server"));
+                }
+            } else if e.message == PAY_UNPARSEABLE_ONION_MSG {
+                return Err(anyhow!("trampoline payment failed by the server"));
+            }
+            Err(e.into())
+        }
     }
 }
 
