@@ -415,28 +415,27 @@ impl Node for PluginNodeServer {
             .collect();
         let new_state: gl_client::persist::State = signer_state.into();
 
-        {
-            // Apply state changes to the in-memory state
-            let mut state = self.signer_state.lock().await;
-            state.merge(&new_state).map_err(|e| {
-                Status::new(
-                    Code::Internal,
-                    format!("Error updating internal state: {e}"),
-                )
-            })?;
+        // Apply state changes to the in-memory state
+        let mut state = self.signer_state.lock().await;
+        state.merge(&new_state).map_err(|e| {
+            Status::new(
+                Code::Internal,
+                format!("Error updating internal state: {e}"),
+            )
+        })?;
 
-            // Send changes to the signer_state_store for persistence
-            self.signer_state_store
-                .lock()
-                .await
-                .write(state.clone())
-                .await
-                .map_err(|e| {
-                    Status::new(
-                        Code::Internal,
-                        format!("error persisting state changes: {}", e),
-                    )
-                })?;
+        // Send changes to the signer_state_store for persistence
+        let store = self.signer_state_store.lock().await;
+        if let Err(e) = store.write(state.clone()).await {
+            log::warn!(
+                "The returned state could not be stored. Ignoring response for request_id={}, error={:?}",
+                req.request_id, e
+            );
+            /* Exit here so we don't end up committing the changes
+             * to CLN, but not to the state store. That'd cause
+             * drifts in states that are very hard to debug, and
+             * harder to correct. */
+            return Ok(Response::new(pb::Empty::default()));
         }
 
         if let Err(e) = self.stage.respond(req).await {
