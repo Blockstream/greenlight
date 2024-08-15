@@ -6,7 +6,6 @@ use serde_json::json;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tokio::sync::Mutex;
 
 pub mod config;
 pub mod hsm;
@@ -28,7 +27,6 @@ mod context;
 
 #[derive(Clone)]
 pub struct GlPlugin {
-    rpc: Arc<Mutex<LightningClient>>,
     stage: Arc<stager::Stage>,
     events: broadcast::Sender<Event>,
 }
@@ -94,11 +92,8 @@ pub async fn init(
     stage: Arc<stager::Stage>,
     events: tokio::sync::broadcast::Sender<Event>,
 ) -> Result<Builder> {
-    let rpc = Arc::new(Mutex::new(LightningClient::new("lightning-rpc")));
-
     let state = GlPlugin {
         events: events.clone(),
-        rpc,
         stage,
     };
 
@@ -161,12 +156,9 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
 async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
     debug!("Received an openchannel request: {:?}", v);
     let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
-    
-    let req = cln_rpc::model::requests::ListdatastoreRequest{
-        key: Some(vec![
-            "glconf".to_string(),
-            "request".to_string(),
-        ])
+
+    let req = cln_rpc::model::requests::ListdatastoreRequest {
+        key: Some(vec!["glconf".to_string(), "request".to_string()]),
     };
 
     let res = rpc.call_typed(&req).await;
@@ -177,13 +169,17 @@ async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_js
             if !res.datastore.is_empty() {
                 match &res.datastore[0].string {
                     Some(serialized_request) => {
-                        match _parse_gl_config_from_serialized_request(serialized_request.to_string()) {
+                        match _parse_gl_config_from_serialized_request(
+                            serialized_request.to_string(),
+                        ) {
                             Some(gl_config) => {
-                                return Ok(json!({"result": "continue", "close_to":  gl_config.close_to_addr}));
+                                return Ok(
+                                    json!({"result": "continue", "close_to":  gl_config.close_to_addr}),
+                                );
                             }
                             None => {
                                 debug!("Failed to parse the GlConfig from the serialized request's payload");
-                            }  
+                            }
                         }
                     }
                     None => {
@@ -192,10 +188,13 @@ async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_js
                 }
             }
 
-            return Ok(json!({"result": "continue"}))
+            return Ok(json!({"result": "continue"}));
         }
         Err(e) => {
-            log::debug!("An error occurred while searching for a custom close_to address: {}", e);
+            log::debug!(
+                "An error occurred while searching for a custom close_to address: {}",
+                e
+            );
             Ok(json!({"result": "continue"}))
         }
     }
@@ -231,20 +230,18 @@ async fn on_invoice_payment(plugin: Plugin, v: serde_json::Value) -> Result<serd
         }
     };
 
-    let rpc = state.rpc.lock().await.clone();
-    let req = requests::ListInvoices {
+    let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
+    let req = cln_rpc::model::requests::ListinvoicesRequest {
         label: Some(call.payment.label.clone()),
+        index: None,
         invstring: None,
+        limit: None,
+        offer_id: None,
         payment_hash: None,
+        start: None,
     };
 
-    let invoice = match rpc
-        .call::<_, responses::ListInvoices>("listinvoices", req)
-        .await
-        .unwrap()
-        .invoices
-        .pop()
-    {
+    let invoice = match rpc.call_typed(&req).await.unwrap().invoices.pop() {
         Some(i) => i,
         None => {
             warn!(
@@ -260,7 +257,9 @@ async fn on_invoice_payment(plugin: Plugin, v: serde_json::Value) -> Result<serd
         invoice
     );
 
-    let amount: pb::Amount = call.payment.amount.try_into().unwrap();
+    let amount: pb::Amount = pb::Amount {
+        unit: Some(pb::amount::Unit::Millisatoshi(call.payment.amount)),
+    };
 
     let mut tlvs = vec![];
 
@@ -268,12 +267,16 @@ async fn on_invoice_payment(plugin: Plugin, v: serde_json::Value) -> Result<serd
         tlvs.push(t.into());
     }
     use crate::pb::incoming_payment::Details;
+    #[allow(deprecated)]
     let details = pb::OffChainPayment {
         label: invoice.label,
         preimage: hex::decode(call.payment.preimage).unwrap(),
         amount: Some(amount.try_into().unwrap()),
+        amount_msat: invoice
+            .amount_msat
+            .map(|a| crate::pb::ClnAmount { msat: a.msat() }),
         extratlvs: tlvs,
-        bolt11: invoice.bolt11,
+        bolt11: invoice.bolt11.unwrap_or_default(),
         payment_hash: hex::decode(invoice.payment_hash).unwrap(),
     };
 

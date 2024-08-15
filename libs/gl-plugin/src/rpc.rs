@@ -1,10 +1,10 @@
-use crate::{requests, responses};
+use crate::requests;
 use clightningrpc::Response;
 use cln_rpc::codec::JsonCodec;
 use futures::{SinkExt, StreamExt};
 use log::{debug, error, warn};
 use serde::{de::DeserializeOwned, Serialize};
-use serde_json::{json, Deserializer, Value};
+use serde_json::{json, Deserializer};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::net::UnixStream;

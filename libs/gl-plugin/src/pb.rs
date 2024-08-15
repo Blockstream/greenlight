@@ -43,14 +43,6 @@ impl HsmRequest {
     }
 }
 
-impl From<u64> for Amount {
-    fn from(i: u64) -> Self {
-        Amount {
-            unit: Some(amount::Unit::Millisatoshi(i)),
-        }
-    }
-}
-
 impl From<messages::TlvField> for TlvField {
     fn from(f: messages::TlvField) -> TlvField {
         TlvField {

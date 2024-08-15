@@ -98,6 +98,12 @@ service Hsm {
 	rpc Ping(Empty) returns (Empty) {}
 }
 
+// This message is a copy of the cln.Amount, used here while migrating to the CLN generated messages. We deprecate the custom one below, and add the 
+message ClnAmount {
+	uint64 msat = 1;
+}
+
+// Deprecated: Use the ClnAmount above instead.
 message Amount {
 	oneof unit {
 		uint64 millisatoshi = 1;
@@ -122,10 +128,11 @@ message TlvField {
 message OffChainPayment {
 	string label = 1;
 	bytes preimage = 2;
-	Amount amount = 3;
+	Amount amount = 3 [deprecated=true];
 	repeated TlvField extratlvs = 4;
 	bytes payment_hash = 5;
 	string bolt11 = 6;
+  ClnAmount amount_msat = 7;
 }
 
 message IncomingPayment {
