@@ -129,6 +129,7 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
     serde_json::to_value(res).context("serialize result")
 }
 
+
 use hex::FromHex;
 use serde::{Deserializer, Serializer};
 
