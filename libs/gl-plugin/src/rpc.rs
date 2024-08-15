@@ -113,23 +113,6 @@ impl LightningClient {
         self.call("getinfo", json!({})).await
     }
 
-    pub async fn stop(&self) -> Result<(), Error> {
-        match self.call::<Value, ()>("stop", json!({})).await {
-            Ok(()) => Ok(()),
-            Err(e) => {
-                debug!("Ignoring error on `stop` call: {}", e);
-                Ok(())
-            }
-        }
-    }
-
-    pub async fn connect<'a>(
-        &self,
-        req: &requests::Connect<'a>,
-    ) -> Result<responses::Connect, Error> {
-        self.call("connect", req).await
-    }
-
     pub async fn listpeers(
         &self,
         node_id: Option<&str>,
@@ -142,44 +125,6 @@ impl LightningClient {
             },
         )
         .await
-    }
-
-    pub async fn disconnect(&self, node_id: &str, force: bool) -> Result<(), Error> {
-        if force {
-            return Err(Error::Unsupported(
-                "Force-disconnects are currently not supported".to_owned(),
-            ));
-        }
-
-        self.call::<requests::Disconnect, responses::Disconnect>(
-            "disconnect",
-            requests::Disconnect { id: node_id },
-        )
-        .await?;
-        Ok(())
-    }
-
-    pub async fn newaddr(&self, typ: crate::pb::BtcAddressType) -> Result<String, Error> {
-        use crate::pb::BtcAddressType;
-        let addresstype = match typ {
-            BtcAddressType::Bech32 => "bech32",
-            BtcAddressType::P2shSegwit => "p2sh-segwit",
-        };
-        let res: responses::NewAddr = self
-            .call(
-                "newaddr",
-                requests::NewAddr {
-                    addresstype: Some(addresstype),
-                },
-            )
-            .await?;
-
-        let addr = match typ {
-            BtcAddressType::Bech32 => res.bech32.unwrap(),
-            BtcAddressType::P2shSegwit => res.p2sh_segwit.unwrap(),
-        };
-
-        Ok(addr)
     }
 
     pub async fn listincoming(&self) -> Result<crate::responses::ListIncoming, Error> {
