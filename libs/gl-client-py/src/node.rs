@@ -58,7 +58,7 @@ impl Node {
     }
 
     fn trampoline_pay(
-        &mut self,
+        &self,
         bolt11: String,
         trampoline_node_id: Vec<u8>,
         amount_msat: Option<u64>,
@@ -76,7 +76,7 @@ impl Node {
             maxdelay: maxdelay.unwrap_or_default(),
             description: description.unwrap_or_default(),
         };
-        let res = exec(async { self.client.trampoline_pay_keepalive(req).await })
+        let res = exec(async { self.client.clone().trampoline_pay(req).await })
             .map_err(error_calling_remote_method)?
             .into_inner();
         convert(Ok(res))
