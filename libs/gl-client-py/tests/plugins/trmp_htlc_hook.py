@@ -4,7 +4,6 @@ from pyln.client import Plugin
 from binascii import unhexlify
 from pyln.proto.primitives import varint_decode
 from io import BytesIO
-import time
 
 INVOICE_TYPE = 33001
 AMOUNT_TYPE = 33003
@@ -17,7 +16,6 @@ plugin = Plugin(
 plugin.check_invoice = None
 plugin.check_amount = None
 plugin.payment_key = None
-plugin.waitfor = None
 
 
 @plugin.hook("htlc_accepted")
@@ -31,9 +29,6 @@ def on_htlc_accepted(htlc, onion, plugin, **kwargs):
     invoice_length = varint_decode(payment_metadata)
     invoice_value = payment_metadata.read(invoice_length)
     assert invoice_type == INVOICE_TYPE
-
-    if plugin.waitfor is not None:
-        time.sleep(plugin.waitfor)
 
     if plugin.check_invoice is not None:
         plugin.log(
@@ -90,12 +85,6 @@ def unsetchecks(plugin):
     """Unsets all checks"""
     plugin.check_invoice = None
     plugin.check_amount = None
-
-
-@plugin.method("waitfor")
-def waitfor(plugin, duration_sec):
-    """Waits for duration_sec before continuing with completion"""
-    plugin.waitfor = duration_sec
 
 
 plugin.run()
