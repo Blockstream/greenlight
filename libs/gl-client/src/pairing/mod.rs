@@ -23,6 +23,8 @@ pub enum Error {
     #[error("could not verify pairing data: {0}")]
     VerifyPairingDataError(String),
 }
+
+#[derive(Debug)]
 pub enum PairingSessionData {
     PairingResponse(PairDeviceResponse),
     PairingQr(String),
