@@ -28,6 +28,9 @@ GL_CLIENT = ${LIBS}/gl-client
 GL_PLUGIN = ${LIBS}/gl-plugin
 GL_SIGNERPROXY = ${LIBS}/gl-signerproxy
 
+# Do not run clippy on dependencies
+CLIPPY_OPTS = --no-deps --message-format short
+
 ARTIFACTS = \
 	.coverage
 
@@ -72,17 +75,24 @@ gl_plugin_sync-files:
 gl_signerproxy_sync-files:
 	$(MAKE) -C ${GL_SIGNERPROXY} sync-files
 
+# Sync all files
 sync-files: gl_client_sync-files gl_plugin_sync-files gl_signerproxy_sync-files
 
-.PHONY: ensure-docker build-self check-self docker-image docs wheels
+# Run clippy
+clippy:
+	cargo clippy ${CLIPPY_OPTS}
 
-check-rs:
-	cargo test --all -- --test-threads=1
+# Run rust tests
+test-rs:
+	cargo test
+
+# Check runs clippy and the tests but does not fail on clippy warnings
+check-rs: clippy test-rs
+
+.PHONY: clippy test-rs check-rs ensure-docker build-self check-self check-all docker-image docs wheels
 
 clean-rs:
 	cargo clean
-
-check: check-rs check-py
 
 clean: clean-rs
 	rm -rf ${ARTIFACTS}
@@ -95,7 +105,7 @@ build-self: ensure-docker
 	cd libs/gl-client-py; maturin develop
 	#mypy examples/python
 
-check-all: check-self check-gl-client check-py
+check-all: check-rs check-self check-py
 
 check-self: ensure-docker build-self
 	PYTHONPATH=/repo/libs/gl-testing \
