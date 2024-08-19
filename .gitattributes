@@ -9,3 +9,7 @@ Cargo.lock     linguist-generated=true -diff -merge
 
 libs/gl-client/.resources/proto/**  linguist-generated=true -diff -text -merge
 libs/gl-client/.resources/tls/**    linguist-generated=true -diff -text -merge
+libs/gl-plugin/.resources/proto/**  linguist-generated=true -diff -text -merge
+libs/gl-plugin/.resources/tls/**    linguist-generated=true -diff -text -merge
+libs/gl-signerproxy/.resources/proto/**  linguist-generated=true -diff -text -merge
+libs/gl-signerproxy/.resources/tls/**    linguist-generated=true -diff -text -merge

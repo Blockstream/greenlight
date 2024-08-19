@@ -22,6 +22,12 @@ else
   RSARCH = ${UNAME_M}
 endif
 
+# Path to workspace crates
+LIBS = ${REPO_ROOT}/libs
+GL_CLIENT = ${LIBS}/gl-client
+GL_PLUGIN = ${LIBS}/gl-plugin
+GL_SIGNERPROXY = ${LIBS}/gl-signerproxy
+
 ARTIFACTS = \
 	.coverage
 
@@ -52,11 +58,23 @@ DOCKER_OPTIONS= \
 	-v /tmp/gltesting/cargo/registry:/opt/cargo/registry \
 	-v ${REPO_ROOT}:/repo
 
-.PHONY: ensure-docker build-self check-self docker-image docs wheels
-
-include libs/gl-client/Makefile
 include libs/gl-client-py/Makefile
 include libs/gl-testing/Makefile
+
+# sync-files section
+.PHONY: sync-files gl_client_sync-files gl_plugin_sync-files gl_signerproxy_sync-files
+gl_client_sync-files:
+	$(MAKE) -C ${GL_CLIENT} sync-files
+
+gl_plugin_sync-files:
+	$(MAKE) -C ${GL_PLUGIN} sync-files
+
+gl_signerproxy_sync-files:
+	$(MAKE) -C ${GL_SIGNERPROXY} sync-files
+
+sync-files: gl_client_sync-files gl_plugin_sync-files gl_signerproxy_sync-files
+
+.PHONY: ensure-docker build-self check-self docker-image docs wheels
 
 check-rs:
 	cargo test --all -- --test-threads=1
