@@ -157,13 +157,13 @@ impl Signer {
             validator_factory,
             starting_time_factory,
             persister: persister.clone(),
+            trusted_oracle_pubkeys: vec![],
             clock,
         };
 
         let mut handler = handler::HandlerBuilder::new(network, 0 as u64, services.clone(), sec)
             .build()
-            .map_err(|e| anyhow!("building root_handler: {:?}", e))?
-            .0;
+            .map_err(|e| anyhow!("building root_handler: {:?}", e))?;
 
         // Calling init on the `InitHandler` from above puts it into a
         // state that it can be upgraded into the `RootHandler` that
@@ -202,8 +202,7 @@ impl Signer {
             self.secret,
         )
         .build()
-        .map_err(|e| anyhow!("building root_handler: {:?}", e))?
-        .0;
+        .map_err(|e| anyhow!("building root_handler: {:?}", e))?;
 
         Ok(h)
     }
@@ -212,7 +211,7 @@ impl Signer {
         let mut h = self.init_handler()?;
         h.handle(Signer::initreq())
             .expect("handling the hsmd_init message");
-        Ok(h.into_root_handler())
+        Ok(h.into())
     }
 
     fn handler_with_approver(
@@ -227,11 +226,10 @@ impl Signer {
         )
         .approver(approver)
         .build()
-        .map_err(|e| crate::signer::Error::Other(anyhow!("Could not create handler: {:?}", e)))?
-        .0;
+        .map_err(|e| crate::signer::Error::Other(anyhow!("Could not create handler: {:?}", e)))?;
         h.handle(Signer::initreq())
             .expect("handling the hsmd_init message");
-        Ok(h.into_root_handler())
+        Ok(h.into())
     }
 
     /// Create an `init` request that we can pass to the signer.
@@ -271,7 +269,12 @@ impl Signer {
     }
 
     fn initmsg(handler: &mut vls_protocol_signer::handler::InitHandler) -> Result<Vec<u8>, Error> {
-        Ok(handler.handle(Signer::initreq()).unwrap().1.as_vec())
+        Ok(handler
+            .handle(Signer::initreq())
+            .unwrap()
+            .1
+            .map(|a| a.as_vec())
+            .unwrap_or_default())
     }
 
     /// Filter out any request that is not signed, such that the
@@ -577,7 +580,7 @@ impl Signer {
             state.clone().into()
         };
         Ok(HsmResponse {
-            raw: response.0.as_vec(),
+            raw: response.as_vec(),
             request_id: req.request_id,
             signer_state,
             error: "".to_owned(),
@@ -601,7 +604,12 @@ impl Signer {
 
         let init = StartupMessage {
             request: Signer::initreq().inner().as_vec(),
-            response: init_handler.handle(Signer::initreq()).unwrap().1.as_vec(),
+            response: init_handler
+                .handle(Signer::initreq())
+                .unwrap()
+                .1
+                .map(|a| a.as_vec())
+                .unwrap_or_default(),
         };
 
         let requests = vec![
@@ -617,7 +625,7 @@ impl Signer {
         let serialized: Vec<Vec<u8>> = requests.iter().map(|m| m.inner().as_vec()).collect();
         let responses: Vec<Vec<u8>> = requests
             .into_iter()
-            .map(|r| self.handler().unwrap().handle(r).unwrap().0.as_vec())
+            .map(|r| self.handler().unwrap().handle(r).unwrap().as_vec())
             .collect();
 
         let mut msgs: Vec<StartupMessage> = serialized
@@ -671,7 +679,9 @@ impl Signer {
             .handle(req)
             .expect("handling legacy init message")
             .1
-            .as_vec();
+            .map(|a| a.as_vec())
+            .unwrap_or_default();
+
         initmsg[35..].to_vec()
     }
 
@@ -959,7 +969,7 @@ impl Signer {
 
         // The signature returned by VLS consists of the signature with the
         // recovery id appended.
-        let complete_sig = response.0.as_vec();
+        let complete_sig = response.as_vec();
         let sig = complete_sig[2..66].to_vec();
         let recovery_id = complete_sig[66];
         Ok((sig, recovery_id))
@@ -975,7 +985,7 @@ impl Signer {
             .handler()?
             .handle(vls_protocol::msgs::from_vec(msg.clone())?)
             .map_err(|_| anyhow!("Sign invoice failed"))?;
-        Ok(sig.0.as_vec()[2..67].to_vec())
+        Ok(sig.as_vec()[2..67].to_vec())
     }
 
     /// Create a Node stub from this instance of the signer, configured to
