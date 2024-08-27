@@ -460,9 +460,9 @@ checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
 name = "bolt-derive"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b4a20c5d2dd939142aa8edcfcaa5126bf0e4483d8edce6502037c2b0adbe069"
+checksum = "d5d9d752698eaa9d487c8bd9e587c4ee941ed79e8fe70ededde3bc1d24508f64"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1213,7 +1213,6 @@ dependencies = [
  "rustls-pemfile",
  "secp256k1 0.26.0",
  "serde",
- "serde_bolt",
  "serde_json",
  "sha256",
  "tempfile",
@@ -1802,9 +1801,9 @@ checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
 
 [[package]]
 name = "lightning"
-version = "0.0.116"
+version = "0.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90a0f2155316f1570446a0447c993480673f840748c8ed25bbc59dfc442ac770"
+checksum = "d52cec5fa9382154fe9671e8df93095b800c7d77abc66e2a5ef839d672521c5e"
 dependencies = [
  "bitcoin 0.29.2",
  "hex",
@@ -1813,9 +1812,9 @@ dependencies = [
 
 [[package]]
 name = "lightning-invoice"
-version = "0.24.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1788c0158526ec27a502043c2911ea6ea58fdc656bdf8749484942c07b790d23"
+checksum = "3eb24878b0f4ef75f020976c886d9ad1503867802329cc963e0ab4623ea3b25c"
 dependencies = [
  "bech32",
  "bitcoin 0.29.2",
@@ -3252,9 +3251,9 @@ dependencies = [
 
 [[package]]
 name = "serde_bolt"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54f634eeb988ab754b0711815e13e6ad983bfc52f76e0af342d492c6cad4f681"
+checksum = "b06b8577e0fd88c67c88e08139a7ecb7b6ab9b8800dfe1290d3de66d2a2601f2"
 dependencies = [
  "bitcoin 0.29.2",
  "bitcoin-consensus-derive",
@@ -4204,9 +4203,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "txoo"
-version = "0.6.4"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d63e3a8a97175f205a3b101cb100568ce15e6b4e77d88207e9065da4a4e061e"
+checksum = "a9db6dd6fd9fff3c0d875c1d8b891481c368b02c76d81bacd0f52f832a3699ef"
 dependencies = [
  "bitcoin 0.29.2",
  "log",
@@ -4325,9 +4324,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vls-core"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e930b25c7dd20dabbff7f564f6a33729ed59c85d759ecfe026d3723c492601b"
+checksum = "3e4ffd7d4f73477364006d79e58f7a78e2abf7db1bd715ca285f4dfc897f5a44"
 dependencies = [
  "anyhow",
  "backtrace",
@@ -4347,14 +4346,15 @@ dependencies = [
  "serde_bolt",
  "serde_derive",
  "serde_with",
+ "tracing",
  "txoo",
 ]
 
 [[package]]
 name = "vls-persist"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd59da7c08b3ec90791c4acc13a590a32b7cfef17c58f42690f1ae1cb2a39e7a"
+checksum = "dc1908e667de1b883705b13d6247a1ac276bedf033f08ce0193a1d7313e25b4f"
 dependencies = [
  "hex",
  "log",
@@ -4362,14 +4362,15 @@ dependencies = [
  "serde_json",
  "serde_with",
  "tempfile",
+ "tracing",
  "vls-core",
 ]
 
 [[package]]
 name = "vls-protocol"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "931878f2eaa91810f7cc183cd9909d6db5c967bda6b7a317aafe710a3e14d30c"
+checksum = "f1a587cd1c110fcb5b3ba1ce043f94040c2fd704a05bd4f6aa5d8b9b9bdaaa8b"
 dependencies = [
  "as-any",
  "bitcoin-consensus-derive",
@@ -4378,13 +4379,14 @@ dependencies = [
  "log",
  "serde_bolt",
  "txoo",
+ "vls-core",
 ]
 
 [[package]]
 name = "vls-protocol-signer"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfd8e85b22aa3fd45097652a6064e85963ac66f95ce027fe9a5cc87c571ba453"
+checksum = "d83515109f514a78497cc13fc81ffc7cc3ff6ef46b623e6a710bc56b60a02b8e"
 dependencies = [
  "bit-vec",
  "log",

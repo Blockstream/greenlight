@@ -26,10 +26,10 @@ cln-grpc = "=0.1.8"
 cln-rpc = "0.1.8"
 cln-plugin = "0.1.8"
 
-vls-core = "^0.11.1"
-vls-persist = "^0.11.1"
-vls-protocol-signer = "^0.11.1"
-vls-protocol = "^0.11.1"
+vls-core = "^0.12"
+vls-persist = "^0.12"
+vls-protocol-signer = "^0.12"
+vls-protocol = "^0.12"
 
 
 # Config for 'cargo dist'
