@@ -9,6 +9,8 @@ use futures::{future::join_all, FutureExt};
 use gl_client::bitcoin::hashes::hex::ToHex;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::{path::Path, time::Duration};
 use tokio::time::{timeout_at, Instant};
 
@@ -71,7 +73,7 @@ pub async fn trampolinepay(
 
     // Wait for the peer connection to re-establish.
     log::debug!("Await peer connection to {}", node_id.to_hex());
-    AwaitablePeer::new(node_id, ClnRpc::new(&rpc_path).await?)
+    AwaitablePeer::new(node_id, rpc_path.as_ref().to_path_buf())
         .wait()
         .await?;
 
@@ -171,7 +173,9 @@ pub async fn trampolinepay(
 
     // Await and filter out re-established channels.
     let deadline = Instant::now() + Duration::from_secs(AWAIT_CHANNELS_TIMEOUT_SEC);
-    let mut channels = reestablished_channels(channels, node_id, &rpc_path, deadline).await?;
+    let mut channels =
+        reestablished_channels(channels, node_id, rpc_path.as_ref().to_path_buf(), deadline)
+            .await?;
 
     // Note: We can also do this inside the reestablished_channels function
     // but as we want to be greedy picking our channels we don't want to
@@ -354,23 +358,29 @@ async fn do_pay(
 async fn reestablished_channels(
     channels: Vec<ChannelData>,
     node_id: PublicKey,
-    rpc_path: impl AsRef<Path>,
+    rpc_path: PathBuf,
     deadline: Instant,
 ) -> Result<Vec<ChannelData>> {
     // Wait for channels to re-establish.
-    let mut awaitables = Vec::new();
+    crate::awaitables::assert_send(AwaitableChannel::new(
+        node_id,
+        ShortChannelId::from_str("1x1x1")?,
+        rpc_path.clone(),
+    ));
+    let mut futures = Vec::new();
     for c in &channels {
-        awaitables.push(
-            AwaitableChannel::new(node_id, c.short_channel_id, ClnRpc::new(&rpc_path).await?)
-                .await?,
+        let rp = rpc_path.clone();
+        futures.push(
+            async move {
+                timeout_at(
+                    deadline,
+                    AwaitableChannel::new(node_id, c.short_channel_id, rp),
+                )
+                .await
+            }
+            .boxed(),
         );
     }
-
-    // Wait with timeout for channel to re-establish.
-    let futures: Vec<_> = awaitables
-        .into_iter()
-        .map(|mut aw| async move { timeout_at(deadline, aw.wait()).await }.boxed())
-        .collect();
 
     log::info!(
         "Starting {} tasks to wait for channels to be ready",
