@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::Mutex;
 
+mod awaitables;
 pub mod config;
 pub mod hsm;
 mod lsp;
