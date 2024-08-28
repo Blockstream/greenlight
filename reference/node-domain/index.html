@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://blockstream.github.io/greenlight/reference/security/">
+        <link rel="canonical" href="https://blockstream.github.io/greenlight/reference/node-domain/">
       
       
-        <link rel="prev" href="../certs/">
+        <link rel="prev" href="../creds/">
       
       
-        <link rel="next" href="../lsp/">
+        <link rel="next" href="../certs/">
       
       
       <link rel="icon" href="../../assets/logo.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Security - Greenlight Documentation</title>
+        <title>Node Domain - Greenlight Documentation</title>
       
     
     
@@ -57,11 +57,11 @@
       
         <meta  property="og:type"  content="website" >
       
-        <meta  property="og:title"  content="Security - Greenlight Documentation" >
+        <meta  property="og:title"  content="Node Domain - Greenlight Documentation" >
       
         <meta  property="og:description"  content="None" >
       
-        <meta  property="og:image"  content="https://blockstream.github.io/greenlight/assets/images/social/reference/security.png" >
+        <meta  property="og:image"  content="https://blockstream.github.io/greenlight/assets/images/social/reference/node-domain.png" >
       
         <meta  property="og:image:type"  content="image/png" >
       
@@ -69,15 +69,15 @@
       
         <meta  property="og:image:height"  content="630" >
       
-        <meta  property="og:url"  content="https://blockstream.github.io/greenlight/reference/security/" >
+        <meta  property="og:url"  content="https://blockstream.github.io/greenlight/reference/node-domain/" >
       
         <meta  name="twitter:card"  content="summary_large_image" >
       
-        <meta  name="twitter:title"  content="Security - Greenlight Documentation" >
+        <meta  name="twitter:title"  content="Node Domain - Greenlight Documentation" >
       
         <meta  name="twitter:description"  content="None" >
       
-        <meta  name="twitter:image"  content="https://blockstream.github.io/greenlight/assets/images/social/reference/security.png" >
+        <meta  name="twitter:image"  content="https://blockstream.github.io/greenlight/assets/images/social/reference/node-domain.png" >
       
     
     
@@ -100,7 +100,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#security" class="md-skip">
+        <a href="#node-domain" class="md-skip">
           Skip to content
         </a>
       
@@ -135,7 +135,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Security
+              Node Domain
             
           </span>
         </div>
@@ -849,10 +849,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../node-domain/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Node Domain
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -861,6 +881,59 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#enter-the-node-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enter the Node Domain
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interpreting Errors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Errors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tls-custom-alert-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      TLS Custom Alert Codes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -891,30 +964,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Security
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -923,53 +976,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#client-node-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      Client &rlarr; Node Authentication
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#client-signer-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      Client &rlarr; Signer Authentication
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#client-signer-authorization" class="md-nav__link">
-    <span class="md-ellipsis">
-      Client &rlarr; Signer Authorization
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1160,29 +1166,35 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#client-node-authentication" class="md-nav__link">
+  <a href="#enter-the-node-domain" class="md-nav__link">
     <span class="md-ellipsis">
-      Client &rlarr; Node Authentication
+      Enter the Node Domain
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#client-signer-authentication" class="md-nav__link">
+  <a href="#interpreting-errors" class="md-nav__link">
     <span class="md-ellipsis">
-      Client &rlarr; Signer Authentication
+      Interpreting Errors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Errors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tls-custom-alert-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      TLS Custom Alert Codes
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#client-signer-authorization" class="md-nav__link">
-    <span class="md-ellipsis">
-      Client &rlarr; Signer Authorization
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1204,97 +1216,133 @@
   
 
 
-<h1 id="security">Security</h1>
-<p>Each component in the Greenlight system is uniquely identified by an
-mTLS keypair, also called an <em>identity</em>. These are either used
-directly to setup mutually authenticated TLS connections, or to sign
-payloads in cases direct connections are not desirable or possible.</p>
-<p>In addition the signer also has access to the Bitcoin keypair that
-backs the Node ID, as well as the on-chain wallet. We will refer to
-this keypair as the <em>signer-identity</em>, whereas mTLS keypairs are just
-called the <em>client-identities</em>.</p>
-<p>In the following scenarios we will consider an attacker that has
-access to the node infrastructure, but not the client or the
-signer. This can either be an external attacker or a rogue Greenlight
-operator. Our goal is to prevent any access to funds from such an
-attacker, whether internal or external, by checking authorization on
-both the node as well as the signer level.</p>
-<h2 id="client-node-authentication">Client &rlarr; Node Authentication</h2>
-<p>This is a direct connection from a client to the node, or the signer
-to the node. The mTLS certificate hierarchy is under the control of
-the Greenlight Team. Each user gets their own CA, and nodes are
-configured to only accept client connections from certificates
-matching that CA. This guarantees that users can only contact their
-own node, while all other nodes would cause a mismatch and disconnect
-the client.</p>
-<div class="admonition example">
-<p class="admonition-title">Experimental</p>
-<p>Access to the node is currently all-or-nothing. The planned
-introduction of Rune-based access control will enable users
-to limit the operations a given client can execute. This is
-dependent on the <em>pairing process</em> as any client that has
-access to the signer could just escalate its privileges via
-the recovery.</p>
-</div>
-<p>The private key for the client-identity is generated on the client
-itself, and never leaves the client, sending only a certificate
-signature request (CSR) to the scheduler which creates and signs the
-certificate. This puts the client in the correct subtree of the CA
-hierarchy, enabling it to contact the node.</p>
-<p>Impersonation by a potential attacker is prevented by keeping the
-private key for the client-identity on the client, and not share it
-with the server. Notice however that the Greenlight team, being in
-control of the CA hierarchy, could create a bogus client certificate
-and use that to issue commands to the node. More on this in the next
-section.</p>
-<h2 id="client-signer-authentication">Client &rlarr; Signer Authentication</h2>
-<p>The signer cannot rely on the mTLS CA structure, since that is under
-control of the Greenlight team. Instead, Greenlight employs an 
-attestation scheme in which the signer identity attests to itself and 
-other signers that a particular client is authorized to perform 
-certain operations.</p>
-<p>When registering a new client, the signer will submit a <a href="https://github.com/nepet/runeauth"><code>rune</code></a>
-as an access token. The rune serves mainly as an authentication while the 
-client's identity in form of a mTLS key-pair provides authorization. 
-The run is bound to the client's identity; it is presented to the signer 
-on each request. This will allow multiple signers to recognize which 
-clients are authorized, even if the signer who carved the rune is not the 
-signer verifying the authorization.</p>
-<p>Before signing a request the signer independently verifies that:</p>
-<ol>
-<li>The operations that it is asked to sign off on match pending RPC
-    commands, and are safe to perform.</li>
-<li>The pending RPC commands are all signed by a valid client-identity</li>
-<li>The client-identity has a valid rune that qualifies for the request.</li>
-<li>None of the pending RPC commands is a replay of a previously
-    completed RPC command.</li>
-</ol>
-<p>An attacker that has gotten access to the node infrastructure may
-inject RPC commands directly into the node, side-stepping any
-authorization check on the node. For this reason the signer performs
-the same checks both on the node as well as the signer, the former
-preventing read-access that doesn't involve the signer, while the
-latter ensures funds are not moved without a client authorizing it.</p>
-<p>The client-identity pubkey, its signature of the command payload, and
-the rune are all passed to the node via grpc headers. The node 
-extracts them, alongside the call itself, and adds it to a request 
-context which will itself be attached to requests that are sent to the
-signer, so it can verify the validity and authenticity of the 
-operations. An attacker that gains access to the node is unable to 
-provide either these signatures and will therefore fail to convince
-the signer of its injected commands.</p>
-<h2 id="client-signer-authorization">Client &rlarr; Signer Authorization</h2>
-<p>The <a href="https://github.com/nepet/runeauth"><code>rune</code></a>-based signer authentication verifies a client's 
-identity and their authorization to execute commands. To achieve more 
-granular control over command authorization for individual clients, a 
-rune can be created with specific restrictions. When verifying client 
-identity, the signer additionally ensures that specific conditions, 
-such as the requested command, align with the limitations of the given
-rune.</p>
-<p>This enables a user to share access to the signer across multiple 
-clients that are restricted to a subset of commands, for example 
-read-only clients, or invoice-only clients, or clients that can only
-create on-chain addresses and so on.</p>
+<h1 id="node-domain">Node Domain</h1>
+<p>The Greenlight team is committed to providing users with full control
+over their Lightning nodes, which is why the ability to offboard from
+a hosted non-custodial node to a self-hosted setup is a key
+feature. We recognize that users may start with a hosted solution for
+convenience, but as their needs grow, they might prefer to manage
+their node on their own hardware or infrastructure. To facilitate this
+transition, we have implemented an export functionality that allows
+users to seamlessly move their node off our infrastructure. This
+feature disables the hosted node and provides users with an encrypted
+copy of their node's database. With this export, users can deploy
+their node independently, ensuring they retain control and ownership
+of their Lightning Network experience.</p>
+<p>Nodes can be exported entirely, including all of their funds and
+channel remaining intact. This means that apart from a brief downtime
+while the node is being exported and re-deployed, the hurdle to taking
+ownership of your own node is minimal.</p>
+<p>Users who wish to run a Lightning Network node behind a NAT (Network
+Address Translation) or firewall often face significant connectivity
+issues. The primary challenge is that NATs and firewalls typically
+block incoming connections, which prevents clients (such as wallets or
+other nodes) from being able to connect to the node. This lack of
+inbound connectivity is crucial for a non-custodial hosted Lightning
+node, since the user cannot access the node via their app, without
+configuring the network router or firewall.</p>
+<p>This is why we built the node domain server, a reverse proxy that
+smooths the user experience and hides the connection details behind a
+simple, publicly reachable URL.</p>
+<h2 id="enter-the-node-domain">Enter the <em>Node Domain</em></h2>
+<p>The <em>node domain</em> is a unique URL designed to provide seamless access
+to a user's Lightning node, regardless of its location — whether
+hosted on Greenlight's infrastructure or self-hosted by the user. The
+format of the URL is <code>gl1[node_id].gl.blckstrm.com</code>, where <code>[node_id]</code>
+is the <code>bech32m</code>-encoded Node ID for the user's node. This URL serves
+as a fixed endpoint that users and clients can rely on to connect to
+their node without needing to worry about the underlying network
+configuration or location.</p>
+<p>The functionality of the node domain is powered by a reverse
+proxy. When a connection request is made to the node domain, the
+reverse proxy processes the request and identifies the desired
+endpoint using Server Name Indication (SNI). SNI allows the proxy to
+determine which node the connection is intended for without decrypting
+the data stream, ensuring that the connection remains secure.</p>
+<p>Once  the  endpoint is  identified,  the  reverse proxy  forwards  the
+connection to the appropriate node:</p>
+<ul>
+<li>
+<p>Hosted Nodes: If the node is hosted on Greenlight's infrastructure,
+   the proxy checks if the node is currently active. If the node is not
+   running, Greenlight automatically schedules and starts the node to
+   handle the connection request.</p>
+</li>
+<li>
+<p>Self-Hosted Nodes: For self-hosted nodes, the process is slightly
+   different. The self-hosted node periodically reaches out to
+   Greenlight's tunnel server. This tunnel server maintains a
+   connection to the node, allowing the reverse proxy to forward
+   incoming connections through the tunnel, effectively exposing the
+   node to the internet. This approach eliminates the need for users
+   to configure NAT or firewall settings, making it easier to maintain
+   a self-hosted node.</p>
+</li>
+</ul>
+<p>In essence, the node domain provides a consistent and secure access
+point for users' Lightning nodes, abstracting away the complexities of
+node location and network configuration.</p>
+<h2 id="interpreting-errors">Interpreting Errors</h2>
+<p>When using Server Name Indication (SNI) during the mutual TLS (mTLS)
+handshake, the node domain server faces a limitation in its ability to
+provide detailed error messages. This is because, during the mTLS
+handshake, the server does not decrypt the data stream, limiting
+itself to reading the unencrypted SNI fields in the handshake
+packets. The SNI is used solely to identify the desired endpoint (the
+specific node) before the encrypted stream is forwarded to the actual
+destination. At this stage, the server has very limited means to
+communicate back to the client, as the secure session has not yet been
+fully established.</p>
+<p>Due to these constraints, the server can only use the alert protocol
+defined in RFC 5246, section 7.2, to report any issues encountered
+during the scheduling process. The alert protocol is a part of the TLS
+specification that allows the server to send predefined, minimal error
+codes to the client, indicating that something has gone wrong. These
+alerts are intentionally brief and do not provide extended error
+details or context, which can make troubleshooting more difficult for
+clients interacting with the node domain.</p>
+<p>To mitigate this limitation, we utilize the custom range for alert
+codes within the alert protocol to encode specific, common issues that
+applications might encounter when connecting to the node domain. By
+doing so, we provide a more granular indication of what might have
+gone wrong during the connection attempt. While this approach still
+operates within the constraints of the TLS handshake, it enables the
+server to convey more specific errors than the standard TLS alerts,
+assisting in diagnosing problems more effectively.</p>
+<p>In summary, because the SNI is used before the data stream is
+decrypted, the node domain server is restricted to using the TLS alert
+protocol for error reporting. By leveraging custom alert codes, we can
+offer more meaningful feedback within these constraints, helping
+clients better understand and resolve connection issues.</p>
+<h3 id="tls-custom-alert-codes">TLS Custom Alert Codes</h3>
+<ul>
+<li>221 (<code>InternalError</code>): A catch-all server-side error. If we don't
+   have more detailed information about what went wrong we return this
+   code. It does not indicate an error on the user's side, rather an
+   issue on the server that the Greenlight team needs to address.</li>
+<li>222 (<code>ReadSniError</code>): SNI (Server Name Indication, see <a href="https://datatracker.ietf.org/doc/html/rfc6066#section-3">RFC 6066,
+   Section3</a>) is used to identify the desired node to
+   talk to. If the node domain server is unable to parse the SNI
+   header in the <code>ClientHelo</code> message this alert is returned. It
+   usually means that you are trying to talk to the servers with a
+   custom client. Please use the <a href="https://github.com/Blockstream/greenlight"><code>gl-client</code></a> library.</li>
+<li>223 (<code>ConnectNodeError</code>): The node domain server has successfully
+   located the node, but failed to connect to it. This may either be a
+   stale scheduling in the hosted scenario, or a stale tunnel
+   connection from the self-hosted node.</li>
+<li>224 (<code>ConnectSchedulerError</code>): The node domain server was unable to
+   talk to the scheduler, and therefore could not locate, and/or
+   schedule, the node.</li>
+<li>225 (<code>SchedulerError</code>): The node domain server contacted the
+   scheduler correctly, but the scheduler was unable to locate or
+   schedule the node.</li>
+</ul>
+<p>Among these 221, 224 and 225 are considered server-side errors, and
+should be handled by the Greenlight team. Please escalate them to the
+team so we can identify the cause and address them. 222 and 223 are
+considered to be user errors, as stale sessions on the hosted offering
+are very unlikely, and therefore their appearance is mostly indicative
+of a user error.</p>
 
 
 

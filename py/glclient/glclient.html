@@ -91,6 +91,9 @@
                                 <a class="function" href="#Node.stream_custommsg">stream_custommsg</a>
                         </li>
                         <li>
+                                <a class="function" href="#Node.trampoline_pay">trampoline_pay</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Node.get_lsp_client">get_lsp_client</a>
                         </li>
                         <li>
@@ -209,6 +212,36 @@
                         </li>
                         <li>
                                 <a class="function" href="#Credentials.with_ca">with_ca</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#NewDeviceClient">NewDeviceClient</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#NewDeviceClient.__init__">NewDeviceClient</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#NewDeviceClient.pair_device">pair_device</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#AttestationDeviceClient">AttestationDeviceClient</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#AttestationDeviceClient.__init__">AttestationDeviceClient</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AttestationDeviceClient.get_pairing_data">get_pairing_data</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AttestationDeviceClient.approve_pairing">approve_pairing</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AttestationDeviceClient.verify_pairing_data">verify_pairing_data</a>
                         </li>
                 </ul>
 
@@ -466,6 +499,19 @@
         
     </div>
     <a class="headerlink" href="#Node.stream_custommsg"></a>
+    
+    
+
+                            </div>
+                            <div id="Node.trampoline_pay" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">trampoline_pay</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">bolt11</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">trampoline_node_id</span><span class="p">:</span> <span class="nb">bytes</span>,</span><span class="param">	<span class="n">amount_msat</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">bytes</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Node.trampoline_pay"></a>
     
     
 
@@ -933,6 +979,108 @@
         
     </div>
     <a class="headerlink" href="#Credentials.with_ca"></a>
+    
+    
+
+                            </div>
+                </section>
+                <section id="NewDeviceClient">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">NewDeviceClient</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#NewDeviceClient"></a>
+    
+    
+
+                            <div id="NewDeviceClient.__init__" class="classattr">
+                                <div class="attr function">
+            
+        <span class="name">NewDeviceClient</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">creds</span><span class="p">:</span> <span class="n"><a href="#Credentials">glclient.glclient.Credentials</a></span>, </span><span class="param"><span class="n">uri</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></span>)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#NewDeviceClient.__init__"></a>
+    
+    
+
+                            </div>
+                            <div id="NewDeviceClient.pair_device" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">pair_device</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">name</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">description</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">restrictions</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#NewDeviceClient.pair_device"></a>
+    
+    
+
+                            </div>
+                </section>
+                <section id="AttestationDeviceClient">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">AttestationDeviceClient</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#AttestationDeviceClient"></a>
+    
+    
+
+                            <div id="AttestationDeviceClient.__init__" class="classattr">
+                                <div class="attr function">
+            
+        <span class="name">AttestationDeviceClient</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">creds</span><span class="p">:</span> <span class="n"><a href="#Credentials">glclient.glclient.Credentials</a></span>, </span><span class="param"><span class="n">uri</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></span>)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttestationDeviceClient.__init__"></a>
+    
+    
+
+                            </div>
+                            <div id="AttestationDeviceClient.get_pairing_data" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_pairing_data</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">device_id</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">bytes</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttestationDeviceClient.get_pairing_data"></a>
+    
+    
+
+                            </div>
+                            <div id="AttestationDeviceClient.approve_pairing" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">approve_pairing</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">device_id</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">device_name</span><span class="p">:</span> <span class="nb">str</span>, </span><span class="param"><span class="n">restrs</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttestationDeviceClient.approve_pairing"></a>
+    
+    
+
+                            </div>
+                            <div id="AttestationDeviceClient.verify_pairing_data" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">verify_pairing_data</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttestationDeviceClient.verify_pairing_data"></a>
     
     
 
