@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Duration};
+use std::time::Duration;
 
 use cln_rpc::{
     model::requests::{
@@ -17,8 +17,22 @@ pub enum Error {
     Channel(&'static str),
     #[error("RPC error: {0}")]
     Rpc(#[from] cln_rpc::RpcError),
-    #[error("Error talking to a GL service: {0}")]
-    Service(String),
+}
+
+/// A struct to track the status of a peer connection.
+pub struct AwaitablePeer {
+    peer_id: PublicKey,
+    rpc: ClnRpc,
+}
+
+impl AwaitablePeer {
+    pub fn new(peer_id: PublicKey, rpc: ClnRpc) -> Self {
+        AwaitablePeer { peer_id, rpc }
+    }
+
+    pub async fn wait(&mut self) -> Result<(), Error> {
+        ensure_peer_connection(&mut self.rpc, self.peer_id).await
+    }
 }
 
 /// A struct to track the status of a channel.
@@ -52,7 +66,7 @@ impl AwaitableChannel {
         use tokio::time::sleep;
         // Ensure that we are connected to the peer, return an Error if
         // we can not connect to the peer.
-        self.ensure_peer_connection().await?;
+        ensure_peer_connection(&mut self.rpc, self.peer_id).await?;
 
         // Next step is to wait for the channel to be
         // re-established. For this we look into the billboard and
@@ -93,36 +107,6 @@ impl AwaitableChannel {
         }
 
         self.spendable_msat().await
-    }
-
-    /// Try to connect to the peer if we are not already connected.
-    async fn ensure_peer_connection(&mut self) -> Result<(), Error> {
-        log::debug!("Checking if peer {} is connected", self.peer_id);
-        let res = self
-            .rpc
-            .call_typed(&cln_rpc::model::requests::ListpeersRequest {
-                id: Some(self.peer_id),
-                level: None,
-            })
-            .await?;
-        let peer = res.peers.first().ok_or(Error::Peer("No such peer"))?;
-
-        if !peer.connected {
-            log::debug!("Peer {} is not connected, connecting", self.peer_id);
-            let req = ConnectRequest {
-                id: self.peer_id.to_string(),
-                host: None,
-                port: None,
-            };
-            let res = self
-                .rpc
-                .call_typed(&req)
-                .await
-                .map_err(|_| Error::Peer("unable to connect"))?;
-
-            log::debug!("Connect call to {} resulted in {:?}", self.peer_id, res);
-        }
-        Ok(())
     }
 
     /// Retrieve the spendable amount for the channel.
@@ -223,4 +207,32 @@ impl AwaitableChannel {
                 .unwrap())
         }
     }
+}
+
+/// Try to connect to the peer if we are not already connected.
+async fn ensure_peer_connection(rpc: &mut ClnRpc, peer_id: PublicKey) -> Result<(), Error> {
+    log::debug!("Checking if peer {} is connected", peer_id);
+    let res = rpc
+        .call_typed(&cln_rpc::model::requests::ListpeersRequest {
+            id: Some(peer_id),
+            level: None,
+        })
+        .await?;
+    let peer = res.peers.first().ok_or(Error::Peer("No such peer"))?;
+
+    if !peer.connected {
+        log::debug!("Peer {} is not connected, connecting", peer_id);
+        let req = ConnectRequest {
+            id: peer_id.to_string(),
+            host: None,
+            port: None,
+        };
+        let res = rpc
+            .call_typed(&req)
+            .await
+            .map_err(|_| Error::Peer("unable to connect"))?;
+
+        log::debug!("Connect call to {} resulted in {:?}", peer_id, res);
+    }
+    Ok(())
 }
