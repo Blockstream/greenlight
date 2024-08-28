@@ -1,14 +1,16 @@
+use crate::awaitables::{AwaitableChannel, AwaitablePeer};
 use crate::pb;
 use anyhow::{anyhow, Result};
 use cln_rpc::{
     primitives::{Amount, PublicKey, ShortChannelId},
     ClnRpc,
 };
-use futures::future::join_all;
+use futures::{future::join_all, FutureExt};
 use gl_client::bitcoin::hashes::hex::ToHex;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{path::Path, time::Duration};
+use tokio::time::{timeout_at, Instant};
 
 // Feature bit used to signal trampoline support.
 const TRAMPOLINE_FEATURE_BIT: usize = 427;
@@ -26,6 +28,8 @@ const TLV_AMT_MSAT: u64 = 33003;
 // case when the trampoline server rejected with a custom error type.
 const PAY_UNPARSEABLE_ONION_MSG: &str = "Malformed error reply";
 const PAY_UNPARSEABLE_ONION_CODE: i32 = 202;
+// How long do we wait for channels to re-establish?
+const AWAIT_CHANNELS_TIMEOUT_SEC: u64 = 20;
 
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
@@ -61,29 +65,31 @@ pub async fn trampolinepay(
 
     log::debug!(
         "New trampoline payment via {}: {} ",
-        hex::encode(req.trampoline_node_id),
+        node_id.to_hex(),
         req.bolt11.clone()
     );
 
+    // Wait for the peer connection to re-establish.
+    log::debug!("Await peer connection to {}", node_id.to_hex());
+    AwaitablePeer::new(node_id, ClnRpc::new(&rpc_path).await?)
+        .wait()
+        .await?;
+
     // Check if peer has signaled that they support forward trampoline pays:
-    let mut rpc = ClnRpc::new(rpc_path.as_ref()).await?;
-    let res = rpc
+    let mut rpc = ClnRpc::new(&rpc_path).await?;
+    let features = rpc
         .call_typed(&cln_rpc::model::requests::ListpeersRequest {
             id: Some(node_id),
             level: None,
         })
-        .await?;
-
-    if res.peers.is_empty() {
-        return Err(anyhow!("node with id {} is unknown", node_id.to_hex()));
-    }
-
-    let features = hex::decode(
-        res.peers[0]
-            .features
-            .as_ref()
-            .ok_or_else(|| anyhow!("Could not extract features from peer object."))?,
-    )?;
+        .await?
+        .peers
+        .first()
+        .ok_or_else(|| anyhow!("node with id {} is unknown", node_id.to_hex()))?
+        .features
+        .as_ref()
+        .map(|feat| hex::decode(feat))
+        .ok_or_else(|| anyhow!("Could not extract features from peer object."))??;
 
     feature_guard(features, TRAMPOLINE_FEATURE_BIT)?;
 
@@ -125,20 +131,11 @@ pub async fn trampolinepay(
 
     debug!("overpay={}, total_amt={}", overpay, amount_msat);
 
-    let res = rpc
+    let mut channels: Vec<ChannelData> = rpc
         .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })
-        .await?;
-
-    let channels = res.channels.unwrap_or_default();
-    if channels.is_empty() {
-        return Err(anyhow!("Has no channels with trampoline node"));
-    }
-    struct ChannelData {
-        short_channel_id: cln_rpc::primitives::ShortChannelId,
-        spendable_msat: u64,
-    }
-
-    let mut channels: Vec<ChannelData> = channels
+        .await?
+        .channels
+        .unwrap_or_default()
         .into_iter()
         .filter_map(|ch| {
             let short_channel_id = match ch.short_channel_id {
@@ -163,10 +160,22 @@ pub async fn trampolinepay(
                 spendable_msat,
             });
         })
-        .collect::<Vec<ChannelData>>();
+        .collect();
 
     channels.sort_by(|a, b| b.spendable_msat.cmp(&a.spendable_msat));
 
+    // Check if we actually got a channel to the trampoline node.
+    if channels.is_empty() {
+        return Err(anyhow!("Has no channels with trampoline node"));
+    }
+
+    // Await and filter out re-established channels.
+    let deadline = Instant::now() + Duration::from_secs(AWAIT_CHANNELS_TIMEOUT_SEC);
+    let mut channels = reestablished_channels(channels, node_id, &rpc_path, deadline).await?;
+
+    // Note: We can also do this inside the reestablished_channels function
+    // but as we want to be greedy picking our channels we don't want to
+    // introduce a race of the choosen channels for now.
     let mut acc = 0;
     let mut choosen = vec![];
     while let Some(channel) = channels.pop() {
@@ -340,6 +349,48 @@ async fn do_pay(
             Err(e.into())
         }
     }
+}
+
+async fn reestablished_channels(
+    channels: Vec<ChannelData>,
+    node_id: PublicKey,
+    rpc_path: impl AsRef<Path>,
+    deadline: Instant,
+) -> Result<Vec<ChannelData>> {
+    // Wait for channels to re-establish.
+    let mut awaitables = Vec::new();
+    for c in &channels {
+        awaitables.push(
+            AwaitableChannel::new(node_id, c.short_channel_id, ClnRpc::new(&rpc_path).await?)
+                .await?,
+        );
+    }
+
+    // Wait with timeout for channel to re-establish.
+    let futures: Vec<_> = awaitables
+        .into_iter()
+        .map(|mut aw| async move { timeout_at(deadline, aw.wait()).await }.boxed())
+        .collect();
+
+    log::info!(
+        "Starting {} tasks to wait for channels to be ready",
+        futures.len()
+    );
+
+    let results = join_all(futures).await;
+    Ok(results
+        .into_iter()
+        .zip(channels)
+        .filter_map(|(result, channel_data)| match result {
+            Ok(_amount) => Some(channel_data),
+            _ => None,
+        })
+        .collect::<Vec<ChannelData>>())
+}
+
+struct ChannelData {
+    short_channel_id: cln_rpc::primitives::ShortChannelId,
+    spendable_msat: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
