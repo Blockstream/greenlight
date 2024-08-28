@@ -27,9 +27,6 @@ class SchedulerServicer(purerpc.Servicer):
 
     async def ExportNode(self, input_message):
         raise NotImplementedError()
-    
-    async def SignerRequestsStream(self, input_message):
-        raise NotImplementedError
 
     async def AddOutgoingWebhook(self, input_message):
         raise NotImplementedError()
@@ -41,6 +38,9 @@ class SchedulerServicer(purerpc.Servicer):
         raise NotImplementedError()
 
     async def RotateOutgoingWebhookSecret(self, input_message):
+        raise NotImplementedError()
+
+    async def SignerRequestsStream(self, input_messages):
         raise NotImplementedError()
 
     @property
@@ -273,7 +273,7 @@ class SchedulerStub:
         self.SignerRequestsStream = self._client.get_method_stub(
             "SignerRequestsStream",
             purerpc.RPCSignature(
-                purerpc.Cardinality.STREAM_STEAM,
+                purerpc.Cardinality.STREAM_STREAM,
                 glclient_dot_scheduler__pb2.SignerResponse,
                 glclient_dot_scheduler__pb2.SignerRequest,
             )
@@ -318,15 +318,15 @@ class DebugStub:
 
 
 class PairingServicer(purerpc.Servicer):
-    async def PairDevice(self, input_messages):
+    async def PairDevice(self, input_message):
         raise NotImplementedError()
 
     async def GetPairingData(self, input_message):
         raise NotImplementedError()
 
-    async def ApproveSession(self, input_message):
+    async def ApprovePairing(self, input_message):
         raise NotImplementedError()
-    
+
     @property
     def service(self) -> purerpc.Service:
         service_obj = purerpc.Service(
