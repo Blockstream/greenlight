@@ -5,6 +5,7 @@ repo_url: https://github.com/Blockstream/greenlight
 edit_uri: tree/main/docs/src
 
 plugins:
+  - search
   - social
   - redirects:
       redirect_maps:
