@@ -413,7 +413,13 @@ class Node(object):
 
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def trampoline_pay(self, bolt11: str, trampoline_node_id: bytes, amount_msat: Optional[int] = None, label: Optional[str] = None):
+    def trampoline_pay(
+            self,
+            bolt11: str,
+            trampoline_node_id: bytes,
+            amount_msat: Optional[int] = None,
+            label: Optional[str] = None
+    ):
         res = self.inner.trampoline_pay(
             bolt11=bolt11,
             trampoline_node_id=trampoline_node_id,
