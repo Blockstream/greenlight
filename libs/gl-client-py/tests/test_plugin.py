@@ -89,6 +89,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
 
     res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l2.info["id"]))
     assert res
+    assert len(res.payment_hash) == 32 # There was a confusion about hex/bytes return.
 
     l2.rpc.unsetchecks()
 
