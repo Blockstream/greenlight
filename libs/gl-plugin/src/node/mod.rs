@@ -395,11 +395,11 @@ impl Node for PluginNodeServer {
     ) -> Result<Response<pb::Empty>, Status> {
         let req = request.into_inner();
 
-	if req.error != "" {
-	    log::error!("Signer reports an error: {}", req.error);
-	    log::warn!("The above error was returned instead of a response.");
-	    return Ok(Response::new(pb::Empty::default()));
-	}
+        if req.error != "" {
+            log::error!("Signer reports an error: {}", req.error);
+            log::warn!("The above error was returned instead of a response.");
+            return Ok(Response::new(pb::Empty::default()));
+        }
 
         // Create a state from the key-value-version tuples. Need to
         // convert here, since `pb` is duplicated in the two different
@@ -566,18 +566,21 @@ impl Node for PluginNodeServer {
         &self,
         r: tonic::Request<pb::TrampolinePayRequest>,
     ) -> Result<tonic::Response<pb::TrampolinePayResponse>, Status> {
-        match tramp::trampolinepay(r.into_inner(), self.rpc_path.clone()).await {
+        match tramp::trampolinepay(r.into_inner(), self.rpc_path.clone())
+            .await
+            .map(|res| {
+                <cln_rpc::model::responses::PayResponse as Into<cln_grpc::pb::PayResponse>>::into(
+                    res,
+                )
+            }) {
             Ok(res) => Ok(tonic::Response::new(pb::TrampolinePayResponse {
-                payment_preimage: res.payment_preimage.to_vec(),
-                payment_hash: res.payment_hash.to_hex().into_bytes(),
+                payment_preimage: res.payment_preimage,
+                payment_hash: res.payment_hash,
                 created_at: res.created_at,
                 parts: res.parts,
-                amount_msat: res.amount_msat.msat(),
-                amount_sent_msat: res.amount_sent_msat.msat(),
-                destination: res
-                    .destination
-                    .map(|d| d.to_hex().into_bytes())
-                    .unwrap_or_default(),
+                amount_msat: res.amount_msat.unwrap_or_default().msat,
+                amount_sent_msat: res.amount_sent_msat.unwrap_or_default().msat,
+                destination: res.destination.unwrap_or_default(),
             })),
             Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
         }
