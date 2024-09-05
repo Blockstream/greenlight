@@ -1,6 +1,7 @@
 from binascii import hexlify, unhexlify
 from glcli import environment as env
-from glclient import Scheduler, Credentials
+from glclient import Scheduler, Credentials, scheduler_pb2 as schedpb
+from glclient.pairing import NewDeviceClient, AttestationDeviceClient
 from pyln.grpc import Amount, AmountOrAll, AmountOrAny
 from google.protobuf.descriptor import FieldDescriptor
 from pathlib import Path
@@ -347,6 +348,79 @@ def schedule(ctx):
         pbprint(res)
     except ValueError as e:
         raise click.ClickException(message=e.args[0])
+
+
+@scheduler.command()
+@click.argument("name", required=True)
+@click.option("--description", type=str, default="", help="A description of the device purpose.")
+@click.option("--restrictions", type=str, default="", help="A set of restrictions used to restrict the devices access.")
+@click.pass_context
+def pair_device(ctx, name, description, restrictions):
+    """Pair a signer-less device with a greenlight node.
+
+    """
+    p_client = NewDeviceClient()
+    session = p_client.pair_device(name, description, restrictions)
+    i_session = iter(session)
+    
+    qr_data = next(i_session)
+    click.echo(f"Share this with the attestation device: {qr_data}")
+
+    res = next(i_session)
+    assert isinstance(res, schedpb.PairDeviceResponse)
+    click.echo(f"Pairing session {res.device_id} completed")
+    with open("credentials.gfs", "wb") as f:
+        f.write(res.creds)
+
+
+@scheduler.command()
+@click.argument("pairing_data", required=True)
+@click.pass_context
+def approve_pairing(ctx, pairing_data):
+    """Approve a pairing request from a signer-less device.
+    Fetches the pairing data from the servers and asks for user input to confirm the pairing request.
+    """
+    device_id = pairing_data.split(':')[1]
+    # p_client = AttestationDeviceClient(Creds())
+    p_client = AttestationDeviceClient(Creds().creds)
+    try:
+        pairing_data = p_client.get_pairing_data(device_id)
+    except Exception as e:
+        click.echo(f"Could not get pairing data: {e}")
+        sys.exit(1)
+
+    click.echo(f"Found pairing request {device_id} with data: {pairing_data}")
+
+    m_valid = p_client.verify_pairing_data(pairing_data)
+    if m_valid is not None:
+        click.echo(f"Pairing data is invalid {m_valid}")
+        sys.exit(1)
+
+    m_attestation = f"""
+    The following device requests attestation:
+    id: {pairing_data.device_id}
+    name: {pairing_data.device_name}
+    description: {pairing_data.description}
+    restrictions: {pairing_data.restrictions}
+    """
+
+    click.echo(m_attestation)
+    if click.confirm(f"Do you want to grant the device access to your node with the given restrictions?", default=False):
+        click.echo("Attestating device")
+        try:
+            p_client.approve_pairing(
+                pairing_data.device_id,
+                pairing_data.device_name,
+                pairing_data.restrictions
+            )
+            sys.exit(0)
+        except Exception as e:
+            click.echo(f"Could not approve device {e}")
+            sys.exit(1)
+    
+    click.echo("")
+    sys.exit(0)
+
 
 @cli.command()
 @click.pass_context
