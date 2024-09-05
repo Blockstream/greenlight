@@ -8,8 +8,9 @@ from typing import Optional, Generator
 class NewDeviceClient(object):
     """A Pairing Client for the "new device" flow."""
 
-    def __init__(self, creds: Credentials, uri: Optional[str] = None):
-        self._inner = native.NewDeviceClient(creds=creds, uri=uri)
+    def __init__(self, creds: Optional[Credentials] = None, uri: Optional[str] = None):
+        self.creds = creds if creds is not None else Credentials()
+        self._inner = native.NewDeviceClient(creds=self.creds, uri=uri)
 
     def _recv(self, m):
         msgs = {
