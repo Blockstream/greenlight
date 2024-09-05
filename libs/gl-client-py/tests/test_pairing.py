@@ -18,7 +18,7 @@ def test_pairing_session(sclient, signer, creds):
     name = "new_device"
     desc = "my_description"
     restrs = "method^list"
-    ps = NewDeviceClient(creds)
+    ps = NewDeviceClient()
     session = ps.pair_device(name, desc, restrs)
     session_iter = iter(session)
 
@@ -33,6 +33,7 @@ def test_pairing_session(sclient, signer, creds):
     scheduler.schedule()
 
     # check for pairing data.
+    assert isinstance(m, str)
     device_id = m.split(':')[1]
     ac = AttestationDeviceClient(creds=creds)
     m = ac.get_pairing_data(device_id)
