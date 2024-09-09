@@ -152,7 +152,7 @@ impl Node {
 }
 
 mod generic;
-mod service;
+pub mod service;
 pub use generic::GenericClient;
 
 mod stasher {
