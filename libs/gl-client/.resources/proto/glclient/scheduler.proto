@@ -423,6 +423,7 @@ message SignerRejection {
   string msg = 1;
   greenlight.HsmRequest request = 2;
   string git_version = 3;
+  bytes node_id = 4;
 }
 
 message PairDeviceRequest {

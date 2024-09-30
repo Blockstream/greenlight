@@ -504,6 +504,7 @@ impl Signer {
                 msg: e.to_string(),
                 request: Some(req.clone()),
                 git_version: GITHASH.to_string(),
+		node_id: self.node_id(),
             })
             .await;
             #[cfg(not(feature = "permissive"))]
@@ -568,6 +569,7 @@ impl Signer {
                 msg: format!("{:?}", e),
                 request: Some(req.clone()),
                 git_version: GITHASH.to_string(),
+		node_id: self.node_id(),
             })
             .await;
             return Err(Error::Other(anyhow!("processing request: {e:?}")));
