@@ -68,7 +68,7 @@ pub fn parse_withdraw_request_response_from_url(url: &str) -> Option<WithdrawReq
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
 
     #[test]
