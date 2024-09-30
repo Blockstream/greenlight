@@ -33,8 +33,11 @@ GENALL += ${PYPROTOS}
 ${PYPROTOS}: pygrpc
 
 pygrpc: ${PROTOSRC}
-	python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
-	python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
+	cp ${PYDIR}/../proto/glclient/scheduler.proto ${PYDIR}/glclient/
+	cp ${PYDIR}/../proto/glclient/greenlight.proto ${PYDIR}/glclient/
+	cd ${PYDIR}; poetry install
+	cd ${PYDIR}; poetry run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
+	cd ${PYDIR}; poetry run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
 
 check-py:
 	cd ${PYDIR}; mypy glclient
