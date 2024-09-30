@@ -65,6 +65,18 @@ pub enum Command {
         #[arg(long)]
         description: Option<String>,
     },
+    /// Establish a new connection with another lightning node.
+    Connect {
+        #[arg(
+            required = true,
+            help = "The targets nodes public key, can be of form id@host:port, host and port must be omitted in this case."
+        )]
+        id: String,
+        #[arg(help = "The peer's hostname or IP address.")]
+        host: Option<String>,
+        #[arg(help = "The peer's port number defaults to the networks default ports if missing.")]
+        port: Option<u32>,
+    },
     /// Stop the node
     Stop,
 }
@@ -127,6 +139,7 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             )
             .await
         }
+        Command::Connect { id, host, port } => connect_handler(config, id, host, port).await,
         Command::Stop => stop(config).await,
     }
 }
@@ -154,7 +167,6 @@ async fn log<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
         .map_err(Error::custom)?
         .into_inner();
 
-    //TODO:  Use tokio::select!() and ctrl + c to cancel listening for log lines
     loop {
         tokio::select! {
             biased;
@@ -266,6 +278,37 @@ async fn invoice_handler<P: AsRef<Path>>(
             cltv,
             deschashonly,
         })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn connect_handler<P: AsRef<Path>>(
+    config: Config<P>,
+    id: String,
+    host: Option<String>,
+    port: Option<u32>,
+) -> Result<()> {
+    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
+    let creds = match util::read_credentials(&creds_path) {
+        Some(c) => c,
+        None => {
+            return Err(Error::CredentialsNotFoundError(format!(
+                "could not read from {}",
+                creds_path.display()
+            )))
+        }
+    };
+
+    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
+        .await
+        .map_err(Error::custom)?;
+
+    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let res = node
+        .connect_peer(cln::ConnectRequest { id, host, port })
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
