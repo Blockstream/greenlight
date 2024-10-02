@@ -15,8 +15,8 @@ struct Cli {
     /// The directory containing the seed and the credentials
     #[arg(short, long)]
     data_dir: Option<String>,
-    /// Bitcoin network to use
-    #[arg(short, long, default_value = "testnet", value_parser = clap::value_parser!(Network))]
+    /// Bitcoin network to use. Supported networks are "signet" and "bitcoin"
+    #[arg(short, long, default_value = "bitcoin", value_parser = clap::value_parser!(Network))]
     network: Network,
     #[arg(long, short)]
     verbose: bool,
