@@ -21,11 +21,11 @@ pub enum Command {
     GetInfo,
     /// Create a new invoice
     Invoice {
-        #[arg(long, required = true)]
+        #[arg(required = true)]
         label: String,
-        #[arg(long, required = true)]
+        #[arg(required = true)]
         description: String,
-        #[arg( long, value_parser = clap::value_parser!(model::AmountOrAny))]
+        #[arg(long, value_parser = clap::value_parser!(model::AmountOrAny))]
         amount_msat: Option<model::AmountOrAny>,
         #[arg(long)]
         expiry: Option<u64>,
@@ -40,7 +40,7 @@ pub enum Command {
     },
     /// Pay a bolt11 invoice
     Pay {
-        #[arg(long, required = true)]
+        #[arg(required = true)]
         bolt11: String,
         #[arg(long)]
         amount_msat: Option<u64>,
@@ -72,18 +72,22 @@ pub enum Command {
             help = "The targets nodes public key, can be of form id@host:port, host and port must be omitted in this case."
         )]
         id: String,
-        #[arg(help = "The peer's hostname or IP address.")]
+        #[arg(long, help = "The peer's hostname or IP address.")]
         host: Option<String>,
-        #[arg(help = "The peer's port number defaults to the networks default ports if missing.")]
+        #[arg(
+            long,
+            help = "The peer's port number defaults to the networks default ports if missing."
+        )]
         port: Option<u32>,
     },
     /// List attempted payments
     Listpays {
-        #[arg(help = "A Bolt11 string to get the payment details")]
+        #[arg(long, help = "A Bolt11 string to get the payment details")]
         bolt11: Option<String>,
-        #[arg(help = "A payment_hash to get the payment details")]
+        #[arg(long, help = "A payment_hash to get the payment details")]
         payment_hash: Option<String>,
         #[arg(
+            long,
             help = "Can be one of \"pending\", \"completed\", \"failed\", filters the payments that are returned"
         )]
         status: Option<String>,
