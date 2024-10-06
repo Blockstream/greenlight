@@ -504,7 +504,7 @@ impl Signer {
                 msg: e.to_string(),
                 request: Some(req.clone()),
                 git_version: GITHASH.to_string(),
-		node_id: self.node_id(),
+                node_id: self.node_id(),
             })
             .await;
             #[cfg(not(feature = "permissive"))]
@@ -569,7 +569,7 @@ impl Signer {
                 msg: format!("{:?}", e),
                 request: Some(req.clone()),
                 git_version: GITHASH.to_string(),
-		node_id: self.node_id(),
+                node_id: self.node_id(),
             })
             .await;
             return Err(Error::Other(anyhow!("processing request: {e:?}")));
@@ -816,6 +816,17 @@ impl Signer {
     }
 
     async fn run_forever_scheduler(
+        &self,
+        scheduler: SchedulerClient<tonic::transport::Channel>,
+    ) -> Result<(), anyhow::Error> {
+        loop {
+            if let Err(e) = self.run_once_scheduler(scheduler.clone()).await {
+                warn!("Error running schduler, trying again: {e}");
+            }
+        }
+    }
+
+    async fn run_once_scheduler(
         &self,
         mut scheduler: SchedulerClient<tonic::transport::Channel>,
     ) -> Result<(), anyhow::Error> {
