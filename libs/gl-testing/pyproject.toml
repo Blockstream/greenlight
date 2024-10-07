@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gltesting"
-version = "0.2.0"
+version = "0.3.0"
 description = ""
 authors = ["Christian Decker <decker@blockstream.com>"]
 license = "MIT"
@@ -37,7 +37,7 @@ pytest-sugar = "^0.9.7"
 #
 # Contributors should use `poetry install` in the project root
 # to insure the installation is editable from local sources.
-gl-client = "0.2.0"
+gl-client = "0.3.0"
 cln-version-manager = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
