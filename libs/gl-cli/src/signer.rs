@@ -6,7 +6,7 @@ use gl_client::{credentials, signer::Signer};
 use lightning_signer::bitcoin::Network;
 use std::path::Path;
 use tokio::{join, signal};
-use util::SEED_FILE_NAME;
+use util::{CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
 
 pub struct Config<P: AsRef<Path>> {
     pub data_dir: P,
@@ -43,7 +43,16 @@ async fn run_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
     let seed = seed.unwrap(); // we checked if it is none before.
 
     // Initialize a signer and scheduler with default credentials.
-    let creds = credentials::Nobody::new();
+    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
+    let creds = match util::read_credentials(&creds_path) {
+        Some(c) => c,
+        None => {
+            return Err(Error::CredentialsNotFoundError(format!(
+                "could not read from {}",
+                creds_path.display()
+            )))
+        }
+    };
     let signer = Signer::new(seed, config.network, creds.clone())
         .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
 
