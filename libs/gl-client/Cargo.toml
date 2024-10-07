@@ -1,6 +1,6 @@
 [package]
 name = "gl-client"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 authors = ["Christian Decker", "The Greenlight Team"]
 description = "Client library for Greenlight, and basis for language bindings."
