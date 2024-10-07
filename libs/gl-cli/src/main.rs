@@ -13,12 +13,12 @@ mod util;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// The directory containing the seed and the credentials
-    #[arg(short, long)]
+    #[arg(short, long, global = true, help_heading = "Global options")]
     data_dir: Option<String>,
     /// Bitcoin network to use. Supported networks are "signet" and "bitcoin"
-    #[arg(short, long, default_value = "bitcoin", value_parser = clap::value_parser!(Network))]
+    #[arg(short, long, default_value = "bitcoin", value_parser = clap::value_parser!(Network), global = true, help_heading = "Global options")]
     network: Network,
-    #[arg(long, short)]
+    #[arg(long, short, global = true, help_heading = "Global options")]
     verbose: bool,
     #[command(subcommand)]
     cmd: Commands,
