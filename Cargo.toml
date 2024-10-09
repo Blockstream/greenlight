@@ -12,7 +12,7 @@ lto = "thin"
 [workspace]
 resolver = "2"
 members = [ 
-  "examples/rust/getting-started",
+  "examples/rust",
   "libs/gl-client",
   "libs/gl-client-py",
   "libs/gl-plugin",

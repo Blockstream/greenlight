@@ -9,9 +9,6 @@ use gl_client::{bitcoin::Network, signer::Signer};
 use std::fs::{self};
 use tokio;
 
-#[tokio::main]
-async fn main() {}
-
 #[allow(unused)]
 // ---8<--- [start: upgrade_device_certs_to_creds]
 async fn upgrade_device_certs_to_creds(
