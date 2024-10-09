@@ -31,7 +31,7 @@ The Nobody credentials are used when there is no registered node associated with
 	
 === "Python"
 	```python
---8<-- "main.py:dev_creds"
+--8<-- "getting_started.py:dev_creds"
 	```
 
 ### Device Credentials
@@ -45,7 +45,7 @@ The Device credentials are used when there is a registered node associated with 
 
 === "Python"
 	```python
---8<-- "main.py:device_creds"
+--8<-- "getting_started.py:device_creds"
 	```
 
 ## Instantiating a Credential from device certificates
@@ -59,7 +59,7 @@ For glclient versions released before v0.2, device certificates were the primary
 
 === "Python"
 	```python
-	--8<-- "main.py:upgrade_device_certs_to_creds"
+--8<-- "getting_started.py:upgrade_device_certs_to_creds"
 	```
 
 

@@ -31,7 +31,7 @@ Greenlight infrastructure:
 
 === "Python"
 	```python
---8<-- "main.py:start_node"
+--8<-- "getting_started.py:start_node"
 	```
 
 Once we have an instance of the `Node` we can start interacting with it via the GRPC interface:
@@ -42,7 +42,7 @@ Once we have an instance of the `Node` we can start interacting with it via the 
 	```
 === "Python"
 	```python
---8<-- "main.py:list_peers"
+--8<-- "getting_started.py:list_peers"
 	```
 	
 The above snippet will read the metadata and list the peers from the
@@ -59,7 +59,7 @@ only component with access to your key.
 
 === "Python"
 	```python
---8<-- "main.py:create_invoice"
+--8<-- "getting_started.py:create_invoice"
 	```
 	
 You'll notice that these calls hang indefinitely. This is because the
@@ -83,7 +83,7 @@ in the last chapter, instantiate the signer with it and then start it.
 	
 === "Python"
 	```python
---8<-- "main.py:start_signer"
+--8<-- "getting_started.py:start_signer"
 	```
 
 If you kept the stuck commands above running, you should notice that

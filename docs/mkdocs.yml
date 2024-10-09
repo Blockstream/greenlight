@@ -30,7 +30,7 @@ markdown_extensions:
       strip_comments: true
       strip_js_on_attributes: false
   - pymdownx.snippets:
-      base_path: ["../examples/rust/snippets", "../examples/python/getting-started/"]
+      base_path: ["../examples/rust/snippets", "../examples/python/snippets"]
 theme:
   name: material
   logo: assets/logo.png
