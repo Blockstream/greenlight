@@ -56,7 +56,7 @@ phrase and then convert it into a seed secret we can use:
 === "Python"
 
 	```python
---8<-- "main.py:create_seed"
+--8<-- "getting_started.py:create_seed"
 	```
 
 !!! important
@@ -79,7 +79,7 @@ nodes.
 === "Python"
 
 	```python
---8<-- "main.py:dev_creds"
+--8<-- "getting_started.py:dev_creds"
 	```
 	
 
@@ -100,7 +100,7 @@ We'll pick `bitcoin`, because ... reckless 😉
 
 === "Python"
 	```python
---8<-- "main.py:init_signer"
+--8<-- "getting_started.py:init_signer"
 	```
 	
 [bip39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
@@ -123,7 +123,7 @@ node's private key. Since the private key is managed exclusively by the
 
 === "Python"
 	```python
---8<-- "main.py:register_node"
+--8<-- "getting_started.py:register_node"
 	```
 
 The result of `register` contains the credentials that can be used
@@ -140,7 +140,7 @@ going forward to talk to the scheduler and the node itself.
 
 === "Python"
 	```python
---8<-- "main.py:get_node"
+--8<-- "getting_started.py:get_node"
 	```
 
 If you get an error about a certificate verification failure when

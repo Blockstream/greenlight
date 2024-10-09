@@ -16,7 +16,7 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 	
 === "Python"
 	```python
---8<-- "main.py:recover_node"
+--8<-- "getting_started.py:recover_node"
 	```
 
 Notice that we are using a `TlsConfig` that is not configured with a

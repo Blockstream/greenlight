@@ -6,6 +6,6 @@ authors = []
 license = "MIT"
 
 [tool.poetry.dependencies]
-gl-client = {path = "../libs/gl-client-py"}
+gl-client = {path = "../../libs/gl-client-py"}
 pytest = "^7.1.2"
 python = ">=3.7,<4"
