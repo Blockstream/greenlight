@@ -11,7 +11,7 @@ In order to recover access all you need to do is recover the `seed` from the BIP
 
 === "Rust"
 	```rust
---8<-- "main.rs:recover_node"
+--8<-- "getting_started.rs:recover_node"
 	```
 	
 === "Python"

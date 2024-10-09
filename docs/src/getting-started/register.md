@@ -50,7 +50,7 @@ phrase and then convert it into a seed secret we can use:
 
 === "Rust"
 	```rust
---8<-- "main.rs:create_seed"
+--8<-- "getting_started.rs:create_seed"
 	```
 
 === "Python"
@@ -73,7 +73,7 @@ nodes.
 
 === "Rust"
 	```rust
---8<-- "main.rs:dev_creds"
+--8<-- "getting_started.rs:dev_creds"
 	```
 	
 === "Python"
@@ -95,7 +95,7 @@ We'll pick `bitcoin`, because ... reckless 😉
 
 === "Rust"
 	```rust
---8<-- "main.rs:init_signer"
+--8<-- "getting_started.rs:init_signer"
 	```
 
 === "Python"
@@ -118,7 +118,7 @@ node's private key. Since the private key is managed exclusively by the
 
 === "Rust"
 	```rust
---8<-- "main.rs:register_node"
+--8<-- "getting_started.rs:register_node"
 	```
 
 === "Python"
@@ -135,7 +135,7 @@ going forward to talk to the scheduler and the node itself.
 
 === "Rust"
 	```rust
---8<-- "main.rs:get_node"
+--8<-- "getting_started.rs:get_node"
 	```
 
 === "Python"

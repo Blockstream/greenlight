@@ -26,7 +26,7 @@ Greenlight infrastructure:
 
 === "Rust"
 	```rust
---8<-- "main.rs:start_node"
+--8<-- "getting_started.rs:start_node"
 	```
 
 === "Python"
@@ -38,7 +38,7 @@ Once we have an instance of the `Node` we can start interacting with it via the 
 
 === "Rust"
     ```rust
---8<-- "main.rs:list_peers"
+--8<-- "getting_started.rs:list_peers"
 	```
 === "Python"
 	```python
@@ -54,7 +54,7 @@ only component with access to your key.
 
 === "Rust"
 	```rust
---8<-- "main.rs:create_invoice"
+--8<-- "getting_started.rs:create_invoice"
 	```
 
 === "Python"
@@ -74,7 +74,7 @@ in the last chapter, instantiate the signer with it and then start it.
 
 === "Rust"
 	```rust
---8<-- "main.rs:start_signer"
+--8<-- "getting_started.rs:start_signer"
 	```
 	
 	Notice that `signer.run_forever()` returns a `Future` which you can spawn a

@@ -26,7 +26,7 @@ The Nobody credentials are used when there is no registered node associated with
 
 === "Rust"
 	```rust
---8<-- "main.rs:dev_creds"
+--8<-- "getting_started.rs:dev_creds"
 	```
 	
 === "Python"
@@ -40,7 +40,7 @@ The Device credentials are used when there is a registered node associated with 
 
 === "Rust"
 	```rust
---8<-- "main.rs:device_creds"
+--8<-- "getting_started.rs:device_creds"
 	```
 
 === "Python"
@@ -54,7 +54,7 @@ For glclient versions released before v0.2, device certificates were the primary
 
 === "Rust"
 	```rust
-	--8<-- "main.rs:upgrade_device_certs_to_creds"
+--8<-- "getting_started.rs:upgrade_device_certs_to_creds"
 	```
 
 === "Python"
