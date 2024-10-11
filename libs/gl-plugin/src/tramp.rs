@@ -140,7 +140,8 @@ pub async fn trampolinepay(
         .unwrap_or_default()
         .into_iter()
         .filter_map(|ch| {
-            let short_channel_id = match ch.short_channel_id {
+            let short_channel_id = ch.short_channel_id.or(ch.alias.and_then(|a| a.local));
+            let short_channel_id = match short_channel_id {
                 Some(scid) => scid,
                 None => {
                     warn!("Missing short channel id on a channel to {}", &node_id);
