@@ -98,56 +98,6 @@ service Hsm {
 	rpc Ping(Empty) returns (Empty) {}
 }
 
-enum NetAddressType {
-	Ipv4 = 0;
-	Ipv6 = 1;
-	TorV2 = 2;
-	TorV3 = 3;
-}
-message Address {
-	NetAddressType type = 1;
-	string addr = 2;
-	uint32 port = 3;
-}
-
-message ListFundsRequest {
-	Confirmation minconf = 1;
-}
-
-enum OutputStatus {
-	CONFIRMED = 0;
-	UNCONFIRMED = 1;
-}
-
-
-// Let the node decide what feerate to apply based on its internal
-// view of the network's current feerate.
-enum FeeratePreset {
-	NORMAL = 0;
-	SLOW = 1;
-	URGENT = 2;
-}
-
-message Feerate {
-	oneof value {
-		FeeratePreset preset = 1;
-		uint64 perkw = 5;
-		uint64 perkb = 6;
-	}
-}
-
-message Confirmation {
-	uint32 blocks = 1;
-}
-
-message Timeout {
-	uint32 seconds = 1;
-}
-
-message BitcoinAddress {
-	string address = 1;
-}
-
 message Amount {
 	oneof unit {
 		uint64 millisatoshi = 1;
@@ -158,72 +108,8 @@ message Amount {
 	}
 }
 
-enum InvoiceStatus {
-	UNPAID = 0;
-	PAID = 1;
-	EXPIRED = 2;
-}
-
-message Invoice {
-	string label = 1;
-	string description = 2;
-	Amount amount = 3;
-	Amount received = 4;
-	InvoiceStatus status = 5;
-	uint32 payment_time = 6;
-	uint32 expiry_time = 7;
-	string bolt11 = 8;
-	bytes payment_hash = 9;
-	bytes payment_preimage = 10;
-}
-
-enum PayStatus {
-	PENDING = 0;
-	COMPLETE = 1;
-	FAILED = 2;
-}
-
-message Payment {
-	bytes destination = 1;
-	bytes payment_hash = 2;
-	bytes payment_preimage = 3;
-	PayStatus status = 4;
-	Amount amount = 5;
-	Amount amount_sent = 6;
-	string bolt11 = 7;
-
-	// UTC Unix timestamp of the time the invoice was created.
-	double created_at = 8;
-	// UTC Unix timestamp of the time the payment was completed
-	// (successfully or failed). 0 if not completed yet.
-	uint64 completed_at = 9;
-}
-
-// A payment identifier is a way to reference a unique payment, either
-// by its bolt11 string or just the payment hash. Only one of the two
-// may be provided at once, since having multiple ones may conflict
-// with each other.
-message PaymentIdentifier {
-	oneof id {
-		string bolt11 = 1;
-		bytes payment_hash = 2;
-	}
-}
-
-message InvoiceIdentifier {
-	oneof id {
-		string label = 1;
-		string invstring = 2;
-		bytes payment_hash = 3;
-	}
-}
-
 // Options to stream_incoming to specify what to stream.
 message StreamIncomingFilter {
-}
-
-message ListInvoicesResponse {
-	repeated Invoice invoices = 1;
 }
 
 message TlvField {
@@ -246,19 +132,6 @@ message IncomingPayment {
 	oneof details {
 		OffChainPayment offchain = 1;
 	}
-}
-
-// A single hop in a Routehint
-message RoutehintHop {
-	bytes node_id = 1;
-	string short_channel_id = 2;
-	uint64 fee_base = 3;
-	uint32 fee_prop = 4;
-	uint32 cltv_expiry_delta = 5;
-}
-
-message Routehint {
-	repeated RoutehintHop hops = 1;
 }
 
 message StreamLogRequest {};
