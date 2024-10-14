@@ -87,6 +87,7 @@ nav:
     - Security: reference/security.md
     - LSP Integration: reference/lsp.md
     - Webhooks: reference/webhooks.md
+    - Pairing: reference/pairing.md
   - About:
     - About: about/index.md
     - Frequently Asked Questions: about/faq.md
