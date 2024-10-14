@@ -8,21 +8,6 @@ pub mod greenlight;
 /// Variants prefixed with `Gl` are deprecated and will eventually be removed.
 #[derive(Clone, Debug)]
 pub enum Request {
-    GlGetinfo(greenlight::GetInfoRequest),
-    GlStop(greenlight::StopRequest),
-    GlListPeers(greenlight::ListPeersRequest),
-    GlDisconnect(greenlight::DisconnectRequest),
-    GlNewAddr(greenlight::NewAddrRequest),
-    GlListFunds(greenlight::ListFundsRequest),
-    GlWithdraw(greenlight::WithdrawRequest),
-    GlFundChannel(greenlight::FundChannelRequest),
-    GlCloseChannel(greenlight::CloseChannelRequest),
-    GlCreateInvoice(greenlight::InvoiceRequest),
-    GlPay(greenlight::PayRequest),
-    GlKeysend(greenlight::KeysendRequest),
-    GlListPayments(greenlight::ListPaymentsRequest),
-    GlListInvoices(greenlight::ListInvoicesRequest),
-    GlConnectPeer(greenlight::ConnectRequest),
     GlConfig(greenlight::GlConfig),
     Getinfo(cln::GetinfoRequest),
     ListPeers(cln::ListpeersRequest),
