@@ -40,7 +40,6 @@ impl<'de> Deserialize<'de> for Promise {
     {
         let str_repr = String::deserialize(deserializer)?;
         let promise = Promise::new(str_repr.clone());
-        format!("{:?}", &promise);
         Promise::new(str_repr.clone())
             .map_err(|_| D::Error::custom("promise exceeds max length"))
     }
