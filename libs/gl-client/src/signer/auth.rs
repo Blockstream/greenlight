@@ -32,7 +32,7 @@ impl Authorizer for GreenlightAuthorizer {
     ) -> Result<Vec<Approval>, Error> {
         let approvals : Vec<_> = requests.iter().flat_map(|request| {
             match request {
-                Request::GlPay(req) => {
+                Request::Pay(req) => {
                     // TODO error handling
                     Some(Approval::Invoice(Invoice::from_str(&req.bolt11)
                         .expect("")))

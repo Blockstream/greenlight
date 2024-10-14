@@ -81,11 +81,6 @@ impl Resolver {
                     // TODO: Add `close_to` to allowlist for the close
                     // later on
                 }
-                (Message::NewChannel(m1), Request::GlFundChannel(m2)) => {
-                    // Different node_id? Reject!
-                    m1.node_id.0 == m2.node_id.as_slice()
-                }
-                (Message::SignInvoice(_l), Request::GlCreateInvoice(_r)) => true,
                 (Message::SignInvoice(_l), Request::Invoice(_r)) => {
                     // TODO: This could be strengthened by parsing the
                     // invoice from `l.u5bytes` and verify the
