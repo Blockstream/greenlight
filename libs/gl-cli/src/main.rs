@@ -57,10 +57,10 @@ async fn run(cli: Cli) -> Result<()> {
         env_logger::init();
     }
 
-    let data_dir = match cli.data_dir {
-        Some(d) => util::DataDir(PathBuf::from_str(&d).unwrap()),
-        None => util::DataDir::default(),
-    };
+    let data_dir = cli
+        .data_dir
+        .map(|d| util::DataDir(PathBuf::from_str(&d).expect("is not a valid path")))
+        .unwrap_or_default();
 
     Ok(match cli.cmd {
         Commands::Scheduler(cmd) => {
