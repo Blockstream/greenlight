@@ -27,7 +27,7 @@ jobs:
             mv /tmp/protoc/bin/protoc /usr/local/bin && \
             chmod a+x /usr/local/bin/protoc && \
             rm -rf /tmp/protoc
-      - run: cargo build --manifest-path ./examples/rust/getting-started/Cargo.toml
+      - run: cargo build --manifest-path ./examples/rust/Cargo.toml
       
   build-and-deploy:
     needs: test-examples
