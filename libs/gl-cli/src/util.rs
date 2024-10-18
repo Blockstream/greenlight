@@ -34,6 +34,7 @@ pub fn write_seed(file_path: impl AsRef<Path>, seed: impl AsRef<[u8]>) -> Result
 
     let mut file = File::create(file_path)?;
     file.write_all(seed.as_ref())?;
+    file.sync_all()?;
 
     Ok(())
 }
@@ -43,6 +44,7 @@ pub fn write_seed(file_path: impl AsRef<Path>, seed: impl AsRef<[u8]>) -> Result
 pub fn write_credentials(file_path: impl AsRef<Path>, creds: impl AsRef<[u8]>) -> Result<()> {
     let mut file = File::create(&file_path)?;
     file.write_all(creds.as_ref())?;
+    file.sync_all()?;
 
     Ok(())
 }
