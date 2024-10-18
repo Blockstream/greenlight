@@ -2,7 +2,7 @@ use crate::error::{Error, Result};
 use crate::util;
 use clap::Subcommand;
 use core::fmt::Debug;
-use gl_client::{credentials, signer::Signer};
+use gl_client::signer::Signer;
 use lightning_signer::bitcoin::Network;
 use std::path::Path;
 use tokio::{join, signal};
