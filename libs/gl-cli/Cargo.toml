@@ -7,7 +7,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bip39 = "2.0.0"
 clap = { version = "4.5.4", features = ["derive"] }
 dirs = "5.0.1"
 env_logger = "0.11.3"

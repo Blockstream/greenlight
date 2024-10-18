@@ -1,4 +1,3 @@
-use bip39::{self, Language, Mnemonic};
 use dirs;
 use gl_client::bitcoin::secp256k1::rand::{self, RngCore};
 use gl_client::credentials;
@@ -16,15 +15,11 @@ pub const DEFAULT_GREENLIGHT_DIR: &str = "greenlight";
 
 // -- Seed section
 
-pub fn generate_seed() -> Result<Vec<u8>> {
-    let mut entropy = [0u8; 32];
+pub fn generate_seed() -> [u8; 32] {
+    let mut seed = [0u8; 32];
     let mut rng = rand::thread_rng();
-    rng.fill_bytes(&mut entropy);
-
-    let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy)?;
-
-    // Return the first 32 bytes of the seed generated from the mnemonic
-    Ok(mnemonic.to_seed("")[0..32].to_vec())
+    rng.fill_bytes(&mut seed);
+    seed
 }
 
 pub fn read_seed(file_path: impl AsRef<Path>) -> Option<Vec<u8>> {
@@ -82,8 +77,6 @@ impl AsRef<Path> for DataDir {
 
 #[derive(thiserror::Error, core::fmt::Debug)]
 pub enum UtilsError {
-    #[error(transparent)]
-    SeedError(#[from] bip39::Error),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 }

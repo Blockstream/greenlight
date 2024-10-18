@@ -92,10 +92,10 @@ async fn register_handler<P: AsRef<Path>>(
         }
         None => {
             // Generate a new seed and save it.
-            let seed = util::generate_seed()?;
+            let seed = util::generate_seed();
             util::write_seed(&seed_path, &seed)?;
             println!("Seed saved to {}", seed_path.display());
-            seed
+            seed.to_vec()
         }
     };
 
