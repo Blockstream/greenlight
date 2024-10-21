@@ -47,7 +47,8 @@ jobs:
 # aarch64 does not compile due to an old(-ish) compiler with the error
 #  `ARM assembler must define __ARM_ARCH`
 #        - aarch64
-        - armv7
+        # Temporarily disable armv7 as to github issues fetching a manifest for the architecture.
+        # - armv7
     steps:
     - uses: actions/checkout@v3
 
