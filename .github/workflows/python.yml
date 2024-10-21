@@ -183,41 +183,41 @@ jobs:
         name: wheels
         path:  libs\gl-client-py\dist
 
-  publish:
-    runs-on: ubuntu-20.04
-    needs:
-      - source
-      - windows
-      - linux
-      - macos
-    if: github.ref == 'refs/heads/main'
-    steps:
-
-    - name: Download wheels
-      uses: actions/download-artifact@v3
-      with:
-        name: wheels
-        path:  libs/gl-client-py/dist
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install python3-pip
-        sudo pip3 install -U \
-          poetry \
-          maturin \
-          twine \
-          keyring
-
-    - name: Publish wheels to PyPI
-      env:
-        TWINE_USERNAME: __token__
-      run: |
-        cd libs/gl-client-py
-        twine upload \
-          --skip-existing \
-          --non-interactive \
-          --verbose \
-          --username "__token__" \
-          --password "${{ secrets.TWINE_PASSWORD }}" \
-          dist/*.tar.gz dist/*.whl
+  # publish:
+  #   runs-on: ubuntu-20.04
+  #   needs:
+  #     - source
+  #     - windows
+  #     - linux
+  #     - macos
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #
+  #   - name: Download wheels
+  #     uses: actions/download-artifact@v3
+  #     with:
+  #       name: wheels
+  #       path:  libs/gl-client-py/dist
+  #
+  #   - name: Install dependencies
+  #     run: |
+  #       sudo apt-get update -qq
+  #       sudo apt-get install python3-pip
+  #       sudo pip3 install -U \
+  #         poetry \
+  #         maturin \
+  #         twine \
+  #         keyring
+  #
+  #   - name: Publish wheels to PyPI
+  #     env:
+  #       TWINE_USERNAME: __token__
+  #     run: |
+  #       cd libs/gl-client-py
+  #       twine upload \
+  #         --skip-existing \
+  #         --non-interactive \
+  #         --verbose \
+  #         --username "__token__" \
+  #         --password "${{ secrets.TWINE_PASSWORD }}" \
+  #         dist/*.tar.gz dist/*.whl
