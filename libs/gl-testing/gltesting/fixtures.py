@@ -160,3 +160,20 @@ def clients(directory, scheduler, nobody_id):
         directory=directory / "clients", scheduler=scheduler, nobody_id=nobody_id
     )
     yield clients
+
+
+@pytest.fixture(scope='session', autouse=True)
+def cln_path() -> Path:
+    """Ensure that the latest CLN version is in PATH.
+
+    Some tests use the NodeFactory directly, which relies on being
+    able to pick a recent CLN version from the `$PATH`. By appending
+    at the end we just ensure that there is a CLN version to be found.
+
+    This is our Elephant in Cairo :-)
+    https://en.wikipedia.org/wiki/Elephant_in_Cairo
+    """
+    manager = ClnVersionManager()
+    v = manager.latest()
+    os.environ['PATH'] += f":{v.bin_path}"
+    return v.bin_path
