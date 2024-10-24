@@ -18,6 +18,10 @@ GENALL += ${GEN_TESTING}
 
 ${TESTINGDIR}/gltesting/scheduler_grpc.py: testgrpc
 
+check-testing-py:
+	#cd ${TESTINGDIR}; mypy gltesting
+	cd ${TESTINGDIR}; poetry install --with=dev; poetry run pytest tests -n 4 -vvv
+
 testgrpc: ${REPO_ROOT}/libs/proto/glclient/scheduler.proto
 	python -m grpc_tools.protoc ${TESTPROTOC_OPTS} glclient/scheduler.proto
 	mv ${TESTINGDIR}/gltesting/glclient/scheduler_grpc.py ${TESTINGDIR}/gltesting/scheduler_grpc.py

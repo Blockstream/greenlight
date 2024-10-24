@@ -105,7 +105,7 @@ build-self: ensure-docker
 	cd libs/gl-client-py; maturin develop
 	#mypy examples/python
 
-check-all: check-rs check-self check-py
+check-all: check-rs check-self check-py check-testing-py
 
 check-self: ensure-docker build-self
 	PYTHONPATH=/repo/libs/gl-testing \
