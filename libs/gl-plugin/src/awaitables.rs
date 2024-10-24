@@ -294,10 +294,7 @@ async fn ensure_peer_connection(
 
 async fn get_version(rpc_path: impl AsRef<Path>) -> Result<String, Error> {
     let mut rpc = connect(rpc_path).await?;
-    let info = rpc
-        .call_typed(&GetinfoRequest {})
-        .await
-        .map_err(|_| Error::Peer("unable to connect"))?;
+    let info = rpc.call_typed(&GetinfoRequest {}).await?;
     Ok(info.version)
 }
 
