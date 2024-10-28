@@ -14,6 +14,7 @@ from pyln.testing.fixtures import bitcoind, teardown_checks, node_cls, test_name
 from gltesting.network import node_factory
 from pyln.testing.fixtures import directory as str_directory
 from decimal import Decimal
+from clnvm import ClnVersionManager
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -21,9 +22,34 @@ logging.getLogger("sh").setLevel(logging.ERROR)
 logging.getLogger("hpack").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
+
+@pytest.fixture(autouse=True)
+def paths():
+    """A fixture to ensure that we have all CLN versions and that
+    `PATH` points to the latest one.
+
+    If you'd like to test a development version rather than the
+    released ones, ensure that its executable path is in the PATH
+    before calling `pytest` since this appends to the end.
+
+    """
+    vm = ClnVersionManager()
+    versions = vm.get_versions()
+
+    # Should be a no-op after the first run
+    vm.get_all()
+
+    latest = [v for v in versions if 'gl' in v.tag][-1]
+
+    os.environ['PATH'] += f":{vm.get_target_path(latest) / 'usr' / 'local' / 'bin'}"
+
+    yield 
+
+
 @pytest.fixture()
 def directory(str_directory : str) -> Path:
     return Path(str_directory) / "gl-testing"
+
 
 @pytest.fixture()
 def cert_directory(directory):
