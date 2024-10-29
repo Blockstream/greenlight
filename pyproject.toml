@@ -39,3 +39,5 @@ pillow = "^9.5.0"
 [tool.poetry.group.lsp_ide.dependencies]
 python-lsp-server = "^1.10.0"
 
+[tool.uv.workspace]
+members = ["libs/gl-testing"]
