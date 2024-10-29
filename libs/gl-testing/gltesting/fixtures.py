@@ -10,11 +10,22 @@ import os
 from pathlib import Path
 import logging
 import sys
-from pyln.testing.fixtures import bitcoind, teardown_checks, node_cls, test_name, executor, db_provider, test_base_dir, jsonschemas
+from pyln.testing.fixtures import (
+    bitcoind,
+    teardown_checks,
+    node_cls,
+    test_name,
+    executor,
+    db_provider,
+    test_base_dir,
+    jsonschemas,
+)
 from gltesting.network import node_factory
 from pyln.testing.fixtures import directory as str_directory
 from decimal import Decimal
+from gltesting.grpcweb import GrpcWebProxy
 from clnvm import ClnVersionManager
+
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -39,15 +50,15 @@ def paths():
     # Should be a no-op after the first run
     vm.get_all()
 
-    latest = [v for v in versions if 'gl' in v.tag][-1]
+    latest = [v for v in versions if "gl" in v.tag][-1]
 
-    os.environ['PATH'] += f":{vm.get_target_path(latest) / 'usr' / 'local' / 'bin'}"
+    os.environ["PATH"] += f":{vm.get_target_path(latest) / 'usr' / 'local' / 'bin'}"
 
-    yield 
+    yield
 
 
 @pytest.fixture()
-def directory(str_directory : str) -> Path:
+def directory(str_directory: str) -> Path:
     return Path(str_directory) / "gl-testing"
 
 
@@ -105,31 +116,33 @@ def scheduler(scheduler_id, bitcoind):
     btcproxy = bitcoind.get_proxy()
 
     # Copied from pyln.testing.utils.NodeFactory.get_node
-    feerates=(15000, 11000, 7500, 3750)
+    feerates = (15000, 11000, 7500, 3750)
 
     def mock_estimatesmartfee(r):
-        params = r['params']
-        if params == [2, 'CONSERVATIVE']:
+        params = r["params"]
+        if params == [2, "CONSERVATIVE"]:
             feerate = feerates[0] * 4
-        elif params == [6, 'ECONOMICAL']:
+        elif params == [6, "ECONOMICAL"]:
             feerate = feerates[1] * 4
-        elif params == [12, 'ECONOMICAL']:
+        elif params == [12, "ECONOMICAL"]:
             feerate = feerates[2] * 4
-        elif params == [100, 'ECONOMICAL']:
+        elif params == [100, "ECONOMICAL"]:
             feerate = feerates[3] * 4
         else:
-            warnings.warn("Don't have a feerate set for {}/{}.".format(
-                params[0], params[1],
-            ))
+            warnings.warn(
+                "Don't have a feerate set for {}/{}.".format(
+                    params[0],
+                    params[1],
+                )
+            )
             feerate = 42
         return {
-            'id': r['id'],
-            'error': None,
-            'result': {
-                'feerate': Decimal(feerate) / 10**8
-            },
+            "id": r["id"],
+            "error": None,
+            "result": {"feerate": Decimal(feerate) / 10**8},
         }
-    btcproxy.mock_rpc('estimatesmartfee', mock_estimatesmartfee)
+
+    btcproxy.mock_rpc("estimatesmartfee", mock_estimatesmartfee)
 
     s = Scheduler(bitcoind=btcproxy, grpc_port=grpc_port, identity=scheduler_id)
     logger.debug(f"Scheduler is running at {s.grpc_addr}")
@@ -149,9 +162,7 @@ def scheduler(scheduler_id, bitcoind):
     # here.
 
     if s.debugger.reports != []:
-        raise ValueError(
-            f"Some signer reported an error: {s.debugger.reports}"
-        )
+        raise ValueError(f"Some signer reported an error: {s.debugger.reports}")
 
 
 @pytest.fixture()
@@ -162,7 +173,7 @@ def clients(directory, scheduler, nobody_id):
     yield clients
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def cln_path() -> Path:
     """Ensure that the latest CLN version is in PATH.
 
@@ -175,5 +186,37 @@ def cln_path() -> Path:
     """
     manager = ClnVersionManager()
     v = manager.latest()
-    os.environ['PATH'] += f":{v.bin_path}"
+    os.environ["PATH"] += f":{v.bin_path}"
     return v.bin_path
+
+
+@pytest.fixture()
+def grpc_test_server():
+    """Creates a hello world server over grpc to test the web proxy against.
+
+    We explicitly do not use the real protos since the proxy must be
+    agnostic.
+
+    """
+    import anyio
+    from threading import Thread
+    import purerpc
+    from util.grpcserver import Server
+
+    server = Server()
+    logging.getLogger("purerpc").setLevel(logging.DEBUG)
+    server.start()
+
+    yield server
+
+    server.stop()
+
+
+@pytest.fixture()
+def grpc_web_proxy(scheduler, grpc_test_server):
+    p = GrpcWebProxy(scheduler=scheduler, grpc_port=grpc_test_server.grpc_port)
+    p.start()
+
+    yield p
+
+    p.stop()

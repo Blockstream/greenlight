@@ -1,0 +1,17 @@
+// Just a small grpc definition to test the grpcweb implementation.
+
+syntax = "proto3";
+
+package gltesting;
+
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

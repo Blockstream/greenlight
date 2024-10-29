@@ -27,5 +27,6 @@ testgrpc: ${REPO_ROOT}/libs/proto/glclient/scheduler.proto
 	mv ${TESTINGDIR}/gltesting/glclient/scheduler_grpc.py ${TESTINGDIR}/gltesting/scheduler_grpc.py
 	rm -rf ${TESTINGDIR}/gltesting/glclient
 
-
+protoc:
+	uv run python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --purerpc_out=. --grpc_python_out=. gltesting/test.proto
 
