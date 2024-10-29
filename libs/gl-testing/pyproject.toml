@@ -1,51 +1,29 @@
-[tool.poetry]
+[project]
 name = "gltesting"
 version = "0.3.0"
 description = ""
-authors = ["Christian Decker <decker@blockstream.com>"]
-license = "MIT"
-
-packages = [
-    { include = "gltesting" },
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "cln-version-manager",
+    "flaky>=3.8.1",
+    "gl-client",
+    "grpcio-tools>=1.66",
+    "grpcio>=1.66.0",
+    "httpx>=0.27.2",
+    "purerpc>=0.8.0",
+    "pyln-testing==24.8.1",
+    "pytest-timeout>=2.3.1",
+    "pytest-xdist>=3.6.1",
+    "rich>=13.9.3",
+    "sh>=1.14.3",
+    "sonora>=0.2.3",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-cryptography = ">=36.0.1"
-ephemeral-port-reserve = "^1.1.4"
-sh = "^1.14.2"
-pytest-timeout = "^2.1.0"
-pytest-xdist = "^2.5.0"
-pytest = "^7.1.2"
-pytest-cov = "^3.0.0"
-rich = "^12.5.1"
-pyln-testing = "==24.02"
-pyln-client = "==24.02"
-pyln-grpc-proto = "^0.1"
-protobuf = ">=3"
-flaky = "^3"
-anyio = "^3.7.1"
-aiostream = "^0.5.1"
-purerpc = { version = "^0.8.0", extras = ["grpc"] }
-pytest-sugar = "^0.9.7"
 
-# The dependency below is defined in this repository
-# PyPi cannot support relative paths.
-#
-# Users, who `pip install` this library retrieve the sources from `PyPi`.
-# using the version numbers listed below
-#
-# Contributors should use `poetry install` in the project root
-# to insure the installation is editable from local sources.
-gl-client = "0.3.0"
-cln-version-manager = "^0.1.0"
+[tool.uv]
+package = true
 
-[tool.poetry.group.dev.dependencies]
-mypy = "^1"
-typed-ast = "^1.5.4"
-cln-version-manager = { path="../cln-version-manager", develop=true }
-grpcio-tools = "^1.62.1"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.uv.sources]
+gl-client = { path = "../gl-client-py" }
+cln-version-manager = { path = "../cln-version-manager" }
