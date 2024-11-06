@@ -33,4 +33,4 @@ class Server(GreeterServicer):
         self.thread.start()
 
     def stop(self):
-        self.inner.aclose
+        pass
