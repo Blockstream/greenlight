@@ -23,7 +23,7 @@ from pyln.testing.fixtures import (
 from gltesting.network import node_factory
 from pyln.testing.fixtures import directory as str_directory
 from decimal import Decimal
-from gltesting.grpcweb import GrpcWebProxy
+from gltesting.grpcweb import GrpcWebProxy, NodeHandler
 from clnvm import ClnVersionManager
 
 
@@ -215,6 +215,19 @@ def grpc_test_server():
 @pytest.fixture()
 def grpc_web_proxy(scheduler, grpc_test_server):
     p = GrpcWebProxy(scheduler=scheduler, grpc_port=grpc_test_server.grpc_port)
+    p.start()
+
+    yield p
+
+    p.stop()
+
+
+@pytest.fixture
+def node_grpc_web_proxy(scheduler):
+    """A grpc-web proxy that knows how to talk to nodes.
+    """
+    p = GrpcWebProxy(scheduler=scheduler, grpc_port=0)
+    p.handler_cls = NodeHandler
     p.start()
 
     yield p
