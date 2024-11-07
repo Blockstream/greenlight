@@ -210,7 +210,7 @@ def gencert(idpath):
     for f in path:
         if os.path.exists(f):
             logging.info(f"Not overwriting existing file {f}")
-            return
+            return Identity.from_path(idpath)
 
     tmpcsr = tempfile.NamedTemporaryFile(mode="w")
     json.dump(mycsr, tmpcsr)
