@@ -40,4 +40,4 @@ pillow = "^9.5.0"
 python-lsp-server = "^1.10.0"
 
 [tool.uv.workspace]
-members = ["libs/gl-testing"]
+members = ["libs/gl-testing", "libs/gl-testserver"]
