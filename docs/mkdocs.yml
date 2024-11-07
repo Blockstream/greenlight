@@ -83,6 +83,7 @@ nav:
     - Client Libraries: reference/client-libraries.md
     - Credentials: reference/creds.md
     - reference/node-domain.md
+    - Testserver: reference/testserver.md
     - Certificates: reference/certs.md
     - Security: reference/security.md
     - LSP Integration: reference/lsp.md
