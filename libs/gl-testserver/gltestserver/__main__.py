@@ -1,20 +1,18 @@
-import json
 from dataclasses import dataclass
-
-import time
-
-from rich.console import Console
-from rich.pretty import pprint
-from rich import inspect
-from pathlib import Path
 from gltesting import fixtures
-import gltesting
 from inspect import isgeneratorfunction
-import click
-import logging
-from rich.logging import RichHandler
+from pathlib import Path
 from pyln.testing.utils import BitcoinD
+from rich.console import Console
+from rich.logging import RichHandler
+from rich.pretty import pprint
 from typing import Any, List
+import click
+import gltesting
+import json
+import logging
+import tempfile
+import time
 
 
 console = Console()
@@ -56,7 +54,7 @@ class TestServer:
         }
 
 
-def build():
+def build(base_dir: Path):
     # List of teardown functions to call in reverse order.
     finalizers = []
 
@@ -72,14 +70,14 @@ def build():
         else:
             return F(*args, **kwargs)
 
-    directory = Path("/tmp/gl-testserver")
+    directory = base_dir / "gl-testserver"
 
     cert_directory = callfixture(fixtures.cert_directory, directory)
-    root_id = callfixture(fixtures.root_id, cert_directory)
-    users_id = callfixture(fixtures.users_id)
+    _root_id = callfixture(fixtures.root_id, cert_directory)
+    _users_id = callfixture(fixtures.users_id)
     nobody_id = callfixture(fixtures.nobody_id, cert_directory)
     scheduler_id = callfixture(fixtures.scheduler_id, cert_directory)
-    paths = callfixture(fixtures.paths)
+    _paths = callfixture(fixtures.paths)
     bitcoind = callfixture(
         fixtures.bitcoind,
         directory=directory,
@@ -113,18 +111,34 @@ def cli():
 
 
 @cli.command()
-def run():
-    gl = build()
+@click.option(
+    "--directory",
+    type=click.Path(),
+    help="""
+      Set the top-level directory for the testserver. This can be used to run
+      multiple instances isolated from each other, by giving each isntance a
+      different top-level directory. Defaults to '/tmp/'
+    """,
+)
+def run(directory):
+    """Start a gl-testserver instance to test against."""
+    if not directory:
+        directory = Path(tempfile.gettempdir())
+    else:
+        directory = Path(directory)
+
+    gl = build(base_dir=directory)
     try:
         meta = gl.metadata()
         metafile = gl.directory / "metadata.json"
+        metafile.parent.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Writing testserver metadata to {metafile}")
         with metafile.open(mode="w") as f:
             json.dump(meta, f)
 
         pprint(meta)
         logger.info(
-            f"Server is up and running with the above config values. To stop press Ctrl-C."
+            "Server is up and running with the above config values. To stop press Ctrl-C."
         )
         time.sleep(1800)
     except Exception as e:

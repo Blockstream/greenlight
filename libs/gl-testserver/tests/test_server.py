@@ -4,14 +4,16 @@
 # Ok, one exception, `TailableProc` is used to run and tail the
 # `gl-testserver`.
 
-import shutil
-import tempfile
-import os
-import pytest
+from pathlib import Path
 from pyln.testing.utils import TailableProc
 import json
+import logging
+import os
+import pytest
+import shutil
 import signal
-from pathlib import Path
+import tempfile
+import time
 
 
 @pytest.fixture
@@ -79,7 +81,9 @@ class TestServer(TailableProc):
             "python3",
             str(Path(__file__).parent / ".." / "gltestserver" / "__main__.py"),
             "run",
+            f"--directory={directory}",
         ]
+        self.directory = Path(directory)
 
     def start(self):
         TailableProc.start(self)
@@ -89,19 +93,21 @@ class TestServer(TailableProc):
         self.proc.send_signal(signal.SIGTERM)
         self.proc.wait()
 
+    def metadata(self):
+        metadata = json.load(
+            (self.directory / "gl-testserver" / "metadata.json").open(mode="r")
+        )
+        return metadata
+
 
 @pytest.fixture
 def testserver(directory):
     ts = TestServer(directory=directory)
     ts.start()
 
-
-    metadata = json.load(open(f'{directory}/metadata.json'))
-    pprint(metadata)
-    
     yield ts
     ts.stop()
 
 
 def test_start(testserver):
-    print(TailableProc)
+    print(testserver.metadata())
