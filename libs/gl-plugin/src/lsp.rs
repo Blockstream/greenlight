@@ -15,8 +15,8 @@ use serde_json::Value;
 struct Onion {
     payload: tlv::SerializedTlvStream,
     short_channel_id: Option<ShortChannelId>,
-    forward_msat: Amount,
-    outgoing_cltv_value: u32,
+    forward_msat: Option<Amount>,
+    outgoing_cltv_value: Option<u32>,
     #[serde(deserialize_with = "from_hex")]
     shared_secret: Vec<u8>,
     #[serde(deserialize_with = "from_hex")]
@@ -59,7 +59,18 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
     log::debug!("Decoded {:?}", &req);
 
     let htlc_amt = req.htlc.amount_msat;
-    let onion_amt = req.onion.forward_msat;
+    let onion_amt = match req.onion.forward_msat {
+        Some(a) => a,
+        None => {
+            // An onion without an `amt_to_forward` is unorthodox and can not
+            // be processed by this plugin. Skip it.
+            return Ok(serde_json::to_value(HtlcAcceptedResponse {
+                result: "continue".to_string(),
+                ..Default::default()
+            })
+            .unwrap());
+        }
+    };
 
     let res = if htlc_amt.msat() < onion_amt.msat() {
         log::info!(
