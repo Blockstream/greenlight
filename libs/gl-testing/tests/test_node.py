@@ -238,7 +238,7 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     We test multiple parts and overpay slightly to verify that even
     that works out ok.
 
-    We also check that we can handle unorthodox onion payloads that 
+    We also check that we can handle unorthodox onion payloads that
     don't carry fields that we expect.
 
     """
@@ -384,7 +384,7 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
 
     # The htlc should be passed on to the next consumer.
     c.find_node().process.wait_for_log(
-        r"lsp-plugin: got an onion payload=.* without an amt forward_msat.",
+        r"Lsp-plugin continue, reason: payload=.* is missing forward_msat",
         timeout=10,
     )
 

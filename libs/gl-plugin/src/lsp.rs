@@ -54,27 +54,35 @@ struct HtlcAcceptedResponse {
 const TLV_FORWARD_AMT: u64 = 2;
 const TLV_PAYMENT_SECRET: u64 = 8;
 
+/// A macro to break out of the current hook flow and return a `continue`
+/// signal to core-lightning. This is to be used when we don't know how to
+/// handle a given payload or as a shortcut in case we could identify that the
+/// incoming htlc is not part of a LSP jit channel opening.
+macro_rules! unwrap_or_continue {
+    ($res:expr) => {
+        match $res {
+            Ok(x) => x,
+            Err(e) => {
+                log::debug!("Lsp-plugin continue, reason: {}", e.to_string());
+                return Ok(serde_json::to_value(HtlcAcceptedResponse {
+                    result: "continue".to_string(),
+                    ..Default::default()
+                })
+                .expect("Could not serialize json value"));
+            }
+        }
+    };
+}
+
 pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow::Error> {
-    let req: HtlcAcceptedRequest = serde_json::from_value(v).unwrap();
+    let req: HtlcAcceptedRequest = unwrap_or_continue!(serde_json::from_value(v));
     log::debug!("Decoded {:?}", &req);
 
     let htlc_amt = req.htlc.amount_msat;
-    let onion_amt = match req.onion.forward_msat {
-        Some(a) => a,
-        None => {
-            // An onion payload without an `amt_to_forward` is unorthodox and
-            // can not be processed by this plugin. Skip it.
-            log::debug!(
-                "lsp-plugin: got an onion payload={} without an amt forward_msat.",
-                req.onion.payload
-            );
-            return Ok(serde_json::to_value(HtlcAcceptedResponse {
-                result: "continue".to_string(),
-                ..Default::default()
-            })
-            .unwrap());
-        }
-    };
+    let onion_amt = unwrap_or_continue!(req.onion.forward_msat.ok_or(format!(
+        "payload={} is missing forward_msat",
+        &req.onion.payload
+    )));
 
     let res = if htlc_amt.msat() < onion_amt.msat() {
         log::info!(
@@ -85,7 +93,10 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
 
         let mut payload = req.onion.payload.clone();
         payload.set_tu64(TLV_FORWARD_AMT, htlc_amt.msat());
-        let payment_secret = payload.get(TLV_PAYMENT_SECRET).unwrap();
+        let payment_secret = unwrap_or_continue!(payload.get(TLV_PAYMENT_SECRET).ok_or(format!(
+            "payload={} is missing payment_secret",
+            &payload.to_string()
+        )));
 
         let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
         let res: cln_rpc::model::responses::ListinvoicesResponse = rpc
@@ -99,19 +110,14 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
                 limit: None,
             })
             .await?;
-        if res.invoices.len() != 1 {
-            log::warn!(
-                "No invoice matching incoming HTLC payment_hash={} found, continuing",
-                hex::encode(&req.htlc.payment_hash)
-            );
-            return Ok(serde_json::to_value(HtlcAcceptedResponse {
-                result: "continue".to_string(),
-                ..Default::default()
-            })
-            .unwrap());
-        }
 
-        let total_msat = res.invoices.iter().next().unwrap().amount_msat.unwrap();
+        let invoice = unwrap_or_continue!(res.invoices.first().ok_or(format!(
+            "no invoice matching incoming HTLC payment_hash={} found",
+            hex::encode(&req.htlc.payment_hash),
+        )));
+        let total_msat = unwrap_or_continue!(invoice
+            .amount_msat
+            .ok_or("invoice has no total amount msat"));
 
         let mut ps = bytes::BytesMut::new();
         ps.put(&payment_secret.value[0..32]);
