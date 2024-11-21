@@ -161,7 +161,7 @@ where
 {
     match buffer {
         None => serializer.serialize_none(),
-        Some(buffer) => serializer.serialize_str(&hex::encode(&buffer.as_ref())),
+        Some(buffer) => serializer.serialize_str(&hex::encode(buffer)),
     }
 }
 
@@ -172,5 +172,5 @@ where
 {
     use serde::de::Error;
     String::deserialize(deserializer)
-        .and_then(|string| Vec::from_hex(&string).map_err(|err| Error::custom(err.to_string())))
+        .and_then(|string| Vec::from_hex(string).map_err(|err| Error::custom(err.to_string())))
 }
