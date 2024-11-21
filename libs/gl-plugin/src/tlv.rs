@@ -191,6 +191,13 @@ impl<'de> Deserialize<'de> for SerializedTlvStream {
     }
 }
 
+impl std::fmt::Display for SerializedTlvStream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = hex::encode(SerializedTlvStream::to_bytes(self.clone()));
+        write!(f, "{s}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
