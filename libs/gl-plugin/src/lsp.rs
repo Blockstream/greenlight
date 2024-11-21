@@ -62,8 +62,12 @@ pub async fn on_htlc_accepted(plugin: Plugin, v: Value) -> Result<Value, anyhow:
     let onion_amt = match req.onion.forward_msat {
         Some(a) => a,
         None => {
-            // An onion without an `amt_to_forward` is unorthodox and can not
-            // be processed by this plugin. Skip it.
+            // An onion payload without an `amt_to_forward` is unorthodox and
+            // can not be processed by this plugin. Skip it.
+            log::debug!(
+                "lsp-plugin: got an onion payload={} without an amt forward_msat.",
+                req.onion.payload
+            );
             return Ok(serde_json::to_value(HtlcAcceptedResponse {
                 result: "continue".to_string(),
                 ..Default::default()
