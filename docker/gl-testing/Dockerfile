@@ -25,8 +25,6 @@
 # Prefer binary installs over compilation where possible.
 # We also heavily rely on staged builds to increase concurrency.
 
-
-
 # --------------------------------------------------
 # STAGE: python-builder
 #--------------------------------------------------
@@ -35,7 +33,7 @@
 # files and installs them in a `venv`.
 #
 # Later, we'll copy this venv to our project
-FROM ubuntu:20.04 as python-builder
+FROM ubuntu:22.04 AS python-builder
 RUN apt update && apt install -qqy curl python3 python3-pip python3-venv libpq-dev
 
 # Create a python-venv that will include all dependencies
@@ -50,7 +48,6 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH=$POETRY_HOME/bin:$PATH
 RUN poetry self add poetry-plugin-export
 
-
 # The pyproject.toml files describe our project
 # I purposefully ignore lock-files here
 # We are developping a libraries and if a new version of a
@@ -60,7 +57,7 @@ ADD libs/gl-client-py/pyproject.toml /repo/libs/gl-client-py/pyproject.toml
 ADD libs/gl-testing/pyproject.toml /repo/libs/gl-testing/pyproject.toml
 ADD libs/cln-version-manager/pyproject.toml /repo/libs/cln-version-manager/pyproject.toml
 
-WORKDIR repo
+WORKDIR /repo
 
 # We don't want to reinstall depenendencies every time
 # a single line of library code changes.
@@ -84,7 +81,7 @@ RUN chmod a+rwx -R /tmp/venv
 # STAGE: rust-builder
 # --------------------------------------------
 # Installs rustc and cargo using rust-up
-from ubuntu:20.04 as rust-base
+FROM ubuntu:22.04 AS rust-base
 RUN apt update && apt install curl build-essential -qqy
 
 ENV RUSTUP_HOME=/opt/rustup
@@ -104,13 +101,12 @@ RUN rustup default stable
 # Ensure we can use cargo under a different user
 RUN chmod a+rwx -R $CARGO_HOME
 
-
 # ------------------------------------------
 # STAGE: cln-downloader
 # -----------------------------------------
 # gl-testing requires multiple versions of Core Lightning
 # Download all versions so they can be copied to our dev-container
-FROM python-builder as cln-downloader
+FROM python-builder AS cln-downloader
 
 ARG GL_TESTING_IGNORE_HASH=0
 
@@ -126,7 +122,7 @@ RUN GL_TESTING_IGNORE_HASH=${GL_TESTING_IGNORE_HASH} python -m clnvm get-all
 # STAGE: bitcoin-downloader
 # ------------------------------------
 # Downloads bitcoin-core
-FROM ubuntu:20.04 as bitcoin-downloader
+FROM ubuntu:22.04 AS bitcoin-downloader
 RUN apt update && apt install -qqy wget
 
 ARG BITCOIN_VERSION=25.0
@@ -141,7 +137,7 @@ RUN cd /tmp/ && \
 # STAGE: cfssl-downloader
 # --------------------------------------
 # Downloads cloudlfares SSL binaries
-FROM ubuntu:20.04 as cfssl-downloader
+FROM ubuntu:22.04 AS cfssl-downloader
 
 RUN apt update && apt install -qqy wget
 
@@ -153,7 +149,7 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljs
 # ----------------------------------------
 # STAGE: protoc-downloader
 # ----------------------------------------
-from ubuntu:20.04 as protoc-downloader
+FROM ubuntu:22.04 AS protoc-downloader
 RUN apt update && apt install -qqy wget unzip
 RUN mkdir /tmp/protoc && \
     cd /tmp/protoc && \
@@ -168,7 +164,7 @@ RUN mkdir /tmp/protoc && \
 # ---------------------------------------
 # Create a release installation or all plugins.
 # This is mainly useful for users who don't to build or edit the rust-code
-FROM rust-base as gl-plugin-builder
+FROM rust-base AS gl-plugin-builder
 
 RUN apt update && apt install -qqy git
 
@@ -178,19 +174,17 @@ COPY --from=protoc-downloader /usr/local/bin/protoc /usr/local/bin/protoc
 # We should only ADD the files we need to optimize caching
 ADD . /repo
 
-
 WORKDIR /repo
 
 RUN cd /repo/libs/gl-plugin && cargo build && \
     cd /repo/libs/gl-signerproxy && cargo build
-
 
 # ---------------------
 # STAGE: Dev container
 # ----------------------------
 #
 # This is the dev-container that we will be using
-FROM rust-base as gl-dev
+FROM rust-base AS gl-dev
 ENV DEBIAN_FRONTEND=noninteractive
 # Indicate we run inside the Dockerfile
 ENV GL_DOCKER=1
@@ -204,7 +198,7 @@ RUN apt-get update && apt install -qqy \
     git \
     jq \
     libpq5 \
-    python \
+    python3 \
     python3-venv \
     python3-pip \
     tree \
@@ -234,8 +228,8 @@ COPY --from=bitcoin-downloader /opt/bitcoin/bin /opt/bitcoin/bin
 ENV PATH=/opt/bitcoin/bin:$PATH
 
 # Install cfssl
-copy --from=cfssl-downloader /usr/bin/cfssl /usr/local/bin/cfssl
-copy --from=cfssl-downloader /usr/bin/cfssljson /usr/local/bin/cfssljson
+COPY --from=cfssl-downloader /usr/bin/cfssl /usr/local/bin/cfssl
+COPY --from=cfssl-downloader /usr/bin/cfssljson /usr/local/bin/cfssljson
 
 # Install protoc
 COPY --from=protoc-downloader /usr/local/bin/protoc /usr/local/bin/protoc
@@ -270,6 +264,3 @@ RUN chmod -R a+rw /tmp/venv
 # Create a symlink to the latest cln-version and add it to the path
 RUN ln -s $(clnvm latest --root-path) /opt/cln-latest
 ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
-
-
-
