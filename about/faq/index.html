@@ -1139,6 +1139,30 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#connectivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connectivity
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connectivity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-cant-i-connect-to-the-service-from-my-schoolwork-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why can't I connect to the service from my school/work network?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1226,6 +1250,30 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#connectivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connectivity
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connectivity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-cant-i-connect-to-the-service-from-my-schoolwork-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why can't I connect to the service from my school/work network?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1271,6 +1319,38 @@ request the signer:</p>
 <p>All of this ensures that only ever the latest state gets signed, and
 that this signed state doesn't get revoked, making a cheat attempt
 impossible.</p>
+<h2 id="connectivity">Connectivity</h2>
+<h3 id="why-cant-i-connect-to-the-service-from-my-schoolwork-network">Why can't I connect to the service from my school/work network?</h3>
+<p>For its authentication and authorization Greenlight uses mTLS (mutual
+transport layer security), an extension on the usual TLS used for
+secure communication in browsers. Unlike normal websites however,
+Greenlight requires two things:</p>
+<ul>
+<li>The server must reply with a server certificate signed by the Greenlight CA.</li>
+<li>The client must use a client certificate signed by the Greenlight CA.</li>
+</ul>
+<p>When you try to access a service that uses mTLS (Mutual Transport
+Layer Security) with self-signed certificates, you might encounter
+connectivity issues, especially on networks with Deep Packet
+Inspection (DPI).</p>
+<p>DPI is a network security technique used to inspect network traffic to
+identify potential threats. Some DPI systems can interfere with
+encrypted connections, particularly those using self-signed
+certificates. These systems often rely on trusted Certificate
+Authorities (CAs) to validate certificates. Since self-signed
+certificates are not issued by a trusted CA, they may be flagged as
+suspicious and blocked.</p>
+<p>The root cause of the issue lies in the network configuration and
+security policies of your school or workplace network. They may have
+strict security measures in place that restrict traffic based on
+certificate validation.  ￼</p>
+<p>This is not a Greenlight issue. Greenlight is using a standard
+security protocol, mTLS, to protect your data. The problem arises from
+the network restrictions imposed by your institution.</p>
+<p>We are working on exposing the scheduler and node interfaces over
+<a href="https://github.com/grpc/grpc-web"><code>grpc-web</code></a> which can use browser-grade certificates, and
+not require a client certificate, thus avoiding these connectivity
+issues.</p>
 
 
 
