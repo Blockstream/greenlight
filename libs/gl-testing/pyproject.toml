@@ -10,7 +10,7 @@ dependencies = [
     "gl-client",
     "grpcio-tools>=1.66",
     "grpcio>=1.66.0",
-    "httpx>=0.27.2",
+    "httpx[http2]>=0.27.2",
     "purerpc>=0.8.0",
     "pyln-client==24.2",
     "pyln-testing==24.2",
