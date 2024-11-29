@@ -191,3 +191,22 @@ docs-publish: docs
 	  --push \
 	  --branch gh-pages \
 	  --remote origin
+
+gltestserver-image: docker/gl-testserver/Dockerfile
+	docker build \
+	  --build-arg DOCKER_USER=$(shell whoami) \
+	  --build-arg UID=$(shell id -u) \
+	  --build-arg GID=$(shell id -g) \
+	  -t gltestserver \
+	  -f docker/gl-testserver/Dockerfile \
+	  .
+
+gltestserver: gltestserver-image
+	mkdir -p /tmp/gltestserver
+	docker run \
+	  --user $(shell id -u):$(shell id -g) \
+	  -e DOCKER_USER=$(shell whoami) \
+	  --net=host \
+	  -ti \
+	  -v $(shell pwd)/.testserver:/tmp/gltestserver \
+	  gltestserver

@@ -10,6 +10,7 @@ from typing import Any, List
 import click
 import gltesting
 import json
+import os
 import logging
 import tempfile
 import time
@@ -47,10 +48,15 @@ class TestServer:
 
     def metadata(self):
         """Construct a dict of config values for this TestServer."""
+        cert_path = Path(os.environ.get('GL_CERT_PATH'))
         return {
             "scheduler_grpc_uri": self.scheduler.grpc_addr,
             "grpc_web_proxy_uri": f"http://localhost:{self.grpc_web_proxy.web_port}",
             "bitcoind_rpc_uri": f"http://rpcuser:rpcpass@localhost:{self.bitcoind.rpcport}",
+            "cert_path": str(cert_path),
+            "ca_crt_path": str(cert_path / "ca.crt"),
+            "nobody_crt_path": str(cert_path / "users" / "nobody.crt"),
+            "nobody_key_path": str(cert_path / "users" / "nobody-key.pem"),
         }
 
 
@@ -120,27 +126,47 @@ def cli():
       different top-level directory. Defaults to '/tmp/'
     """,
 )
-def run(directory):
+@click.option(
+    '--metadata',
+    type=click.Path(),
+    help="Where to store the metadata.json and .envrc files"
+)
+def run(directory, metadata=None):
     """Start a gl-testserver instance to test against."""
     if not directory:
         directory = Path(tempfile.gettempdir())
     else:
         directory = Path(directory)
 
+    metadata = Path(metadata) if metadata else directory
+        
     gl = build(base_dir=directory)
     try:
         meta = gl.metadata()
-        metafile = gl.directory / "metadata.json"
+        metafile = metadata / "metadata.json"
         metafile.parent.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Writing testserver metadata to {metafile}")
         with metafile.open(mode="w") as f:
             json.dump(meta, f)
 
+        envfile = metadata / ".env"
+        logger.info(f"Writing .env file to {envfile}")
+        with envfile.open(mode="w") as f:
+            f.write(f"""\
+            export GL_SCHEDULER_GRPC_URI={meta['scheduler_grpc_uri']}
+            export GL_CERT_PATH={meta['cert_path']}
+            export GL_CA_CRT={meta['ca_crt_path']}
+            export GL_NOBODY_CRT={meta['nobody_crt_path']}
+            export GL_NOBODY_KEY={meta['nobody_key_path']}
+            export RUST_LOG=glclient=debub,info
+            """)
+
         pprint(meta)
         logger.info(
             "Server is up and running with the above config values. To stop press Ctrl-C."
         )
-        time.sleep(1800)
+        while True:
+            time.sleep(1800)
     except Exception as e:
         logger.warning(f"Caught exception running testserver: {e}")
         pass
