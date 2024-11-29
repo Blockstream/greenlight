@@ -70,7 +70,7 @@ pub use lightning_signer::bitcoin;
 pub use lightning_signer::lightning;
 pub use lightning_signer::lightning_invoice;
 
-pub(crate) const TCP_KEEPALIVE: Duration = Duration::from_secs(5);
-pub(crate) const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(90);
+pub(crate) const TCP_KEEPALIVE: Duration = Duration::from_secs(1);
+pub(crate) const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub mod runes;
