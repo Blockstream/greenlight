@@ -180,7 +180,6 @@ class NodeHandler(Handler):
         # Load TLS client cert info client
         ctx = httpx.create_ssl_context(
             verify=ca_path,
-            http2=True,
             cert=(
                 node.identity.cert_chain_path,
                 node.identity.private_key_path,
