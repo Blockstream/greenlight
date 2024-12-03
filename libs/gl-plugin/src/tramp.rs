@@ -184,6 +184,10 @@ pub async fn trampolinepay(
     let mut acc = 0;
     let mut choosen = vec![];
     while let Some(channel) = channels.pop() {
+        if acc == amount_msat {
+            break;
+        }
+
         if (channel.spendable_msat + acc) <= amount_msat {
             choosen.push((channel.short_channel_id, channel.spendable_msat));
             acc += channel.spendable_msat;
