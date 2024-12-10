@@ -15,7 +15,8 @@ ENV PATH=$PATH:/home/$DOCKER_USER/.local/bin/:/opt/bitcoin/bin:/home/$DOCKER_USE
 ENV REPO=$REPO_PATH
 
 # Force this target dir, so the scripts can find all the binaries.
-ENV CARGO_TARGET_DIR=$REPO/target
+#ENV CARGO_TARGET_DIR=${REPO}/target
+ENV CARGO_TARGET_DIR=/tmp/target/
 
 RUN apt update && apt install -qqy \
     curl \
@@ -57,6 +58,9 @@ RUN cd /tmp/ && \
 RUN mkdir -p ${REPO_PATH} && \
     chown $DOCKER_USER:users ${REPO_PATH}
 
+ADD ../../libs/ ${REPO_PATH}/libs
+ADD ../../pyproject.toml ${REPO_PATH}/
+
 ADD ../../ ${REPO_PATH}/
 RUN chown $DOCKER_USER:users -R ${REPO_PATH}
 RUN chown $DOCKER_USER:users -R /home/$DOCKER_USER
@@ -69,9 +73,12 @@ RUN curl \
     -s -- -y --default-toolchain ${RUST_VERSION}
 RUN rustup default stable
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
 WORKDIR ${REPO_PATH}/libs/gl-testserver/
+
+RUN cargo build --bin gl-plugin
+RUN cargo build --bin gl-signerproxy
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 RUN uv sync --locked -v
 RUN uv run clnvm get-all
