@@ -9,9 +9,11 @@ ARG BITCOIN_VERSION=24.0
 ARG GID=0
 ARG UID=0
 ARG DOCKER_USER=dev
+ARG REPO_PATH=/repo
 ENV PATH=$PATH:/home/$DOCKER_USER/.local/bin/:/opt/bitcoin/bin:/home/$DOCKER_USER/.cargo/bin
 #ENV VIRTUAL_ENV=/tmp/venv
 ENV CARGO_TARGET_DIR=/tmp/cargo
+ENV REPO=$REPO_PATH
 
 RUN apt update && apt install -qqy \
     curl \
@@ -50,9 +52,11 @@ RUN cd /tmp/ && \
     mv /tmp/bitcoin-$BITCOIN_VERSION/ /opt/bitcoin && \
     rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
 
-ADD ../ /repo/libs
-RUN chown $DOCKER_USER:users -R /repo
+RUN mkdir -p ${REPO_PATH} && \
+    chown $DOCKER_USER:users ${REPO_PATH}
 
+ADD ../../ ${REPO_PATH}/
+RUN chown $DOCKER_USER:users -R ${REPO_PATH}
 USER $DOCKER_USER
 
 RUN curl \
@@ -64,8 +68,8 @@ RUN rustup default stable
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-WORKDIR /repo/libs/gl-testserver/
-RUN echo $PATH
+WORKDIR ${REPO_PATH}/libs/gl-testserver/
+
 RUN uv sync --locked -v
 RUN uv run clnvm get-all
-CMD uv run gltestserver run --metadata /tmp/gltestserver
+CMD uv run gltestserver run --metadata ${REPO}/
