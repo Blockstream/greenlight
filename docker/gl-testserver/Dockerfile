@@ -1,19 +1,21 @@
 FROM ubuntu:22.04 AS python-builder
 
-ENV RUST_VERSION=1.74
-ENV PATH=$CARGO_HOME/bin:$PATH
-ENV PROTOC_VERSION=3.19.3
-ENV CFSSL_VERSION=1.6.5
-ENV GL_TESTING_IGNORE_HASH=true
 ARG BITCOIN_VERSION=24.0
 ARG GID=0
 ARG UID=0
 ARG DOCKER_USER=dev
 ARG REPO_PATH=/repo
+
+ENV RUST_VERSION=1.74
+ENV PATH=$CARGO_HOME/bin:$PATH
+ENV PROTOC_VERSION=3.19.3
+ENV CFSSL_VERSION=1.6.5
+ENV GL_TESTING_IGNORE_HASH=true
 ENV PATH=$PATH:/home/$DOCKER_USER/.local/bin/:/opt/bitcoin/bin:/home/$DOCKER_USER/.cargo/bin
-#ENV VIRTUAL_ENV=/tmp/venv
-ENV CARGO_TARGET_DIR=/tmp/cargo
 ENV REPO=$REPO_PATH
+
+# Force this target dir, so the scripts can find all the binaries.
+ENV CARGO_TARGET_DIR=$REPO/target
 
 RUN apt update && apt install -qqy \
     curl \
@@ -57,6 +59,7 @@ RUN mkdir -p ${REPO_PATH} && \
 
 ADD ../../ ${REPO_PATH}/
 RUN chown $DOCKER_USER:users -R ${REPO_PATH}
+RUN chown $DOCKER_USER:users -R /home/$DOCKER_USER
 USER $DOCKER_USER
 
 RUN curl \
@@ -72,4 +75,4 @@ WORKDIR ${REPO_PATH}/libs/gl-testserver/
 
 RUN uv sync --locked -v
 RUN uv run clnvm get-all
-CMD uv run gltestserver run --metadata ${REPO}/
+CMD uv run gltestserver run --metadata ${REPO}/ --directory ${REPO}/.gltestserver
