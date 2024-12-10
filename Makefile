@@ -197,7 +197,7 @@ gltestserver-image: docker/gl-testserver/Dockerfile
 	  --build-arg DOCKER_USER=$(shell whoami) \
 	  --build-arg UID=$(shell id -u) \
 	  --build-arg GID=$(shell id -g) \
-	  --build-arg REPO_PATH=$(shell git rev-parse --show-superproject-working-tree) \
+	  --build-arg REPO_PATH=$(shell git rev-parse --show-toplevel) \
 	  -t gltestserver \
 	  -f docker/gl-testserver/Dockerfile \
 	  .
