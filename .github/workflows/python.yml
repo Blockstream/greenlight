@@ -18,23 +18,23 @@ jobs:
   source:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
-        architecture: x64
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          architecture: x64
 
-    - run: pip3 install poetry
-    - run : |
-        cd libs/gl-client-py
-        poetry build --format=sdist
+      - run: pip3 install poetry
+      - run: |
+          cd libs/gl-client-py
+          poetry build --format=sdist
 
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: libs/gl-client-py/dist/gl_client-*.tar.gz
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-source
+          path: libs/gl-client-py/dist/gl_client-*.tar.gz
 
   linux:
     runs-on: ubuntu-20.04
@@ -42,62 +42,62 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - x86_64
-        - i686
-# aarch64 does not compile due to an old(-ish) compiler with the error
-#  `ARM assembler must define __ARM_ARCH`
-#        - aarch64
-        # Temporarily disable armv7 as to github issues fetching a manifest for the architecture.
-        # - armv7
+          - x86_64
+          - i686
+    # aarch64 does not compile due to an old(-ish) compiler with the error
+    #  `ARM assembler must define __ARM_ARCH`
+    #        - aarch64
+    # Temporarily disable armv7 as to github issues fetching a manifest for the architecture.
+    # - armv7
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v2
-      with:
-        version: "23.2"  # Fixed since we mount the path below
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+        with:
+          version: "23.2" # Fixed since we mount the path below
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        working-directory: libs/gl-client-py
-        rust-toolchain: stable
-        target: ${{ matrix.target }}
-        manylinux: auto
-        args: --release --out dist
-        docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: libs/gl-client-py
+          rust-toolchain: stable
+          target: ${{ matrix.target }}
+          manylinux: auto
+          args: --release --out dist
+          docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
 
-    - name: Install built wheel (emulated)
-      uses: uraimo/run-on-arch-action@v2.5.0
-      if: matrix.target != 'ppc64' && matrix.target != 'x86_64' && matrix.target != 'i686'
-      with:
-        arch: ${{ matrix.target }}
-        distro: ubuntu22.04
-        githubToken: ${{ github.token }}
-        install: |
-          apt-get update
-          apt-get install -y --no-install-recommends python3 python3-pip
-          pip3 install -U pip pytest
+      - name: Install built wheel (emulated)
+        uses: uraimo/run-on-arch-action@v2.5.0
+        if: matrix.target != 'ppc64' && matrix.target != 'x86_64' && matrix.target != 'i686'
+        with:
+          arch: ${{ matrix.target }}
+          distro: ubuntu22.04
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y --no-install-recommends python3 python3-pip
+            pip3 install -U pip pytest
+          run: |
+            pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
+            python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+
+      - name: Install built wheel (native)
+        if: matrix.target == 'x86_64'
         run: |
           pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
           python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
-    - name: Install built wheel (native)
-      if: matrix.target == 'x86_64'
-      run: |
-          pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
-
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: libs/gl-client-py/dist/
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: libs/gl-client-py/dist/
 
   macos:
     runs-on: macos-13
@@ -105,44 +105,43 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - x86_64
-        - aarch64
+          - x86_64
+          - aarch64
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
-        architecture: x64
-    - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          architecture: x64
+      - uses: dtolnay/rust-toolchain@nightly
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v2
-      with:
-        version: "23.2"
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+        with:
+          version: "23.2"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build wheels - ${{ matrix.target }}
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        working-directory: libs/gl-client-py
-        args: --release --out dist
-        docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
-      env:
-        MACOSX_DEPLOYMENT_TARGET: 10.9
+      - name: Build wheels - ${{ matrix.target }}
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          working-directory: libs/gl-client-py
+          args: --release --out dist
+          docker-options: -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
+        env:
+          MACOSX_DEPLOYMENT_TARGET: 10.9
 
-    - name: Install built wheel
-      if: matrix.target == 'x86_64'
-      run: |
+      - name: Install built wheel
+        if: matrix.target == 'x86_64'
+        run: |
           pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
           python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: libs/gl-client-py/dist/
-
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.target }}
+          path: libs/gl-client-py/dist/
 
   windows:
     runs-on: windows-2019
@@ -153,36 +152,36 @@ jobs:
           - x64
           - x86
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
-        architecture: ${{ matrix.target }}
-    - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          architecture: ${{ matrix.target }}
+      - uses: dtolnay/rust-toolchain@nightly
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v2
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        working-directory: libs\\gl-client-py
-        args: --release --out dist
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          working-directory: libs\\gl-client-py
+          args: --release --out dist
 
-# Wildcard expansion on windows is different...
-#    - name: Install built wheel
-#      run: |
-#          pip install libs\gl-client-py\dist\gl_client*.whl --force-reinstall
-#          python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+      # Wildcard expansion on windows is different...
+      #    - name: Install built wheel
+      #      run: |
+      #          pip install libs\gl-client-py\dist\gl_client*.whl --force-reinstall
+      #          python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path:  libs\gl-client-py\dist
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-win-${{ matrix.target }}
+          path: libs\gl-client-py\dist
 
   publish:
     runs-on: ubuntu-20.04
@@ -193,32 +192,32 @@ jobs:
       - macos
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: libs/gl-client-py/dist
+          pattern: libs/gl-client-py/dist-*
+          merge-multiple: true
 
-    - name: Download wheels
-      uses: actions/download-artifact@v3
-      with:
-        name: wheels
-        path:  libs/gl-client-py/dist
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install python3-pip
+          sudo pip3 install -U \
+            poetry \
+            maturin \
+            twine \
+            keyring
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install python3-pip
-        sudo pip3 install -U \
-          poetry \
-          maturin \
-          twine \
-          keyring
-
-    - name: Publish wheels to PyPI
-      env:
-        TWINE_USERNAME: __token__
-      run: |
-        cd libs/gl-client-py
-        twine upload \
-          --skip-existing \
-          --non-interactive \
-          --verbose \
-          --username "__token__" \
-          --password "${{ secrets.TWINE_PASSWORD }}" \
-          dist/*.tar.gz dist/*.whl
+      - name: Publish wheels to PyPI
+        env:
+          TWINE_USERNAME: __token__
+        run: |
+          cd libs/gl-client-py
+          twine upload \
+            --skip-existing \
+            --non-interactive \
+            --verbose \
+            --username "__token__" \
+            --password "${{ secrets.TWINE_PASSWORD }}" \
+            dist/*.tar.gz dist/*.whl

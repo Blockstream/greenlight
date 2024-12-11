@@ -39,7 +39,7 @@ permissions:
 on:
   push:
     tags:
-      - '**[0-9]+.[0-9]+.[0-9]+*'
+      - "**[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
 
 jobs:
@@ -66,9 +66,9 @@ jobs:
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
       - name: "Upload dist-manifest.json"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-${{ matrix.runs-on }}
           path: dist-manifest.json
 
   # Build and packages all the platform-specific things
@@ -103,10 +103,10 @@ jobs:
         run: |
           brew install python@3.10
         if: ${{ runner.os == 'macOS' }}
-      - name: Install Protoc    
+      - name: Install Protoc
         uses: arduino/setup-protoc@v2
         with:
-          version: "23.2"  # Fixed since we mount the path below
+          version: "23.2" # Fixed since we mount the path below
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v4
         with:
@@ -140,9 +140,9 @@ jobs:
 
           cp dist-manifest.json "$BUILD_MANIFEST_NAME"
       - name: "Upload artifacts"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-${{ matrix.runs-on }}
           path: |
             ${{ steps.cargo-dist.outputs.paths }}
             ${{ env.BUILD_MANIFEST_NAME }}
@@ -168,10 +168,11 @@ jobs:
         with:
           submodules: recursive
       - name: "Download artifacts"
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: artifacts
           path: artifacts
+          pattern: artifacts-*
+          merge-multiple: true
       - name: Cleanup
         run: |
           # Remove the granular manifests
