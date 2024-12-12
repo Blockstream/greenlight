@@ -26,3 +26,8 @@ libs/cln-version-manager/poetry.lock
 .gltestserver
 uv.lock
 metadata.json
+
+# JS Examples 
+examples/javascript/node_modules
+examples/javascript/response.bin
+examples/javascript/package-lock.json
