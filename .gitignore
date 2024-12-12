@@ -20,3 +20,12 @@ docs/.cache
 
 # Don't store poetry.lock file
 libs/cln-version-manager/poetry.lock
+
+# Ignore files from Shahana's testing 
+.env
+metadata.json
+.gltestserver
+uv.lock
+examples/javascript/node_modules
+examples/javascript/response.bin
+examples/javascript/package-lock.json

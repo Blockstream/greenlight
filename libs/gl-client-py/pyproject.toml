@@ -1,5 +1,6 @@
 [project]
 name = "gl-client"
+version = "0.3.0"
 
 dependencies = [
     "protobuf>=3",
