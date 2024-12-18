@@ -1,0 +1,782 @@
+
+namespace glclient {
+};
+
+interface Node {
+constructor();  GetinfoResponse Getinfo(GetinfoRequest request);
+  ListpeersResponse ListPeers(ListpeersRequest request);
+  ListfundsResponse ListFunds(ListfundsRequest request);
+  SendpayResponse SendPay(SendpayRequest request);
+  ListchannelsResponse ListChannels(ListchannelsRequest request);
+  AddgossipResponse AddGossip(AddgossipRequest request);
+  AddpsbtoutputResponse AddPsbtOutput(AddpsbtoutputRequest request);
+  AutocleanonceResponse AutoCleanOnce(AutocleanonceRequest request);
+  AutocleanstatusResponse AutoCleanStatus(AutocleanstatusRequest request);
+  CheckmessageResponse CheckMessage(CheckmessageRequest request);
+  CloseResponse Close(CloseRequest request);
+  ConnectResponse Connect(ConnectRequest request);
+  CreateinvoiceResponse CreateInvoice(CreateinvoiceRequest request);
+  DatastoreResponse Datastore(DatastoreRequest request);
+  DatastoreusageResponse DatastoreUsage(DatastoreusageRequest request);
+  CreateonionResponse CreateOnion(CreateonionRequest request);
+  DeldatastoreResponse DelDatastore(DeldatastoreRequest request);
+  DelinvoiceResponse DelInvoice(DelinvoiceRequest request);
+  DevforgetchannelResponse DevForgetChannel(DevforgetchannelRequest request);
+  EmergencyrecoverResponse EmergencyRecover(EmergencyrecoverRequest request);
+  RecoverResponse Recover(RecoverRequest request);
+  RecoverchannelResponse RecoverChannel(RecoverchannelRequest request);
+  InvoiceResponse Invoice(InvoiceRequest request);
+  InvoicerequestResponse InvoiceRequest(InvoicerequestRequest request);
+  DisableinvoicerequestResponse DisableInvoiceRequest(DisableinvoicerequestRequest request);
+  ListinvoicerequestsResponse ListInvoiceRequests(ListinvoicerequestsRequest request);
+  ListdatastoreResponse ListDatastore(ListdatastoreRequest request);
+  ListinvoicesResponse ListInvoices(ListinvoicesRequest request);
+  SendonionResponse SendOnion(SendonionRequest request);
+  ListsendpaysResponse ListSendPays(ListsendpaysRequest request);
+  ListtransactionsResponse ListTransactions(ListtransactionsRequest request);
+  MakesecretResponse MakeSecret(MakesecretRequest request);
+  PayResponse Pay(PayRequest request);
+  ListnodesResponse ListNodes(ListnodesRequest request);
+  WaitanyinvoiceResponse WaitAnyInvoice(WaitanyinvoiceRequest request);
+  WaitinvoiceResponse WaitInvoice(WaitinvoiceRequest request);
+  WaitsendpayResponse WaitSendPay(WaitsendpayRequest request);
+  NewaddrResponse NewAddr(NewaddrRequest request);
+  WithdrawResponse Withdraw(WithdrawRequest request);
+  KeysendResponse KeySend(KeysendRequest request);
+  FundpsbtResponse FundPsbt(FundpsbtRequest request);
+  SendpsbtResponse SendPsbt(SendpsbtRequest request);
+  SignpsbtResponse SignPsbt(SignpsbtRequest request);
+  UtxopsbtResponse UtxoPsbt(UtxopsbtRequest request);
+  TxdiscardResponse TxDiscard(TxdiscardRequest request);
+  TxprepareResponse TxPrepare(TxprepareRequest request);
+  TxsendResponse TxSend(TxsendRequest request);
+  ListpeerchannelsResponse ListPeerChannels(ListpeerchannelsRequest request);
+  ListclosedchannelsResponse ListClosedChannels(ListclosedchannelsRequest request);
+  DecodepayResponse DecodePay(DecodepayRequest request);
+  DecodeResponse Decode(DecodeRequest request);
+  DelpayResponse DelPay(DelpayRequest request);
+  DelforwardResponse DelForward(DelforwardRequest request);
+  DisableofferResponse DisableOffer(DisableofferRequest request);
+  DisconnectResponse Disconnect(DisconnectRequest request);
+  FeeratesResponse Feerates(FeeratesRequest request);
+  FetchinvoiceResponse FetchInvoice(FetchinvoiceRequest request);
+  Fundchannel_cancelResponse FundChannel_Cancel(Fundchannel_cancelRequest request);
+  Fundchannel_completeResponse FundChannel_Complete(Fundchannel_completeRequest request);
+  FundchannelResponse FundChannel(FundchannelRequest request);
+  Fundchannel_startResponse FundChannel_Start(Fundchannel_startRequest request);
+  GetlogResponse GetLog(GetlogRequest request);
+  FunderupdateResponse FunderUpdate(FunderupdateRequest request);
+  GetrouteResponse GetRoute(GetrouteRequest request);
+  ListforwardsResponse ListForwards(ListforwardsRequest request);
+  ListoffersResponse ListOffers(ListoffersRequest request);
+  ListpaysResponse ListPays(ListpaysRequest request);
+  ListhtlcsResponse ListHtlcs(ListhtlcsRequest request);
+  MultifundchannelResponse MultiFundChannel(MultifundchannelRequest request);
+  MultiwithdrawResponse MultiWithdraw(MultiwithdrawRequest request);
+  OfferResponse Offer(OfferRequest request);
+  Openchannel_abortResponse OpenChannel_Abort(Openchannel_abortRequest request);
+  Openchannel_bumpResponse OpenChannel_Bump(Openchannel_bumpRequest request);
+  Openchannel_initResponse OpenChannel_Init(Openchannel_initRequest request);
+  Openchannel_signedResponse OpenChannel_Signed(Openchannel_signedRequest request);
+  Openchannel_updateResponse OpenChannel_Update(Openchannel_updateRequest request);
+  PingResponse Ping(PingRequest request);
+  PluginResponse Plugin(PluginRequest request);
+  RenepaystatusResponse RenePayStatus(RenepaystatusRequest request);
+  RenepayResponse RenePay(RenepayRequest request);
+  ReserveinputsResponse ReserveInputs(ReserveinputsRequest request);
+  SendcustommsgResponse SendCustomMsg(SendcustommsgRequest request);
+  SendinvoiceResponse SendInvoice(SendinvoiceRequest request);
+  SetchannelResponse SetChannel(SetchannelRequest request);
+  SetconfigResponse SetConfig(SetconfigRequest request);
+  SetpsbtversionResponse SetPsbtVersion(SetpsbtversionRequest request);
+  SigninvoiceResponse SignInvoice(SigninvoiceRequest request);
+  SignmessageResponse SignMessage(SignmessageRequest request);
+  Splice_initResponse Splice_Init(Splice_initRequest request);
+  Splice_signedResponse Splice_Signed(Splice_signedRequest request);
+  Splice_updateResponse Splice_Update(Splice_updateRequest request);
+  UnreserveinputsResponse UnreserveInputs(UnreserveinputsRequest request);
+  UpgradewalletResponse UpgradeWallet(UpgradewalletRequest request);
+  WaitblockheightResponse WaitBlockHeight(WaitblockheightRequest request);
+  WaitResponse Wait(WaitRequest request);
+  ListconfigsResponse ListConfigs(ListconfigsRequest request);
+  StopResponse Stop(StopRequest request);
+  HelpResponse Help(HelpRequest request);
+  PreapprovekeysendResponse PreApproveKeysend(PreapprovekeysendRequest request);
+  PreapproveinvoiceResponse PreApproveInvoice(PreapproveinvoiceRequest request);
+  StaticbackupResponse StaticBackup(StaticbackupRequest request);
+  BkprchannelsapyResponse BkprChannelsApy(BkprchannelsapyRequest request);
+  BkprdumpincomecsvResponse BkprDumpIncomeCsv(BkprdumpincomecsvRequest request);
+  BkprinspectResponse BkprInspect(BkprinspectRequest request);
+  BkprlistaccounteventsResponse BkprListAccountEvents(BkprlistaccounteventsRequest request);
+  BkprlistbalancesResponse BkprListBalances(BkprlistbalancesRequest request);
+  BkprlistincomeResponse BkprListIncome(BkprlistincomeRequest request);
+  BlacklistruneResponse BlacklistRune(BlacklistruneRequest request);
+  CheckruneResponse CheckRune(CheckruneRequest request);
+  CreateruneResponse CreateRune(CreateruneRequest request);
+  ShowrunesResponse ShowRunes(ShowrunesRequest request);
+};dictionary GetinfoResponse {
+};
+
+dictionary ListpeersResponse {
+};
+
+dictionary ListfundsResponse {
+};
+
+dictionary SendpayResponse {
+};
+
+dictionary ListchannelsResponse {
+};
+
+dictionary AddgossipResponse {
+};
+
+dictionary AddpsbtoutputResponse {
+};
+
+dictionary AutocleanonceResponse {
+};
+
+dictionary AutocleanstatusResponse {
+};
+
+dictionary CheckmessageResponse {
+};
+
+dictionary CloseResponse {
+};
+
+dictionary ConnectResponse {
+};
+
+dictionary CreateinvoiceResponse {
+};
+
+dictionary DatastoreResponse {
+};
+
+dictionary DatastoreusageResponse {
+};
+
+dictionary CreateonionResponse {
+};
+
+dictionary DeldatastoreResponse {
+};
+
+dictionary DelinvoiceResponse {
+};
+
+dictionary DevforgetchannelResponse {
+};
+
+dictionary EmergencyrecoverResponse {
+};
+
+dictionary RecoverResponse {
+};
+
+dictionary RecoverchannelResponse {
+};
+
+dictionary InvoiceResponse {
+};
+
+dictionary InvoicerequestResponse {
+};
+
+dictionary DisableinvoicerequestResponse {
+};
+
+dictionary ListinvoicerequestsResponse {
+};
+
+dictionary ListdatastoreResponse {
+};
+
+dictionary ListinvoicesResponse {
+};
+
+dictionary SendonionResponse {
+};
+
+dictionary ListsendpaysResponse {
+};
+
+dictionary ListtransactionsResponse {
+};
+
+dictionary MakesecretResponse {
+};
+
+dictionary PayResponse {
+};
+
+dictionary ListnodesResponse {
+};
+
+dictionary WaitanyinvoiceResponse {
+};
+
+dictionary WaitinvoiceResponse {
+};
+
+dictionary WaitsendpayResponse {
+};
+
+dictionary NewaddrResponse {
+};
+
+dictionary WithdrawResponse {
+};
+
+dictionary KeysendResponse {
+};
+
+dictionary FundpsbtResponse {
+};
+
+dictionary SendpsbtResponse {
+};
+
+dictionary SignpsbtResponse {
+};
+
+dictionary UtxopsbtResponse {
+};
+
+dictionary TxdiscardResponse {
+};
+
+dictionary TxprepareResponse {
+};
+
+dictionary TxsendResponse {
+};
+
+dictionary ListpeerchannelsResponse {
+};
+
+dictionary ListclosedchannelsResponse {
+};
+
+dictionary DecodepayResponse {
+};
+
+dictionary DecodeResponse {
+};
+
+dictionary DelpayResponse {
+};
+
+dictionary DelforwardResponse {
+};
+
+dictionary DisableofferResponse {
+};
+
+dictionary DisconnectResponse {
+};
+
+dictionary FeeratesResponse {
+};
+
+dictionary FetchinvoiceResponse {
+};
+
+dictionary Fundchannel_cancelResponse {
+};
+
+dictionary Fundchannel_completeResponse {
+};
+
+dictionary FundchannelResponse {
+};
+
+dictionary Fundchannel_startResponse {
+};
+
+dictionary GetlogResponse {
+};
+
+dictionary FunderupdateResponse {
+};
+
+dictionary GetrouteResponse {
+};
+
+dictionary ListforwardsResponse {
+};
+
+dictionary ListoffersResponse {
+};
+
+dictionary ListpaysResponse {
+};
+
+dictionary ListhtlcsResponse {
+};
+
+dictionary MultifundchannelResponse {
+};
+
+dictionary MultiwithdrawResponse {
+};
+
+dictionary OfferResponse {
+};
+
+dictionary Openchannel_abortResponse {
+};
+
+dictionary Openchannel_bumpResponse {
+};
+
+dictionary Openchannel_initResponse {
+};
+
+dictionary Openchannel_signedResponse {
+};
+
+dictionary Openchannel_updateResponse {
+};
+
+dictionary PingResponse {
+};
+
+dictionary PluginResponse {
+};
+
+dictionary RenepaystatusResponse {
+};
+
+dictionary RenepayResponse {
+};
+
+dictionary ReserveinputsResponse {
+};
+
+dictionary SendcustommsgResponse {
+};
+
+dictionary SendinvoiceResponse {
+};
+
+dictionary SetchannelResponse {
+};
+
+dictionary SetconfigResponse {
+};
+
+dictionary SetpsbtversionResponse {
+};
+
+dictionary SigninvoiceResponse {
+};
+
+dictionary SignmessageResponse {
+};
+
+dictionary Splice_initResponse {
+};
+
+dictionary Splice_signedResponse {
+};
+
+dictionary Splice_updateResponse {
+};
+
+dictionary UnreserveinputsResponse {
+};
+
+dictionary UpgradewalletResponse {
+};
+
+dictionary WaitblockheightResponse {
+};
+
+dictionary WaitResponse {
+};
+
+dictionary ListconfigsResponse {
+};
+
+dictionary StopResponse {
+};
+
+dictionary HelpResponse {
+};
+
+dictionary PreapprovekeysendResponse {
+};
+
+dictionary PreapproveinvoiceResponse {
+};
+
+dictionary StaticbackupResponse {
+};
+
+dictionary BkprchannelsapyResponse {
+};
+
+dictionary BkprdumpincomecsvResponse {
+};
+
+dictionary BkprinspectResponse {
+};
+
+dictionary BkprlistaccounteventsResponse {
+};
+
+dictionary BkprlistbalancesResponse {
+};
+
+dictionary BkprlistincomeResponse {
+};
+
+dictionary BlacklistruneResponse {
+};
+
+dictionary CheckruneResponse {
+};
+
+dictionary CreateruneResponse {
+};
+
+dictionary ShowrunesResponse {
+};
+
+dictionary GetinfoRequest {
+};
+
+dictionary ListpeersRequest {
+};
+
+dictionary ListfundsRequest {
+};
+
+dictionary SendpayRequest {
+};
+
+dictionary ListchannelsRequest {
+};
+
+dictionary AddgossipRequest {
+};
+
+dictionary AddpsbtoutputRequest {
+};
+
+dictionary AutocleanonceRequest {
+};
+
+dictionary AutocleanstatusRequest {
+};
+
+dictionary CheckmessageRequest {
+};
+
+dictionary CloseRequest {
+};
+
+dictionary ConnectRequest {
+};
+
+dictionary CreateinvoiceRequest {
+};
+
+dictionary DatastoreRequest {
+};
+
+dictionary DatastoreusageRequest {
+};
+
+dictionary CreateonionRequest {
+};
+
+dictionary DeldatastoreRequest {
+};
+
+dictionary DelinvoiceRequest {
+};
+
+dictionary DevforgetchannelRequest {
+};
+
+dictionary EmergencyrecoverRequest {
+};
+
+dictionary RecoverRequest {
+};
+
+dictionary RecoverchannelRequest {
+};
+
+dictionary InvoiceRequest {
+};
+
+dictionary InvoicerequestRequest {
+};
+
+dictionary DisableinvoicerequestRequest {
+};
+
+dictionary ListinvoicerequestsRequest {
+};
+
+dictionary ListdatastoreRequest {
+};
+
+dictionary ListinvoicesRequest {
+};
+
+dictionary SendonionRequest {
+};
+
+dictionary ListsendpaysRequest {
+};
+
+dictionary ListtransactionsRequest {
+};
+
+dictionary MakesecretRequest {
+};
+
+dictionary PayRequest {
+};
+
+dictionary ListnodesRequest {
+};
+
+dictionary WaitanyinvoiceRequest {
+};
+
+dictionary WaitinvoiceRequest {
+};
+
+dictionary WaitsendpayRequest {
+};
+
+dictionary NewaddrRequest {
+};
+
+dictionary WithdrawRequest {
+};
+
+dictionary KeysendRequest {
+};
+
+dictionary FundpsbtRequest {
+};
+
+dictionary SendpsbtRequest {
+};
+
+dictionary SignpsbtRequest {
+};
+
+dictionary UtxopsbtRequest {
+};
+
+dictionary TxdiscardRequest {
+};
+
+dictionary TxprepareRequest {
+};
+
+dictionary TxsendRequest {
+};
+
+dictionary ListpeerchannelsRequest {
+};
+
+dictionary ListclosedchannelsRequest {
+};
+
+dictionary DecodepayRequest {
+};
+
+dictionary DecodeRequest {
+};
+
+dictionary DelpayRequest {
+};
+
+dictionary DelforwardRequest {
+};
+
+dictionary DisableofferRequest {
+};
+
+dictionary DisconnectRequest {
+};
+
+dictionary FeeratesRequest {
+};
+
+dictionary FetchinvoiceRequest {
+};
+
+dictionary Fundchannel_cancelRequest {
+};
+
+dictionary Fundchannel_completeRequest {
+};
+
+dictionary FundchannelRequest {
+};
+
+dictionary Fundchannel_startRequest {
+};
+
+dictionary GetlogRequest {
+};
+
+dictionary FunderupdateRequest {
+};
+
+dictionary GetrouteRequest {
+};
+
+dictionary ListforwardsRequest {
+};
+
+dictionary ListoffersRequest {
+};
+
+dictionary ListpaysRequest {
+};
+
+dictionary ListhtlcsRequest {
+};
+
+dictionary MultifundchannelRequest {
+};
+
+dictionary MultiwithdrawRequest {
+};
+
+dictionary OfferRequest {
+};
+
+dictionary Openchannel_abortRequest {
+};
+
+dictionary Openchannel_bumpRequest {
+};
+
+dictionary Openchannel_initRequest {
+};
+
+dictionary Openchannel_signedRequest {
+};
+
+dictionary Openchannel_updateRequest {
+};
+
+dictionary PingRequest {
+};
+
+dictionary PluginRequest {
+};
+
+dictionary RenepaystatusRequest {
+};
+
+dictionary RenepayRequest {
+};
+
+dictionary ReserveinputsRequest {
+};
+
+dictionary SendcustommsgRequest {
+};
+
+dictionary SendinvoiceRequest {
+};
+
+dictionary SetchannelRequest {
+};
+
+dictionary SetconfigRequest {
+};
+
+dictionary SetpsbtversionRequest {
+};
+
+dictionary SigninvoiceRequest {
+};
+
+dictionary SignmessageRequest {
+};
+
+dictionary Splice_initRequest {
+};
+
+dictionary Splice_signedRequest {
+};
+
+dictionary Splice_updateRequest {
+};
+
+dictionary UnreserveinputsRequest {
+};
+
+dictionary UpgradewalletRequest {
+};
+
+dictionary WaitblockheightRequest {
+};
+
+dictionary WaitRequest {
+};
+
+dictionary ListconfigsRequest {
+};
+
+dictionary StopRequest {
+};
+
+dictionary HelpRequest {
+};
+
+dictionary PreapprovekeysendRequest {
+};
+
+dictionary PreapproveinvoiceRequest {
+};
+
+dictionary StaticbackupRequest {
+};
+
+dictionary BkprchannelsapyRequest {
+};
+
+dictionary BkprdumpincomecsvRequest {
+};
+
+dictionary BkprinspectRequest {
+};
+
+dictionary BkprlistaccounteventsRequest {
+};
+
+dictionary BkprlistbalancesRequest {
+};
+
+dictionary BkprlistincomeRequest {
+};
+
+dictionary BlacklistruneRequest {
+};
+
+dictionary CheckruneRequest {
+};
+
+dictionary CreateruneRequest {
+};
+
+dictionary ShowrunesRequest {
+};
+
