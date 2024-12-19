@@ -13,10 +13,10 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import logging
 import struct
 import httpx
+import re
+import urllib.parse
 from dataclasses import dataclass
 from typing import Dict
-import ssl
-
 
 class GrpcWebProxy(object):
     def __init__(self, scheduler: Scheduler, grpc_port: int):
@@ -67,6 +67,7 @@ class Request:
 @dataclass
 class Response:
     body: bytes
+    headers: Dict[str, str]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -91,9 +92,10 @@ class Handler(BaseHTTPRequestHandler):
             headers=headers,
             content=content,
         )
-        client = httpx.Client(http1=False, http2=True)
+        timeout = httpx.Timeout(10.0, connect=5.0)
+        client = httpx.Client(http1=False, http2=True, timeout=timeout)
         res = client.send(req)
-        return Response(body=res.content)
+        return Response(body=res.content, headers=res.headers)
 
     def auth(self, request: Request) -> bool:
         """Authenticate the request. True means allow."""
@@ -118,11 +120,16 @@ class Handler(BaseHTTPRequestHandler):
 
         req = Request(body=body, headers=self.headers, flags=flags, length=length)
         if not self.auth(req):
-            self.wfile.write(b"HTTP/1.1 401 Unauthorized\r\n\r\n")
+            self.send_response(401)
+            self.send_header("grpc-status", "16")
+            self.end_headers()
+            self.wfile.write(b"Unauthorized")
             return
-
+        
         response = self.proxy(req)
-        self.wfile.write(b"HTTP/1.0 200 OK\n\n")
+        self.send_response(200)
+        self.send_header("grpc-status", response.headers.get("grpc-status", "200"))
+        self.end_headers()
         self.wfile.write(response.body)
         self.wfile.flush()
 
@@ -195,6 +202,8 @@ class NodeHandler(Handler):
             "user-agent": "gl-testing-grpc-web-proxy",
         }
         content = struct.pack("!cI", request.flags, request.length) + request.body
+        print(f'Request Body: {request.body}')
+        print(f'Request Content: {content}')
 
         # Forward request
         req = httpx.Request(
@@ -203,7 +212,27 @@ class NodeHandler(Handler):
             headers=headers,
             content=content,
         )
-        res = client.send(req)
+        
+        try:
+            res = client.send(req)
+            if res.status_code >= 400 or "grpc-status" in res.headers:
+                grpc_status = res.headers.get("grpc-status", "200")
+                error_message = urllib.parse.unquote(res.headers.get("grpc-message", "None"))
+                error_match = re.search(r"RpcError \{(.*?)\}", error_message)
+                if error_match:
+                    error_message = error_match.group(1)
+                    # Replace data: None with data: null for valid json and add parantheses for valid json
+                    error_message = '{' + error_message.replace('None', 'null') + '}'
+                self.logger.warn(f"gRPC status code received: {grpc_status}")
+                self.logger.warn(f"gRPC message received: {error_message}")
+                error = f"{error_message}".encode("utf-8")
+                error_res = struct.pack("!cI", request.flags, len(error)) + error
+                return Response(body=error_res, headers={"grpc-status": grpc_status})
 
-        # Return response
-        return Response(body=res.content)
+            return Response(body=res.content, headers={"grpc-status": "200"})
+
+        except Exception as e:
+            self.logger.warn(f"gRPC request error received: {str(e)}")
+            error = f"Internal Server Error: {str(e)}".encode("utf-8")
+            error_res = struct.pack("!cI", request.flags, len(error)) + error
+            return Response(body=error_res, headers={"grpc-status": "14"})
