@@ -340,7 +340,7 @@ async fn do_pay(
     match rpc
         .call_typed(&cln_rpc::model::requests::WaitsendpayRequest {
             payment_hash: payment_hash,
-            timeout: Some(120),
+            timeout: None,
             partid: Some(part_id),
             groupid: Some(group_id),
         })
