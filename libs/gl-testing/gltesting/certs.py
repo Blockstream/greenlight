@@ -4,7 +4,7 @@ import logging
 import tempfile
 import json
 import os
-from sh import cfssl, openssl, cfssljson
+import subprocess
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat._oid import NameOID
@@ -108,9 +108,13 @@ def path_to_identity(path):
     )
 
 def postprocess_private_key(keyfile):
-    converted = openssl("pkcs8", "-topk8", "-nocrypt", "-in", keyfile).stdout
-    with open(keyfile, "wb") as f:
-        f.write(converted)
+    result = subprocess.run(["openssl", "pkcs8", "-topk8", "-nocrypt", "-in", keyfile], capture_output=True, text=True)
+    if result.returncode == 0:
+        converted = result.stdout
+        with open(keyfile, "wb") as f:
+            f.write(converted.encode())
+    else:
+        raise RuntimeError(f"OpenSSL command failed with error: {result.stderr}")
 
 
 def parent_ca(path):
@@ -167,24 +171,15 @@ def genca(idpath):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    cfssljson(cfssl("gencert", "-initca", tmpcsr.name), "-bare", path[3])
-
+    certs_json = subprocess.check_output(["cfssl", "gencert", "-initca", tmpcsr.name])
+    subprocess.run(["cfssljson", "-bare", path[3]], input=certs_json)
+    
     # Write config
     tmpconfig = tempfile.NamedTemporaryFile(mode="w")
     tmpconfig.write(config)
     tmpconfig.flush()
-    cfssljson(
-        cfssl(
-            "sign",
-            f"-ca={parent[0]}",
-            f"-ca-key={parent[1]}",
-            f"-config={tmpconfig.name}",
-            f"-profile={profile}",
-            path[3] + ".csr",
-        ),
-        "-bare",
-        path[3],
-    )
+    sign_certs_json = subprocess.check_output(["cfssl", "sign", f"-ca={parent[0]}", f"-ca-key={parent[1]}", f"-config={tmpconfig.name}", f"-profile={profile}", path[3] + ".csr"])
+    subprocess.run(["cfssljson", "-bare", path[3]], input=sign_certs_json)
     # Cleanup the temporary certificate signature request
     os.remove(path[3] + ".csr")
 
@@ -225,18 +220,8 @@ def gencert(idpath):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    cfssljson(
-        cfssl(
-            "gencert",
-            f"-ca={parent[0]}",
-            f"-ca-key={parent[1]}",
-            f"-config={tmpconfig.name}",
-            f"-profile={profile}",
-            tmpcsr.name,
-        ),
-        "-bare",
-        path[3],
-    )
+    certs_json = subprocess.check_output(["cfssl", "gencert", f"-ca={parent[0]}", f"-ca-key={parent[1]}", f"-config={tmpconfig.name}", f"-profile={profile}", tmpcsr.name])
+    subprocess.run(["cfssljson", "-bare", path[3]], input=certs_json)
     # Cleanup the temporary certificate signature request
     os.remove(path[3] + ".csr")
 
@@ -300,28 +285,11 @@ def gencert_from_csr(csr: bytes, recover=False, pairing=False):
         os.makedirs(directory)
 
     if pairing:
-        cfssljson(
-            cfssl(
-                "sign",
-                f"-ca={parent[0]}",
-                f"-ca-key={parent[1]}",
-                tmpcsr.name,
-                tmpsubject.name,
-            ),
-            "-bare",
-            path[3],
-        )
+        sign_certs_json = subprocess.check_output(["cfssl", "sign", f"-ca={parent[0]}", f"-ca-key={parent[1]}", tmpcsr.name, tmpsubject.name])
     else:
-        cfssljson(
-            cfssl(
-                "sign",
-                f"-ca={parent[0]}",
-                f"-ca-key={parent[1]}",
-                tmpcsr.name,
-            ),
-            "-bare",
-            path[3],
-        )
+        sign_certs_json = subprocess.check_output(["cfssl", "sign", f"-ca={parent[0]}", f"-ca-key={parent[1]}", tmpcsr.name])
+
+    subprocess.run(["cfssljson", "-bare", path[3]], input=sign_certs_json)
 
     # Cleanup the temporary certificate signature request
     os.remove(path[3] + ".csr")
@@ -333,4 +301,3 @@ def gencert_from_csr(csr: bytes, recover=False, pairing=False):
     cert = certf.read()
     certf.close()
     return cert
-
