@@ -151,15 +151,16 @@ def run(directory, metadata=None):
 
         envfile = metadata / ".env"
         logger.info(f"Writing .env file to {envfile}")
+        import textwrap
         with envfile.open(mode="w") as f:
-            f.write(f"""\
+            f.write(textwrap.dedent(f"""
             export GL_SCHEDULER_GRPC_URI={meta['scheduler_grpc_uri']}
             export GL_CERT_PATH={meta['cert_path']}
             export GL_CA_CRT={meta['ca_crt_path']}
             export GL_NOBODY_CRT={meta['nobody_crt_path']}
             export GL_NOBODY_KEY={meta['nobody_key_path']}
             export RUST_LOG=glclient=debub,info
-            """)
+            """))
 
         pprint(meta)
         logger.info(
