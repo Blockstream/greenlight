@@ -65,6 +65,72 @@ pub async fn trampolinepay(
 ) -> Result<cln_rpc::model::responses::PayResponse> {
     let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trampoline_node_id[..])?;
 
+    let mut rpc = ClnRpc::new(&rpc_path).await?;
+
+    // Extract the amount from the bolt11 or use the set amount field
+    // Return an error if there is a mismatch.
+    let decoded = rpc
+        .call_typed(&cln_rpc::model::requests::DecodepayRequest {
+            bolt11: req.bolt11.clone(),
+            description: None,
+        })
+        .await?;
+
+    let send_pays = rpc
+        .call_typed(&cln_rpc::model::requests::ListsendpaysRequest {
+            payment_hash: Some(decoded.payment_hash.clone()),
+            bolt11: None,
+            index: None,
+            limit: None,
+            start: None,
+            status: None,
+        })
+        .await?;
+    if send_pays
+        .payments
+        .iter()
+        .any(|p| p.status != cln_rpc::model::responses::ListsendpaysPaymentsStatus::FAILED)
+    {
+        let resp = rpc
+            .call_typed(&cln_rpc::model::requests::WaitsendpayRequest {
+                payment_hash: decoded.payment_hash.clone(),
+                groupid: None,
+                partid: None,
+                timeout: None,
+            })
+            .await?;
+
+        let preimage = match resp.payment_preimage {
+            Some(preimage) => preimage,
+            None => return Err(anyhow!("got completed payment part without preimage")),
+        };
+        return Ok(cln_rpc::model::responses::PayResponse {
+            amount_msat: resp.amount_msat.unwrap_or(Amount::from_msat(0)),
+            amount_sent_msat: resp.amount_sent_msat,
+            created_at: 0.,
+            destination: resp.destination,
+            parts: match resp.partid {
+                Some(0) => 1,
+                Some(partid) => partid as u32,
+                None => 1,
+            },
+            payment_hash: resp.payment_hash,
+            payment_preimage: preimage,
+            status: match resp.status {
+                cln_rpc::model::responses::WaitsendpayStatus::COMPLETE => {
+                    cln_rpc::model::responses::PayStatus::COMPLETE
+                }
+            },
+            warning_partial_completion: None,
+        });
+    }
+
+    let max_group_id = send_pays
+        .payments
+        .iter()
+        .map(|p| p.groupid)
+        .max()
+        .unwrap_or(0);
     log::debug!(
         "New trampoline payment via {}: {} ",
         node_id.to_hex(),
@@ -78,7 +144,7 @@ pub async fn trampolinepay(
         .await?;
 
     // Check if peer has signaled that they support forward trampoline pays:
-    let mut rpc = ClnRpc::new(&rpc_path).await?;
+
     let features = rpc
         .call_typed(&cln_rpc::model::requests::ListpeersRequest {
             id: Some(node_id),
@@ -94,15 +160,6 @@ pub async fn trampolinepay(
         .ok_or_else(|| anyhow!("Could not extract features from peer object."))??;
 
     feature_guard(features, TRAMPOLINE_FEATURE_BIT)?;
-
-    // Extract the amount from the bolt11 or use the set amount field
-    // Return an error if there is a mismatch.
-    let decoded = rpc
-        .call_typed(&cln_rpc::model::requests::DecodepayRequest {
-            bolt11: req.bolt11.clone(),
-            description: None,
-        })
-        .await?;
 
     let amount_msat = match (as_option(req.amount_msat), decoded.amount_msat) {
         (None, None) => {
@@ -225,7 +282,7 @@ pub async fn trampolinepay(
     let payload_hex = hex::encode(SerializedTlvStream::to_bytes(payload));
 
     let mut part_id = if choosen.len() == 1 { 0 } else { 1 };
-    let group_id = 1;
+    let group_id = max_group_id + 1;
     let mut handles: Vec<
         tokio::task::JoinHandle<
             std::result::Result<cln_rpc::model::responses::WaitsendpayResponse, anyhow::Error>,
