@@ -134,6 +134,16 @@ impl Signer {
             ],
         });
 
+        // TODO Remove this once VLS has implemented the fee budget
+        // per payment, rather than the fee budget per HTLC.
+        // Ref: https://github.com/Blockstream/greenlight/issues/538
+        {
+            policy.max_feerate_per_kw = 75_000;
+            policy.filter.merge(PolicyFilter {
+                rules: vec![FilterRule::new_warn("policy-commitment-fee-range")],
+            });
+        }
+
         policy.filter.merge(PolicyFilter {
             // TODO: Remove once we have implemented zero invoice support
             rules: vec![
