@@ -1,0 +1,17 @@
+[project]
+name = "gl-docs"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.5.49",
+    "mkdocs-redirects>=1.2.2",
+    "mkdocs-material-extensions>=1.3.1",
+    "pymdown-extensions>=10.13",
+    "ghp-import>=2.1.0",
+    "pdoc>=15.0.1",
+    "cairosvg>=2.7.1",
+    "pillow>=11.0.0",
+]
