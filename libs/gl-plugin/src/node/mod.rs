@@ -573,16 +573,22 @@ impl Node for PluginNodeServer {
                     res,
                 )
             }) {
-            Ok(res) => Ok(tonic::Response::new(pb::TrampolinePayResponse {
-                payment_preimage: res.payment_preimage,
-                payment_hash: res.payment_hash,
-                created_at: res.created_at,
-                parts: res.parts,
-                amount_msat: res.amount_msat.unwrap_or_default().msat,
-                amount_sent_msat: res.amount_sent_msat.unwrap_or_default().msat,
-                destination: res.destination.unwrap_or_default(),
-            })),
-            Err(e) => Err(Status::new(Code::Unknown, e.to_string())),
+            Ok(res) => {
+                debug!("Trampoline payment successful");
+                Ok(tonic::Response::new(pb::TrampolinePayResponse {
+                    payment_preimage: res.payment_preimage,
+                    payment_hash: res.payment_hash,
+                    created_at: res.created_at,
+                    parts: res.parts,
+                    amount_msat: res.amount_msat.unwrap_or_default().msat,
+                    amount_sent_msat: res.amount_sent_msat.unwrap_or_default().msat,
+                    destination: res.destination.unwrap_or_default(),
+                }))
+            }
+            Err(e) => {
+                debug!("Trampoline payment failed: {}", e);
+                Err(Status::new(Code::Unknown, e.to_string()))
+            }
         }
     }
 }
