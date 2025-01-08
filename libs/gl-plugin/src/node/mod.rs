@@ -230,7 +230,9 @@ impl Node for PluginNodeServer {
             // log entries are produced while we're streaming the
             // backlog out, but do we care?
             use tokio::io::{AsyncBufReadExt, BufReader};
-            let file = tokio::fs::File::open("/tmp/log").await?;
+	    // The nodelet uses its CWD, but CLN creates a network
+	    // subdirectory
+            let file = tokio::fs::File::open("../log").await?;
             let mut file = BufReader::new(file).lines();
 
             tokio::spawn(async move {
