@@ -22,6 +22,7 @@ impl Connected for UnixStream {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // TODO: Check if this is really needed.
 pub struct UdsConnectInfo {
     pub peer_addr: Option<Arc<tokio::net::unix::SocketAddr>>,
     pub peer_cred: Option<tokio::net::unix::UCred>,
