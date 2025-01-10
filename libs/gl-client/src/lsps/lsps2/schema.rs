@@ -39,9 +39,7 @@ impl<'de> Deserialize<'de> for Promise {
         D: serde::Deserializer<'de>,
     {
         let str_repr = String::deserialize(deserializer)?;
-        let promise = Promise::new(str_repr.clone());
-        Promise::new(str_repr.clone())
-            .map_err(|_| D::Error::custom("promise exceeds max length"))
+        Promise::new(str_repr.clone()).map_err(|_| D::Error::custom("promise exceeds max length"))
     }
 }
 
