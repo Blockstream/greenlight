@@ -47,6 +47,7 @@ def test_node_grpc_web(scheduler, node_grpc_web_proxy, clients):
     c = clients.new()
     c.register(configure=True)
     n = c.node()
+    _s =    c.signer().run_in_thread()
     info = n.get_info()
 
     # Now extract the TLS certificates, so we can sign the payload.
@@ -62,3 +63,8 @@ def test_node_grpc_web(scheduler, node_grpc_web_proxy, clients):
     req = clnpb.GetinfoRequest()
     info = web_client.call("Getinfo", req)
     print(info)
+
+    # Ask for a new address
+    req = clnpb.NewaddrRequest()
+    addr = web_client.call("NewAddr", req)
+    print(addr)
