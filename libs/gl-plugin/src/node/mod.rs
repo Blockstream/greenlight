@@ -7,7 +7,6 @@ use crate::{stager, tramp};
 use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
-use gl_client::bitcoin::hashes::hex::ToHex;
 use gl_client::persist::State;
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
