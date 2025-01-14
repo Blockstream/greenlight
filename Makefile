@@ -192,8 +192,9 @@ docs-publish: docs
 	  --branch gh-pages \
 	  --remote origin
 
-gltestserver-image: docker/gl-testserver/Dockerfile
-	docker build \
+gltestserver-image: ${REPO_ROOT}/docker/gl-testserver/Dockerfile
+	docker buildx build \
+	  --load \
 	  --build-arg DOCKER_USER=$(shell whoami) \
 	  --build-arg UID=$(shell id -u) \
 	  --build-arg GID=$(shell id -g) \
@@ -203,8 +204,8 @@ gltestserver-image: docker/gl-testserver/Dockerfile
 	  .
 
 gltestserver: gltestserver-image
-	mkdir -p /tmp/gltestserver
 	docker run \
+	  --rm \
 	  --user $(shell id -u):$(shell id -g) \
 	  -e DOCKER_USER=$(shell whoami) \
 	  --net=host \
