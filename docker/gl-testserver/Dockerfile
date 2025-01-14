@@ -80,6 +80,6 @@ RUN cargo build --bin gl-signerproxy
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-RUN uv sync --locked -v
+RUN uv lock && uv sync --locked -v
 RUN uv run clnvm get-all
 CMD uv run gltestserver run --metadata ${REPO}/ --directory ${REPO}/.gltestserver
