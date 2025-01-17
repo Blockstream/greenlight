@@ -5,11 +5,11 @@ on:
     types:
       - synchronize
       - opened
-    workflow_dispatch:
-    merge_group:
-    push:
-      branches:
-        - master
+  workflow_dispatch:
+  merge_group:
+  push:
+    branches:
+      - master
 
 jobs:
   source:
@@ -41,18 +41,11 @@ jobs:
       - name: Install poetry
         if: steps.cached-poetry.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
       - name: Install dependencies
         run: poetry update && poetry install --no-interaction
       - name: Run mypy
         run: poetry run mypy
       - name: Run tests
         run: poetry run pytest tests
-
-    
-
-      
-    
-
-          
-        
-

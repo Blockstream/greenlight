@@ -44,9 +44,11 @@ RUN python3 -m venv /tmp/venv
 # This ensures poetry is always up-to-date.
 # This approach also ensures `poetry` and our environment don't overlap
 ENV POETRY_HOME=/tmp/poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
 ENV PATH=$POETRY_HOME/bin:$PATH
-RUN poetry self add poetry-plugin-export
+
+# Uncomment below line after poetry v2.x.x upgrade
+# RUN poetry self add poetry-plugin-export
 
 # The pyproject.toml files describe our project
 # I purposefully ignore lock-files here
@@ -246,8 +248,10 @@ ENV VIRTUAL_ENV=/tmp/venv
 ARG GID=0
 ARG UID=0
 ARG DOCKER_USER=dev
-RUN groupadd -g $GID -o $DOCKER_USER &&\
-    useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
+
+# Check if the group already exists before running groupadd
+RUN getent group $GID || groupadd -g $GID -o $DOCKER_USER && \
+    id -u $UID || useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Create the required tmp-dicts
