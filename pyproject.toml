@@ -7,7 +7,9 @@ requires-python = ">=3.9"
 dependencies = []
 
 [tool.uv]
-package = false
+dev-dependencies = [
+    "pytest-timeout>=2.3.1",
+]
 
 [tool.uv.workspace]
 members = [
