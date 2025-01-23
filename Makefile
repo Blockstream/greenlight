@@ -102,8 +102,7 @@ gen: ${GENALL}
 
 build-self: ensure-docker
 	cargo build --all
-	cd libs/gl-client-py; maturin develop --uv
-	#mypy examples/python
+	cd libs/gl-client-py; uv tool run maturin develop --uv
 
 check-all: check-rs check-self check-py check-testing-py
 
@@ -113,7 +112,7 @@ check-self: ensure-docker build-self
 	ls -lha .venv/bin
 	PYTHONPATH=/repo/libs/gl-testing \
 	GL_TESTING_IGNORE_HASH=1 \
-	uv run python3 -m pytest -vvv -s\
+	uv run python3 -m pytest -vvv -n 4 \
 	  /repo/libs/gl-testing \
 	  ${PYTEST_OPTS}
 
