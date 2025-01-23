@@ -102,7 +102,7 @@ gen: ${GENALL}
 
 build-self: ensure-docker
 	cargo build --all
-	cd libs/gl-client-py; uv tool run maturin develop --uv
+	uv sync --package gl-client --extra dev
 
 check-all: check-rs check-self check-py check-testing-py
 

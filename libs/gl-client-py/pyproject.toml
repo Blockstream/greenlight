@@ -1,52 +1,29 @@
 [project]
 name = "gl-client"
-version = "0.3.0"
-license = "MIT"
-description = "Python bindings to the Greenlight service"
+version = "0.3.1"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"
-
+dependencies = [
+    "grpcio>=1.56",
+    "protobuf>=4",
+    "pyln-grpc-proto>=0.1",
+]
 authors = [
   {name = "Christian Decker", email = "decker@blockstream.com"},
 ]
-
-dependencies = [
-    "protobuf>=3",
-    "grpcio>=1.56",
-    "pyln-grpc-proto>=0.1",
-]
-
-[tool.poetry]
-name = "gl-client"
-version = "0.3.0"
-description = ""
-
-packages = [
-    { include = "glclient" },
-]
-
-include = [
-    { path = "glclient/*.pyi", format = ["wheel", "sdist"] },
-    { path = "glclient/py.typed", format = ["wheel", "sdist"] },
-]
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.1.0"
-mypy-protobuf = "^3.5"
-maturin = {version = ">=1.0,<1.3.2", extras = ["patchelf"]}
-mypy = "^1.7.0"
-grpcio-tools = "^1.67"
-
-[tool.poetry.dependencies]
-python = ">=3.8,<4"
-grpcio = ">=1.67"
-pyln-grpc-proto = ">=0.1.2,<1.2"
-protobuf = ">=4"
-maturin = ">=1.0"
-
 [build-system]
 requires = ["maturin>=1.0"]
 build-backend = "maturin"
+
+[dependency-groups]
+dev = [
+    "grpcio>=1.67",
+    "maturin>=1",
+    "mypy>=1.14.1",
+    "protobuf>=4",
+    "pyln-grpc-proto>=0.1.2",
+]
 
 [tool.mypy]
 exclude = [
