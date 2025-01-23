@@ -1,11 +1,11 @@
 [project]
-name = "gltesting"
+name = "gl-testing"
 version = "0.3.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "cln-version-manager",
+#    "cln-version-manager",
     "flaky>=3.8.1",
     "gl-client",
     "grpcio-tools>=1.66",
@@ -26,5 +26,5 @@ dependencies = [
 package = true
 
 [tool.uv.sources]
-gl-client = { path = "../gl-client-py" }
-cln-version-manager = { path = "../cln-version-manager" }
+gl-client = { workspace = true }
+#cln-version-manager = { path = "../cln-version-manager" }
