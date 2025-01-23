@@ -45,39 +45,13 @@ RUN python3 -m venv /tmp/venv
 # This approach also ensures `poetry` and our environment don't overlap
 ENV POETRY_HOME=/tmp/poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
-ENV PATH=$POETRY_HOME/bin:$PATH
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH=$POETRY_HOME/bin:$HOME/.local/bin:$PATH
 
-# Uncomment below line after poetry v2.x.x upgrade
-# RUN poetry self add poetry-plugin-export
 
-# The pyproject.toml files describe our project
-# I purposefully ignore lock-files here
-# We are developping a libraries and if a new version of a
-# dependency breaks our code I want to be the first to know it
-ADD pyproject.toml /repo/pyproject.toml
-ADD libs/gl-client-py/pyproject.toml /repo/libs/gl-client-py/pyproject.toml
-ADD libs/gl-testing/pyproject.toml /repo/libs/gl-testing/pyproject.toml
-ADD libs/cln-version-manager/pyproject.toml /repo/libs/cln-version-manager/pyproject.toml
-
+ADD . /repo
 WORKDIR /repo
 
-# We don't want to reinstall depenendencies every time
-# a single line of library code changes.
-#
-# Poetry install requires us to ADD the library-code to
-# the dockerfile. So this approach doesn't work
-#
-# Using poetry export we can generate a list of all dependencies.
-# We filter out all path-depenendencies from this list cause we
-# don't have the code in the Docker-repo yet.
-RUN poetry lock
-RUN poetry export -f requirements.txt -o requirements.txt --with=dev
-RUN cat requirements.txt | sed '/file:\/\/\//d' > requirements2.txt
-RUN python -m pip install --upgrade pip && pip install wheel && pip install -r requirements2.txt
-
-# Later we will run this image under another user
-# It is great if they can access this as well
-RUN chmod a+rwx -R /tmp/venv
 
 # ---------------------------------------------
 # STAGE: rust-builder
@@ -102,23 +76,6 @@ RUN rustup default stable
 
 # Ensure we can use cargo under a different user
 RUN chmod a+rwx -R $CARGO_HOME
-
-# ------------------------------------------
-# STAGE: cln-downloader
-# -----------------------------------------
-# gl-testing requires multiple versions of Core Lightning
-# Download all versions so they can be copied to our dev-container
-FROM python-builder AS cln-downloader
-
-ARG GL_TESTING_IGNORE_HASH=0
-
-RUN mkdir -p /opt/cln/
-ENV CLNVM_CACHE_DIR=/opt/cln
-
-ADD libs/cln-version-manager /repo/libs/cln-version-manager
-RUN cd /repo/libs/cln-version-manager; python -m pip install -e .
-
-RUN GL_TESTING_IGNORE_HASH=${GL_TESTING_IGNORE_HASH} python -m clnvm get-all
 
 # -------------------------------------
 # STAGE: bitcoin-downloader
@@ -192,6 +149,23 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV GL_DOCKER=1
 # Tells cln to use shorter polling intervals
 ENV DEVELOPER=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH=$HOME/.local/bin:/opt/cln-latest/usr/local/bin:/opt/bitcoin/bin:/opt/cln-latest/usr/local/bin:$PATH
+ENV UV_INSTALL_DIR=/usr/local/bin/
+# grpcio == 1.46 produces spammy log messages, silence them
+ENV GRPC_ENABLE_FORK_SUPPORT=0
+
+# Install cln-versions
+ENV CLNVM_CACHE_DIR=/opt/cln
+ENV GL_TESTING_IGNORE_HASH=1
+
+# Enumerate all versions that gl-testing should find
+ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/:/opt/cln/v24.02gl1/usr/local/bin/
+
+# Create a non-root user.
+ARG GID=0
+ARG UID=0
+ARG DOCKER_USER=dev
 
 # Required dependencies and some dependencies which are nice to have
 # floating around
@@ -214,20 +188,8 @@ RUN apt-get update && apt install -qqy \
 # Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
 ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
 
-# grpcio == 1.46 produces spammy log messages, silence them
-ENV GRPC_ENABLE_FORK_SUPPORT=0
-
-# Install cln-versions
-COPY --from=cln-downloader /opt/cln /opt/cln
-ENV CLNVM_CACHE_DIR=/opt/cln
-ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
-
-# Enumerate all versions that gl-testing should find
-ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/opt/cln/v0.11.0.1/usr/local/bin/:/opt/cln/v0.11.2gl2/usr/local/bin/:/opt/cln/v22.11gl1/usr/local/bin/:/opt/cln/v23.05gl1/usr/local/bin/:/opt/cln/v23.08gl1/usr/local/bin/:/opt/cln/v24.02gl1/usr/local/bin/
-
 # Install bitcoin-core
 COPY --from=bitcoin-downloader /opt/bitcoin/bin /opt/bitcoin/bin
-ENV PATH=/opt/bitcoin/bin:$PATH
 
 # Install cfssl
 COPY --from=cfssl-downloader /usr/bin/cfssl /usr/local/bin/cfssl
@@ -236,18 +198,6 @@ COPY --from=cfssl-downloader /usr/bin/cfssljson /usr/local/bin/cfssljson
 # Install protoc
 COPY --from=protoc-downloader /usr/local/bin/protoc /usr/local/bin/protoc
 
-# Copy the installs from the python-builder
-COPY --from=python-builder /tmp/poetry /tmp/poetry
-COPY --from=python-builder /tmp/venv /tmp/venv
-COPY --from=python-builder /repo/poetry.lock /repo/poetry.lock
-
-ENV PATH=/tmp/poetry/bin:/tmp/venv/bin:$PATH
-ENV VIRTUAL_ENV=/tmp/venv
-
-# Create a non-root user.
-ARG GID=0
-ARG UID=0
-ARG DOCKER_USER=dev
 
 # Check if the group already exists before running groupadd
 RUN getent group $GID || groupadd -g $GID -o $DOCKER_USER && \
@@ -260,11 +210,11 @@ RUN mkdir -p /tmp/gltesting/cargo && mkdir -p /tmp/gltesting/tmp
 
 ADD . /repo
 WORKDIR /repo
+ENV UV_LINK_MODE=copy
 
-# Add the remaining repositories to the python-path
-RUN poetry install
-RUN chmod -R a+rw /tmp/venv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN uv sync && uv pip install libs/cln-version-manager
+RUN uv run --package cln-version-manager clnvm --verbose get-all
 
 # Create a symlink to the latest cln-version and add it to the path
-RUN ln -s $(clnvm latest --root-path) /opt/cln-latest
-ENV PATH=/opt/cln-latest/usr/local/bin:$PATH
+RUN ln -s $(uv run --package cln-version-manager latest --root-path) /opt/cln-latest
