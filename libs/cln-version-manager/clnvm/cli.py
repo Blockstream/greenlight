@@ -1,18 +1,18 @@
 import importlib
 import logging
 import logging.config
-from pathlib import Path
 
-import os
 import sys
-from typing import Optional
 
 import clnvm
-from clnvm.cln_version_manager import ClnVersionManager, VersionDescriptor
+from clnvm.cln_version_manager import ClnVersionManager
+from importlib import resources
+
 
 def configure_logging() -> None:
-    dirname, _ = os.path.split(__file__)
-    logging.config.fileConfig(Path(dirname) / "logging.conf")
+    with resources.path(clnvm, "logging.conf") as fname:
+        assert fname is not None, "logging.conf must be bundled as a resource"
+        logging.config.fileConfig(fname)
 
 # Handle the optional import and provide a nice error message if it fails
 _click = importlib.util.find_spec("click")
