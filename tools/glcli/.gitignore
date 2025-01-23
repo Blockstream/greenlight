@@ -1,7 +1,0 @@
-__pycache__
-dist
-build
-.cache
-src
-poetry.lock
-glapi.egg-info
