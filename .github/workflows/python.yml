@@ -24,17 +24,19 @@ jobs:
         with:
           python-version: 3.9
           architecture: x64
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
 
-      - run: pip3 install poetry
-      - run: |
-          cd libs/gl-client-py
-          poetry build --format=sdist
+      - name: Build Source Distribution
+        run: uv build --package gl-client --sdist
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-source
-          path: libs/gl-client-py/dist/gl_client-*.tar.gz
+          path: dist/gl_client-*.tar.gz
 
   linux:
     runs-on: ubuntu-20.04
@@ -204,17 +206,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install python3-pip
           sudo pip3 install -U \
-            poetry \
-            maturin \
-            twine \
-            keyring
-
+            uv
+  
       - name: Publish wheels to PyPI
         env:
           TWINE_USERNAME: __token__
         run: |
           cd libs/gl-client-py
-          twine upload \
+          uv tool run twine upload \
             --skip-existing \
             --non-interactive \
             --verbose \

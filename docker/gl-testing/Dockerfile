@@ -150,7 +150,9 @@ ENV GL_DOCKER=1
 # Tells cln to use shorter polling intervals
 ENV DEVELOPER=1
 ENV PYTHONUNBUFFERED=1
-ENV PATH=$HOME/.local/bin:/opt/cln-latest/usr/local/bin:/opt/bitcoin/bin:/opt/cln-latest/usr/local/bin:$PATH
+# Start by setting the PATH once and for all, they might not be there
+# yet, but we will put the tools in those directories.
+ENV PATH=$HOME/.local/bin:/opt/cln-latest/usr/local/bin:/opt/bitcoin/bin:/opt/cln-latest/usr/local/bin:/usr/local/bin:$PATH
 ENV UV_INSTALL_DIR=/usr/local/bin/
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0

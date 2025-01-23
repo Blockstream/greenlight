@@ -9,6 +9,7 @@ hsm_secret
 site
 .DS_Store
 target
+*.egg-info
 
 # These files are auto generated and may contain sensible data that
 # we do not want to check-in!
