@@ -1,6 +1,14 @@
 [project]
 name = "gl-client"
 version = "0.3.0"
+license = "MIT"
+description = "Python bindings to the Greenlight service"
+readme = "README.md"
+requires-python = ">=3.8"
+
+authors = [
+  {name = "Christian Decker", email = "decker@blockstream.com"},
+]
 
 dependencies = [
     "protobuf>=3",
@@ -12,8 +20,6 @@ dependencies = [
 name = "gl-client"
 version = "0.3.0"
 description = ""
-authors = ["Christian Decker <decker@blockstream.com>"]
-license = "MIT"
 
 packages = [
     { include = "glclient" },
