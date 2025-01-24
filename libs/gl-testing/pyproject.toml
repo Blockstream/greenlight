@@ -5,7 +5,7 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-#    "cln-version-manager",
+    #    "cln-version-manager",
     "flaky>=3.8.1",
     "gl-client",
     "grpcio-tools>=1.66",
@@ -19,6 +19,7 @@ dependencies = [
     "rich>=13.9.3",
     "sh>=1.14.3",
     "sonora>=0.2.3",
+    "cln-version-manager",
 ]
 
 
@@ -27,4 +28,13 @@ package = true
 
 [tool.uv.sources]
 gl-client = { workspace = true }
-#cln-version-manager = { path = "../cln-version-manager" }
+cln-version-manager = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "gltesting",
+]

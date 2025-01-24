@@ -215,8 +215,8 @@ WORKDIR /repo
 ENV UV_LINK_MODE=copy
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN uv sync && uv pip install libs/cln-version-manager
-RUN uv run --package cln-version-manager clnvm --verbose get-all
+RUN uv sync --all-packages --extra dev
+RUN uv run python3 -m clnvm --verbose get-all
 
 # Create a symlink to the latest cln-version and add it to the path
 RUN ln -s $(uv run --package cln-version-manager latest --root-path) /opt/cln-latest

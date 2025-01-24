@@ -40,8 +40,8 @@ pygrpc: ${PROTOSRC}
 	cd ${PYDIR}; poetry run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
 
 check-py:
-	cd ${PYDIR}; mypy glclient
-	cd libs/gl-client-py; pytest tests -n $(shell nproc)
+	#uv run --all-packages mypy ${PYDIR}/glclient
+	uv run --all-packages pytest tests -n $(shell nproc) ${PYDIR}/tests
 
 clean-py:
 	rm -f ${PYPROTOS} ${PYDIR}/build ${PYDIR}/dist
