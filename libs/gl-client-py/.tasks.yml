@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  check:
+    cmds:
+      - uv run pytest -vvv tests
+
+  build:
+    cmds:
+      - uv build --sdist

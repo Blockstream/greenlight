@@ -1,0 +1,23 @@
+version: '3'
+
+includes:
+  clnvm:
+    taskfile: "libs/cln-version-manager/Taskfile.yml"
+    dir: "libs/cln-version-manager/"
+
+  clientpy:
+    taskfile: "libs/gl-client-py/Taskfile.yml"
+    dir: "libs/gl-client-py/"
+
+  docker:
+    taskfile: "docker/Taskfile.yml"
+    dir: "."
+
+tasks:
+  check-py:
+    dir: "libs/gl-client-py"
+    env:
+      GL_TESTING_IGNORE_HASH: 1
+    cmds:
+      - uv run --all-packages mypy glclient
+      - uv run --all-packages pytest tests

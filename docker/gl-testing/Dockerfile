@@ -168,6 +168,11 @@ ENV CLN_PATH=/opt/cln/v0.10.1/usr/local/bin/:/opt/cln/v0.10.2/usr/local/bin/:/op
 ARG GID=0
 ARG UID=0
 ARG DOCKER_USER=dev
+ENV UV_LINK_MODE=copy
+# Configure rust and related logging. Set up a default logging
+# filter. This includes all trace-level messages from greenlight
+# components and validating lightning signer
+ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
 
 # Required dependencies and some dependencies which are nice to have
 # floating around
@@ -186,9 +191,6 @@ RUN apt-get update && apt install -qqy \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure rust and related logging
-# Set up a default logging filter. This includes all trace-level messages from greenlight components and validating lightning signer
-ENV RUST_LOG=gl_client=trace,tracing=warn,gl_signerproxy=trace,gl_plugin=trace,lightning_signer=trace,vls_protocol_signer=trace,vls_core=trace,vls_persist=trace,vls_protocol=trace,info
 
 # Install bitcoin-core
 COPY --from=bitcoin-downloader /opt/bitcoin/bin /opt/bitcoin/bin
@@ -200,22 +202,20 @@ COPY --from=cfssl-downloader /usr/bin/cfssljson /usr/local/bin/cfssljson
 # Install protoc
 COPY --from=protoc-downloader /usr/local/bin/protoc /usr/local/bin/protoc
 
-
 # Check if the group already exists before running groupadd
 RUN getent group $GID || groupadd -g $GID -o $DOCKER_USER && \
     id -u $UID || useradd -m -u $UID -g $GID -G sudo -o -s /bin/bash $DOCKER_USER && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Create the required tmp-dicts
-RUN chmod a+rw /tmp
 RUN mkdir -p /tmp/gltesting/cargo && mkdir -p /tmp/gltesting/tmp
 
 ADD . /repo
 WORKDIR /repo
-ENV UV_LINK_MODE=copy
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Populate `uv` cache
 RUN uv sync --all-packages --extra dev
+
+# Populate CLN versions
 RUN uv run python3 -m clnvm --verbose get-all
 
 # Create a symlink to the latest cln-version and add it to the path
