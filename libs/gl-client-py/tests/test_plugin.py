@@ -3,6 +3,9 @@ from pyln.testing.utils import wait_for
 from pyln import grpc as clnpb
 import pytest
 import secrets
+from pathlib import Path
+
+trmp_plugin_path = Path(__file__).parent / "plugins" / "trmp_htlc_hook.py"
 
 
 def test_big_size_requests(clients):
@@ -56,7 +59,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     # Fund channel between nodes.
     l2 = node_factory.get_node(
         options={
-            "plugin": "/repo/libs/gl-client-py/tests/plugins/trmp_htlc_hook.py",
+            "plugin": trmp_plugin_path,
         }
     )
     n1.connect_peer(l2.info["id"], f"localhost:{l2.port}")
@@ -158,7 +161,7 @@ def test_trampoline_multi_htlc(bitcoind, clients, node_factory):
     # Fund channel between nodes.
     l2 = node_factory.get_node(
         options={
-            "plugin": "/repo/libs/gl-client-py/tests/plugins/trmp_htlc_hook.py",
+            "plugin": trmp_plugin_path,
         }
     )
     n1.connect_peer(l2.info["id"], f"localhost:{l2.port}")
