@@ -18,10 +18,23 @@ jobs:
       fail-fast: false
     steps:
     - uses: actions/checkout@v3
-    - name: Build tester image
-      run: |
-        sudo chmod a+rwx -R libs/gl-client-py
-        make docker-image
+
+    - name: Install Task
+      uses: arduino/setup-task@v2
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
+      
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
+
+    - name: Install dependencies
+      run: task docker:install-cfssl
+
     - name: Rust Cache
       uses: actions/cache@v2
       with:
@@ -29,10 +42,11 @@ jobs:
           /tmp/gltesting/cargo
           /tmp/gltesting/target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Check Self
-      run : |
-        PYTEST_OPTS='-n 8' make docker-check-self
 
-    - name: Run python image
+    - name: Check Self
+      env:
+        GL_TESTING_IGNORE_HASH: 1
+        PATH: /home/runner/.cargo/bin:/tmp/bin:${{ PATH }}
+        PYTEST_OPTS: -n 6
       run : |
-        PYTEST_OPTS='-n 8' make docker-check-py
+        task clientpy:check

@@ -15,14 +15,13 @@ def configure_logging() -> None:
         logging.config.fileConfig(fname)
 
 # Handle the optional import and provide a nice error message if it fails
-_click = importlib.util.find_spec("click")
-if _click is None:
+try:
+    import click
+except Exception:
     print("To use clnvm the `cli` feature must be installed")
     print("You can install the feature using")
     print("> pip install gltesting[cli]")
     sys.exit(1)
-
-import click
 
 
 @click.group()
