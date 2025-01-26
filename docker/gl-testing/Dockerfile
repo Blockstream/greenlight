@@ -208,6 +208,8 @@ RUN getent group $GID || groupadd -g $GID -o $DOCKER_USER && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 RUN mkdir -p /tmp/gltesting/cargo && mkdir -p /tmp/gltesting/tmp
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ADD . /repo
 WORKDIR /repo
