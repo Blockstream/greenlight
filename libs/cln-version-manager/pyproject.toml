@@ -8,24 +8,9 @@ authors = [
   {name = "Christian Decker", email = "decker@blockstream.com"},
   {name = "Erik De Smedt", email = "edesmedt@blockstream.com"},
 ]
-
-[tool.poetry.dependencies]
-python = "^3.8"
-requests = "^2"
-click = "^8"
-
-[tool.poetry.group.dev.dependencies]
-types-requests = "^2.31"
-pytest = "^8"
-mypy = "^1.8.0"
-types-click = "^7"
-black = "^24.2.0"
-
-[tool.poetry.group.lsp_ide.dependencies]
-python-lsp-server = "^1.10.0"
-
-[tool.poetry.scripts]
-clnvm = "clnvm.cli:run"
+dependencies = [
+    "requests>=2.32.3",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -34,6 +19,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "mypy>=1.14.1",
+    "pytest>=7.4.4",
     "types-requests>=2.31.0.6",
 ]
 
@@ -41,3 +27,6 @@ dev = [
 include = [
     "clnvm",
 ]
+
+[project.scripts]
+hello = "clnvm.cli:run"

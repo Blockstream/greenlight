@@ -13,10 +13,20 @@ includes:
     taskfile: "docker/.tasks.yml"
     dir: "."
 
+  plugin:
+    taskfile: "libs/gl-plugin/.tasks.yml"
+    dir: "."
+
+  signerproxy:
+    taskfile: "libs/gl-signerproxy/.tasks.yml"
+    dir: "."
+
 tasks:
 
   ci-check:
-    deps:
+    cmds:
+      - task: signerproxy:build
+      - task: plugin:build
       - task: clientpy:check
       - task: clnvm:check
 
