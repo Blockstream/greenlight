@@ -35,7 +35,7 @@ jobs:
       uses: arduino/setup-protoc@v3
 
     - name: Install dependencies
-      run: task docker:install-cfssl
+      run: task docker:install-dependencies
 
     - name: Adjust PATH
       run: |
