@@ -33,6 +33,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "mypy>=1.14.1",
     "types-requests>=2.31.0.6",
 ]
 
