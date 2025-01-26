@@ -18,7 +18,7 @@ from typing import List, Optional
 target_dir = Path(
     os.environ.get(
         'CARGO_TARGET_DIR',
-        Path(__file__).parent / ".." / ".." / "target"
+        Path(__file__).parent / ".." / ".." / ".." / "target"
     )
 )
 
