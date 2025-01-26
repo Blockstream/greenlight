@@ -13,7 +13,7 @@ package = false
 members = [
   "libs/gl-testing",
   "libs/gl-client-py",
-#  "libs/gl-testserver",
+  "libs/gl-testserver",
   "libs/cln-version-manager",
 ]
 exclude = ["packages/seeds"]
