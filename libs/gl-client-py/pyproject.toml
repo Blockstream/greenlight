@@ -5,8 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "gl-testing",
-    "grpcio>=1.56",
     "protobuf>=4",
     "pyln-grpc-proto>=0.1",
 ]
