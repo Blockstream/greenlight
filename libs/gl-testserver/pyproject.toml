@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "click>=8.1.7",
-    "gltesting",
+    "gl-testing",
     "rich>=13.9.3",
 ]
 
@@ -14,4 +14,4 @@ dependencies = [
 gltestserver = 'gltestserver.__main__:cli'
 
 [tool.uv.sources]
-gltesting = { workspace = true }
+gl-testing = { workspace = true }

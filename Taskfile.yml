@@ -2,22 +2,33 @@ version: '3'
 
 includes:
   clnvm:
-    taskfile: "libs/cln-version-manager/Taskfile.yml"
+    taskfile: "libs/cln-version-manager/.tasks.yml"
     dir: "libs/cln-version-manager/"
 
   clientpy:
-    taskfile: "libs/gl-client-py/Taskfile.yml"
+    taskfile: "libs/gl-client-py/.tasks.yml"
     dir: "libs/gl-client-py/"
 
   docker:
-    taskfile: "docker/Taskfile.yml"
+    taskfile: "docker/.tasks.yml"
     dir: "."
 
 tasks:
-  check-py:
-    dir: "libs/gl-client-py"
-    env:
-      GL_TESTING_IGNORE_HASH: 1
+
+  ci-check:
+    deps:
+      - task: clientpy:check
+      - task: clnvm:check
+
+  docker-ci-check:
     cmds:
-      - uv run --all-packages mypy glclient
-      - uv run --all-packages pytest tests
+      - >
+        docker buildx build \
+          --load \
+          --build-arg DOCKER_USER=$(whoami) \
+          --build-arg UID=$(id -u) \
+          --build-arg GID=$(id -g) \
+          --build-arg GL_TESTING_IGNORE_HASH=1 \
+          -t gltesting \
+          -f docker/gl-testing/Dockerfile \
+          .
