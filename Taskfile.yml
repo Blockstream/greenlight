@@ -32,3 +32,4 @@ tasks:
           -t gltesting \
           -f docker/gl-testing/Dockerfile \
           .
+      - docker run -ti -v $(pwd):/repo gltesting task ci-check
