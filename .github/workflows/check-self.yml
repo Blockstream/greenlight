@@ -45,13 +45,17 @@ jobs:
         echo "/tmp/bin/" >> $GITHUB_PATH
 
     - name: Rust Cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           /tmp/gltesting/cargo
           /tmp/gltesting/target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Build binaries
+      run:
+        task ci-build
+        
     - name: Check Self
       env:
         GL_TESTING_IGNORE_HASH: 1
