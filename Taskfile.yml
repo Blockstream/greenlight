@@ -24,9 +24,9 @@ includes:
 tasks:
 
   ci-check:
+    deps:
+      - ci-build
     cmds:
-      - task: signerproxy:build
-      - task: plugin:build
       - task: clientpy:check
       - task: clnvm:check
 
@@ -43,3 +43,8 @@ tasks:
           -f docker/gl-testing/Dockerfile \
           .
       - docker run -ti -v $(pwd):/repo gltesting task ci-check
+
+  ci-build:
+    cmds:
+      - task: signerproxy:build
+      - task: plugin:build
