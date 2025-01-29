@@ -17,23 +17,3 @@ build_gl_client_py:
     expire_in: 2 weeks
     paths:
       - "target/wheels/*"
-
-build_glcli:
-  extends: .build_setup
-  when: manual
-  rules:
-    - if: $CI_COMMIT_TAG =~ /glcli_\d{8}(_[1-9][0-9]?)?\-.*/
-  before_script:
-    - export NEW_VER=$(echo ${CI_COMMIT_TAG} | cut -d'-' -f2)
-    - sed -i "s/^version = \".*\"/version = \"$NEW_VER\"/" tools/glcli/pyproject.toml
-    - . $HOME/.cargo/env # sh doesn't have the correct PATH
-  script:
-    - cd tools/glcli
-    - poetry config pypi-token.pypi ${PYPI_TOKEN}
-    - poetry build
-    - poetry publish
-    - ls -lh dist
-  artifacts:
-    expire_in: 2 weeks
-    paths:
-      - "tools/glcli/dist/*"
