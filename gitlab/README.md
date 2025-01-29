@@ -1,5 +1,5 @@
 ## Gitlab Pipelines
-There are 5 Greenlight packaged binaries/libraries that are published - 2 Python packages and 3 Rust crates. 
+There are 5 Greenlight packaged binaries/libraries that are published - 1 Python packages and 4 Rust crates. 
 
 The builds are triggered by certain tag formats. Make sure to include a patch as well since the Rust compiler requires that (applicable to `gl-client-py` as well).
 
@@ -11,9 +11,9 @@ If a tagged release doesn't work, it can be retried by adding an `_N` suffix aft
 
 ### PyPI
 * gl-client-py - `glclientpy_YYYYMMDD-x.x.x`
-* greenlight-cli - `glcli_YYYYMMDD-x.x.x`
 
 ### crates.io
 * gl-client - `glclient_YYYYMMDD-x.x.x`
 * gl-plugin - `glplugin_YYYYMMDD-x.x.x`
 * gl-signerproxy - `glsignerproxy_YYYYMMDD-x.x.x`
+* gl-cli -`glcli_YYYYMMDD-x.x.x`
