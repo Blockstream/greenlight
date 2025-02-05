@@ -10,7 +10,7 @@ ENV RUST_VERSION=1.74
 ENV PATH=$CARGO_HOME/bin:$PATH
 ENV PROTOC_VERSION=3.19.3
 ENV CFSSL_VERSION=1.6.5
-ENV GL_TESTING_IGNORE_HASH=true
+ENV GL_TESTING_IGNORE_HASH=False
 ENV PATH=$PATH:/home/$DOCKER_USER/.local/bin/:/opt/bitcoin/bin:/home/$DOCKER_USER/.cargo/bin
 ENV REPO=$REPO_PATH
 
@@ -81,5 +81,4 @@ RUN cargo build --bin gl-signerproxy
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 RUN uv lock && uv sync --locked -v
-RUN uv run clnvm get-all
 CMD uv run gltestserver run --metadata ${REPO}/ --directory ${REPO}/.gltestserver
