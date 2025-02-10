@@ -37,18 +37,6 @@ pub enum Commands {
     Node(node::Command),
 }
 
-//#[tokio::main]
-//async fn main() {
-//    let cli = Cli::parse();
-//
-//    match run(cli).await {
-//        Ok(()) => (),
-//        Err(e) => {
-//            println!("{}", e);
-//        }
-//    }
-//}
-
 pub async fn run(cli: Cli) -> Result<()> {
     if cli.verbose {
         if std::env::var("RUST_LOG").is_err() {
