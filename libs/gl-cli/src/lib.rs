@@ -11,7 +11,7 @@ mod util;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Cli {
+pub struct Cli {
     /// The directory containing the seed and the credentials
     #[arg(short, long, global = true, help_heading = "Global options")]
     data_dir: Option<String>,
@@ -25,7 +25,7 @@ struct Cli {
 }
 
 #[derive(Subcommand, Debug)]
-enum Commands {
+pub enum Commands {
     /// Interact with the scheduler that is the brain of most operations
     #[command(subcommand)]
     Scheduler(scheduler::Command),
@@ -37,19 +37,19 @@ enum Commands {
     Node(node::Command),
 }
 
-#[tokio::main]
-async fn main() {
-    let cli = Cli::parse();
+//#[tokio::main]
+//async fn main() {
+//    let cli = Cli::parse();
+//
+//    match run(cli).await {
+//        Ok(()) => (),
+//        Err(e) => {
+//            println!("{}", e);
+//        }
+//    }
+//}
 
-    match run(cli).await {
-        Ok(()) => (),
-        Err(e) => {
-            println!("{}", e);
-        }
-    }
-}
-
-async fn run(cli: Cli) -> Result<()> {
+pub async fn run(cli: Cli) -> Result<()> {
     if cli.verbose {
         if std::env::var("RUST_LOG").is_err() {
             std::env::set_var("RUST_LOG", "debug")
