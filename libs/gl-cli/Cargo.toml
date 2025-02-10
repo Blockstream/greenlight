@@ -1,5 +1,5 @@
 [package]
-name = "glcli"
+name = "gl-cli"
 version = "0.1.0"
 edition = "2021"
 authors = ["Peter Neuroth <pet.v.ne@gmail.com>"]
@@ -11,6 +11,11 @@ keywords = ["lightning", "greenlight", "cli", "bitcoin", "blockchain"]
 categories = ["command-line-utlis", "cryptography::cryptocurrencies"]
 license = "MIT"
 reademe = "README.md"
+
+[[bin]]
+name = "glcli"
+test = true
+doc = true
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
