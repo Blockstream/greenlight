@@ -6,7 +6,6 @@ RUN pip install --upgrade pip \
   && pip install --upgrade maturin wheel poetry
 
 ENV RUST_VERSION=1.83
-# ENV RUST_DIST_VERSION=v0.13.3
 ENV RUST_DIST_VERSION=v0.4.2
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- --default-toolchain ${RUST_VERSION} -y \
