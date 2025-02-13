@@ -10,7 +10,7 @@ documentation = "https://blockstream.github.io/greenlight/"
 keywords = ["lightning", "greenlight", "cli", "bitcoin", "blockchain"]
 categories = ["command-line-utlis", "cryptography::cryptocurrencies"]
 license = "MIT"
-reademe = "README.md"
+readme = "README.md"
 
 [[bin]]
 name = "glcli"
