@@ -5,7 +5,7 @@ SHELL ["/bin/bash", "-c"]
 RUN pip install --upgrade pip \
   && pip install --upgrade maturin wheel poetry
 
-ENV RUST_VERSION=1.76
+ENV RUST_VERSION=1.83
 # ENV RUST_DIST_VERSION=v0.13.3
 ENV RUST_DIST_VERSION=v0.4.2
 
