@@ -1,14 +1,35 @@
+const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const protobuf = require('protobufjs');
 
-const PORT = process.argv[2] || '1111';
-const AUTH_PUBKEY = 'replace+this+with+your+base64+encoded+pubkey';
+const PORT = process.argv[2] || getPortFromMetadata() || '1111';
+const NODE_PUBKEY = 'yournodepubkeyhexvalue00000000000000000000000000000000000000000000';
+const AUTH_PUBKEY = Buffer.from(NODE_PUBKEY, 'hex').toString('base64');
 const AUTH_SIGNATURE = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 const PROTO_PATHS = [
   path.join(process.cwd(), '../../libs/gl-client/.resources/proto/node.proto'),
   path.join(process.cwd(), '../../libs/gl-client/.resources/proto/primitives.proto')
 ];
+
+function getPortFromMetadata() {
+  try {
+    const grpcWebProxyUri = JSON.parse(fs.readFileSync('../../metadata.json')).grpc_web_proxy_uri;
+    if (!grpcWebProxyUri) {
+      console.error('grpc_web_proxy_uri not found in metadata.json');
+      return null;
+    }
+    const grpc_port = new URL(grpcWebProxyUri).port;
+    if (!grpc_port) {
+      console.error('Port not found in grpc_web_proxy_uri');
+      return null;
+    }
+    return grpc_port;
+  } catch (error) {
+    console.error('Error reading metadata.json: ', error.message);
+    return null;
+  }
+}
 
 function getGrpcErrorMessage(grpcStatusCode) {
   const grpcStatusMessages = {
@@ -37,11 +58,13 @@ async function encodePayload(clnNode, method, payload) {
   const methodRequest = clnNode.lookupType(`cln.${method}Request`);
   const errMsg = methodRequest.verify(payload);
   if (errMsg) throw new Error(errMsg);
-  const header = Buffer.alloc(4);
-  header.writeUInt8(0, 0);
   const requestPayload = methodRequest.create(payload);
-  const encodedPayload = methodRequest.encodeDelimited(requestPayload).finish();
-  return Buffer.concat([header, encodedPayload]);
+  const encodedPayload = methodRequest.encode(requestPayload).finish();
+  const flags = Buffer.alloc(1);
+  flags.writeUInt8(0, 0);
+  const header = Buffer.alloc(4);
+  header.writeUInt32BE(encodedPayload.length, 0);
+  return Buffer.concat([flags, header, encodedPayload]);
 }
 
 async function sendRequest(methodUrl, encodedPayload) {
@@ -72,31 +95,34 @@ function transformValue(key, value) {
 }
 
 function decodeResponse(clnNode, method, response) {
-  const methodResponse = clnNode.lookupType(`cln.${method}Response`)  
-  const offset = 5;
-  const responseData = new Uint8Array(response.data).slice(offset);
+  const methodResponse = clnNode.lookupType(`cln.${method}Response`);
+  const dataBuffer = Buffer.from(response.data);
+  const resFlag = dataBuffer.subarray(0, 1);
+  const resDataLength = dataBuffer.subarray(1, 5);
+  const responseData = dataBuffer.subarray(5);
   const grpcStatus = +response.headers['grpc-status'];
   if (grpcStatus !== 0) {
-    let errorDecoded = new TextDecoder("utf-8").decode(responseData);
-    if (errorDecoded !== 'None') {
-      errorDecoded = JSON.parse(errorDecoded.replace(/([a-zA-Z0-9_]+):/g, '"$1":'));
-    } else {
-      errorDecoded = {code: grpcStatus, message: getGrpcErrorMessage(grpcStatus)};
-    }
-    return { grpc_code: grpcStatus, grpc_error: getGrpcErrorMessage(grpcStatus), error: errorDecoded};
-  } else {
-    // FIXME: Use decodeDelimited
-    const decodedRes = methodResponse.decode(responseData);
-    const decodedResObject = methodResponse.toObject(decodedRes, {
+      let errorMessage = 'None';
+      try {
+          errorMessage = decodeURIComponent(new TextDecoder('utf-8').decode(responseData)).trim();
+          if (errorMessage == 'None') {
+              errorMessage = getGrpcErrorMessage(grpcStatus);
+          }
+      } catch (decodeError) {
+          errorMessage = decodeError;
+      }
+      throw new Error(errorMessage);
+  }
+  const decodedRes = methodResponse.decode(responseData);
+  const decodedResObject = methodResponse.toObject(decodedRes, {
       longs: String,
       enums: String,
       bytes: Buffer,
       defaults: true,
       arrays: true,
       objects: true,
-    });
-    return JSON.parse(JSON.stringify(decodedResObject, transformValue));
-  }
+  });
+  return JSON.parse(JSON.stringify(decodedResObject, transformValue));
 }
 
 async function fetchNodeData() {
@@ -120,14 +146,14 @@ async function fetchNodeData() {
         console.log('\nResponse Decoded:');
         console.dir(responseJSON, { depth: null, color: true });
       } catch (error) {
-        console.error('\nResponse Error:\n', error.response.status, ' - ', error.response.statusText);
+        console.error('\nResponse Error:\n', error.response?.status || error.code, ' - ', error.response?.statusText || error.response?.data || error.message || '');
       }
     }
   } catch (error) {
     console.error('Error:', error.message);
     if (error.response) {
-      console.error('Error status:', error.response.status);
-      console.error('Error data:', error.response.data);
+      console.error('Error status:', error.response?.status || error.code);
+      console.error('Error data:', error.response?.statusText || error.response?.data || error.message || '');
     }
   }
 }
