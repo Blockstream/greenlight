@@ -42,143 +42,21 @@ present at a time, freeing others from that duty.
 
 # Getting started
 
-The following is a quick walkthrough based on the python `glcli`
-command line tool to get you started:
-
-## Install and updating `glcli` and python API
-
-There are prebuilt `glcli` and `gl-client-py` packages on a private
-repository. These allow developers to hit a running start, without
-having to bother with compiling the binary extensions.
-
+The easiest way to begin using __Greenlight__ is with its command-line
+interface `glcli`. You can install it directly from __crates.io__ by running:
 ```bash
-pip install -U gl-client
-pip install --extra-index-url=https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/simple/ -U glcli
+cargo install gl-cli
 ```
 
-Should you encounter any issues with the installation it is likely due
-to there not being a prebuilt version of the `gl-client-py`
-library. Please refer to its [documentation][glpy-doc] on how to build
-the library from source, and let us know your platform so we can add
-it to our build system if possible.
-
-[glpy-doc]: libs/gl-client-py
-
-## Register / recover an account
-
-Registration and recovery are managed by the scheduler, hence the
-`scheduler` prefix in the following commands.
-
-```
-$ glcli scheduler register --network=testnet
-{
-  "device_cert": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n\n\n",
-  "device_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-}
-```
-
-This returns an mTLS certificate and a matching private key that is
-used to authenticate and authorize the application with the
-services. These should be stored on the device and be used for all
-future communication. In particular, nodes will only accept incoming
-connections that are authenticated with the user's certificate. In
-order to register as a new user a signature from the key manager is
-required.
-
-The recovery process is also based on the key manager providing a
-signature:
-
-```bash 
-$ glcli scheduler recover
-{
-  "device_cert": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n\n\n",
-  "device_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-}
-```
-
-This too provides a certificate and a matching private key that can be
-used to authenticate and authorize the application.
-
-## Scheduling
-
-While `glcli` takes care of scheduling the node automatically if
-another command is provided, when implementing the client this must be
-done as a separate step:
-
+Once installed execute:
 ```bash
-$ glcli scheduler schedule
-{
-  "grpc_uri": "https://35.236.110.178:6019",
-  "node_id": "A27DtykCS7EjvnlUCB0yjrSMz4KSN4kGOo0Hm2Gd+lbi"
-}
-```
-
-Notice that protocol buffers encode binary values using base64, which
-is why the `node_id` isn't hex encoded. The node can now be reached
-directly at the provided URI. Notice that `glcli` will automatically
-look up the current location:
-
-```
-$ glcli getinfo
-{
-  "addresses": [],
-  "alias": "LATENTGLEE",
-  "blockheight": 2003446,
-  "color": "A27D",
-  "network": "testnet",
-  "node_id": "A27DtykCS7EjvnlUCB0yjrSMz4KSN4kGOo0Hm2Gd+lbi",
-  "num_peers": 0,
-  "version": "0.10.0"
-}
-```
-
-In order to attach the `hsmd` to the node run the following:
-
-```bash
-$ glcli hsmd 
-[2021-06-07 18:38:02,574 - DEBUG] Found existing hsm_secret file, loading secret from it
-[2021-06-07 18:38:02,575 - DEBUG] Initializing libhsmd with secret
-[2021-06-07 18:38:02,583 - DEBUG] libhsmd initialized for node_id=036ec3b729024bb123be7954081d328eb48ccf82923789063a8d079b619dfa56e2
-[2021-06-07 18:38:02,584 - DEBUG] Contacting scheduler at 35.236.110.178:443 to wait for the node to be scheduled.
-[2021-06-07 18:38:02,594 - DEBUG] Waiting for node 036ec3b729024bb123be7954081d328eb48ccf82923789063a8d079b619dfa56e2 to be scheduled
-[2021-06-07 18:38:03,229 - INFO] Node was scheduled at https://35.236.110.178:6019, opening direct connection
-[2021-06-07 18:38:03,230 - DEBUG] Streaming HSM requests
-```
-
-Not all commands require the `hsmd` to be running, however it is good
-practice to have it running in parallel with other commands being
-executed. Future versions of `glcli` will automatically spawn an
-instance if needed by the command in question.
-
-From hereon the node can be managed just as if it were a local node,
-including sending and receiving on-chain transactions, sending and
-receiving off-chain transactions, opening and closing channels, etc.
-
-```bash
-
 glcli --help
-Usage: glcli [OPTIONS] COMMAND [ARGS]...
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  close
-  connect
-  destroy
-  disconnect
-  fundchannel
-  getinfo
-  hsmd         Run the hsmd against the scheduler.
-  invoice
-  listfunds
-  listpeers
-  newaddr
-  pay
-  scheduler
-  stop
-  withdraw
 ```
+This command will display an overview of all available commands.
+
+For additional details and usage examples, refer to `glcli` [README][glcli-doc].
+
+[glcli-doc]: libs/gl-cli
 
 # Best practices
 
