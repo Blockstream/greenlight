@@ -180,7 +180,7 @@ pub struct RoutehintHop {
 pub struct RoutehintHopDev {
     pub id: String,
     pub short_channel_id: String,
-    pub fee_base_msat: u64,
+    pub fee_base_msat: Option<u64>,
     pub fee_proportional_millionths: u32,
     pub cltv_expiry_delta: u16,
 }
