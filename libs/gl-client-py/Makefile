@@ -35,9 +35,9 @@ ${PYPROTOS}: pygrpc
 pygrpc: ${PROTOSRC}
 	cp ${PYDIR}/../proto/glclient/scheduler.proto ${PYDIR}/glclient/
 	cp ${PYDIR}/../proto/glclient/greenlight.proto ${PYDIR}/glclient/
-	cd ${PYDIR}; poetry install
-	cd ${PYDIR}; poetry run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
-	cd ${PYDIR}; poetry run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
+	cd ${PYDIR}; uv sync
+	cd ${PYDIR}; uv run python3 -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
+	cd ${PYDIR}; uv run python3 -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
 
 check-py:
 	#uv run --all-packages mypy ${PYDIR}/glclient
