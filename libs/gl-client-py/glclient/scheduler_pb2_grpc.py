@@ -6,10 +6,8 @@ import warnings
 from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 from glclient import scheduler_pb2 as glclient_dot_scheduler__pb2
 
-GRPC_GENERATED_VERSION = '1.64.1'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
-EXPECTED_ERROR_RELEASE = '1.65.0'
-SCHEDULED_RELEASE_DATE = 'June 25, 2024'
 _version_not_supported = False
 
 try:
@@ -19,15 +17,12 @@ except ImportError:
     _version_not_supported = True
 
 if _version_not_supported:
-    warnings.warn(
+    raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
         + f' but the generated code in glclient/scheduler_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
-        + f' This warning will become an error in {EXPECTED_ERROR_RELEASE},'
-        + f' scheduled for release on {SCHEDULED_RELEASE_DATE}.',
-        RuntimeWarning
     )
 
 
@@ -345,7 +340,7 @@ class SchedulerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def SignerRequestsStream(self, request_iterator, context):
-        """Attaches a Signer  via a bidirectional stream to the scheduler. 
+        """Attaches a Signer  via a bidirectional stream to the scheduler.
         This is a communication channel between greenlight and the signing
         device that is used for requests that are not part of the node api.
 
@@ -1061,6 +1056,129 @@ class Pairing(object):
             '/scheduler.Pairing/ApprovePairing',
             glclient_dot_scheduler__pb2.ApprovePairingRequest.SerializeToString,
             glclient_dot_greenlight__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+
+class LspsStub(object):
+    """A service to explore lsps compatible LSP's
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.ListLsps = channel.unary_unary(
+                '/scheduler.Lsps/ListLsps',
+                request_serializer=glclient_dot_scheduler__pb2.ListLspsRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.ListLspsResponse.FromString,
+                _registered_method=True)
+        self.GetLspInfo = channel.unary_unary(
+                '/scheduler.Lsps/GetLspInfo',
+                request_serializer=glclient_dot_scheduler__pb2.GetLspInfoRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.GetLspInfoResponse.FromString,
+                _registered_method=True)
+
+
+class LspsServicer(object):
+    """A service to explore lsps compatible LSP's
+    """
+
+    def ListLsps(self, request, context):
+        """Returns a structured list of all available Lsps. An Lsp is a
+        Lightning Service Provider, providing an API as described in blips
+        50, 51 and 52 https://github.com/lightning/blips. From cln:
+        `lsps-listlsps`.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetLspInfo(self, request, context):
+        """Returns detailed information about a LSP. From cln: `lsps-lspinfo`.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_LspsServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'ListLsps': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListLsps,
+                    request_deserializer=glclient_dot_scheduler__pb2.ListLspsRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.ListLspsResponse.SerializeToString,
+            ),
+            'GetLspInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetLspInfo,
+                    request_deserializer=glclient_dot_scheduler__pb2.GetLspInfoRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.GetLspInfoResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'scheduler.Lsps', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('scheduler.Lsps', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class Lsps(object):
+    """A service to explore lsps compatible LSP's
+    """
+
+    @staticmethod
+    def ListLsps(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/scheduler.Lsps/ListLsps',
+            glclient_dot_scheduler__pb2.ListLspsRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.ListLspsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetLspInfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/scheduler.Lsps/GetLspInfo',
+            glclient_dot_scheduler__pb2.GetLspInfoRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.GetLspInfoResponse.FromString,
             options,
             channel_credentials,
             insecure,

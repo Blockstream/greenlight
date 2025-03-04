@@ -309,8 +309,8 @@ class RegistrationResponse(google.protobuf.message.Message):
     client side and appends the rune to the registratrion response.
     """
     creds: builtins.bytes
-    """Creds contains a serialized version of the device_cert, the device_key 
-    and the rune that are used to authenticate a device at the backend, 
+    """Creds contains a serialized version of the device_cert, the device_key
+    and the rune that are used to authenticate a device at the backend,
     and to authorize a request at the signer.
     """
     def __init__(
@@ -436,8 +436,8 @@ class RecoveryResponse(google.protobuf.message.Message):
     client side and appends the rune to the registratrion response.
     """
     creds: builtins.bytes
-    """Creds contains a serialized version of the device_cert, the device_key 
-    and the rune that are used to authenticate a device at the backend, 
+    """Creds contains a serialized version of the device_cert, the device_key
+    and the rune that are used to authenticate a device at the backend,
     and to authorize a request at the signer.
     """
     def __init__(
@@ -648,12 +648,12 @@ class PairDeviceRequest(google.protobuf.message.Message):
     subjects CN field: CN=/users/<node_id>/<device_name>.
     """
     description: builtins.str
-    """A human readable description of the device, this can be a 
-    purpose or something similar. Can be used to display to the 
+    """A human readable description of the device, this can be a
+    purpose or something similar. Can be used to display to the
     user on the old device.
     """
     restrictions: builtins.str
-    """A set of restrictions that the new devices requests for the 
+    """A set of restrictions that the new devices requests for the
     rune. This might in the future get upgraded for easier naming.
     """
     def __init__(
@@ -696,8 +696,8 @@ class PairDeviceResponse(google.protobuf.message.Message):
     the device pairs to.
     """
     creds: builtins.bytes
-    """Creds contains a serialized version of the device certificate, the device 
-    key and the rune that are used to authenticate a device at the backend, 
+    """Creds contains a serialized version of the device certificate, the device
+    key and the rune that are used to authenticate a device at the backend,
     and to authorize a request at the signer.
     """
     def __init__(
@@ -749,12 +749,12 @@ class GetPairingDataResponse(google.protobuf.message.Message):
     subjects CN field: CN=/users/<node_id>/<device_name>.
     """
     description: builtins.str
-    """A human readable description of the device, this can be a 
-    purpose or something similar. Can be used to display to the 
+    """A human readable description of the device, this can be a
+    purpose or something similar. Can be used to display to the
     user on the old device.
     """
     restrictions: builtins.str
-    """A set of restrictions that the new devices requests for the 
+    """A set of restrictions that the new devices requests for the
     rune. This might in the future get upgraded for easier naming.
     """
     def __init__(
@@ -796,7 +796,7 @@ class ApprovePairingRequest(google.protobuf.message.Message):
     sig: builtins.bytes
     """The signature of the above to ensure data integrity."""
     pubkey: builtins.bytes
-    """The public key corresponding to the private key that was used 
+    """The public key corresponding to the private key that was used
     to sign the request and that is part of the rune;
     """
     rune: builtins.str
@@ -884,3 +884,279 @@ class SignerResponse(google.protobuf.message.Message):
     def WhichOneof(self, oneof_group: typing.Literal["response", b"response"]) -> typing.Literal["empty", "approve_pairing"] | None: ...
 
 global___SignerResponse = SignerResponse
+
+@typing.final
+class ListLspsRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+global___ListLspsRequest = ListLspsRequest
+
+@typing.final
+class ListLspsResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    @typing.final
+    class LspsEntry(google.protobuf.message.Message):
+        DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+        KEY_FIELD_NUMBER: builtins.int
+        VALUE_FIELD_NUMBER: builtins.int
+        key: builtins.str
+        @property
+        def value(self) -> global___Lsp: ...
+        def __init__(
+            self,
+            *,
+            key: builtins.str = ...,
+            value: global___Lsp | None = ...,
+        ) -> None: ...
+        def HasField(self, field_name: typing.Literal["value", b"value"]) -> builtins.bool: ...
+        def ClearField(self, field_name: typing.Literal["key", b"key", "value", b"value"]) -> None: ...
+
+    LSPS_FIELD_NUMBER: builtins.int
+    @property
+    def lsps(self) -> google.protobuf.internal.containers.MessageMap[builtins.str, global___Lsp]:
+        """A map that maps the public keys of known LSPs to the information we have
+        about them.
+        """
+
+    def __init__(
+        self,
+        *,
+        lsps: collections.abc.Mapping[builtins.str, global___Lsp] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["lsps", b"lsps"]) -> None: ...
+
+global___ListLspsResponse = ListLspsResponse
+
+@typing.final
+class Lsp(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PROTOCOLS_FIELD_NUMBER: builtins.int
+    @property
+    def protocols(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]:
+        """An object that contains the supported protocols with additional
+        information about the LSPs conditions.
+        """
+
+    def __init__(
+        self,
+        *,
+        protocols: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["protocols", b"protocols"]) -> None: ...
+
+global___Lsp = Lsp
+
+@typing.final
+class GetLspInfoRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PUBLIC_KEY_FIELD_NUMBER: builtins.int
+    public_key: builtins.str
+    """The public key of the LSP of interest."""
+    def __init__(
+        self,
+        *,
+        public_key: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["public_key", b"public_key"]) -> None: ...
+
+global___GetLspInfoRequest = GetLspInfoRequest
+
+@typing.final
+class GetLspInfoResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    PUBLIC_KEY_FIELD_NUMBER: builtins.int
+    PROTOCOLS_FIELD_NUMBER: builtins.int
+    public_key: builtins.str
+    """The public key of the LSP."""
+    @property
+    def protocols(self) -> global___LspProtocols:
+        """Infos about the supported protocols."""
+
+    def __init__(
+        self,
+        *,
+        public_key: builtins.str = ...,
+        protocols: global___LspProtocols | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["protocols", b"protocols"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["protocols", b"protocols", "public_key", b"public_key"]) -> None: ...
+
+global___GetLspInfoResponse = GetLspInfoResponse
+
+@typing.final
+class LspProtocols(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    LSPS1_FIELD_NUMBER: builtins.int
+    LSPS2_FIELD_NUMBER: builtins.int
+    @property
+    def lsps1(self) -> global___Lsps1Info:
+        """Optional information relating to the lsps1 protocol. Is only present if
+        the LSP supports the protocol.
+        """
+
+    @property
+    def lsps2(self) -> global___Lsps2Info:
+        """Optional information relating to the lsps2 protocol. Is only present if
+        the LSP supports the protocol.
+        """
+
+    def __init__(
+        self,
+        *,
+        lsps1: global___Lsps1Info | None = ...,
+        lsps2: global___Lsps2Info | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["lsps1", b"lsps1", "lsps2", b"lsps2"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["lsps1", b"lsps1", "lsps2", b"lsps2"]) -> None: ...
+
+global___LspProtocols = LspProtocols
+
+@typing.final
+class Lsps1Info(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    MIN_REQUIRED_CHANNEL_CONFIRMATIONS_FIELD_NUMBER: builtins.int
+    MIN_FUNDING_CONFIRMS_WITHIN_BLOCKS_FIELD_NUMBER: builtins.int
+    SUPPORTS_ZERO_CHANNEL_RESERVE_FIELD_NUMBER: builtins.int
+    MAX_CHANNEL_EXPIRY_BLOCKS_FIELD_NUMBER: builtins.int
+    MIN_INITIAL_CLIENT_BALANCE_SAT_FIELD_NUMBER: builtins.int
+    MAX_INITIAL_CLIENT_BALANCE_SAT_FIELD_NUMBER: builtins.int
+    MIN_INITIAL_LSP_BALANCE_SAT_FIELD_NUMBER: builtins.int
+    MAX_INITIAL_LSP_BALANCE_SAT_FIELD_NUMBER: builtins.int
+    MIN_CHANNEL_BALANCE_SAT_FIELD_NUMBER: builtins.int
+    MAX_CHANNEL_BALANCE_SAT_FIELD_NUMBER: builtins.int
+    min_required_channel_confirmations: builtins.int
+    """The smallest number of confirmations needed for the LSP to accept a
+    channel as confirmed and sends `channel_ready` (see bolt02).
+    """
+    min_funding_confirms_within_blocks: builtins.int
+    """The smallest number of blocks in which the LSP can confirm the funding
+    transaction.
+    """
+    supports_zero_channel_reserve: builtins.bool
+    """Is true if the LSP supports zeroreserve on the channel."""
+    max_channel_expiry_blocks: builtins.int
+    """Is the maximum number of blocks a channel can be leased for."""
+    min_initial_client_balance_sat: builtins.int
+    """The minimum amount in satoshis that a client must request."""
+    max_initial_client_balance_sat: builtins.int
+    """The maximum amount in satoshis that a client must request."""
+    min_initial_lsp_balance_sat: builtins.int
+    """The minimum amount in satoshis that the LSP will provide to the channel."""
+    max_initial_lsp_balance_sat: builtins.int
+    """The maximum amount in satoshis that the LSP will provide to the channel."""
+    min_channel_balance_sat: builtins.int
+    """The minimum channel size the LSP accepts."""
+    max_channel_balance_sat: builtins.int
+    """The maximum channel size the LSP accepts."""
+    def __init__(
+        self,
+        *,
+        min_required_channel_confirmations: builtins.int = ...,
+        min_funding_confirms_within_blocks: builtins.int = ...,
+        supports_zero_channel_reserve: builtins.bool = ...,
+        max_channel_expiry_blocks: builtins.int = ...,
+        min_initial_client_balance_sat: builtins.int = ...,
+        max_initial_client_balance_sat: builtins.int = ...,
+        min_initial_lsp_balance_sat: builtins.int = ...,
+        max_initial_lsp_balance_sat: builtins.int = ...,
+        min_channel_balance_sat: builtins.int = ...,
+        max_channel_balance_sat: builtins.int = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["max_channel_balance_sat", b"max_channel_balance_sat", "max_channel_expiry_blocks", b"max_channel_expiry_blocks", "max_initial_client_balance_sat", b"max_initial_client_balance_sat", "max_initial_lsp_balance_sat", b"max_initial_lsp_balance_sat", "min_channel_balance_sat", b"min_channel_balance_sat", "min_funding_confirms_within_blocks", b"min_funding_confirms_within_blocks", "min_initial_client_balance_sat", b"min_initial_client_balance_sat", "min_initial_lsp_balance_sat", b"min_initial_lsp_balance_sat", "min_required_channel_confirmations", b"min_required_channel_confirmations", "supports_zero_channel_reserve", b"supports_zero_channel_reserve"]) -> None: ...
+
+global___Lsps1Info = Lsps1Info
+
+@typing.final
+class Lsps2Info(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    OPENING_FEE_PARAMS_MENU_FIELD_NUMBER: builtins.int
+    @property
+    def opening_fee_params_menu(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___Lsps2OpeningFeeParams]:
+        """The LSP may return an empty array in which case, the client currently
+        cannot use JIT channels with this LSP.
+        """
+
+    def __init__(
+        self,
+        *,
+        opening_fee_params_menu: collections.abc.Iterable[global___Lsps2OpeningFeeParams] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["opening_fee_params_menu", b"opening_fee_params_menu"]) -> None: ...
+
+global___Lsps2Info = Lsps2Info
+
+@typing.final
+class Lsps2OpeningFeeParams(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    MIN_FEE_MSAT_FIELD_NUMBER: builtins.int
+    PROPORTIONAL_FIELD_NUMBER: builtins.int
+    VALID_UNTIL_FIELD_NUMBER: builtins.int
+    MIN_LIFETIME_FIELD_NUMBER: builtins.int
+    MAX_CLIENT_TO_SELF_DELAY_FIELD_NUMBER: builtins.int
+    MIN_PAYMENT_SIZE_MSAT_FIELD_NUMBER: builtins.int
+    MAX_PAYMENT_SIZE_MSAT_FIELD_NUMBER: builtins.int
+    PROMISE_FIELD_NUMBER: builtins.int
+    min_fee_msat: builtins.int
+    """The minimum fee to be paid by the client to the LSP."""
+    proportional: builtins.int
+    """A parts-per-million number that describes how many millisatoshis to charge
+    for every 1 million millisatoshis of payment size for the first payment. If
+    the proportional fee is less than than `min_fee_msat`, then `min_fee_msat`
+    is paid instead of the proportional times payment size divided by 1
+    million.
+    """
+    valid_until: builtins.str
+    """Is a datetime (as an ISO8601 string) up to which this specific
+    `opening_fee_params` is valid, and also serves as the timeout for the JIT
+    Channel flow, if this particular object is selected.
+    """
+    min_lifetime: builtins.int
+    """Is a number of blocks that the LSP promises it will keep the channel alive
+    without closing, after confirmation.
+    """
+    max_client_to_self_delay: builtins.int
+    """Is a maximum number of blocks that the client is allowed to set its
+    `to_self_pay_delay` parameter.
+    """
+    min_payment_size_msat: builtins.int
+    """Is the minimum payment size, inclusive. Is the amount in millisatoshis that
+    the payer is guaranteed to be able to send to the client, not including the
+    forwarding fees of nodes along the way.
+    """
+    max_payment_size_msat: builtins.int
+    """Is the maximum payment size, inclusive. Is the amount in millisatoshis that
+    the payer is guaranteed to be able to send to the client, not including the
+    forwarding fees of nodes along the way.
+    """
+    promise: builtins.str
+    """An arbitrary LSP-genereated string that proves to the LSP that it has
+    promised a specific `opening_fee_params`.
+    """
+    def __init__(
+        self,
+        *,
+        min_fee_msat: builtins.int = ...,
+        proportional: builtins.int = ...,
+        valid_until: builtins.str = ...,
+        min_lifetime: builtins.int = ...,
+        max_client_to_self_delay: builtins.int = ...,
+        min_payment_size_msat: builtins.int = ...,
+        max_payment_size_msat: builtins.int = ...,
+        promise: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["max_client_to_self_delay", b"max_client_to_self_delay", "max_payment_size_msat", b"max_payment_size_msat", "min_fee_msat", b"min_fee_msat", "min_lifetime", b"min_lifetime", "min_payment_size_msat", b"min_payment_size_msat", "promise", b"promise", "proportional", b"proportional", "valid_until", b"valid_until"]) -> None: ...
+
+global___Lsps2OpeningFeeParams = Lsps2OpeningFeeParams

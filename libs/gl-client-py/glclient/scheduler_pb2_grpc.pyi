@@ -222,7 +222,7 @@ class SchedulerStub:
         glclient.scheduler_pb2.SignerResponse,
         glclient.scheduler_pb2.SignerRequest,
     ]
-    """Attaches a Signer  via a bidirectional stream to the scheduler. 
+    """Attaches a Signer  via a bidirectional stream to the scheduler.
     This is a communication channel between greenlight and the signing
     device that is used for requests that are not part of the node api.
 
@@ -433,7 +433,7 @@ class SchedulerAsyncStub:
         glclient.scheduler_pb2.SignerResponse,
         glclient.scheduler_pb2.SignerRequest,
     ]
-    """Attaches a Signer  via a bidirectional stream to the scheduler. 
+    """Attaches a Signer  via a bidirectional stream to the scheduler.
     This is a communication channel between greenlight and the signing
     device that is used for requests that are not part of the node api.
 
@@ -670,7 +670,7 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         request_iterator: _MaybeAsyncIterator[glclient.scheduler_pb2.SignerResponse],
         context: _ServicerContext,
     ) -> typing.Union[collections.abc.Iterator[glclient.scheduler_pb2.SignerRequest], collections.abc.AsyncIterator[glclient.scheduler_pb2.SignerRequest]]:
-        """Attaches a Signer  via a bidirectional stream to the scheduler. 
+        """Attaches a Signer  via a bidirectional stream to the scheduler.
         This is a communication channel between greenlight and the signing
         device that is used for requests that are not part of the node api.
 
@@ -831,3 +831,67 @@ class PairingServicer(metaclass=abc.ABCMeta):
         """
 
 def add_PairingServicer_to_server(servicer: PairingServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+
+class LspsStub:
+    """A service to explore lsps compatible LSP's"""
+
+    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
+    ListLsps: grpc.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.ListLspsRequest,
+        glclient.scheduler_pb2.ListLspsResponse,
+    ]
+    """Returns a structured list of all available Lsps. An Lsp is a
+    Lightning Service Provider, providing an API as described in blips
+    50, 51 and 52 https://github.com/lightning/blips. From cln:
+    `lsps-listlsps`.
+    """
+
+    GetLspInfo: grpc.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.GetLspInfoRequest,
+        glclient.scheduler_pb2.GetLspInfoResponse,
+    ]
+    """Returns detailed information about a LSP. From cln: `lsps-lspinfo`."""
+
+class LspsAsyncStub:
+    """A service to explore lsps compatible LSP's"""
+
+    ListLsps: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.ListLspsRequest,
+        glclient.scheduler_pb2.ListLspsResponse,
+    ]
+    """Returns a structured list of all available Lsps. An Lsp is a
+    Lightning Service Provider, providing an API as described in blips
+    50, 51 and 52 https://github.com/lightning/blips. From cln:
+    `lsps-listlsps`.
+    """
+
+    GetLspInfo: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.scheduler_pb2.GetLspInfoRequest,
+        glclient.scheduler_pb2.GetLspInfoResponse,
+    ]
+    """Returns detailed information about a LSP. From cln: `lsps-lspinfo`."""
+
+class LspsServicer(metaclass=abc.ABCMeta):
+    """A service to explore lsps compatible LSP's"""
+
+    @abc.abstractmethod
+    def ListLsps(
+        self,
+        request: glclient.scheduler_pb2.ListLspsRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.scheduler_pb2.ListLspsResponse, collections.abc.Awaitable[glclient.scheduler_pb2.ListLspsResponse]]:
+        """Returns a structured list of all available Lsps. An Lsp is a
+        Lightning Service Provider, providing an API as described in blips
+        50, 51 and 52 https://github.com/lightning/blips. From cln:
+        `lsps-listlsps`.
+        """
+
+    @abc.abstractmethod
+    def GetLspInfo(
+        self,
+        request: glclient.scheduler_pb2.GetLspInfoRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.scheduler_pb2.GetLspInfoResponse, collections.abc.Awaitable[glclient.scheduler_pb2.GetLspInfoResponse]]:
+        """Returns detailed information about a LSP. From cln: `lsps-lspinfo`."""
+
+def add_LspsServicer_to_server(servicer: LspsServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...

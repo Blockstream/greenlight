@@ -546,3 +546,113 @@ message SignerResponse {
     ApprovePairingResponse approve_pairing = 3;
   }
 }
+
+message ListLspsRequest {}
+
+message ListLspsResponse {
+  // A map that maps the public keys of known LSPs to the information we have
+  // about them.
+  map<string, Lsp> lsps = 1;
+}
+
+message Lsp {
+  // An object that contains the supported protocols with additional
+  // information about the LSPs conditions.
+  repeated int32 protocols = 1;
+}
+
+message GetLspInfoRequest {
+  // The public key of the LSP of interest.
+  string public_key = 1;
+}
+
+message GetLspInfoResponse {
+  // The public key of the LSP.
+  string public_key = 1;
+  // Infos about the supported protocols.
+  LspProtocols protocols = 2;
+}
+
+message LspProtocols {
+  // Optional information relating to the lsps1 protocol. Is only present if
+  // the LSP supports the protocol.
+  Lsps1Info lsps1 = 1;
+  // Optional information relating to the lsps2 protocol. Is only present if
+  // the LSP supports the protocol.
+  Lsps2Info lsps2 = 2;
+}
+
+message Lsps1Info {
+  // The smallest number of confirmations needed for the LSP to accept a
+  // channel as confirmed and sends `channel_ready` (see bolt02).
+  uint32 min_required_channel_confirmations = 1;
+  // The smallest number of blocks in which the LSP can confirm the funding
+  // transaction.
+  uint32 min_funding_confirms_within_blocks = 2;
+  // Is true if the LSP supports zeroreserve on the channel.
+  bool supports_zero_channel_reserve = 3;
+  // Is the maximum number of blocks a channel can be leased for.
+  uint32 max_channel_expiry_blocks = 4;
+  // The minimum amount in satoshis that a client must request.
+  uint64 min_initial_client_balance_sat = 5;
+  // The maximum amount in satoshis that a client must request.
+  uint64 max_initial_client_balance_sat = 6;
+  // The minimum amount in satoshis that the LSP will provide to the channel.
+  uint64 min_initial_lsp_balance_sat = 7;
+  // The maximum amount in satoshis that the LSP will provide to the channel.
+  uint64 max_initial_lsp_balance_sat = 8;
+  // The minimum channel size the LSP accepts.
+  uint64 min_channel_balance_sat = 9;
+  // The maximum channel size the LSP accepts.
+  uint64 max_channel_balance_sat = 10;
+}
+
+message Lsps2Info {
+  // The LSP may return an empty array in which case, the client currently
+  // cannot use JIT channels with this LSP.
+  repeated Lsps2OpeningFeeParams opening_fee_params_menu = 1;
+}
+
+message Lsps2OpeningFeeParams {
+  // The minimum fee to be paid by the client to the LSP.
+  uint64 min_fee_msat = 1;
+  // A parts-per-million number that describes how many millisatoshis to charge
+  // for every 1 million millisatoshis of payment size for the first payment. If
+  // the proportional fee is less than than `min_fee_msat`, then `min_fee_msat`
+  // is paid instead of the proportional times payment size divided by 1
+  // million.
+  uint32 proportional = 2;
+  // Is a datetime (as an ISO8601 string) up to which this specific
+  // `opening_fee_params` is valid, and also serves as the timeout for the JIT
+  // Channel flow, if this particular object is selected.
+  string valid_until = 3;
+  // Is a number of blocks that the LSP promises it will keep the channel alive
+  // without closing, after confirmation.
+  uint32 min_lifetime = 4;
+  // Is a maximum number of blocks that the client is allowed to set its
+  // `to_self_pay_delay` parameter.
+  uint32 max_client_to_self_delay = 5;
+  // Is the minimum payment size, inclusive. Is the amount in millisatoshis that
+  // the payer is guaranteed to be able to send to the client, not including the
+  // forwarding fees of nodes along the way.
+  uint64 min_payment_size_msat = 6;
+  // Is the maximum payment size, inclusive. Is the amount in millisatoshis that
+  // the payer is guaranteed to be able to send to the client, not including the
+  // forwarding fees of nodes along the way.
+  uint64 max_payment_size_msat = 7;
+  // An arbitrary LSP-genereated string that proves to the LSP that it has
+  // promised a specific `opening_fee_params`.
+  string promise = 8;
+}
+
+// A service to explore lsps compatible LSP's
+service Lsps {
+  // Returns a structured list of all available Lsps. An Lsp is a
+  // Lightning Service Provider, providing an API as described in blips
+  // 50, 51 and 52 https://github.com/lightning/blips. From cln:
+  // `lsps-listlsps`.
+  rpc ListLsps(ListLspsRequest) returns (ListLspsResponse) {}
+
+  // Returns detailed information about a LSP. From cln: `lsps-lspinfo`.
+  rpc GetLspInfo(GetLspInfoRequest) returns (GetLspInfoResponse) {}
+}

@@ -91,10 +91,10 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.received_invite_code = None
         self.debugger = DebugServicer()
         self.webhooks = []
-        self.pairings = PairingServicer()
         self.pairing_tx_in, self.pairing_rx_in = anyio.create_memory_object_stream()
         self.pairing_tx_out, self.paring_rx_out = anyio.create_memory_object_stream()
         self.pairings = PairingServicer(stream_out=self.pairing_tx_in, stream_in=self.paring_rx_out)
+        self.lsps = LspsServicer()
 
         if node_directory is not None:
             self.node_directory = node_directory
@@ -119,6 +119,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.server.add_service(self.service)
         self.server.add_service(self.debugger.service)
         self.server.add_service(self.pairings.service)
+        self.server.add_service(self.lsps.service)
 
         threading.Thread(target=anyio.run, args=(self.run,), daemon=True).start()
         logging.info(f"Scheduler started on port {self.grpc_port}")
@@ -468,5 +469,15 @@ class PairingServicer(schedgrpc.PairingServicer):
         await self.stream_out.send(req)
         return greenlightpb.Empty()
 
+class LspsServicer(schedgrpc.LspsServicer):
+    """Mocks LSP discovery for the scheduler"""
+    def __init__(self):
+        pass
+
+    async def ListLsps(self, _req: schedpb.ListLspsRequest):
+        return schedpb.ListLspsResponse()
+
+    async def GetLspInfo(self, _req: schedpb.GetLspInfoRequest):
+        return schedpb.GetLspInfoResponse()
 
 Scheduler = AsyncScheduler

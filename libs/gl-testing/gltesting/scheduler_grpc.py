@@ -392,3 +392,60 @@ class PairingStub:
                 glclient_dot_greenlight__pb2.Empty,
             )
         )
+
+
+class LspsServicer(purerpc.Servicer):
+    async def ListLsps(self, input_message):
+        raise NotImplementedError()
+
+    async def GetLspInfo(self, input_message):
+        raise NotImplementedError()
+
+    @property
+    def service(self) -> purerpc.Service:
+        service_obj = purerpc.Service(
+            "scheduler.Lsps"
+        )
+        service_obj.add_method(
+            "ListLsps",
+            self.ListLsps,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.ListLspsRequest,
+                glclient_dot_scheduler__pb2.ListLspsResponse,
+            )
+        )
+        service_obj.add_method(
+            "GetLspInfo",
+            self.GetLspInfo,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.GetLspInfoRequest,
+                glclient_dot_scheduler__pb2.GetLspInfoResponse,
+            )
+        )
+        return service_obj
+
+
+class LspsStub:
+    def __init__(self, channel):
+        self._client = purerpc.Client(
+            "scheduler.Lsps",
+            channel
+        )
+        self.ListLsps = self._client.get_method_stub(
+            "ListLsps",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.ListLspsRequest,
+                glclient_dot_scheduler__pb2.ListLspsResponse,
+            )
+        )
+        self.GetLspInfo = self._client.get_method_stub(
+            "GetLspInfo",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.GetLspInfoRequest,
+                glclient_dot_scheduler__pb2.GetLspInfoResponse,
+            )
+        )
