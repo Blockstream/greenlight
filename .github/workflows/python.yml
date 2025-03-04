@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   source:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
 
@@ -39,7 +39,7 @@ jobs:
           path: dist/gl_client-*.tar.gz
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +79,7 @@ jobs:
         if: matrix.target != 'ppc64' && matrix.target != 'x86_64' && matrix.target != 'i686'
         with:
           arch: ${{ matrix.target }}
-          distro: ubuntu22.04
+          distro: ubuntu24.04
           githubToken: ${{ github.token }}
           install: |
             apt-get update
