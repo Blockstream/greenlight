@@ -138,9 +138,12 @@ impl Signer {
         // per payment, rather than the fee budget per HTLC.
         // Ref: https://github.com/Blockstream/greenlight/issues/538
         {
-            policy.max_feerate_per_kw = 75_000;
+            policy.max_feerate_per_kw = 150_000;
             policy.filter.merge(PolicyFilter {
-                rules: vec![FilterRule::new_warn("policy-commitment-fee-range")],
+                rules: vec![
+		    FilterRule::new_warn("policy-commitment-fee-range"),
+		    FilterRule::new_warn("policy-mutual-fee-range"),
+		],
             });
         }
 
