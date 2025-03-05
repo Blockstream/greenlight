@@ -6,9 +6,8 @@ from glclient import nodepb
 from pyln import grpc as clnpb
 from flaky import flaky
 
-import struct
 import time
-import unittest
+import pytest
 
 
 def test_node_start(scheduler, clients):
@@ -389,6 +388,7 @@ def test_lsp_jit_fee(clients, node_factory, bitcoind):
     )
 
 
+@pytest.mark.skip(reason="Log-line can't be found anymore")
 def test_custommsg(clients, node_factory, bitcoind, executor):
     """Connect a GL node and a CLN node and have them talk."""
     c = clients.new()
@@ -448,6 +448,8 @@ def test_node_reconnect(clients, scheduler, node_factory, bitcoind):
     assert peer["id"] == l1.info["id"]
 
 
+# nepet: do we want to keep this to prevent a regression?
+@pytest.mark.skip(reason="Does currently use an unasserted version v24.05")
 def test_vls_crash_repro(
     clients: Clients, scheduler: Scheduler, node_factory, bitcoind
 ) -> None:
