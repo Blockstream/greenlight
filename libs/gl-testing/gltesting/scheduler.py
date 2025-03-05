@@ -472,12 +472,93 @@ class PairingServicer(schedgrpc.PairingServicer):
 class LspsServicer(schedgrpc.LspsServicer):
     """Mocks LSP discovery for the scheduler"""
     def __init__(self):
-        pass
+        self.lsps = {
+            "02ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff": schedpb.LspProtocols(
+            lsps1=schedpb.Lsps1Info(
+                min_required_channel_confirmations=3,
+                min_funding_confirms_within_blocks=6,
+                supports_zero_channel_reserve=False,
+                max_channel_expiry_blocks=144,
+                min_initial_client_balance_sat=0,
+                max_initial_client_balance_sat=1000000,
+                min_initial_lsp_balance_sat=50000,
+                max_initial_lsp_balance_sat=1000000,
+                min_channel_balance_sat=50000,
+                max_channel_balance_sat=2000000,
+                ),
+            lsps2=schedpb.Lsps2Info(
+                opening_fee_params_menu=[
+                        schedpb.Lsps2OpeningFeeParams(
+                            min_fee_msat=5000000,
+                            proportional=2500,
+                            valid_until="2025-12-31T23:59:59Z",
+                            min_lifetime=1000,
+                            max_client_to_self_delay=2016,
+                            min_payment_size_msat=1000000,
+                            max_payment_size_msat=1000000000,
+                            promise="sample-promise-25d3fa",
+                        ),
+                        schedpb.Lsps2OpeningFeeParams(
+                            min_fee_msat=2000000,
+                            proportional=5500,
+                            valid_until="2025-12-31T23:59:59Z",
+                            min_lifetime=100,
+                            max_client_to_self_delay=2016,
+                            min_payment_size_msat=1000000,
+                            max_payment_size_msat=1000000000,
+                            promise="sample-promise-ffb6da",
+                        ),
+                    ],
+                ),
+            ),
+            "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": schedpb.LspProtocols(
+            lsps1=schedpb.Lsps1Info(
+                min_required_channel_confirmations=6,
+                min_funding_confirms_within_blocks=10,
+                supports_zero_channel_reserve=True,
+                max_channel_expiry_blocks=1000,
+                min_initial_client_balance_sat=0,
+                max_initial_client_balance_sat=1000000,
+                min_initial_lsp_balance_sat=50000,
+                max_initial_lsp_balance_sat=1000000,
+                min_channel_balance_sat=50000,
+                max_channel_balance_sat=2000000,
+                ),
+            lsps2=schedpb.Lsps2Info(
+                opening_fee_params_menu=[
+                        schedpb.Lsps2OpeningFeeParams(
+                            min_fee_msat=3000000,
+                            proportional=1500,
+                            valid_until="2025-12-31T23:59:59Z",
+                            min_lifetime=500,
+                            max_client_to_self_delay=2016,
+                            min_payment_size_msat=1000000,
+                            max_payment_size_msat=1000000000,
+                            promise="sample-promise-ababab",
+                        ),
+                    ],
+                ),
+            ),
+            "020000000000000000000000000000000000000000000000000000000000000000": schedpb.LspProtocols(),
+        }
 
     async def ListLsps(self, _req: schedpb.ListLspsRequest):
-        return schedpb.ListLspsResponse()
+        response = schedpb.ListLspsResponse(lsps={
+            "02ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff": schedpb.Lsp(protocols=[1,2]),
+            "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": schedpb.Lsp(protocols=[2,1]),
+            "020000000000000000000000000000000000000000000000000000000000000000": schedpb.Lsp()
+        })
 
-    async def GetLspInfo(self, _req: schedpb.GetLspInfoRequest):
-        return schedpb.GetLspInfoResponse()
+        return response
+
+    async def GetLspInfo(self, req: schedpb.GetLspInfoRequest):
+        response = schedpb.GetLspInfoResponse()
+        protocols = self.lsps[req.public_key]
+        if protocols is not None:
+            response = schedpb.GetLspInfoResponse(
+                public_key=req.public_key,
+                protocols=protocols,
+            )
+        return response
 
 Scheduler = AsyncScheduler
