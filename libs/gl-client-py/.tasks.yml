@@ -2,8 +2,10 @@ version: '3'
 
 tasks:
   check:
+    env:
+      PYTEST_OPTS: "-vvv"
     cmds:
-      - uv run pytest -vvv tests
+      - uv run pytest tests $PYTEST_OPTS
 
   build:
     cmds:
