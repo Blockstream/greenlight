@@ -184,10 +184,3 @@ let secret_response = scheduler.rotate_outgoing_webhook_secret(1).await.unwrap()
 ```python
 secret_response = scheduler.rotate_outgoing_webhook_secret(1)
 ```
-
-## Testing Webhooks
-
-Before deploying webhooks, test them using online webhook debugging tools. Here are two recommended services:
-
-- **[Beeceptor](https://beeceptor.com/)** – Allows quick webhook testing with a custom endpoint.
-- **[Request Inspector](https://requestinspector.com/)** – Provides detailed request logs and debugging insights.
