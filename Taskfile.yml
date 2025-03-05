@@ -9,6 +9,10 @@ includes:
     taskfile: "libs/gl-client-py/.tasks.yml"
     dir: "libs/gl-client-py/"
 
+  testing:
+    taskfile: "libs/gl-testing/.tasks.yml"
+    dir: "libs/gl-testing/"
+
   docker:
     taskfile: "docker/.tasks.yml"
     dir: "."
@@ -28,6 +32,7 @@ tasks:
       - ci-build
     cmds:
       - task: clientpy:check
+      - task: testing:check
       - task: clnvm:check
 
   docker-ci-check:
