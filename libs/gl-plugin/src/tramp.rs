@@ -192,7 +192,7 @@ pub async fn trampolinepay(
 
     debug!("overpay={}, total_amt={}", overpay, amount_msat);
 
-    let mut channels: Vec<ChannelData> = rpc
+    let mut channels: Vec<Channel> = rpc
         .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })
         .await?
         .channels
@@ -226,7 +226,7 @@ pub async fn trampolinepay(
                     return None;
                 }
             };
-            return Some(ChannelData {
+            return Some(Channel {
                 short_channel_id,
                 spendable_msat,
                 min_htlc_out_msat,
@@ -448,11 +448,11 @@ async fn do_pay(
 }
 
 async fn reestablished_channels(
-    channels: Vec<ChannelData>,
+    channels: Vec<Channel>,
     node_id: PublicKey,
     rpc_path: PathBuf,
     deadline: Instant,
-) -> Result<Vec<ChannelData>> {
+) -> Result<Vec<Channel>> {
     // Wait for channels to re-establish.
     crate::awaitables::assert_send(AwaitableChannel::new(
         node_id,
@@ -487,10 +487,11 @@ async fn reestablished_channels(
             Ok(_amount) => Some(channel_data),
             _ => None,
         })
-        .collect::<Vec<ChannelData>>())
+        .collect::<Vec<Channel>>())
 }
 
-struct ChannelData {
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Channel {
     short_channel_id: cln_rpc::primitives::ShortChannelId,
     spendable_msat: u64,
     min_htlc_out_msat: u64,
