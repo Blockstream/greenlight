@@ -32,6 +32,8 @@ const PAY_UNPARSEABLE_ONION_MSG: &str = "Malformed error reply";
 const PAY_UNPARSEABLE_ONION_CODE: i32 = 202;
 // How long do we wait for channels to re-establish?
 const AWAIT_CHANNELS_TIMEOUT_SEC: u64 = 20;
+// Minimum amount we can send through a channel.
+const MIN_HTLC_AMOUNT: u64 = 1;
 
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
@@ -215,9 +217,20 @@ pub async fn trampolinepay(
                     return None;
                 }
             };
+            let min_htlc_out_msat = match ch.minimum_htlc_out_msat {
+                Some(m) => m.msat(),
+                None => {
+                    warn!(
+                        "Missing missing minimum_htlc_out_msat on channel with scid={}",
+                        short_channel_id.to_string()
+                    );
+                    return None;
+                }
+            };
             return Some(ChannelData {
                 short_channel_id,
                 spendable_msat,
+                min_htlc_out_msat,
             });
         })
         .collect();
@@ -243,6 +256,16 @@ pub async fn trampolinepay(
     while let Some(channel) = channels.pop() {
         if acc == amount_msat {
             break;
+        }
+
+        // Filter out channels that lack minimum funds and can not send an htlc.
+        if std::cmp::max(MIN_HTLC_AMOUNT, channel.min_htlc_out_msat) > channel.spendable_msat {
+            debug!("Skip channel {}: has spendable_msat={} and minimum_htlc_out_msat={} and can not send htlc.",
+                channel.short_channel_id,
+                channel.spendable_msat,
+                channel.min_htlc_out_msat,
+            );
+            continue;
         }
 
         if (channel.spendable_msat + acc) <= amount_msat {
@@ -463,6 +486,7 @@ async fn reestablished_channels(
 struct ChannelData {
     short_channel_id: cln_rpc::primitives::ShortChannelId,
     spendable_msat: u64,
+    min_htlc_out_msat: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
