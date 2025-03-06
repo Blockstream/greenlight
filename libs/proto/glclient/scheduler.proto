@@ -1,7 +1,7 @@
 syntax = "proto3";
 package scheduler;
 
-import "glclient/greenlight.proto";
+import "./greenlight.proto";
 
 // The scheduler service is the endpoint which allows users to
 // register a new node with greenlight, recover access to an existing
