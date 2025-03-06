@@ -232,6 +232,8 @@ pub async fn trampolinepay(
                 min_htlc_out_msat,
             });
         })
+        .filter(|ch| ch.spendable_msat > 0)
+        .filter(|ch| ch.spendable_msat > ch.min_htlc_out_msat)
         .collect();
 
     channels.sort_by(|a, b| b.spendable_msat.cmp(&a.spendable_msat));
