@@ -244,45 +244,14 @@ pub async fn trampolinepay(
 
     // Await and filter out re-established channels.
     let deadline = Instant::now() + Duration::from_secs(AWAIT_CHANNELS_TIMEOUT_SEC);
-    let mut channels =
+    let channels =
         reestablished_channels(channels, node_id, rpc_path.as_ref().to_path_buf(), deadline)
             .await?;
 
     // Note: We can also do this inside the reestablished_channels function
     // but as we want to be greedy picking our channels we don't want to
     // introduce a race of the choosen channels for now.
-    let mut acc = 0;
-    let mut choosen = vec![];
-    while let Some(channel) = channels.pop() {
-        if acc == amount_msat {
-            break;
-        }
-
-        // Filter out channels that lack minimum funds and can not send an htlc.
-        if std::cmp::max(MIN_HTLC_AMOUNT, channel.min_htlc_out_msat) > channel.spendable_msat {
-            debug!("Skip channel {}: has spendable_msat={} and minimum_htlc_out_msat={} and can not send htlc.",
-                channel.short_channel_id,
-                channel.spendable_msat,
-                channel.min_htlc_out_msat,
-            );
-            continue;
-        }
-
-        if (channel.spendable_msat + acc) <= amount_msat {
-            choosen.push((channel.short_channel_id, channel.spendable_msat));
-            acc += channel.spendable_msat;
-        } else {
-            let rest = amount_msat - acc;
-            choosen.push((channel.short_channel_id, rest));
-            acc += rest;
-            break;
-        }
-    }
-
-    // Check that we found enough spendables
-    if acc < amount_msat {
-        return Err(anyhow!("missing balance {}msat<{}msat", acc, amount_msat));
-    }
+    let choosen = pick_channels(amount_msat, channels)?;
 
     // FIXME should not be neccessary as we already check on the amount.
     let parts = choosen.len();
@@ -368,6 +337,45 @@ pub async fn trampolinepay(
     } else {
         Err(anyhow!("missing payment_preimage"))
     }
+}
+
+fn pick_channels(
+    amount_msat: u64,
+    mut channels: Vec<ChannelData>,
+) -> Result<Vec<(cln_rpc::primitives::ShortChannelId, u64)>> {
+    let mut acc = 0;
+    let mut choosen = vec![];
+    while let Some(channel) = channels.pop() {
+        if acc == amount_msat {
+            break;
+        }
+
+        // Filter out channels that lack minimum funds and can not send an htlc.
+        if std::cmp::max(MIN_HTLC_AMOUNT, channel.min_htlc_out_msat) > channel.spendable_msat {
+            debug!("Skip channel {}: has spendable_msat={} and minimum_htlc_out_msat={} and can not send htlc.",
+                channel.short_channel_id,
+                channel.spendable_msat,
+                channel.min_htlc_out_msat,
+            );
+            continue;
+        }
+
+        if (channel.spendable_msat + acc) <= amount_msat {
+            choosen.push((channel.short_channel_id, channel.spendable_msat));
+            acc += channel.spendable_msat;
+        } else {
+            let rest = amount_msat - acc;
+            choosen.push((channel.short_channel_id, rest));
+            acc += rest;
+            break;
+        }
+    }
+
+    if acc < amount_msat {
+        return Err(anyhow!("missing balance {}msat<{}msat", acc, amount_msat));
+    }
+
+    Ok(choosen)
 }
 
 async fn do_pay(
@@ -511,4 +519,50 @@ pub struct SendpayRequest {
     pub payment_secret: Option<cln_rpc::primitives::Secret>,
     pub payment_hash: cln_rpc::primitives::Sha256,
     pub route: Vec<cln_rpc::model::requests::SendpayRoute>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_picking_channels() {
+        let scid1 = ShortChannelId::from_str("100000x100x0").unwrap();
+        let scid2 = ShortChannelId::from_str("100000x101x0").unwrap();
+        let scid3 = ShortChannelId::from_str("100000x102x0").unwrap();
+        let scid4 = ShortChannelId::from_str("100000x103x0").unwrap();
+        let channels = vec![
+            ChannelData {
+                short_channel_id: scid1,
+                spendable_msat: 100000,
+                min_htlc_out_msat: 0,
+            },
+            // Below MIN_HTLC_AMOUNT.
+            ChannelData {
+                short_channel_id: scid2,
+                spendable_msat: 0,
+                min_htlc_out_msat: 0,
+            },
+            // min_htlc_out_msat is larger than spendable_msat.
+            ChannelData {
+                short_channel_id: scid3,
+                spendable_msat: 1,
+                min_htlc_out_msat: 2,
+            },
+            ChannelData {
+                short_channel_id: scid4,
+                spendable_msat: 55000,
+                min_htlc_out_msat: 55000,
+            },
+        ];
+
+        let amount_msat = 150000;
+        let choosen = pick_channels(amount_msat, channels).unwrap();
+
+        assert_eq!(choosen.len(), 2);
+        assert_eq!(choosen[0].0, scid4);
+        assert_eq!(choosen[0].1, 55000);
+        assert_eq!(choosen[1].0, scid1);
+        assert_eq!(choosen[1].1, 95000);
+    }
 }
