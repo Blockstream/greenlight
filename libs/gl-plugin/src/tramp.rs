@@ -32,8 +32,6 @@ const PAY_UNPARSEABLE_ONION_MSG: &str = "Malformed error reply";
 const PAY_UNPARSEABLE_ONION_CODE: i32 = 202;
 // How long do we wait for channels to re-establish?
 const AWAIT_CHANNELS_TIMEOUT_SEC: u64 = 20;
-// Minimum amount we can send through a channel.
-const MIN_HTLC_AMOUNT: u64 = 1;
 
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
@@ -252,14 +250,17 @@ pub async fn trampolinepay(
 
     // Note: We can also do this inside the reestablished_channels function
     // but as we want to be greedy picking our channels we don't want to
-    // introduce a race of the choosen channels for now.
-    let choosen = pick_channels(amount_msat, channels)?;
-
-    // FIXME should not be neccessary as we already check on the amount.
-    let parts = choosen.len();
-    if parts == 0 {
-        return Err(anyhow!("no channels found to send"));
-    }
+    // introduce a race of the chosen channels for now.
+    let alloc = match find_minimal_allocation(&channels, amount_msat) {
+        Some(alloc) if !alloc.is_empty() => alloc,
+        _ => {
+            return Err(anyhow!(
+                "could not allocate enough funds accross channels {}msat<{}msat",
+                channels.iter().map(|ch| ch.spendable_msat).sum::<u64>(),
+                amount_msat
+            ));
+        }
+    };
 
     // All set we can preapprove the invoice
     let _ = rpc
@@ -275,16 +276,18 @@ pub async fn trampolinepay(
     payload.set_tu64(TLV_AMT_MSAT, tlv_amount_msat);
     let payload_hex = hex::encode(SerializedTlvStream::to_bytes(payload));
 
-    let mut part_id = if choosen.len() == 1 { 0 } else { 1 };
+    let mut part_id = if alloc.len() == 1 { 0 } else { 1 };
     let group_id = max_group_id + 1;
     let mut handles: Vec<
         tokio::task::JoinHandle<
             std::result::Result<cln_rpc::model::responses::WaitsendpayResponse, anyhow::Error>,
         >,
     > = vec![];
-    for (scid, part_amt) in choosen {
+    for ch in &alloc {
         let bolt11 = req.bolt11.clone();
         let label = req.label.clone();
+        let part_amt = ch.contrib_msat.clone();
+        let scid = ch.channel.short_channel_id.clone();
         let description = decoded.description.clone();
         let payload_hex = payload_hex.clone();
         let mut rpc = ClnRpc::new(&rpc_path).await?;
@@ -332,52 +335,13 @@ pub async fn trampolinepay(
             amount_msat: cln_rpc::primitives::Amount::from_msat(amount_msat),
             amount_sent_msat: cln_rpc::primitives::Amount::from_msat(amount_msat),
             created_at: 0.,
-            parts: parts as u32,
+            parts: alloc.len() as u32,
             payment_hash: decoded.payment_hash,
             payment_preimage,
         })
     } else {
         Err(anyhow!("missing payment_preimage"))
     }
-}
-
-fn pick_channels(
-    amount_msat: u64,
-    mut channels: Vec<ChannelData>,
-) -> Result<Vec<(cln_rpc::primitives::ShortChannelId, u64)>> {
-    let mut acc = 0;
-    let mut choosen = vec![];
-    while let Some(channel) = channels.pop() {
-        if acc == amount_msat {
-            break;
-        }
-
-        // Filter out channels that lack minimum funds and can not send an htlc.
-        if std::cmp::max(MIN_HTLC_AMOUNT, channel.min_htlc_out_msat) > channel.spendable_msat {
-            debug!("Skip channel {}: has spendable_msat={} and minimum_htlc_out_msat={} and can not send htlc.",
-                channel.short_channel_id,
-                channel.spendable_msat,
-                channel.min_htlc_out_msat,
-            );
-            continue;
-        }
-
-        if (channel.spendable_msat + acc) <= amount_msat {
-            choosen.push((channel.short_channel_id, channel.spendable_msat));
-            acc += channel.spendable_msat;
-        } else {
-            let rest = amount_msat - acc;
-            choosen.push((channel.short_channel_id, rest));
-            acc += rest;
-            break;
-        }
-    }
-
-    if acc < amount_msat {
-        return Err(anyhow!("missing balance {}msat<{}msat", acc, amount_msat));
-    }
-
-    Ok(choosen)
 }
 
 async fn do_pay(
@@ -500,6 +464,89 @@ struct Channel {
     min_htlc_out_msat: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ChannelContribution<'a> {
+    channel: &'a Channel,
+    contrib_msat: u64,
+}
+
+/// Finds an allocation that covers the target amount using as few channels as
+/// possible.
+fn find_minimal_allocation<'a>(
+    channels: &'a [Channel],
+    target_msat: u64,
+) -> Option<Vec<ChannelContribution<'a>>> {
+    // We can not allocate channels for a zero amount.
+    if target_msat == 0 {
+        return None;
+    }
+
+    // We'll use recursion with backtracking.
+    // - `idx` is the current channel index.
+    // - `target_msat` is the remaining amount.
+    // - `current` collects the allocations so far.
+    // - `best` stores the best solution found.
+    fn rec<'a>(
+        channels: &'a [Channel],
+        idx: usize,
+        target_msat: u64,
+        current: &mut Vec<ChannelContribution<'a>>,
+        best: &mut Option<Vec<ChannelContribution<'a>>>,
+    ) {
+        // Base case: If we've exactly allocated the target, record the solution.
+        if target_msat == 0 {
+            if best.is_none() || current.len() < best.as_ref().unwrap().len() {
+                *best = Some(current.clone())
+            }
+            return;
+        }
+
+        // Base case: We have processed all channels and could not find a
+        // solution.
+        if idx >= channels.len() {
+            return;
+        }
+
+        // Option 1: Skip the current channel.
+        rec(channels, idx + 1, target_msat, current, best);
+
+        // Option 2: Use the current channel.
+        let ch = &channels[idx];
+
+        // Each channel has an upper and a lower bound defined by the minimum
+        // htlc amount and the spendable amount.
+        let lower = ch.min_htlc_out_msat;
+        let upper = ch.spendable_msat.min(target_msat);
+
+        // If the remaining target amount is below the channel's lower bound we
+        // can not use it.
+        if target_msat < lower {
+            return;
+        }
+
+        // Try allocations from the upper bound down to the lower bound to
+        // maximize channel usage.
+        for alloc in (lower..=upper).rev() {
+            current.push(ChannelContribution {
+                channel: ch,
+                contrib_msat: alloc,
+            });
+            rec(channels, idx + 1, target_msat - alloc, current, best);
+            current.pop();
+            // Early exit: If we've found a one-channel solution, that's
+            // optimal.
+            if best.as_ref().map_or(false, |s| s.len() == 1) {
+                return;
+            }
+        }
+    }
+
+    let mut best = None;
+    let mut current = Vec::new();
+    rec(channels, 0, target_msat, &mut current, &mut best);
+    best
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SendpayRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -525,47 +572,213 @@ pub struct SendpayRequest {
 }
 
 #[cfg(test)]
-mod tests {
+mod channel_allocation_tests {
     use super::*;
 
     #[test]
-    fn test_picking_channels() {
-        let scid1 = ShortChannelId::from_str("100000x100x0").unwrap();
-        let scid2 = ShortChannelId::from_str("100000x101x0").unwrap();
-        let scid3 = ShortChannelId::from_str("100000x102x0").unwrap();
-        let scid4 = ShortChannelId::from_str("100000x103x0").unwrap();
-        let channels = vec![
-            ChannelData {
-                short_channel_id: scid1,
-                spendable_msat: 100000,
-                min_htlc_out_msat: 0,
+    fn single_channel_exact_amount() {
+        // A single channel that can exactly cover the amount.
+        let channels = [Channel {
+            short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+            spendable_msat: 5_000,
+            min_htlc_out_msat: 1_000,
+        }];
+        let target_msat = 5_000;
+        let allocation =
+            find_minimal_allocation(&channels, target_msat).expect("Allocation should succeed");
+        assert_eq!(allocation.len(), 1, "Only one channel needed");
+        assert_eq!(
+            allocation[0].contrib_msat, 5_000,
+            "Full amount should be allocated"
+        );
+        // Verify constraints.
+        assert!(
+            allocation[0].contrib_msat >= channels[0].min_htlc_out_msat
+                && allocation[0].contrib_msat <= channels[0].spendable_msat,
+        );
+    }
+
+    #[test]
+    fn multiple_channels_exact_sum() {
+        // Two channels whose spendable amounts sum exactlyu to the target
+        // amount.
+        let channels = [
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+                spendable_msat: 8_000,
+                min_htlc_out_msat: 500,
             },
-            // Below MIN_HTLC_AMOUNT.
-            ChannelData {
-                short_channel_id: scid2,
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x101x0").unwrap(),
+                spendable_msat: 7_000,
+                min_htlc_out_msat: 500,
+            },
+        ];
+        let target_msat = 15_000;
+        let allocation =
+            find_minimal_allocation(&channels, target_msat).expect("Allocation should succeed");
+        assert_eq!(
+            allocation.len(),
+            2,
+            "Both channels should be used to cover the amount"
+        );
+        assert_eq!(
+            allocation[0].contrib_msat, 8_000,
+            "Channel 0 should contribute 8_000 msat"
+        );
+        assert_eq!(
+            allocation[1].contrib_msat, 7_000,
+            "Channel 1 should contribute 7_000 msat"
+        );
+        // Verify constraints.
+        let total_allocated: u64 = allocation.iter().map(|ch| ch.contrib_msat).sum();
+        assert_eq!(
+            total_allocated, target_msat,
+            "Total allocated should equal the target amount"
+        );
+        assert!(
+            allocation[0].contrib_msat >= channels[0].min_htlc_out_msat
+                && allocation[0].contrib_msat <= channels[0].spendable_msat,
+        );
+        assert!(
+            allocation[1].contrib_msat >= channels[1].min_htlc_out_msat
+                && allocation[1].contrib_msat <= channels[1].spendable_msat,
+        );
+    }
+
+    #[test]
+    fn single_channel_below_min_htlc() {
+        // Channel has enough spendable, but target_msat is below channel's
+        // minimum HTLC value.
+        let channels = [Channel {
+            short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+            spendable_msat: 20_000,
+            min_htlc_out_msat: 15_000,
+        }];
+        let target_msat = 10_000;
+        assert!(
+            find_minimal_allocation(&channels, target_msat).is_none(),
+            "Should fail to allocate below minimum HTLC"
+        );
+    }
+
+    #[test]
+    fn min_htlc_constraints_multiple_channels() {
+        // Two channels where each has a significant min_htlc_out_msat.
+        // Total liquidity is enough, but we must split carefully to meet each
+        // min.
+        let channels = [
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+                spendable_msat: 200,
+                min_htlc_out_msat: 110,
+            },
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x101x0").unwrap(),
+                spendable_msat: 150,
+                min_htlc_out_msat: 100,
+            },
+        ];
+        let target_msat = 250;
+        // Channel 0 alone cannot cover (200 < 250), channel 1 alone cannot
+        // (150 < 250). Both needed, but each must send at least their min
+        // (100 and 110) respectively.
+        // One valid allocation is channel0 -> 150, channel1 -> 100 (total 250).
+        let allocation =
+            find_minimal_allocation(&channels, target_msat).expect("Allocation should succeed");
+        assert_eq!(
+            allocation.len(),
+            2,
+            "Both channels are required for this payment"
+        );
+        // Verify constraints.
+        allocation.iter().for_each(|ch| {
+            assert!(ch.contrib_msat <= ch.channel.spendable_msat);
+            assert!(ch.contrib_msat >= ch.channel.min_htlc_out_msat);
+        });
+        // Verify total equals target
+        let total: u64 = allocation.iter().map(|ch| ch.contrib_msat).sum();
+        assert_eq!(total, target_msat);
+    }
+
+    #[test]
+    fn zero_target_amount() {
+        // A zero amount should not allocate from any channel.
+        let channels = [Channel {
+            short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+            spendable_msat: 20_000,
+            min_htlc_out_msat: 15_000,
+        }];
+        let target_msat = 0;
+        assert!(
+            find_minimal_allocation(&channels, target_msat).is_none(),
+            "Should fail to allocate channels for an amount of 0 msat"
+        );
+    }
+
+    #[test]
+    fn insufficient_total_liquidity() {
+        // Total available(2_000) is less than target_msat (2_500)
+        let channels = [
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+                spendable_msat: 1_500,
+                min_htlc_out_msat: 1,
+            },
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x101x0").unwrap(),
+                spendable_msat: 500,
+                min_htlc_out_msat: 1,
+            },
+        ];
+        let target_msat = 2_500;
+        assert!(find_minimal_allocation(&channels, target_msat).is_none());
+    }
+
+    #[test]
+    fn all_channels_min_htlc_too_high() {
+        // Each channel's min_htlc_out_msat is higher than the target amount,
+        // so none can send out an HTLC.
+        let channels = [
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
+                spendable_msat: 10_000,
+                min_htlc_out_msat: 6_000,
+            },
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x101x0").unwrap(),
+                spendable_msat: 8_000,
+                min_htlc_out_msat: 6_000,
+            },
+        ];
+        let target_msat = 5_000;
+        assert!(find_minimal_allocation(&channels, target_msat).is_none());
+    }
+
+    #[test]
+    fn channel_has_zero_spendable() {
+        // We have some channels with 0 spendable_msat and we do not want to
+        // allocate them with 0 amount HTLCs.
+        let channels = [
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x100x0").unwrap(),
                 spendable_msat: 0,
                 min_htlc_out_msat: 0,
             },
-            // min_htlc_out_msat is larger than spendable_msat.
-            ChannelData {
-                short_channel_id: scid3,
-                spendable_msat: 1,
-                min_htlc_out_msat: 2,
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x102x0").unwrap(),
+                spendable_msat: 5_000,
+                min_htlc_out_msat: 0,
             },
-            ChannelData {
-                short_channel_id: scid4,
-                spendable_msat: 55000,
-                min_htlc_out_msat: 55000,
+            Channel {
+                short_channel_id: ShortChannelId::from_str("100000x101x0").unwrap(),
+                spendable_msat: 0,
+                min_htlc_out_msat: 0,
             },
         ];
-
-        let amount_msat = 150000;
-        let choosen = pick_channels(amount_msat, channels).unwrap();
-
-        assert_eq!(choosen.len(), 2);
-        assert_eq!(choosen[0].0, scid4);
-        assert_eq!(choosen[0].1, 55000);
-        assert_eq!(choosen[1].0, scid1);
-        assert_eq!(choosen[1].1, 95000);
+        let target_msat = 5_000;
+        let alloc =
+            find_minimal_allocation(&channels, target_msat).expect("Should be able to allocate");
+        assert_eq!(alloc.len(), 1, "Should have only included one channel");
     }
 }
