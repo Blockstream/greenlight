@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::pb::{self, node_server::Node};
-use crate::rpc::LightningClient;
 use crate::storage::StateStore;
 use crate::{messages, Event};
 use crate::{stager, tramp};
@@ -13,7 +12,6 @@ use governor::{
 };
 use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
-use serde_json::json;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::{
@@ -54,7 +52,6 @@ lazy_static! {
 pub struct PluginNodeServer {
     pub tls: ServerTlsConfig,
     pub stage: Arc<stager::Stage>,
-    pub rpc: Arc<Mutex<LightningClient>>,
     rpc_path: PathBuf,
     events: tokio::sync::broadcast::Sender<super::Event>,
     signer_state: Arc<Mutex<State>>,
@@ -78,8 +75,6 @@ impl PluginNodeServer {
         rpc_path.push("lightning-rpc");
         info!("Connecting to lightning-rpc at {:?}", rpc_path);
 
-        let rpc = Arc::new(Mutex::new(LightningClient::new(rpc_path.clone())));
-
         // Bridge the RPC_BCAST into the events queue
         let tx = events.clone();
         tokio::spawn(async move {
@@ -95,15 +90,12 @@ impl PluginNodeServer {
 
         let ctx = crate::context::Context::new();
 
-        let rrpc = rpc.clone();
-
         let s = PluginNodeServer {
             ctx,
             tls,
-            rpc,
             stage,
             events,
-            rpc_path,
+            rpc_path: rpc_path.clone(),
             signer_state: Arc::new(Mutex::new(signer_state)),
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
@@ -114,10 +106,11 @@ impl PluginNodeServer {
             use tokio::time::{sleep, Duration};
 
             // Move the lock into the closure so we can release it later.
-            let rpc = rrpc.lock().await;
+            let mut rpc = cln_rpc::ClnRpc::new(rpc_path.clone()).await.unwrap();
             loop {
-                let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
-                    rpc.call("getinfo", json!({})).await;
+                let res = rpc
+                    .call_typed(&cln_rpc::model::requests::GetinfoRequest {})
+                    .await;
                 match res {
                     Ok(_) => break,
                     Err(e) => {
@@ -137,8 +130,7 @@ impl PluginNodeServer {
                 key: Some(vec!["glconf".to_string(), "request".to_string()]),
             };
 
-            let res: Result<cln_rpc::model::responses::ListdatastoreResponse, crate::rpc::Error> =
-                rpc.call("listdatastore", list_datastore_req).await;
+            let res = rpc.call_typed(&list_datastore_req).await;
 
             match res {
                 Ok(list_datastore_res) => {
@@ -177,11 +169,8 @@ impl PluginNodeServer {
         limiter.until_ready().await
     }
 
-    pub async fn get_rpc(&self) -> LightningClient {
-        let rpc = self.rpc.lock().await;
-        let r = rpc.clone();
-        drop(rpc);
-        r
+    pub async fn get_rpc(&self) -> Result<cln_rpc::ClnRpc> {
+        cln_rpc::ClnRpc::new(self.rpc_path.clone()).await
     }
 }
 
@@ -229,8 +218,8 @@ impl Node for PluginNodeServer {
             // log entries are produced while we're streaming the
             // backlog out, but do we care?
             use tokio::io::{AsyncBufReadExt, BufReader};
-	    // The nodelet uses its CWD, but CLN creates a network
-	    // subdirectory
+            // The nodelet uses its CWD, but CLN creates a network
+            // subdirectory
             let file = tokio::fs::File::open("../log").await?;
             let mut file = BufReader::new(file).lines();
 
@@ -475,10 +464,16 @@ impl Node for PluginNodeServer {
     ) -> Result<Response<pb::Empty>, Status> {
         self.limit().await;
         let gl_config = req.into_inner();
-        let rpc = self.get_rpc().await;
+        let mut rpc = self.get_rpc().await.map_err(|e| {
+            tonic::Status::new(
+                tonic::Code::Internal,
+                format!("could not connect rpc client: {e}"),
+            )
+        })?;
 
-        let res: Result<crate::responses::GetInfo, crate::rpc::Error> =
-            rpc.call("getinfo", json!({})).await;
+        let res = rpc
+            .call_typed(&cln_rpc::model::requests::GetinfoRequest {})
+            .await;
 
         let network = match res {
             Ok(get_info_response) => match get_info_response.network.parse() {
@@ -528,20 +523,14 @@ impl Node for PluginNodeServer {
             .map(|r| r.into())
             .collect();
         let serialized_req = serde_json::to_string(&requests[0]).unwrap();
-        let datastore_res: Result<
-            crate::cln_rpc::model::responses::DatastoreResponse,
-            crate::rpc::Error,
-        > = rpc
-            .call(
-                "datastore",
-                json!({
-                    "key": vec![
-                        "glconf".to_string(),
-                        "request".to_string(),
-                    ],
-                    "string": serialized_req,
-                }),
-            )
+        let datastore_res = rpc
+            .call_typed(&cln_rpc::model::requests::DatastoreRequest {
+                key: vec!["glconf".to_string(), "request".to_string()],
+                string: Some(serialized_req.clone()),
+                hex: None,
+                mode: None,
+                generation: None,
+            })
             .await;
 
         match datastore_res {

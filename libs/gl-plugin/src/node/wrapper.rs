@@ -1,6 +1,9 @@
-use crate::LightningClient;
+use std::collections::HashMap;
+use std::str::FromStr;
+
 use anyhow::Error;
 use cln_grpc::pb::{self, node_server::Node};
+use cln_rpc::{self, model::responses::ListpeerchannelsChannelsState};
 use log::debug;
 use tonic::{Request, Response, Status};
 
@@ -35,8 +38,9 @@ impl Node for WrappedNodeServer {
     ) -> Result<Response<pb::InvoiceResponse>, Status> {
         let req = req.into_inner();
 
-        use crate::rpc::LightningClient;
-        let mut rpc = LightningClient::new(self.node_server.rpc_path.clone());
+        let mut rpc = cln_rpc::ClnRpc::new(self.node_server.rpc_path.clone())
+            .await
+            .unwrap();
 
         // First we get the incoming channels so we can force them to
         // be added to the invoice. This is best effort and will be
@@ -81,8 +85,8 @@ impl Node for WrappedNodeServer {
             None => Some(144),  // Use a day if not set
         };
 
-        let res: Result<crate::responses::Invoice, crate::rpc::Error> =
-            rpc.call("invoice", pbreq).await;
+        let res: Result<crate::responses::Invoice, cln_rpc::RpcError> =
+            rpc.call_raw("invoice", &pbreq).await;
 
         let res: Result<cln_grpc::pb::InvoiceResponse, tonic::Status> = res
             .map(|r| cln_grpc::pb::InvoiceResponse::from(r))
@@ -554,87 +558,88 @@ impl Node for WrappedNodeServer {
     }
 }
 
+fn check_option<T, F>(opt: Option<T>, condition: F) -> bool
+where
+    F: FnOnce(&T) -> bool,
+{
+    opt.as_ref().map_or(false, condition)
+}
+
 impl WrappedNodeServer {
-    async fn get_routehints(&self, rpc: &mut LightningClient) -> Result<Vec<pb::Routehint>, Error> {
-        use crate::responses::Peer;
-
-        // Get a list of active channels to peers so we can filter out
-        // offline peers or peers with unconfirmed or closing
-        // channels.
-        let res = rpc
-            .listpeers(None)
-            .await?
-            .peers
-            .into_iter()
-            .filter(|p| p.channels.len() > 0)
-            .collect::<Vec<Peer>>();
-
-        // Now project channels to their state and flatten into a vec
-        // of short_channel_ids
-        let active: Vec<String> = res
-            .iter()
-            .map(|p| {
-                p.channels
-                    .iter()
-                    .filter(|c| c.state == "CHANNELD_NORMAL")
-                    .filter_map(|c| c.clone().short_channel_id)
-            })
-            .flatten()
-            .collect();
-
-        /* Due to a bug in `listincoming` in CLN we get the real
-         * `short_channel_id`, whereas we're supposed to use the
-         * remote alias if the channel is unannounced. This patches
-         * the issue in GL, and should work transparently once we fix
-         * `listincoming`. */
-        use std::collections::HashMap;
-        let aliases: HashMap<String, String> = HashMap::from_iter(
-            res.iter()
-                .map(|p| {
-                    p.channels
-                        .iter()
-                        .filter(|c| {
-                            c.short_channel_id.is_some()
-                                && c.alias.is_some()
-                                && c.alias.as_ref().unwrap().remote.is_some()
-                        })
-                        .map(|c| {
-                            (
-                                c.short_channel_id.clone().unwrap(),
-                                c.alias.clone().unwrap().remote.unwrap(),
-                            )
+    async fn get_routehints(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<Vec<pb::Routehint>, Error> {
+        // Get a map of active channels to peers with a status of
+        // "CHANNELD_NORMAL", and it aliases.
+        // Due to a bug in `listincoming` in CLN we get the real
+        // `short_channel_id`, whereas we're supposed to use the remote alias if
+        // the channel is unannounced. This patches the issue in GL, and should
+        // work transparently once we fix `listincoming`.
+        let req = cln_rpc::model::requests::ListpeerchannelsRequest { id: None };
+        let res = rpc.call_typed(&req).await?;
+        let active_channels: HashMap<
+            cln_rpc::primitives::ShortChannelId,
+            cln_rpc::primitives::ShortChannelId,
+        > = match res.channels {
+            Some(channels) => channels
+                .into_iter()
+                .filter(|c| {
+                    check_option(c.peer_connected, |&c| c)
+                        && check_option(c.state, |&state| {
+                            state == ListpeerchannelsChannelsState::CHANNELD_NORMAL
                         })
                 })
-                .flatten(),
-        );
+                .filter_map(|c| {
+                    c.short_channel_id.map(|scid| {
+                        let value = c
+                            .alias
+                            .as_ref()
+                            .and_then(|alias| alias.remote)
+                            .unwrap_or(scid);
+                        (scid, value)
+                    })
+                })
+                .collect(),
+            None => HashMap::new(),
+        };
 
-        // Now we can listincoming, filter with the above active list,
-        // and then map to become `pb::Routehint` instances
-        Ok(rpc
-            .listincoming()
-            .await?
+        let res: crate::responses::ListIncoming = rpc
+            .call_raw("listincoming", &crate::requests::ListIncoming {})
+            .await?;
+        let active_incoming_channels: Vec<crate::responses::IncomingChannel> = res
             .incoming
             .into_iter()
-            .filter(|i| active.contains(&i.short_channel_id))
+            .filter(|i| {
+                if let Ok(scid) = cln_rpc::primitives::ShortChannelId::from_str(&i.short_channel_id)
+                {
+                    active_channels.contains_key(&scid)
+                } else {
+                    false
+                }
+            })
+            .collect();
+
+        let route_hints = active_incoming_channels
+            .into_iter()
             .map(|i| {
                 let base: Option<cln_rpc::primitives::Amount> =
                     i.fee_base_msat.as_str().try_into().ok();
 
+                let scid =
+                    cln_rpc::primitives::ShortChannelId::from_str(&i.short_channel_id).unwrap();
+                let alias = active_channels.get(&scid).unwrap_or(&scid);
+                let alias_str = format!("{}", alias);
                 pb::Routehint {
                     hops: vec![pb::RouteHop {
                         id: hex::decode(i.id).expect("hex-decoding node_id"),
-                        short_channel_id: aliases
-                            .get(&i.short_channel_id)
-                            .or(Some(&i.short_channel_id))
-                            .unwrap()
-                            .to_owned(),
+                        short_channel_id: alias_str,
                         feebase: base.map(|b| b.into()),
                         feeprop: i.fee_proportional_millionths,
                         expirydelta: i.cltv_expiry_delta,
                     }],
                 }
             })
-            .collect())
+            .collect();
+
+        Ok(route_hints)
     }
 }
 
