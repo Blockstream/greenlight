@@ -1,7 +1,10 @@
-# glcli
+# gl-cli
 
-`glcli` is a command-line interface for running a __Greenlight signer__ and 
-operating a __Greenlight_node__. It is built on top of the `gl-client` library.
+`gl-cli` is a command-line interface for running a __Greenlight signer__ and 
+operating a __Greenlight node__. It is built on top of the `gl-client` library.
+The crate is called `gl-cli` to be consistent with the naming scheme that
+__Greenlight__ uses but the binary it produces is `glcli` for convenience
+reasons.
 
 ## Features
 
@@ -15,12 +18,10 @@ include additional commands and broader integration.
 
 ## Installation
 
-Since `glcli` is not yet published on __crates.io__, you can install it locally
-using 
+You can install `glcli` from __crates.io__
 ```bash
-cargo install --path=.
+cargo install gl-cli
 ```
-Run this command from the `glcli` directory.
 
 ### Prerequisites
 

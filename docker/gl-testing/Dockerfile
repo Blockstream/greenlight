@@ -215,7 +215,7 @@ ADD . /repo
 WORKDIR /repo
 
 # Populate `uv` cache
-RUN uv sync --all-packages --extra dev
+RUN uv sync --all-packages --dev
 
 # Populate CLN versions
 RUN uv run python3 -m clnvm --verbose get-all

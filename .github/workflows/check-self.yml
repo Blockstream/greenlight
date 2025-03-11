@@ -62,3 +62,4 @@ jobs:
         PYTEST_OPTS: -n 6
       run : |
         task clientpy:check
+        task testing:check
