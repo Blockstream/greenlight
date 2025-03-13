@@ -12,12 +12,13 @@ use governor::{
 };
 use lazy_static::lazy_static;
 use log::{debug, error, info, trace, warn};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
+use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, Mutex, OnceCell};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{transport::ServerTlsConfig, Code, Request, Response, Status};
@@ -28,6 +29,32 @@ pub use wrapper::WrappedNodeServer;
 
 static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
     OnceCell::const_new();
+
+static RPC_CLIENT: OnceCell<Arc<Mutex<cln_rpc::ClnRpc>>> = OnceCell::const_new();
+
+pub async fn get_rpc<P: AsRef<Path>>(path: P) -> Arc<Mutex<cln_rpc::ClnRpc>> {
+    RPC_CLIENT
+        .get_or_init(|| async {
+            loop {
+                match cln_rpc::ClnRpc::new(path.as_ref()).await {
+                    Ok(client) => {
+                        debug!("Connected to lightning-rpc.");
+                        return Arc::new(Mutex::new(client));
+                    }
+                    Err(e) => {
+                        debug!(
+                            "Failed to connect to lightning-rpc: {:?}. Retrying in 50m...",
+                            e
+                        );
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        continue;
+                    }
+                }
+            }
+        })
+        .await
+        .clone()
+}
 
 lazy_static! {
     static ref HSM_ID_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -102,30 +129,8 @@ impl PluginNodeServer {
         };
 
         tokio::spawn(async move {
-            debug!("Locking grpc interface until the JSON-RPC interface becomes available.");
-            use tokio::time::{sleep, Duration};
-
-            // Move the lock into the closure so we can release it later.
-            let mut rpc = cln_rpc::ClnRpc::new(rpc_path.clone()).await.unwrap();
-            loop {
-                let res = rpc
-                    .call_typed(&cln_rpc::model::requests::GetinfoRequest {})
-                    .await;
-                match res {
-                    Ok(_) => break,
-                    Err(e) => {
-                        warn!(
-                            "JSON-RPC interface not yet available. Delaying 50ms. {:?}",
-                            e
-                        );
-                        sleep(Duration::from_millis(50)).await;
-                    }
-                }
-            }
-
-            // Signal that the RPC is ready now.
-            RPC_READY.store(true, Ordering::SeqCst);
-
+            let rpc_arc = get_rpc(&rpc_path).await.clone();
+            let mut rpc = rpc_arc.lock().await;
             let list_datastore_req = cln_rpc::model::requests::ListdatastoreRequest {
                 key: Some(vec!["glconf".to_string(), "request".to_string()]),
             };
@@ -150,8 +155,6 @@ impl PluginNodeServer {
                 }
                 Err(_) => {}
             }
-
-            drop(rpc);
         });
 
         Ok(s)
@@ -167,10 +170,6 @@ impl PluginNodeServer {
             .await;
 
         limiter.until_ready().await
-    }
-
-    pub async fn get_rpc(&self) -> Result<cln_rpc::ClnRpc> {
-        cln_rpc::ClnRpc::new(self.rpc_path.clone()).await
     }
 }
 
@@ -464,12 +463,8 @@ impl Node for PluginNodeServer {
     ) -> Result<Response<pb::Empty>, Status> {
         self.limit().await;
         let gl_config = req.into_inner();
-        let mut rpc = self.get_rpc().await.map_err(|e| {
-            tonic::Status::new(
-                tonic::Code::Internal,
-                format!("could not connect rpc client: {e}"),
-            )
-        })?;
+        let rpc_arc = get_rpc(&self.rpc_path).await;
+        let mut rpc = rpc_arc.lock().await;
 
         let res = rpc
             .call_typed(&cln_rpc::model::requests::GetinfoRequest {})
@@ -622,13 +617,15 @@ impl PluginNodeServer {
         }
 
         log::info!("Reconnecting all peers (plugin)");
-        let mut rpc = cln_rpc::ClnRpc::new(self.rpc_path.clone()).await?;
         let peers = self.get_reconnect_peers().await?;
         log::info!(
             "Found {} peers to reconnect: {:?} (plugin)",
             peers.len(),
             peers.iter().map(|p| p.id.clone())
         );
+
+        let rpc_arc = get_rpc(&self.rpc_path).await;
+        let mut rpc = rpc_arc.lock().await;
 
         for r in peers {
             trace!("Calling connect: {:?} (plugin)", &r.id);
@@ -646,8 +643,8 @@ impl PluginNodeServer {
     async fn get_reconnect_peers(
         &self,
     ) -> Result<Vec<cln_rpc::model::requests::ConnectRequest>, Error> {
-        let rpc_path = self.rpc_path.clone();
-        let mut rpc = cln_rpc::ClnRpc::new(rpc_path).await?;
+        let rpc_arc = get_rpc(&self.rpc_path).await;
+        let mut rpc = rpc_arc.lock().await;
         let peers = rpc
             .call_typed(&cln_rpc::model::requests::ListpeersRequest {
                 id: None,
