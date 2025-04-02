@@ -43,7 +43,7 @@ class HashMismatch(Exception):
         self.expected = expected
 
     def __str__(self) -> str:
-        return f"The cryptographic hash of '{self.tag}' doesn't match."
+        return self.__repr__()
 
     def __repr__(self) -> str:
         return f"HashMismatch(tag={self.tag}, actual={self.actual}, expected={self.expected})"
