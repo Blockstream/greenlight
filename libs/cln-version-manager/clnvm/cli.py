@@ -14,13 +14,20 @@ def configure_logging() -> None:
         assert fname is not None, "logging.conf must be bundled as a resource"
         logging.config.fileConfig(fname)
 
+
 # Handle the optional import and provide a nice error message if it fails
 try:
     import click
+    from rich.logging import RichHandler
+    from rich.console import Console
+
+    logging.basicConfig(
+        level="NOTSET", format="%(message)s", datefmt="[%X]", handlers=[RichHandler(console=Console(stderr=True))]
+    )
 except Exception:
     print("To use clnvm the `cli` feature must be installed")
     print("You can install the feature using")
-    print("> pip install gltesting[cli]")
+    print("> pip install cln-version-manager[cli]")
     sys.exit(1)
 
 
@@ -36,6 +43,7 @@ def cli(verbose: bool) -> None:
 def get_all(force: bool) -> None:
     version_manager = ClnVersionManager()
     versions = version_manager.get_versions()
+    logging.info(f"Fetching {len(versions)} versions")
     for version in versions:
         try:
             result = version_manager.get(version, force)

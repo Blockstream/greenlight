@@ -12,6 +12,12 @@ dependencies = [
     "requests>=2.32.3",
 ]
 
+[project.optional-dependencies]
+cli = [
+    "click",
+    "rich",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
