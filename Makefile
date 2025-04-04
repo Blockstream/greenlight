@@ -49,7 +49,8 @@ CLN_VERSIONS = \
 	v22.11gl1 \
 	v23.05gl1 \
 	v23.08gl1 \
-	v24.02gl1
+	v24.02gl1 \
+	v24.11gl1
 
 DOCKER_OPTIONS= \
 	--rm \
