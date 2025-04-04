@@ -196,7 +196,6 @@ pub async fn trampolinepay(
         .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })
         .await?
         .channels
-        .unwrap_or_default()
         .into_iter()
         .filter_map(|ch| {
             let short_channel_id = ch.short_channel_id.or(ch.alias.and_then(|a| a.local));
@@ -262,7 +261,7 @@ pub async fn trampolinepay(
     // All set we can preapprove the invoice
     let _ = rpc
         .call_typed(&cln_rpc::model::requests::PreapproveinvoiceRequest {
-            bolt11: Some(req.bolt11.clone()),
+            bolt11: req.bolt11.clone(),
         })
         .await?;
 
@@ -397,7 +396,7 @@ async fn do_pay(
     let route = cln_rpc::model::requests::SendpayRoute {
         amount_msat: cln_rpc::primitives::Amount::from_msat(part_amt),
         id: node_id.clone(),
-        delay: max_delay.unwrap_or(MAX_DELAY_DEFAULT) as u16,
+        delay: max_delay.unwrap_or(MAX_DELAY_DEFAULT),
         channel: scid,
     };
 
