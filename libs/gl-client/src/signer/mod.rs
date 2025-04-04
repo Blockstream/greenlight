@@ -47,7 +47,7 @@ pub mod model;
 mod report;
 mod resolve;
 
-const VERSION: &str = "v24.02";
+const VERSION: &str = "v24.11";
 const GITHASH: &str = env!("GIT_HASH");
 const RUNE_VERSION: &str = "gl0";
 // This is the same derivation key that is used by core lightning itself.
