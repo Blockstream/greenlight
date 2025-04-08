@@ -316,6 +316,7 @@ async fn invoice_handler<P: AsRef<Path>>(
     let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
     let res = node
         .invoice(cln::InvoiceRequest {
+            exposeprivatechannels: vec![],
             amount_msat: amount_msat.map(|v| v.into()),
             description,
             label,
@@ -387,6 +388,9 @@ async fn listpays_handler<P: AsRef<Path>>(
     let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
     let res = node
         .list_pays(cln::ListpaysRequest {
+            index: None,
+            start: None,
+            limit: None,
             bolt11,
             payment_hash,
             status,
@@ -443,6 +447,7 @@ async fn pay_handler<P: AsRef<Path>>(
             exclude: exclude.unwrap_or_default(),
             maxfee: maxfee.map(|msat| cln::Amount { msat }),
             description,
+            partial_msat: None,
         })
         .await
         .map_err(|e| Error::custom(e.message()))?
