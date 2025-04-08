@@ -21,10 +21,18 @@ async fn main() -> Result<(), Error> {
     let config = Config::new().context("loading config")?;
     let stage = Arc::new(Stage::new());
     let (events, _) = tokio::sync::broadcast::channel(16);
+    let (notifications, _) = tokio::sync::broadcast::channel(16);
     let state_store = get_signer_store().await?;
 
     start_hsm_server(config.clone(), stage.clone())?;
-    start_node_server(config, stage.clone(), events.clone(), state_store).await?;
+    start_node_server(
+        config,
+        stage.clone(),
+        events.clone(),
+        notifications,
+        state_store,
+    )
+    .await?;
 
     let plugin = gl_plugin::init(stage, events).await?;
     if let Some(plugin) = plugin.start().await? {
@@ -38,6 +46,7 @@ async fn start_node_server(
     config: Config,
     stage: Arc<Stage>,
     events: tokio::sync::broadcast::Sender<Event>,
+    notifications: tokio::sync::broadcast::Sender<cln_rpc::notifications::Notification>,
     signer_state_store: Box<dyn StateStore>,
 ) -> Result<(), Error> {
     let addr: SocketAddr = config
@@ -62,6 +71,7 @@ async fn start_node_server(
         stage.clone(),
         config.clone(),
         events.clone(),
+        notifications.clone(),
         signer_state_store,
     )
     .await?;
