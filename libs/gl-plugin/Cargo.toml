@@ -2,10 +2,7 @@
 name = "gl-plugin"
 version = "0.3.0"
 edition = "2021"
-authors = [
-        "Christian Decker",
-        "The Greenlight Team"
-]
+authors = ["Christian Decker", "The Greenlight Team"]
 description = "Python bindings for the Greenlight client library."
 repository = "https://github.com/Blockstream/greenlight"
 license = "MIT"
@@ -33,7 +30,7 @@ lazy_static = "^1.4.0"
 linemux = "0.2"
 log = "0.4"
 nix = "^0"
-prost = "0.11"
+prost = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 sled = "0.34"
@@ -41,9 +38,9 @@ thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tonic = { version = "^0.8", features = ["tls", "transport"] }
+tonic = { version = "0.11", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 vls-protocol = { workspace = true }
 
 [build-dependencies]
-tonic-build = "^0.8"
+tonic-build = "0.11"
