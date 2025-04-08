@@ -1,7 +1,7 @@
 [package]
 name = "gl-client"
 version = "0.3.0"
-edition = "2018"
+edition = "2021"
 authors = ["Christian Decker", "The Greenlight Team"]
 description = "Client library for Greenlight, and basis for language bindings."
 repository = "https://github.com/Blockstream/greenlight"
@@ -27,11 +27,11 @@ picky = "6.3"
 picky-asn1-x509 = "0.12"
 picky-asn1-der = "0.4"
 pin-project = "1.1.5"
-prost = "0.11"
-prost-derive = "0.11"
+prost = "0.12"
+prost-derive = "0.12"
 reqwest = { version = "^0.11", features = [
-        "json",
-        "rustls-tls-native-roots",
+    "json",
+    "rustls-tls-native-roots",
 ], default-features = false }
 ring = "~0.16.20"
 runeauth = "0.1"
@@ -39,7 +39,7 @@ rustls-pemfile = "1.0.4"
 sha256 = "1.5.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
-tonic = { version = "^0.8", features = ["tls", "transport"] }
+tonic = { version = "0.11", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 tempfile = "3.10.1"
 url = "2.5.0"
@@ -63,5 +63,5 @@ time = { version = "0.3", features = ["macros"] }
 x509-certificate = "0.23.1"
 
 [build-dependencies]
-tonic-build = "^0.8"
+tonic-build = "0.11"
 serde = { version = "1", features = ["derive"] }
