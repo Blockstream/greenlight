@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 includes:
   clnvm:
@@ -26,7 +26,6 @@ includes:
     dir: "."
 
 tasks:
-
   ci-check:
     deps:
       - ci-build
@@ -44,6 +43,7 @@ tasks:
           --build-arg UID=$(id -u) \
           --build-arg GID=$(id -g) \
           --build-arg GL_TESTING_IGNORE_HASH=1 \
+          --platform=linux/amd64 \
           -t gltesting \
           -f docker/gl-testing/Dockerfile \
           .
