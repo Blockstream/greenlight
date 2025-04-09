@@ -512,6 +512,9 @@ impl Persist for MemoryPersister {
                 0,
                 state_e.velocity_control.into(),
                 state_e.fee_velocity_control.into(),
+                0u64,
+                /* dbid_high_water_mark: prevents reuse of
+                 * channel dbid, 0 disables enforcement. */
             );
 
             let entry = lightning_signer::persist::model::NodeEntry {

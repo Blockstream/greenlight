@@ -77,7 +77,7 @@ impl Resolver {
                 }
                 (Message::NewChannel(m1), Request::FundChannel(m2)) => {
                     // Different node_id? Reject!
-                    m1.node_id.0 == m2.id.as_slice()
+                    m1.peer_id.0 == m2.id.as_slice()
                     // TODO: Add `close_to` to allowlist for the close
                     // later on
                 }
