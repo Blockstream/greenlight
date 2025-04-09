@@ -6,7 +6,6 @@ use cln_rpc::{
     ClnRpc,
 };
 use futures::{future::join_all, FutureExt};
-use gl_client::bitcoin::hashes::hex::ToHex;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -64,6 +63,7 @@ pub async fn trampolinepay(
     rpc_path: impl AsRef<Path>,
 ) -> Result<cln_rpc::model::responses::PayResponse> {
     let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trampoline_node_id[..])?;
+    let hex_node_id = hex::encode(node_id.serialize());
 
     let mut rpc = ClnRpc::new(&rpc_path).await?;
 
@@ -133,12 +133,12 @@ pub async fn trampolinepay(
         .unwrap_or(0);
     log::debug!(
         "New trampoline payment via {}: {} ",
-        node_id.to_hex(),
+        hex_node_id,
         req.bolt11.clone()
     );
 
     // Wait for the peer connection to re-establish.
-    log::debug!("Await peer connection to {}", node_id.to_hex());
+    log::debug!("Await peer connection to {}", hex_node_id);
     AwaitablePeer::new(node_id, rpc_path.as_ref().to_path_buf())
         .wait()
         .await?;
@@ -153,7 +153,7 @@ pub async fn trampolinepay(
         .await?
         .peers
         .first()
-        .ok_or_else(|| anyhow!("node with id {} is unknown", node_id.to_hex()))?
+        .ok_or_else(|| anyhow!("node with id {} is unknown", hex_node_id))?
         .features
         .as_ref()
         .map(|feat| hex::decode(feat))

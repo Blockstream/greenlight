@@ -108,7 +108,7 @@ pub fn validate_invoice_from_callback_response(
     );
 
     let description_hash: String = match invoice.description() {
-        Bolt11InvoiceDescription::Direct(d) => sha256::digest(d.clone().into_inner()),
+        Bolt11InvoiceDescription::Direct(d) => sha256::digest(d.to_string()),
         Bolt11InvoiceDescription::Hash(h) => h.0.to_string(),
     };
 
