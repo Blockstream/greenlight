@@ -122,7 +122,8 @@ impl Signer {
         // The persister takes care of persisting metadata across
         // restarts
         let persister = Arc::new(crate::persist::MemoryPersister::new());
-        let mut policy = lightning_signer::policy::simple_validator::make_simple_policy(network);
+        let mut policy =
+            lightning_signer::policy::simple_validator::make_default_simple_policy(network);
 
         policy.filter = PolicyFilter::default();
         policy.filter.merge(PolicyFilter {
@@ -141,9 +142,9 @@ impl Signer {
             policy.max_feerate_per_kw = 150_000;
             policy.filter.merge(PolicyFilter {
                 rules: vec![
-		    FilterRule::new_warn("policy-commitment-fee-range"),
-		    FilterRule::new_warn("policy-mutual-fee-range"),
-		],
+                    FilterRule::new_warn("policy-commitment-fee-range"),
+                    FilterRule::new_warn("policy-mutual-fee-range"),
+                ],
             });
         }
 
