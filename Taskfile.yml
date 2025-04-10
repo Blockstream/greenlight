@@ -34,7 +34,7 @@ tasks:
       - task: testing:check
       - task: clnvm:check
 
-  docker-ci-check:
+  docker-ci-build:
     cmds:
       - >
         docker buildx build \
@@ -47,9 +47,19 @@ tasks:
           -t gltesting \
           -f docker/gl-testing/Dockerfile \
           .
-      - docker run -ti -v $(pwd):/repo gltesting task ci-check
+    
+  docker-ci-check:
+    deps:
+#      - docker-ci-build
+    cmds:
+      - docker run --rm -ti -v $(pwd):/repo gltesting task ci-check
 
   ci-build:
     cmds:
       - task: signerproxy:build
       - task: plugin:build
+  clean:
+    dir: "."
+    cmds:
+      - cargo clean
+      - rm -rf .venv
