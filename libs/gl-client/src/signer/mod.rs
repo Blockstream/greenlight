@@ -270,26 +270,8 @@ impl Signer {
             dev_bip32_seed: None,
             dev_channel_secrets: None,
             dev_channel_secrets_shaseed: None,
-            hsm_wire_min_version: 5,
-            hsm_wire_max_version: 5,
-        })
-    }
-
-    fn bolt12initreq() -> vls_protocol::msgs::Message {
-        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: Octets("bolt12-invoice-base".as_bytes().to_vec()),
-        })
-    }
-
-    fn scbinitreq() -> vls_protocol::msgs::Message {
-        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: Octets("scb secret".as_bytes().to_vec()),
-        })
-    }
-
-    fn commandoinitreq() -> vls_protocol::msgs::Message {
-        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: Octets("commando".as_bytes().to_vec()),
+            hsm_wire_min_version: 4,
+            hsm_wire_max_version: 6,
         })
     }
 
@@ -642,11 +624,24 @@ impl Signer {
         let requests = vec![
             // v22.11 introduced an addiotiona startup message, the
             // bolt12 key generation
-            Signer::bolt12initreq(),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("bolt12-invoice-base".as_bytes().to_vec()),
+            }),
             // SCB needs a secret derived too
-            Signer::scbinitreq(),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("scb secret".as_bytes().to_vec()),
+            }),
             // Commando needs a secret for its runes
-            Signer::commandoinitreq(),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("commando".as_bytes().to_vec()),
+            }),
+            // The node alias key
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("node-alias-base".as_bytes().to_vec()),
+            }),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("offer-blinded-path".as_bytes().to_vec()),
+            }),
         ];
 
         let serialized: Vec<Vec<u8>> = requests.iter().map(|m| m.inner().as_vec()).collect();
