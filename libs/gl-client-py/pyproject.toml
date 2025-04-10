@@ -1,6 +1,6 @@
 [project]
 name = "gl-client"
-version = "0.3.2"
+version = "0.3.2rc1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"

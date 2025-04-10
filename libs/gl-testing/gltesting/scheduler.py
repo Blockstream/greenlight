@@ -136,6 +136,8 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         for n in self.nodes:
             if n.node_id == node_id:
                 return n
+        from rich.pretty import pprint
+        pprint(self.nodes)
         raise ValueError(
             f"No node with node_id={node_id} found in gltesting scheduler, do you need to register it first?"
         )
@@ -264,7 +266,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
 
     async def Schedule(self, req):
         n = self.get_node(req.node_id)
-
+        print("XXX", n)
         # If already running we just return the existing binding
         if n.process:
             return schedpb.NodeInfoResponse(
@@ -274,7 +276,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
 
         node_version = n.signer_version.get_node_version()
         node_version = self.versions.get(node_version, None)
-
+        print("XXX", node_version)
         logging.debug(
             f"Determined that we need to start node_version={node_version} for n.signer_version={n.signer_version}"
         )
@@ -284,41 +286,48 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
                 f"No node_version found for n.signer_version={n.signer_version}"
             )
 
-        # Otherwise we need to start a new process
-        n.process = NodeProcess(
-            node_id=req.node_id,
-            init_msg=n.initmsg,
-            directory=n.directory,
-            network=n.network,
-            identity=n.identity,
-            version=node_version,
-            bitcoind=self.bitcoind,
-            startupmsgs=n.startupmsgs,
-        )
-        n.process.write_node_config(n.network)
-        n.process.start()
+        print("XXX","Starting")
+        try:
+            # Otherwise we need to start a new process
+            n.process = NodeProcess(
+                node_id=req.node_id,
+                init_msg=n.initmsg,
+                directory=n.directory,
+                network=n.network,
+                identity=n.identity,
+                version=node_version,
+                bitcoind=self.bitcoind,
+                startupmsgs=n.startupmsgs,
+            )
+            n.process.write_node_config(n.network)
+            n.process.start()
 
-        with n.condition:
-            n.condition.notify_all()
-
-        # Wait for the grpc port to be accessible
-        start_time = time.perf_counter()
-        timeout = 10
-        while True:
-            try:
-                with socket.create_connection(
-                    ("localhost", n.process.grpc_port), timeout=0.1
-                ):
-                    break
-            except Exception:
-                time.sleep(0.01)
-                if time.perf_counter() - start_time >= timeout:
-                    raise TimeoutError(
-                        f"Waited too for port localhost:{n.process.grpc_port} to become reachable"
-                    )
-        # TODO Actually wait for the port to be accessible
-        time.sleep(1)
-
+            # Wait for the grpc port to be accessible
+            start_time = time.perf_counter()
+            timeout = 10
+            print("Waiting for node to become reachable")
+            while True:
+                try:
+                    print("Pinging")
+                    with socket.create_connection(
+                        ("localhost", n.process.grpc_port), timeout=0.1
+                    ):
+                        print("Successfully connected to grpc port")
+                        break
+                except Exception:
+                    print("Failed to contact grpc port, sleeping")
+                    time.sleep(0.1)
+                    if time.perf_counter() - start_time >= timeout:
+                        raise TimeoutError(
+                            f"Waited too for port localhost:{n.process.grpc_port} to become reachable"
+                        )
+            # TODO Actually wait for the port to be accessible
+            time.sleep(1)
+            with n.condition:
+                n.condition.notify_all()
+        except Exception as e:
+            print(e)
+            raise e
         return schedpb.NodeInfoResponse(
             node_id=n.node_id,
             grpc_uri=n.process.grpc_uri,

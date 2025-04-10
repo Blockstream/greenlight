@@ -92,11 +92,11 @@ class NodeProcess(TailableProc):
             '--disable-plugin=cln-grpc',
             f'--subdaemon=hsmd:{signerproxy_path}',
             f'--important-plugin={plugin_path}',
-            '--dev-bitcoind-poll=5',
-            '--dev-fast-gossip',
+            #'--dev-bitcoind-poll=5',
+            #'--dev-fast-gossip',
             '--offline',
-            '--experimental-anchors',
-            '--developer',  # TODO Make this multi-version capable
+            #'--experimental-anchors',
+            #'--developer',  # TODO Make this multi-version capable
         ]
 
     def write_node_config(self, network: str):
