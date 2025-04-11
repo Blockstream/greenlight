@@ -47,7 +47,7 @@ pub mod model;
 mod report;
 mod resolve;
 
-const VERSION: &str = "v24.02";
+const VERSION: &str = "v24.11";
 const GITHASH: &str = env!("GIT_HASH");
 const RUNE_VERSION: &str = "gl0";
 // This is the same derivation key that is used by core lightning itself.
@@ -122,7 +122,8 @@ impl Signer {
         // The persister takes care of persisting metadata across
         // restarts
         let persister = Arc::new(crate::persist::MemoryPersister::new());
-        let mut policy = lightning_signer::policy::simple_validator::make_simple_policy(network);
+        let mut policy =
+            lightning_signer::policy::simple_validator::make_default_simple_policy(network);
 
         policy.filter = PolicyFilter::default();
         policy.filter.merge(PolicyFilter {
@@ -141,9 +142,9 @@ impl Signer {
             policy.max_feerate_per_kw = 150_000;
             policy.filter.merge(PolicyFilter {
                 rules: vec![
-		    FilterRule::new_warn("policy-commitment-fee-range"),
-		    FilterRule::new_warn("policy-mutual-fee-range"),
-		],
+                    FilterRule::new_warn("policy-commitment-fee-range"),
+                    FilterRule::new_warn("policy-mutual-fee-range"),
+                ],
             });
         }
 
@@ -269,26 +270,8 @@ impl Signer {
             dev_bip32_seed: None,
             dev_channel_secrets: None,
             dev_channel_secrets_shaseed: None,
-            hsm_wire_min_version: 5,
-            hsm_wire_max_version: 5,
-        })
-    }
-
-    fn bolt12initreq() -> vls_protocol::msgs::Message {
-        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: Octets("bolt12-invoice-base".as_bytes().to_vec()),
-        })
-    }
-
-    fn scbinitreq() -> vls_protocol::msgs::Message {
-        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: Octets("scb secret".as_bytes().to_vec()),
-        })
-    }
-
-    fn commandoinitreq() -> vls_protocol::msgs::Message {
-        vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
-            info: Octets("commando".as_bytes().to_vec()),
+            hsm_wire_min_version: 4,
+            hsm_wire_max_version: 6,
         })
     }
 
@@ -641,11 +624,24 @@ impl Signer {
         let requests = vec![
             // v22.11 introduced an addiotiona startup message, the
             // bolt12 key generation
-            Signer::bolt12initreq(),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("bolt12-invoice-base".as_bytes().to_vec()),
+            }),
             // SCB needs a secret derived too
-            Signer::scbinitreq(),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("scb secret".as_bytes().to_vec()),
+            }),
             // Commando needs a secret for its runes
-            Signer::commandoinitreq(),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("commando".as_bytes().to_vec()),
+            }),
+            // The node alias key
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("node-alias-base".as_bytes().to_vec()),
+            }),
+            vls_protocol::msgs::Message::DeriveSecret(vls_protocol::msgs::DeriveSecret {
+                info: Octets("offer-blinded-path".as_bytes().to_vec()),
+            }),
         ];
 
         let serialized: Vec<Vec<u8>> = requests.iter().map(|m| m.inner().as_vec()).collect();

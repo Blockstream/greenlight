@@ -1,9 +1,6 @@
 use cln_rpc::{
     model::{
-        requests::{
-            ConnectRequest, GetinfoRequest, GetrouteRequest, ListpeerchannelsRequest,
-            ListpeersRequest,
-        },
+        requests::{ConnectRequest, GetinfoRequest, GetrouteRequest, ListpeerchannelsRequest},
         responses::GetrouteResponse,
     },
     primitives::{Amount, PublicKey, ShortChannelId},
@@ -311,7 +308,6 @@ async fn billboard(
             .await
             .map_err(|e| Error::Rpc(e))?
             .channels
-            .ok_or(Error::Channel("No channels found"))?
             .into_iter()
             .filter(|c| {
                 c.short_channel_id == Some(scid)
@@ -324,28 +320,10 @@ async fn billboard(
             .status
             .ok_or(Error::Channel("Status not found"))?)
     } else {
-        #[allow(deprecated)]
-        Ok(rpc
-            .call_typed(&ListpeersRequest {
-                id: Some(peer_id),
-                level: None,
-            })
-            .await
-            .map_err(|e| Error::Rpc(e))?
-            .peers
-            .into_iter()
-            .nth(0)
-            .ok_or(Error::Channel("Has no peers list"))?
-            .channels
-            .into_iter()
-            .nth(0)
-            .ok_or(Error::Channel("Has no channels list"))?
-            .into_iter()
-            .filter(|c| c.short_channel_id == Some(scid))
-            .nth(0)
-            .ok_or(Error::Channel("No channel with scid"))?
-            .status
-            .ok_or(Error::Channel("No amount found"))?)
+        return Err(Error::Service(format!(
+            "Not supported in this version of core-lightning: {}, need at least v23.05gl1",
+            version,
+        )));
     }
 }
 
@@ -381,7 +359,6 @@ async fn spendable_msat(
             .await
             .map_err(|e| Error::Rpc(e))?
             .channels
-            .ok_or(Error::Channel("No channels found"))?
             .into_iter()
             .filter(|c| {
                 c.short_channel_id == Some(scid)
@@ -394,28 +371,10 @@ async fn spendable_msat(
             .spendable_msat
             .ok_or(Error::Channel("No amount found"))?)
     } else {
-        #[allow(deprecated)]
-        Ok(rpc
-            .call_typed(&ListpeersRequest {
-                id: Some(peer_id),
-                level: None,
-            })
-            .await
-            .map_err(|e| Error::Rpc(e))?
-            .peers
-            .into_iter()
-            .nth(0)
-            .ok_or(Error::Channel("Has no peers list"))?
-            .channels
-            .into_iter()
-            .nth(0)
-            .ok_or(Error::Channel("Has no channels list"))?
-            .into_iter()
-            .filter(|c| c.short_channel_id == Some(scid))
-            .nth(0)
-            .ok_or(Error::Channel("No channel with scid"))?
-            .spendable_msat
-            .ok_or(Error::Channel("No amount found"))?)
+        return Err(Error::Service(format!(
+            "Not supported in this version of core-lightning: {}, need at least v23.05gl1",
+            version,
+        )));
     }
 }
 

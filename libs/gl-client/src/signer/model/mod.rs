@@ -15,7 +15,7 @@ pub enum Request {
     SendPay(cln::SendpayRequest),
     ListChannels(cln::ListchannelsRequest),
     AddGossip(cln::AddgossipRequest),
-    AutoCleanInvoice(cln::AutocleaninvoiceRequest),
+    AutoCleanOnce(cln::AutocleanonceRequest),
     CheckMessage(cln::CheckmessageRequest),
     Close(cln::CloseRequest),
     Connect(cln::ConnectRequest),

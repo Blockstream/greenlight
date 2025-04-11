@@ -154,15 +154,15 @@ class NodeHandler(Handler):
         ts = request.headers.get("glts", None)
 
         if not pk:
-            self.logger.warn(f"Missing public key header")
+            self.logger.warning(f"Missing public key header: headers={request.headers}")
             return False
 
         if not sig:
-            self.logger.warn(f"Missing signature header")
+            self.logger.warning(f"Missing signature header: headers={request.headers}")
             return False
 
         if not ts:
-            self.logger.warn(f"Missing timestamp header")
+            self.logger.warning(f"Missing timestamp header: headers={request.headers}")
             return False
 
         # TODO Check the signature.
@@ -212,12 +212,15 @@ class NodeHandler(Handler):
         )
         
         try:
+            self.logger.debug(f"Sending grpc request req={req}, payload={content} to url={url}")
             res = client.send(req)
             # Capture the error from header and send it in the body as well
-            if res.headers.get("grpc-status", "0") != "0":
-                grpc_status = res.headers.get("grpc-status")
+            status = res.headers.get("grpc-status", "0")
+            logging.debug(f"Server returned grpc-status={status}")
+            if status != "0":
                 error_message = res.headers.get("grpc-message", "None")
-                self.logger.warning(f"gRPC status code received: {grpc_status}")
+                self.logger.error(f"Received grpc-status={status}, error={error_message}")
+                self.logger.warning(f"gRPC status code received: {status}")
                 self.logger.warning(f"gRPC message received: {error_message}")
                 error = error_message.encode("utf-8")
                 error_res = struct.pack("!cI", request.flags, len(error)) + error

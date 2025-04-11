@@ -1,6 +1,6 @@
 [project]
 name = "gl-client"
-version = "0.3.1"
+version = "0.3.2rc1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -21,6 +21,7 @@ dev = [
     "grpcio>=1.67",
     "maturin>=1",
     "mypy>=1.14.1",
+    "patchelf>=0.17.2.2",
     "protobuf>=4",
     "pyln-grpc-proto>=0.1.2",
     "types-protobuf>=5.29.1.20241207",

@@ -77,7 +77,7 @@ impl Resolver {
                 }
                 (Message::NewChannel(m1), Request::FundChannel(m2)) => {
                     // Different node_id? Reject!
-                    m1.node_id.0 == m2.id.as_slice()
+                    m1.peer_id.0 == m2.id.as_slice()
                     // TODO: Add `close_to` to allowlist for the close
                     // later on
                 }
@@ -94,7 +94,7 @@ impl Resolver {
                     // Manually calling preapproveinvoice should
                     // always be allowed. The bolt11 string have to
                     // match.
-                    l.invstring.0 == r.bolt11().as_bytes()
+                    l.invstring.0 == r.bolt11.as_bytes()
                 }
                 (Message::PreapproveInvoice(l), Request::TrampolinePay(r)) => {
                     l.invstring.0 == r.bolt11.as_bytes()

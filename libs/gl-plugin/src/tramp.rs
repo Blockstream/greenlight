@@ -6,7 +6,6 @@ use cln_rpc::{
     ClnRpc,
 };
 use futures::{future::join_all, FutureExt};
-use gl_client::bitcoin::hashes::hex::ToHex;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -66,6 +65,7 @@ pub async fn trampolinepay(
     rpc_path: impl AsRef<Path>,
 ) -> Result<cln_rpc::model::responses::PayResponse> {
     let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trampoline_node_id[..])?;
+    let hex_node_id = hex::encode(node_id.serialize());
 
     let mut rpc = ClnRpc::new(&rpc_path).await?;
 
@@ -135,12 +135,12 @@ pub async fn trampolinepay(
         .unwrap_or(0);
     log::debug!(
         "New trampoline payment via {}: {} ",
-        node_id.to_hex(),
+        hex_node_id,
         req.bolt11.clone()
     );
 
     // Wait for the peer connection to re-establish.
-    log::debug!("Await peer connection to {}", node_id.to_hex());
+    log::debug!("Await peer connection to {}", hex_node_id);
     AwaitablePeer::new(node_id, rpc_path.as_ref().to_path_buf())
         .wait()
         .await?;
@@ -155,7 +155,7 @@ pub async fn trampolinepay(
         .await?
         .peers
         .first()
-        .ok_or_else(|| anyhow!("node with id {} is unknown", node_id.to_hex()))?
+        .ok_or_else(|| anyhow!("node with id {} is unknown", hex_node_id))?
         .features
         .as_ref()
         .map(|feat| hex::decode(feat))
@@ -196,7 +196,6 @@ pub async fn trampolinepay(
         .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })
         .await?
         .channels
-        .unwrap_or_default()
         .into_iter()
         .filter_map(|ch| {
             let short_channel_id = ch.short_channel_id.or(ch.alias.and_then(|a| a.local));
@@ -262,7 +261,7 @@ pub async fn trampolinepay(
     // All set we can preapprove the invoice
     let _ = rpc
         .call_typed(&cln_rpc::model::requests::PreapproveinvoiceRequest {
-            bolt11: Some(req.bolt11.clone()),
+            bolt11: req.bolt11.clone(),
         })
         .await?;
 
@@ -397,7 +396,7 @@ async fn do_pay(
     let route = cln_rpc::model::requests::SendpayRoute {
         amount_msat: cln_rpc::primitives::Amount::from_msat(part_amt),
         id: node_id.clone(),
-        delay: max_delay.unwrap_or(MAX_DELAY_DEFAULT) as u16,
+        delay: max_delay.unwrap_or(MAX_DELAY_DEFAULT),
         channel: scid,
     };
 

@@ -6,6 +6,7 @@ use crate::{stager, tramp};
 use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
+use cln_rpc::Notification;
 use gl_client::persist::State;
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
@@ -85,6 +86,7 @@ pub struct PluginNodeServer {
     grpc_binding: String,
     signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
     pub ctx: crate::context::Context,
+    notifications: tokio::sync::broadcast::Sender<Notification>,
 }
 
 impl PluginNodeServer {
@@ -92,6 +94,7 @@ impl PluginNodeServer {
         stage: Arc<stager::Stage>,
         config: Config,
         events: tokio::sync::broadcast::Sender<super::Event>,
+        notifications: tokio::sync::broadcast::Sender<Notification>,
         signer_state_store: Box<dyn StateStore>,
     ) -> Result<Self, Error> {
         let tls = ServerTlsConfig::new()
@@ -126,6 +129,7 @@ impl PluginNodeServer {
             signer_state: Arc::new(Mutex::new(signer_state)),
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
+            notifications,
         };
 
         tokio::spawn(async move {
