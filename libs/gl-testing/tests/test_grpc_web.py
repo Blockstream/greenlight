@@ -47,7 +47,7 @@ def test_node_grpc_web(scheduler, node_grpc_web_proxy, clients):
     c = clients.new()
     c.register(configure=True)
     n = c.node()
-    _s =    c.signer().run_in_thread()
+    _s = c.signer().run_in_thread()
     info = n.get_info()
 
     # Now extract the TLS certificates, so we can sign the payload.
