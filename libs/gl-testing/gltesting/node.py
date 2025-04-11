@@ -95,6 +95,7 @@ class NodeProcess(TailableProc):
             '--dev-bitcoind-poll=5',
             '--dev-fast-gossip',
             '--offline',
+            '--allow-deprecated-apis=true',
             #'--experimental-anchors',
             '--developer',  # TODO Make this multi-version capable
         ]
