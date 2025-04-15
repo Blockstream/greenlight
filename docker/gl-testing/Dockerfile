@@ -109,10 +109,18 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljs
 # STAGE: protoc-downloader
 # ----------------------------------------
 FROM ubuntu:22.04 AS protoc-downloader
+ARG TARGETPLATFORM
+
 RUN apt update && apt install -qqy wget unzip
-RUN mkdir /tmp/protoc && \
+RUN PLATFORM=$( \
+    case ${TARGETPLATFORM} in \
+    linux/amd64 ) echo "x86_64";; \
+    linux/arm64 ) echo "aarch_64";; \
+    esac \
+    ) && \
+    mkdir /tmp/protoc && \
     cd /tmp/protoc && \
-    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
+    wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-${PLATFORM}.zip && \
     unzip protoc.zip && \
     mv /tmp/protoc/bin/protoc /usr/local/bin && \
     chmod a+x /usr/local/bin/protoc && \
