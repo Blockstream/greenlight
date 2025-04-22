@@ -186,7 +186,7 @@ the flags `-v` for a verbose output and `-s` to print all output to
 the console instead of capturing it.
 
 ```
-pytest -v -s my-first-test.py
+uv run pytest -v -s my-first-test.py
 ```
 
 This should produce a lot of output, with the last few lines reading 
@@ -457,7 +457,7 @@ make docker-shell
 We can start our `pytest` test now. Remember the options `-v` and `-s`
 to print the logs to stdout instead of capturing them. 
 ```bash
-pytest -vs my-first-test.py
+uv run pytest -vs my-first-test.py
 ```
 
 After the test is finished you should see `passed` in the terminal.
@@ -517,7 +517,7 @@ make docker-shell
 
 Then we can start our REPL form inside the docker-shell.
 ```bash
-pytest -s examples/setup_repl.py
+uv run pytest -s examples/python/setup_repl.py
 ```
 
 You will see an output that looks similar to the following lines:
