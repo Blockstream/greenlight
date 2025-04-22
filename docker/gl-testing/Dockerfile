@@ -83,11 +83,18 @@ RUN chmod a+rwx -R $CARGO_HOME
 # Downloads bitcoin-core
 FROM ubuntu:22.04 AS bitcoin-downloader
 RUN apt update && apt install -qqy wget
+ARG TARGETPLATFORM
 
 ARG BITCOIN_VERSION=25.0
 
-RUN cd /tmp/ && \
-    wget "https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz" -O bitcoin.tar.gz && \
+RUN PLATFORM=$( \
+    case ${TARGETPLATFORM} in \
+    linux/amd64 ) echo "x86_64";; \
+    linux/arm64 ) echo "aarch64";; \
+    esac \
+    ) && \
+    cd /tmp/ && \
+    wget "https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-${PLATFORM}-linux-gnu.tar.gz" -O bitcoin.tar.gz && \
     tar -xvzf bitcoin.tar.gz && \
     mv /tmp/bitcoin-$BITCOIN_VERSION/ /opt/bitcoin && \
     rm -rf bitcoin.tar.gz /tmp/bitcoin-$BITCOIN_VERSION
@@ -97,12 +104,13 @@ RUN cd /tmp/ && \
 # --------------------------------------
 # Downloads cloudlfares SSL binaries
 FROM ubuntu:22.04 AS cfssl-downloader
+ARG TARGETARCH
 
 RUN apt update && apt install -qqy wget
 
-RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssl_1.5.0_linux_amd64 -O /usr/bin/cfssl && \
+RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssl_1.6.5_linux_${TARGETARCH} -O /usr/bin/cfssl && \
     chmod a+x /usr/bin/cfssl
-RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.5.0/cfssljson_1.5.0_linux_amd64 -O /usr/bin/cfssljson && \
+RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssljson_1.6.5_linux_${TARGETARCH} -O /usr/bin/cfssljson && \
     chmod a+x /usr/bin/cfssljson
 
 # ----------------------------------------
