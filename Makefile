@@ -102,7 +102,7 @@ gen: ${GENALL}
 
 build-self: ensure-docker
 	cargo build --all
-	uv sync --package gl-client --extra dev
+	uv sync --package gl-client --group dev
 
 check-all: check-rs check-self check-py check-testing-py
 
