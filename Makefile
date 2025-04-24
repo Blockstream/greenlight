@@ -207,6 +207,7 @@ gltestserver-image: ${REPO_ROOT}/docker/gl-testserver/Dockerfile
 	  .
 
 gltestserver: gltestserver-image
+	rm -rf .gltestserver/gl-testserver && \
 	docker run \
 	  --rm \
 	  --user $(shell id -u):$(shell id -g) \
