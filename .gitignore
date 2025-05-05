@@ -28,7 +28,10 @@ libs/cln-version-manager/poetry.lock
 uv.lock
 metadata.json
 
-# JS Examples 
+# JS Examples
 examples/javascript/node_modules
 examples/javascript/response.bin
 examples/javascript/package-lock.json
+
+# Vendor dir
+vendor
