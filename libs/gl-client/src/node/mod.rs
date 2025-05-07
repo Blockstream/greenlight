@@ -9,6 +9,8 @@ use log::{debug, info, trace};
 use tonic::transport::{Channel, Uri};
 use tower::ServiceBuilder;
 
+const DEFAULT_MAX_DECODING_MESSAGE_SIZE: usize = 32 * 1024 * 1024; // 32 MiB
+
 /// A client to the remotely running node on the greenlight
 /// infrastructure. It is configured to authenticate itself with the
 /// device mTLS keypair and will sign outgoing requests with the same
@@ -20,7 +22,7 @@ pub type GClient = GenericClient<service::AuthService>;
 pub type ClnClient = cln_client::NodeClient<service::AuthService>;
 
 pub trait GrpcClient {
-    fn new_with_inner(inner: service::AuthService) -> Self;
+    fn new_with_inner(inner: service::AuthService, max_decoding_message_size: usize) -> Self;
 }
 
 /// A builder to configure a [`Client`] that can either connect to a
@@ -34,23 +36,24 @@ pub struct Node {
     node_id: Vec<u8>,
     tls: TlsConfig,
     rune: String,
+    max_decoding_message_size: Option<usize>,
 }
 
 impl GrpcClient for Client {
-    fn new_with_inner(inner: service::AuthService) -> Self {
-        Client::new(inner)
+    fn new_with_inner(inner: service::AuthService, max_decoding_message_size: usize) -> Self {
+        Client::new(inner).max_decoding_message_size(max_decoding_message_size)
     }
 }
 
 impl GrpcClient for GClient {
-    fn new_with_inner(inner: service::AuthService) -> Self {
-        GenericClient::new(inner)
+    fn new_with_inner(inner: service::AuthService, max_decoding_message_size: usize) -> Self {
+        GenericClient::new(inner).max_decoding_message_size(max_decoding_message_size)
     }
 }
 
 impl GrpcClient for ClnClient {
-    fn new_with_inner(inner: service::AuthService) -> Self {
-        ClnClient::new(inner)
+    fn new_with_inner(inner: service::AuthService, max_decoding_message_size: usize) -> Self {
+        ClnClient::new(inner).max_decoding_message_size(max_decoding_message_size)
     }
 }
 
@@ -65,7 +68,13 @@ impl Node {
             node_id,
             tls,
             rune,
+            max_decoding_message_size: None,
         })
+    }
+
+    pub fn with_max_decoding_message_size(mut self, size: usize) -> Self {
+        self.max_decoding_message_size = Some(size);
+        self
     }
 
     pub async fn connect<C>(&self, node_uri: String) -> Result<C>
@@ -112,7 +121,11 @@ impl Node {
             .connect_lazy();
         let chan = ServiceBuilder::new().layer(layer).service(chan);
 
-        Ok(C::new_with_inner(chan))
+        let size = self
+            .max_decoding_message_size
+            .unwrap_or(DEFAULT_MAX_DECODING_MESSAGE_SIZE);
+
+        Ok(C::new_with_inner(chan, size))
     }
 
     pub async fn schedule_with_uri<C>(self, scheduler_uri: String) -> Result<C>
