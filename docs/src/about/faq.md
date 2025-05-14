@@ -67,3 +67,33 @@ not require a client certificate, thus avoiding these connectivity
 issues.
 
 [grpc-web]: https://github.com/grpc/grpc-web
+
+
+## Payments
+
+### Why am I getting a warning about fee budgets?
+
+When you make a payment on the Lightning Network using Greenlight, the
+payment often needs to be routed through several other nodes in the
+network to reach the recipient. These intermediate nodes facilitating
+the payment charge a small fee for their service. 
+
+Lightning Network fees consist of two parts:
+
+ - A base fee: A small fixed amount charged per forwarded payment.
+ - A proportional fee: A percentage of the payment amount.
+
+These fees are added on top of the amount you wish to send. If the
+value of your payment is very close to your total available balance in
+your Greenlight node, there might not be enough remaining funds to
+cover the fees charged by all the nodes along the payment path.  In
+such cases, even though Greenlight will attempt to send the payment,
+it is highly likely to fail because the total amount required
+(payment + fees) exceeds your available funds. 
+
+For situations where you need to move your entire balance, dedicated
+draining mechanisms exist, such as swapping funds out to an on-chain
+Bitcoin wallet. These methods are designed to transfer the entire
+available amount and handle the associated fees differently, typically
+deducting them from the total amount being moved rather than requiring
+them to be available beforehand as an extra buffer.
