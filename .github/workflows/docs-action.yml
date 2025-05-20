@@ -59,7 +59,7 @@ jobs:
             rm -rf /tmp/protoc \
 
       - name: Install poetry dependencies
-        run: poetry install --with docs
+        run: uv sync
           
       - name: Build docs
         env:
@@ -67,8 +67,7 @@ jobs:
           DOCSREMOTE: "origin"
           GITHUB_TOKEN: "${{ secrets.GH_PAGES_PAT }}"
         run: mkdir -p ${GITHUB_WORKSPACE}/site/
-      - run: cd docs && poetry run mkdocs build --verbose --strict --clean --site-dir=${GITHUB_WORKSPACE}/site/
-      - run: poetry run pdoc -o ${GITHUB_WORKSPACE}/site/py glclient
+      - run: cd docs && uv run mkdocs build --verbose --strict --clean --site-dir=${GITHUB_WORKSPACE}/site/
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
