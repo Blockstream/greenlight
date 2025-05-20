@@ -13,6 +13,7 @@ dev-dependencies = [
 
 [tool.uv.workspace]
 members = [
+  "docs",
   "libs/gl-testing",
   "libs/gl-client-py",
   "libs/gl-testserver",
