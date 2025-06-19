@@ -1,13 +1,14 @@
-use crate::awaitables::{AwaitableChannel, AwaitablePeer};
+use crate::awaitables::{AwaitableChannel, AwaitablePeer, Error as AwaitablePeerError};
 use crate::pb;
-use anyhow::{anyhow, Result};
 use cln_rpc::{
     primitives::{Amount, PublicKey, ShortChannelId},
-    ClnRpc,
+    ClnRpc, RpcError,
 };
 use futures::{future::join_all, FutureExt};
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::error::Error as StdError;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::{path::Path, time::Duration};
@@ -332,17 +333,242 @@ pub mod greenlight_error {
     }
 }
 
+use greenlight_error::{ErrorCode, ErrorStatusConversionExt, GreenlightError};
+
+/// Type alias for Core Lightning RPC error codes.
+///
+/// CLN uses specific numeric codes to indicate different types of failures
+/// in payment operations. This type preserves the original error code
+/// for debugging and logging purposes.
+pub type ClnRpcError = i32;
+
+/// Implementation of `ErrorCode` for CLN RPC errors.
+///
+/// This implementation treats all i32 values as valid error codes,
+/// allowing us to preserve any error code returned by CLN without loss.
+impl ErrorCode for ClnRpcError {
+    fn code(&self) -> i32 {
+        *self
+    }
+
+    fn from_code(code: i32) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        Some(code)
+    }
+}
+
+/// Converts Core Lightning RPC errors into trampoline errors.
+///
+/// This conversion preserves the original error code and message,
+/// and includes any additional error data as JSON in the error context.
+impl From<RpcError> for TrampolineError {
+    fn from(value: RpcError) -> Self {
+        let mut c_err = Self::new(
+            TrampolineErrCode::RpcError(value.code.unwrap_or(-1)),
+            value.message,
+        );
+        if let Some(data) = value.data {
+            let jdata = serde_json::to_string(&data)
+                .ok()
+                .unwrap_or_else(|| "could not convert cln rpc error to json".to_string());
+            c_err = c_err.with_context(jdata);
+        }
+        c_err
+    }
+}
+
+/// Error codes specific to trampoline routing operations.
+///
+/// These error codes cover various failure scenarios in Lightning Network
+/// trampoline routing, from configuration issues to payment failures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TrampolineErrCode {
+    FeatureNotSupported,
+    InvalidNodeId,
+    NetworkError,
+    UnknownPeer,
+    MissingAmount,
+    AmbigousAmount,
+    MissingChannel,
+    InsufficientFunds,
+    InvalidInvoice,
+    PeerNodeFailure,
+    PaymentFailure,
+    PeerConnectionFailure,
+    MissingPreimage,
+    Internal,
+    RpcError(ClnRpcError),
+}
+
+impl core::fmt::Display for TrampolineErrCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.code())
+    }
+}
+
+/// Maps trampoline error codes to numeric values and back.
+///
+/// Error code allocation:
+/// - 42701-42714: Reserved for trampoline-specific errors
+/// - Other ranges: CLN RPC error codes (see comments in from_code)
+impl ErrorCode for TrampolineErrCode {
+    fn code(&self) -> i32 {
+        match self {
+            Self::FeatureNotSupported => 42701,
+            Self::InvalidNodeId => 42702,
+            Self::NetworkError => 42703,
+            Self::UnknownPeer => 42704,
+            Self::MissingAmount => 42705,
+            Self::AmbigousAmount => 42706,
+            Self::MissingChannel => 42707,
+            Self::InsufficientFunds => 42708,
+            Self::InvalidInvoice => 42709,
+            Self::PeerNodeFailure => 42710,
+            Self::PaymentFailure => 42711,
+            Self::PeerConnectionFailure => 42712,
+            Self::MissingPreimage => 42713,
+            Self::Internal => 42714,
+            Self::RpcError(cln_err) => cln_err.code(),
+        }
+    }
+
+    fn from_code(code: i32) -> Option<Self> {
+        match code {
+            42701 => Some(Self::FeatureNotSupported),
+            42702 => Some(Self::InvalidNodeId),
+            42703 => Some(Self::NetworkError),
+            42704 => Some(Self::UnknownPeer),
+            42705 => Some(Self::MissingAmount),
+            42706 => Some(Self::AmbigousAmount),
+            42707 => Some(Self::MissingChannel),
+            42708 => Some(Self::InsufficientFunds),
+            42709 => Some(Self::InvalidInvoice),
+            42710 => Some(Self::PeerNodeFailure),
+            42711 => Some(Self::PeerNodeFailure),
+            42712 => Some(Self::PeerConnectionFailure),
+            42713 => Some(Self::MissingPreimage),
+            42714 => Some(Self::Internal),
+            // Possible sendpay failure codes:
+            // -1: Catchall nonspecific error.
+            // 201: Already paid with this hash using different amount or destination.
+            // 202: Unparseable onion reply.
+            // 203: Permanent failure at destination.
+            // 204: Failure along route; retry a different route.
+            // 212: localinvreqid refers to an invalid, or used, local invoice_request.
+            // Possible waitsendpay error codes:
+            // -1: Catchall nonspecific error.
+            // 200: Timed out before the payment could complete.
+            // 202: Unparseable onion reply.
+            // 203: Permanent failure at destination.
+            // 204: Failure along route; retry a different route.
+            // 208: A payment for payment_hash was never made and there is nothing to wait for.
+            // 209: The payment already failed, but the reason for failure was not stored. This should only occur when querying failed payments on very old databases.
+            -1 | 200..204 | 208 | 209 | 212 => Some(Self::RpcError(code)),
+            _ => None,
+        }
+    }
+}
+
+/// Maps trampoline error codes to appropriate gRPC status codes.
+///
+/// The mapping follows gRPC best practices:
+/// - Client errors (invalid input) → InvalidArgument
+/// - Precondition failures → FailedPrecondition
+/// - Server errors → Internal
+/// - Unknown/unclassified errors → Unknown
+impl ErrorStatusConversionExt for TrampolineErrCode {
+    fn status_code(&self) -> tonic::Code {
+        match self {
+            // Precondition failures: The operation was rejected because the
+            // system is not in a state required for the operation's execution
+            TrampolineErrCode::FeatureNotSupported
+            | TrampolineErrCode::UnknownPeer
+            | TrampolineErrCode::MissingAmount
+            | TrampolineErrCode::MissingChannel
+            | TrampolineErrCode::InsufficientFunds
+            | TrampolineErrCode::PeerConnectionFailure
+            | TrampolineErrCode::MissingPreimage => tonic::Code::FailedPrecondition,
+
+            // Invalid arguments: Client specified an invalid argument
+            TrampolineErrCode::InvalidNodeId
+            | TrampolineErrCode::AmbigousAmount
+            | TrampolineErrCode::InvalidInvoice => tonic::Code::InvalidArgument,
+
+            // Internal errors: Server-side errors
+            TrampolineErrCode::NetworkError
+            | TrampolineErrCode::PeerNodeFailure
+            | TrampolineErrCode::Internal => tonic::Code::Internal,
+
+            // Unknown: Error type cannot be classified
+            TrampolineErrCode::PaymentFailure => tonic::Code::Unknown,
+
+            // RPC errors are mapped to Unknown as they can represent various
+            // failure types
+            TrampolineErrCode::RpcError(_) => tonic::Code::Unknown,
+        }
+    }
+}
+
+/// Type aliases for convenience.
+pub type TrampolineError = GreenlightError<TrampolineErrCode>;
+type Result<T, E = TrampolineError> = core::result::Result<T, E>;
+
+/// TrampolineError Convenience Constructors
+impl TrampolineError {
+    /// Creates an error indicating that the peer doesn't support required
+    /// trampoline features.
+    pub fn feature_not_supported(features: impl Into<String>) -> Self {
+        TrampolineError::new(
+            TrampolineErrCode::FeatureNotSupported,
+            format!("Peer doesn't suport trampoline payments"),
+        )
+        .with_hint("Use a peer node that supports trampoline pay (feat 427)")
+        .with_context(json!({"features": features.into()}).to_string())
+    }
+
+    /// Creates an error for invalid node ID format.
+    pub fn invalid_node_id(source: impl StdError + Send + Sync + 'static) -> Self {
+        TrampolineError::new(
+            TrampolineErrCode::InvalidNodeId,
+            format!("Got an invalid node id: {}", source.to_string()),
+        )
+        .with_hint("A node id must be exactly 33 bytes (66 hex characters)")
+        .with_source(source)
+    }
+
+    /// Creates a network error for Core Lightning connection failures.
+    pub fn network(reason: impl Into<String>) -> Self {
+        TrampolineError::new(
+            TrampolineErrCode::NetworkError,
+            format!(
+                "Could not connect to core-lightning node: {}",
+                reason.into()
+            ),
+        )
+    }
+
+    /// Creates an internal error for unexpected failures.
+    pub fn internal(message: impl Into<String>) -> Self {
+        let msg = message.into();
+        debug!(
+            "Something unexpected happened during trampoline_pay: {}",
+            &msg
+        );
+        TrampolineError::new(TrampolineErrCode::Internal, msg)
+    }
+}
+
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
     features.reverse();
     let byte_pos = feature_bit / 8;
     let bit_pos = feature_bit % 8;
     if byte_pos >= features.len() || (features[byte_pos] & (1 << bit_pos)) == 0 {
-        return Err(anyhow!(
-            "Features {:?} do not contain feature bit {}",
-            hex::encode(features),
-            feature_bit
-        ));
+        return Err(TrampolineError::feature_not_supported(hex::encode(
+            features,
+        )));
     }
     Ok(())
 }
@@ -362,10 +588,13 @@ pub async fn trampolinepay(
     req: pb::TrampolinePayRequest,
     rpc_path: impl AsRef<Path>,
 ) -> Result<cln_rpc::model::responses::PayResponse> {
-    let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trampoline_node_id[..])?;
+    let node_id = cln_rpc::primitives::PublicKey::from_slice(&req.trampoline_node_id[..])
+        .map_err(TrampolineError::invalid_node_id)?;
     let hex_node_id = hex::encode(node_id.serialize());
 
-    let mut rpc = ClnRpc::new(&rpc_path).await?;
+    let mut rpc = ClnRpc::new(&rpc_path)
+        .await
+        .map_err(|e| TrampolineError::network(e.to_string()))?;
 
     // Extract the amount from the bolt11 or use the set amount field
     // Return an error if there is a mismatch.
@@ -402,7 +631,12 @@ pub async fn trampolinepay(
 
         let preimage = match resp.payment_preimage {
             Some(preimage) => preimage,
-            None => return Err(anyhow!("got completed payment part without preimage")),
+            None => {
+                return Err(TrampolineError::new(
+                    TrampolineErrCode::MissingPreimage,
+                    "got completed payment part without preimage",
+                ))
+            }
         };
         return Ok(cln_rpc::model::responses::PayResponse {
             amount_msat: resp.amount_msat.unwrap_or(Amount::from_msat(0)),
@@ -441,7 +675,23 @@ pub async fn trampolinepay(
     log::debug!("Await peer connection to {}", hex_node_id);
     AwaitablePeer::new(node_id, rpc_path.as_ref().to_path_buf())
         .wait()
-        .await?;
+        .await
+        .map_err(|e| match e {
+            AwaitablePeerError::PeerUnknown(s) => TrampolineError::new(
+                TrampolineErrCode::UnknownPeer,
+                format!("Unknown peer {}", s),
+            )
+            .with_hint("You need to be connected and share a channel with the trampoline node"),
+            AwaitablePeerError::PeerConnectionFailure(s) => TrampolineError::new(
+                TrampolineErrCode::PeerConnectionFailure,
+                format!("Can't connect to peer {}", s),
+            ),
+            AwaitablePeerError::Rpc(rpc_error) => rpc_error.into(),
+            _ => {
+                TrampolineError::internal("Got an unexpected error while awaiting peer connection")
+                    .with_source(e)
+            }
+        })?;
 
     // Check if peer has signaled that they support forward trampoline pays:
 
@@ -453,28 +703,43 @@ pub async fn trampolinepay(
         .await?
         .peers
         .first()
-        .ok_or_else(|| anyhow!("node with id {} is unknown", hex_node_id))?
+        .ok_or_else(|| {
+            TrampolineError::new(
+                TrampolineErrCode::UnknownPeer,
+                format!("Unknown peer node {}", hex_node_id),
+            ).with_hint("You need to have an active channel with the trampoline node before you can execute a trampoline payment")
+        })?
         .features
         .as_ref()
         .map(|feat| hex::decode(feat))
-        .ok_or_else(|| anyhow!("Could not extract features from peer object."))??;
+        .ok_or_else(|| {
+            TrampolineError::internal("missing feature bits on listpeers response")
+        })?
+        .map_err(|e| {
+            TrampolineError::internal("could not parse feature bits from hex").with_source(e)
+        })?;
 
     feature_guard(features, TRAMPOLINE_FEATURE_BIT)?;
 
     let amount_msat = match (as_option(req.amount_msat), decoded.amount_msat) {
         (None, None) => {
-            return Err(anyhow!(
-                "Bolt11 does not contain an amount and no amount was set either"
+            return Err(TrampolineError::new(
+                TrampolineErrCode::MissingAmount,
+                "Missing amount")
+            .with_hint(
+                "If the invoice does not have a fixed amount you need to set the amount parameter"
             ));
         }
         (None, Some(amt)) => amt.msat(),
         (Some(amt), None) => amt,
         (Some(set_amt), Some(bolt11_amt)) => {
             if set_amt != bolt11_amt.msat() {
-                return Err(anyhow!(
-                    "Bolt11 amount {}msat and given amount {}msat do not match.",
-                    bolt11_amt.msat(),
-                    set_amt,
+                return Err(TrampolineError::new(
+                    TrampolineErrCode::AmbigousAmount,
+                    format!("Invoice amount and the given amount don't match"),
+                )
+                .with_hint(
+                    "If the invoice has the amount set you don't need to set it as a parameter",
                 ));
             }
             bolt11_amt.msat()
@@ -488,7 +753,7 @@ pub async fn trampolinepay(
         * (as_option(req.maxfeepercent).unwrap_or(DEFAULT_OVERPAY_PERCENT) as f64 / 100 as f64);
     let amount_msat = amount_msat + overpay as u64;
 
-    debug!("overpay={}, total_amt={}", overpay, amount_msat);
+    debug!("overpay={}, total_amt={}", overpay as u64, amount_msat);
 
     let channels: Vec<Channel> = rpc
         .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })
@@ -536,7 +801,10 @@ pub async fn trampolinepay(
 
     // Check if we actually got a channel to the trampoline node.
     if channels.is_empty() {
-        return Err(anyhow!("Has no channels with trampoline node"));
+        return Err(TrampolineError::new(
+            TrampolineErrCode::MissingChannel,
+            "No active and usable channelt to trampoline node found",
+        ).with_hint("In order to execute a trampoline payment, you heed to share a channel with the trampoline node that has a usable outgoing balance"));
     }
 
     // Await and filter out re-established channels.
@@ -565,10 +833,12 @@ pub async fn trampolinepay(
             {
                 Some(alloc) => alloc,
                 None => {
-                    return Err(anyhow!(
-                        "could not allocate enough funds across channels {}msat<{}msat",
-                        channels.iter().map(|ch| ch.spendable_msat).sum::<u64>(),
-                        amount_msat
+                    return Err(TrampolineError::new(
+                        TrampolineErrCode::InsufficientFunds,
+                        format!(
+                            "Insufficient funds, {}msat are required, current maximal available {}msat",
+                            amount_msat,
+                            channels.iter().map(|ch| ch.spendable_msat).sum::<u64>()),
                     ));
                 }
             }
@@ -592,9 +862,7 @@ pub async fn trampolinepay(
     let mut part_id = if alloc.len() == 1 { 0 } else { 1 };
     let group_id = max_group_id + 1;
     let mut handles: Vec<
-        tokio::task::JoinHandle<
-            std::result::Result<cln_rpc::model::responses::WaitsendpayResponse, anyhow::Error>,
-        >,
+        tokio::task::JoinHandle<Result<cln_rpc::model::responses::WaitsendpayResponse>>,
     > = vec![];
     for ch in &alloc {
         let bolt11 = req.bolt11.clone();
@@ -603,8 +871,24 @@ pub async fn trampolinepay(
         let scid = ch.channel.short_channel_id.clone();
         let description = decoded.description.clone();
         let payload_hex = payload_hex.clone();
-        let mut rpc = ClnRpc::new(&rpc_path).await?;
+        let mut rpc = ClnRpc::new(&rpc_path)
+            .await
+            .map_err(|e| TrampolineError::network(e.to_string()))?;
         let handle = tokio::spawn(async move {
+            let payment_secret = decoded
+                .payment_secret
+                .map(|e| e[..].to_vec())
+                .ok_or(TrampolineError::new(
+                    TrampolineErrCode::InvalidInvoice,
+                    "The invoice is invalid, missing payment secret",
+                ))?
+                .try_into()
+                .map_err(|e: anyhow::Error| {
+                    TrampolineError::new(
+                        TrampolineErrCode::InvalidInvoice,
+                        format!("The invoice is invalid, {}", e.to_string()),
+                    )
+                })?;
             do_pay(
                 &mut rpc,
                 node_id,
@@ -617,11 +901,7 @@ pub async fn trampolinepay(
                 group_id,
                 decoded.payment_hash,
                 cln_rpc::primitives::Amount::from_msat(amount_msat),
-                decoded
-                    .payment_secret
-                    .map(|e| e[..].to_vec())
-                    .ok_or(anyhow!("missing payment secret"))?
-                    .try_into()?,
+                payment_secret,
                 payload_hex,
                 as_option(req.maxdelay),
             )
@@ -634,7 +914,9 @@ pub async fn trampolinepay(
     let results = join_all(handles).await;
     let mut payment_preimage = None;
     for result in results {
-        let response = result??;
+        let response = result.map_err(|e| {
+            TrampolineError::internal("Failed to wait for all tasks to complete").with_source(e)
+        })??;
         if let Some(preimage) = response.payment_preimage {
             payment_preimage = Some(preimage);
         }
@@ -653,7 +935,10 @@ pub async fn trampolinepay(
             payment_preimage,
         })
     } else {
-        Err(anyhow!("missing payment_preimage"))
+        Err(TrampolineError::new(
+            TrampolineErrCode::PaymentFailure,
+            "Payment failed, missing payment preimage",
+        ))
     }
 }
 
@@ -717,16 +1002,24 @@ async fn do_pay(
         Err(e) => {
             if let Some(code) = e.code {
                 if code == PAY_UNPARSEABLE_ONION_CODE {
-                    return Err(anyhow!("trampoline payment failed by the server"));
+                    return Err(TrampolineError::new(
+                        TrampolineErrCode::PeerNodeFailure,
+                        "Got unparsable onion code from peer",
+                    ));
                 }
             } else if e.message == PAY_UNPARSEABLE_ONION_MSG {
-                return Err(anyhow!("trampoline payment failed by the server"));
+                return Err(TrampolineError::new(
+                    TrampolineErrCode::PeerNodeFailure,
+                    "Got unparsable onion code from peer",
+                ));
             }
             Err(e.into())
         }
     }
 }
 
+// FIXME: Once the `assert_send` is removed we can return a `Vec<Channel>` or an
+// `Option<Vec<Channel>>` instead of a result.
 async fn reestablished_channels(
     channels: Vec<Channel>,
     node_id: PublicKey,
@@ -734,9 +1027,11 @@ async fn reestablished_channels(
     deadline: Instant,
 ) -> Result<Vec<Channel>> {
     // Wait for channels to re-establish.
+    // FIXME: Seems that this is a left-over of the development process that
+    // ensures that the channels are "sendable", they are `Send`.
     crate::awaitables::assert_send(AwaitableChannel::new(
         node_id,
-        ShortChannelId::from_str("1x1x1")?,
+        ShortChannelId::from_str("1x1x1").map_err(|e| TrampolineError::internal(e.to_string()))?,
         rpc_path.clone(),
     ));
     let mut futures = Vec::new();

@@ -20,8 +20,10 @@ const RPC_CALL_DELAY_MSEC: u64 = 250;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Peer error: {0}")]
-    Peer(&'static str),
+    #[error("Unknown peer {0}")]
+    PeerUnknown(String),
+    #[error("Can't connect to peer {0}")]
+    PeerConnectionFailure(String),
     #[error("Channel error: {0}")]
     Channel(&'static str),
     #[error("RPC error: {0}")]
@@ -270,7 +272,10 @@ async fn ensure_peer_connection(
             level: None,
         })
         .await?;
-    let peer = res.peers.first().ok_or(Error::Peer("No such peer"))?;
+    let peer = res
+        .peers
+        .first()
+        .ok_or(Error::PeerUnknown(peer_id.to_string()))?;
 
     if !peer.connected {
         log::debug!("Peer {} is not connected, connecting", peer_id);
@@ -282,7 +287,7 @@ async fn ensure_peer_connection(
         let res = rpc
             .call_typed(&req)
             .await
-            .map_err(|_| Error::Peer("unable to connect"))?;
+            .map_err(|_| Error::PeerConnectionFailure(peer_id.to_string()))?;
 
         log::debug!("Connect call to {} resulted in {:?}", peer_id, res);
     }
