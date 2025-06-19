@@ -1,6 +1,7 @@
 from gltesting.fixtures import *
 from pyln.testing.utils import wait_for
 from pyln import grpc as clnpb
+import grpc
 import pytest
 import secrets
 from pathlib import Path
@@ -92,7 +93,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
 
     res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l2.info["id"]))
     assert res
-    assert len(res.payment_hash) == 32 # There was a confusion about hex/bytes return.
+    assert len(res.payment_hash) == 32  # There was a confusion about hex/bytes return.
 
     l2.rpc.unsetchecks()
 
@@ -124,7 +125,9 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
 
     # calling `trampoline_pay` with an unkown tmrp_node_id must fail.
     with pytest.raises(
-        expected_exception=ValueError, match=r"Peer error: No such peer"
+        expected_exception=ValueError,
+
+        match=f"Unknown peer {l3.info['id']}",
     ):
         res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l3.info["id"]))
 
@@ -134,12 +137,9 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     # trampoline payments must fail.
     with pytest.raises(
         expected_exception=ValueError,
-        match=r"Features \\\"[a-f0-9]+\\\" do not contain feature bit 427",
+        match="Peer doesn't suport trampoline payments",
     ):
         res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l3.info["id"]))
-
-    res = n1.listpays()
-    print(f"LISTPAYS: {res}")
 
 
 def test_trampoline_multi_htlc(bitcoind, clients, node_factory):
