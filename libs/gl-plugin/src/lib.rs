@@ -18,7 +18,7 @@ pub mod responses;
 pub mod stager;
 pub mod storage;
 pub mod tlv;
-mod tramp;
+pub mod tramp;
 #[cfg(unix)]
 mod unix;
 
