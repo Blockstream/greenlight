@@ -555,16 +555,11 @@ impl Node for PluginNodeServer {
         &self,
         r: tonic::Request<pb::TrampolinePayRequest>,
     ) -> Result<tonic::Response<pb::TrampolinePayResponse>, Status> {
-        match tramp::trampolinepay(r.into_inner(), self.rpc_path.clone())
+        tramp::trampolinepay(r.into_inner(), self.rpc_path.clone())
             .await
-            .map(|res| {
-                <cln_rpc::model::responses::PayResponse as Into<cln_grpc::pb::PayResponse>>::into(
-                    res,
-                )
-            }) {
-            Ok(res) => {
-                debug!("Trampoline payment successful");
-                Ok(tonic::Response::new(pb::TrampolinePayResponse {
+            .map(cln_rpc::model::responses::PayResponse::into)
+            .map(|res: cln_grpc::pb::PayResponse| {
+                tonic::Response::new(pb::TrampolinePayResponse {
                     payment_preimage: res.payment_preimage,
                     payment_hash: res.payment_hash,
                     created_at: res.created_at,
@@ -572,13 +567,12 @@ impl Node for PluginNodeServer {
                     amount_msat: res.amount_msat.unwrap_or_default().msat,
                     amount_sent_msat: res.amount_sent_msat.unwrap_or_default().msat,
                     destination: res.destination.unwrap_or_default(),
-                }))
-            }
-            Err(e) => {
-                debug!("Trampoline payment failed: {}", e);
-                Err(Status::new(Code::Unknown, e.to_string()))
-            }
-        }
+                })
+            })
+            .map_err(|err| {
+                debug!("Trampoline payment failed: {}", err);
+                err.into()
+            })
     }
 }
 
