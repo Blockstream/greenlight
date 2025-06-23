@@ -12,7 +12,7 @@ tasks:
       - cargo build --release
       
   build:
-    dif: '.'
+    dir: '.'
     deps:
       - build-python
 
