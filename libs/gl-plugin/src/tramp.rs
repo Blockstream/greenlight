@@ -186,44 +186,56 @@ impl ErrorStatusConversionExt for TrampolineErrCode {
     }
 }
 
+// We need to respect rusts orphan rule which does not let us use a simple
+// type TrampolineError = GreenlightError<TrampolineErrCode>, as this would
+// not let us implement own methods on TrampolineError since it IS
+// GreenlightError and therefore not defined in this crate.
+// We can avoid to implement all these delegations of the trait methods and
+// the builder methods (furhter down) in the future by providing a proc
+// macro that derives all the boilerplate for us.
 pub struct TrampolineError(pub GreenlightError<TrampolineErrCode>);
 
-impl core::ops::Deref for TrampolineError {
-    type Target = GreenlightError<TrampolineErrCode>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl core::fmt::Display for TrampolineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
-// Implement From for easy conversion
+impl From<TrampolineError> for tonic::Status {
+    fn from(value: TrampolineError) -> Self {
+        tonic::Status::from(value.0)
+    }
+}
+
 impl From<GreenlightError<TrampolineErrCode>> for TrampolineError {
     fn from(err: GreenlightError<TrampolineErrCode>) -> Self {
         TrampolineError(err)
     }
 }
 
-/// Type aliases for convenience.
-// pub type TrampolineError = GreenlightError<TrampolineErrCode>;
+/// Type alias for convenience.
 type Result<T, E = TrampolineError> = core::result::Result<T, E>;
-
-/// Needed to bypass rusts orphan rule.
-// trait TrampolineErrorExt {
-//     fn feature_not_supported(features: impl Into<String>) -> Self;
-//     fn invalid_node_id(source: impl StdError + Send + Sync + 'static) -> Self;
-//     fn network(reason: impl Into<String>) -> Self;
-//     fn internal(message: impl Into<String>) -> Self;
-// }
 
 /// TrampolineError Convenience Constructors
 impl TrampolineError {
+    // Delegate builder methods, wrapping the result
     fn new(code: TrampolineErrCode, message: impl Into<String>) -> Self {
         TrampolineError(GreenlightError::new(code, message))
     }
 
-    // impl TrampolineErrorExt for TrampolineError {
-    /// Creates an error indicating that the peer doesn't support required
-    /// trampoline features.
+    pub fn with_hint(self, hint: impl Into<String>) -> Self {
+        TrampolineError(self.0.with_hint(hint))
+    }
+
+    pub fn with_context(self, context: impl Into<String>) -> Self {
+        TrampolineError(self.0.with_context(context))
+    }
+
+    pub fn with_source(self, source: impl StdError + Send + Sync + 'static) -> Self {
+        TrampolineError(self.0.with_source(source))
+    }
+
+    // Implement convenince constructors.
     fn feature_not_supported(features: impl Into<String>) -> Self {
         Self::new(
             TrampolineErrCode::FeatureNotSupported,
