@@ -1468,6 +1468,7 @@ dependencies = [
  "env_logger 0.7.1",
  "futures",
  "gl-client",
+ "gl-util",
  "governor",
  "hex",
  "hyper 0.14.32",

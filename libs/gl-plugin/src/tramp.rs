@@ -216,6 +216,14 @@ impl From<GreenlightError<TrampolineErrCode>> for TrampolineError {
 /// Type alias for convenience.
 type Result<T, E = TrampolineError> = core::result::Result<T, E>;
 
+/// Needed to bypass rusts orphan rule.
+// trait TrampolineErrorExt {
+//     fn feature_not_supported(features: impl Into<String>) -> Self;
+//     fn invalid_node_id(source: impl StdError + Send + Sync + 'static) -> Self;
+//     fn network(reason: impl Into<String>) -> Self;
+//     fn internal(message: impl Into<String>) -> Self;
+// }
+
 /// TrampolineError Convenience Constructors
 impl TrampolineError {
     // Delegate builder methods, wrapping the result
@@ -286,7 +294,11 @@ fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()>
         return Err(TrampolineError::feature_not_supported(hex::encode(
             features,
         )));
-    }
+        poline error codes to numeric values and back.
+        ///
+        /// Error code allocation:
+        /// - 42701-42714: Reserved for trampoline-specific errors
+        /// - Other ranges: CLN RPC error codes (see comments in from_code)}
     Ok(())
 }
 
