@@ -18,6 +18,7 @@ members = [
     "libs/gl-plugin",
     "libs/gl-signerproxy",
     "libs/gl-cli",
+    "libs/gl-util",
 ]
 
 [workspace.dependencies]
