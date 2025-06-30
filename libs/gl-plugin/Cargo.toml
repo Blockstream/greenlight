@@ -23,6 +23,7 @@ cln-rpc = { workspace = true }
 env_logger = "^0.7.1"
 futures = "0.3"
 gl-client = { version = "^0.3.0", path = "../gl-client" }
+gl-util = { version = "0.1", path = "../gl-util" }
 governor = { version = "0.5", default-features = false, features = ["std"] }
 hex = "0.4"
 hyper = "0.14.28"
