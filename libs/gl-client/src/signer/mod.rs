@@ -466,6 +466,7 @@ impl Signer {
     }
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
+        debug!("Processing request {:?}", req);
         let diff: crate::persist::State = req.signer_state.clone().into();
 
         let prestate = {
@@ -713,7 +714,10 @@ impl Signer {
     /// directly and start streaming and processing requests.
     pub async fn run_forever(&self, shutdown: mpsc::Receiver<()>) -> Result<(), anyhow::Error> {
         let scheduler_uri = crate::utils::scheduler_uri();
-        Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await
+        debug!("Starting signer run loop");
+        let res = Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await;
+        debug!("Exited signer run loop");
+        res
     }
 
     /// Create and, if necessary, upgrade the scheduler
