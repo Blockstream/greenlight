@@ -1,6 +1,6 @@
 [package]
 name = "gl-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Peter Neuroth <pet.v.ne@gmail.com>"]
 description = "A command-line interface for running a Greenlight signer and operating a Greenlight node"
@@ -8,7 +8,7 @@ homepage = "https://blockstream.github.io/greenlight/"
 repository = "https://github.com/Blockstream/greenlight"
 documentation = "https://blockstream.github.io/greenlight/"
 keywords = ["lightning", "greenlight", "cli", "bitcoin", "blockchain"]
-categories = ["command-line-utlis", "cryptography::cryptocurrencies"]
+categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
 license = "MIT"
 readme = "README.md"
 
