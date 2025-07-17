@@ -137,7 +137,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     # trampoline payments must fail.
     with pytest.raises(
         expected_exception=ValueError,
-        match="Peer doesn't suport trampoline payments",
+        match="Peer doesn't support trampoline payments",
     ):
         res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l3.info["id"]))
 
