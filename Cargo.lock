@@ -1512,6 +1512,7 @@ name = "gl-util"
 version = "0.1.0"
 dependencies = [
  "bytes 1.10.1",
+ "cln-rpc",
  "serde",
  "serde_json",
  "tonic 0.11.0",
