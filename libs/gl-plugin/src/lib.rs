@@ -6,6 +6,9 @@ use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
+#[macro_use(error)]
+extern crate gl_util;
+
 mod awaitables;
 pub mod config;
 pub mod hsm;
