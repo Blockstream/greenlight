@@ -29,6 +29,46 @@ macro_rules! parsing_error {
     };
 }
 
+/// Creates an `Error` with the specified `ErrorCode` and optional formatted
+/// message.
+///
+/// This macro provides a convenient and efficient way to construct `Error`
+/// instances with compile-time optimizations and meaningful default messages.
+///
+/// # Arguments
+///
+/// * `$code` - An `ErrorCode` variant that categorizes the error type
+/// * `$msg` - *(Optional)* A string literal for static messages
+/// * `$fmt` - *(Optional)* A format string literal with `{}` placeholders
+/// * `$args` - *(Optional)* Arguments corresponding to format placeholders
+///
+/// # See Also
+///
+/// - [`format!`] - For understanding format string syntax
+/// - [`Error::new`] - The underlying constructor being called
+/// - [`std::fmt`] - For advanced formatting options
+///
+/// [`format!`]: std::format
+/// [`Error::new`]: crate::Error::new
+/// [`std::fmt`]: std::fmt
+#[macro_export]
+macro_rules! error {
+    // Default message variant - generates meaningful message from error code
+    ($code:expr) => {
+        $crate::error::Error::new($code, concat!(stringify!($code), " occurred"))
+    };
+
+    // Static message variant - most efficient for literal strings
+    ($code:expr, $msg:literal) => {
+        $crate::error::Error::new($code, $msg)
+    };
+
+    // Formatted message variant - with compile-time format validation
+    ($code:expr, $fmt:literal, $($args:expr),+ $(,)?) => {
+        $crate::error::Error::new($code, format!($fmt, $($args),+))
+    };
+}
+
 /// Trait for defining module-specific error codes.
 ///
 /// This trait should be implemented by enums that represent different error
@@ -108,7 +148,7 @@ pub trait ErrorStatusConversionExt: ErrorCode {
 
 /// Generic error type that combines error codes with rich error context.
 #[derive(Debug, Clone)]
-pub struct GreenlightError<C: ErrorCode> {
+pub struct Error<C: ErrorCode> {
     /// Error code for categorization and programmatic handling
     pub code: C,
     /// User-facing error message
@@ -121,7 +161,7 @@ pub struct GreenlightError<C: ErrorCode> {
     pub source: Option<Arc<dyn StdError + Send + Sync>>,
 }
 
-impl<C: ErrorCode> GreenlightError<C> {
+impl<C: ErrorCode> Error<C> {
     /// Creates a new error with the given code and message.
     pub fn new(code: C, message: impl Into<String>) -> Self {
         Self {
@@ -181,8 +221,8 @@ impl<C: ErrorCode> GreenlightError<C> {
     ///
     /// This is useful when errors need to be converted between different
     /// modules or layers that use different error code enums.
-    pub fn map_code<T: ErrorCode>(self, new_code: T) -> GreenlightError<T> {
-        GreenlightError {
+    pub fn map_code<T: ErrorCode>(self, new_code: T) -> Error<T> {
+        Error {
             code: new_code,
             message: self.message,
             hint: self.hint,
@@ -193,14 +233,14 @@ impl<C: ErrorCode> GreenlightError<C> {
 }
 
 /// Displays the error message.
-impl<C: ErrorCode> core::fmt::Display for GreenlightError<C> {
+impl<C: ErrorCode> core::fmt::Display for Error<C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.message)
     }
 }
 
 /// Implements the standard error trait for error chaining.
-impl<C: ErrorCode> StdError for GreenlightError<C> {
+impl<C: ErrorCode> StdError for Error<C> {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         self.source
             .as_ref()
@@ -212,8 +252,8 @@ impl<C: ErrorCode> StdError for GreenlightError<C> {
 ///
 /// The error details are JSON-encoded and included in the status details
 /// field. If JSON serialization fails, a fallback JSON string is used.
-impl<C: ErrorCode + ErrorStatusConversionExt> From<GreenlightError<C>> for tonic::Status {
-    fn from(value: GreenlightError<C>) -> Self {
+impl<C: ErrorCode + ErrorStatusConversionExt> From<Error<C>> for tonic::Status {
+    fn from(value: Error<C>) -> Self {
         let code = value.code.status_code();
         let details: Bytes = serde_json::to_vec(&GrpcErrorDetails {
             code: value.code(),
@@ -241,7 +281,7 @@ impl<C: ErrorCode + ErrorStatusConversionExt> From<GreenlightError<C>> for tonic
 /// 2. The error code in the details can be mapped to a valid `C` variant
 ///
 /// Returns an `anyhow::Error` if parsing fails or the error code is unknown.
-impl<C: ErrorCode> TryFrom<tonic::Status> for GreenlightError<C> {
+impl<C: ErrorCode> TryFrom<tonic::Status> for Error<C> {
     type Error = ParsingError;
 
     fn try_from(value: tonic::Status) -> std::result::Result<Self, Self::Error> {
@@ -281,6 +321,20 @@ impl ErrorCode for ClnRpcError {
         Self: Sized,
     {
         Some(code)
+    }
+}
+
+/// Implementation of RPC error codes
+use cln_rpc::RpcError;
+
+pub trait RpcErrConversion: ErrorCode {
+    fn from_rpc_error(value: &RpcError) -> Self;
+}
+
+impl<C: ErrorCode + RpcErrConversion> From<RpcError> for Error<C> {
+    fn from(value: RpcError) -> Self {
+        let code = C::from_rpc_error(&value);
+        Self::new(code, value.message)
     }
 }
 
@@ -324,7 +378,7 @@ mod test {
             }
         }
 
-        type TestError = GreenlightError<TestErrorCodes>;
+        type TestError = Error<TestErrorCodes>;
 
         let t_err = TestError::new(TestErrorCodes::FailedPrecondition, "a failed precondition")
             .with_hint("How to resolve it");
