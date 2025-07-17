@@ -174,7 +174,7 @@ impl ErrorStatusConversionExt for TrampolineErrorCode {
 
 /// Type alias for convenience.
 type Result<T, E = TrampolineError> = core::result::Result<T, E>;
-type TrampolineError = Error<TrampolineErrorCode>;
+pub type TrampolineError = Error<TrampolineErrorCode>;
 
 fn feature_guard(features: impl Into<Vec<u8>>, feature_bit: usize) -> Result<()> {
     let mut features = features.into();
