@@ -397,7 +397,7 @@ class Node(object):
         self,
         bolt11: str,
         amount_msat: Optional[clnpb.Amount] = None,
-        retry_for: int = 0,
+        retry_for: Optional[int] = None,
         maxfee: Optional[clnpb.Amount] = None,
         maxfeepercent: Optional[float] = None,
     ) -> clnpb.PayResponse:
