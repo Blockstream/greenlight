@@ -9,9 +9,9 @@ build_gl_client_py:
     - sed -i "s/^version = \".*\"/version = \"$NEW_VER\"/" libs/gl-client-py/Cargo.toml
     - . $HOME/.cargo/env # sh doesn't have the correct PATH
   script:
-    - poetry run maturin build -m libs/gl-client-py/Cargo.toml --release || sleep 3600
-    - poetry run maturin sdist -m libs/gl-client-py/Cargo.toml
-    - poetry run maturin upload --username __token__ --password ${PYPI_TOKEN} target/wheels/*
+    - uv run maturin build -m libs/gl-client-py/Cargo.toml --release || sleep 3600
+    - uv run maturin sdist -m libs/gl-client-py/Cargo.toml
+    - uv run maturin upload --username __token__ --password ${PYPI_TOKEN} target/wheels/*
     - ls -lh target/wheels
   artifacts:
     expire_in: 2 weeks

@@ -228,7 +228,7 @@ integrated rpc client that we can use to fund the `l2` node with
 !!! tip "Tip: Use your IDEs autocompletion"
 	If you want to use the __autocompletion__ features of your IDE you
 	need to select the python interpreter form the environment set by 
-	poetry in `libs/gl-testing`. You can then import the classes from 
+	uv in `libs/gl-testing`. You can then import the classes from 
 	the fixtures and annotate the fixtures with its types.
 	e.g. 
 	``` { .python .no-copy }
@@ -661,17 +661,21 @@ the necessary dependencies for the
 example.
 
 ```bash
-poetry shell
+uv venv
 ```
 
 ```bash
-poetry install
+source .venv/bin/activate
 ```
 
-The first command drops us into a [`poetry`][poetry]-shell, the second
+```bash
+uv sync
+```
+
+The first command creates a virtual environment, the second activates it, and the third
 installs the necessary dependencies from the `pyproject.toml` file.
 
-With the REPL setup in the docker-shell and from the poetry-shell on 
+With the REPL setup in the docker-shell and from the virtual environment on 
 the host we can now run our test application.
 
 ```bash
@@ -724,6 +728,5 @@ trigger a shutdown.
 [gl-testing-diff]: https://github.com/Blockstream/greenlight/tree/main/libs/gl-testing#differences-between-greenlight-and-gl-testing
 [stickers]: https://store.blockstream.com/product/sticker-bundle/
 [repl]: https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop
-[poetry]: https://python-poetry.org
 [grpc]: https://grpc.io/
 [protoc]: https://grpc.io/docs/protoc-installation/

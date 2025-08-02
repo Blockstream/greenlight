@@ -44,9 +44,6 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
 
       - name: Install dependencies
         run: |
@@ -58,7 +55,7 @@ jobs:
             chmod a+x /usr/local/bin/protoc && \
             rm -rf /tmp/protoc \
 
-      - name: Install poetry dependencies
+      - name: Install dependencies
         run: uv sync
           
       - name: Build docs
