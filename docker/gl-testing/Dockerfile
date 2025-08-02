@@ -40,13 +40,8 @@ RUN apt update && apt install -qqy curl python3 python3-pip python3-venv libpq-d
 ENV PATH=/tmp/venv/bin:$PATH
 RUN python3 -m venv /tmp/venv
 
-# We use the official poetry installer
-# This ensures poetry is always up-to-date.
-# This approach also ensures `poetry` and our environment don't overlap
-ENV POETRY_HOME=/tmp/poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH=$POETRY_HOME/bin:$HOME/.local/bin:$PATH
+ENV PATH=$HOME/.local/bin:$PATH
 
 
 ADD . /repo
