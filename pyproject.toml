@@ -18,5 +18,6 @@ members = [
   "libs/gl-client-py",
   "libs/gl-testserver",
   "libs/cln-version-manager",
+  "libs/gl-msggen",
 ]
 exclude = ["packages/seeds"]

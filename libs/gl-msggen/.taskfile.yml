@@ -1,0 +1,15 @@
+version: '3'
+
+tasks:
+  run:
+    cmds:
+      - uv run genudl
+
+  json:
+    directory: '.'
+    description: |
+      Updates the .msggen.json file containing GRPC enum metadata as
+      well as the backwards compat markers used for multi-version
+      compatibility.
+    cmds:
+      - curl https://raw.githubusercontent.com/ElementsProject/lightning/refs/heads/master/.msggen.json > glmsggen/msggen.json

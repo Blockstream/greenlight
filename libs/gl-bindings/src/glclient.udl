@@ -23,6 +23,8 @@ constructor();  GetinfoResponse Getinfo(GetinfoRequest request);
   DelinvoiceResponse DelInvoice(DelinvoiceRequest request);
   DevforgetchannelResponse DevForgetChannel(DevforgetchannelRequest request);
   EmergencyrecoverResponse EmergencyRecover(EmergencyrecoverRequest request);
+  GetemergencyrecoverdataResponse GetEmergencyRecoverData(GetemergencyrecoverdataRequest request);
+  ExposesecretResponse ExposeSecret(ExposesecretRequest request);
   RecoverResponse Recover(RecoverRequest request);
   RecoverchannelResponse RecoverChannel(RecoverchannelRequest request);
   InvoiceResponse Invoice(InvoiceRequest request);
@@ -57,16 +59,18 @@ constructor();  GetinfoResponse Getinfo(GetinfoRequest request);
   DelpayResponse DelPay(DelpayRequest request);
   DelforwardResponse DelForward(DelforwardRequest request);
   DisableofferResponse DisableOffer(DisableofferRequest request);
+  EnableofferResponse EnableOffer(EnableofferRequest request);
   DisconnectResponse Disconnect(DisconnectRequest request);
   FeeratesResponse Feerates(FeeratesRequest request);
   FetchinvoiceResponse FetchInvoice(FetchinvoiceRequest request);
-  Fundchannel_cancelResponse FundChannel_Cancel(Fundchannel_cancelRequest request);
-  Fundchannel_completeResponse FundChannel_Complete(Fundchannel_completeRequest request);
+  FundchannelCancelResponse FundChannelCancel(FundchannelCancelRequest request);
+  FundchannelCompleteResponse FundChannelComplete(FundchannelCompleteRequest request);
   FundchannelResponse FundChannel(FundchannelRequest request);
-  Fundchannel_startResponse FundChannel_Start(Fundchannel_startRequest request);
+  FundchannelStartResponse FundChannelStart(FundchannelStartRequest request);
   GetlogResponse GetLog(GetlogRequest request);
   FunderupdateResponse FunderUpdate(FunderupdateRequest request);
   GetrouteResponse GetRoute(GetrouteRequest request);
+  ListaddressesResponse ListAddresses(ListaddressesRequest request);
   ListforwardsResponse ListForwards(ListforwardsRequest request);
   ListoffersResponse ListOffers(ListoffersRequest request);
   ListpaysResponse ListPays(ListpaysRequest request);
@@ -74,11 +78,11 @@ constructor();  GetinfoResponse Getinfo(GetinfoRequest request);
   MultifundchannelResponse MultiFundChannel(MultifundchannelRequest request);
   MultiwithdrawResponse MultiWithdraw(MultiwithdrawRequest request);
   OfferResponse Offer(OfferRequest request);
-  Openchannel_abortResponse OpenChannel_Abort(Openchannel_abortRequest request);
-  Openchannel_bumpResponse OpenChannel_Bump(Openchannel_bumpRequest request);
-  Openchannel_initResponse OpenChannel_Init(Openchannel_initRequest request);
-  Openchannel_signedResponse OpenChannel_Signed(Openchannel_signedRequest request);
-  Openchannel_updateResponse OpenChannel_Update(Openchannel_updateRequest request);
+  OpenchannelAbortResponse OpenChannelAbort(OpenchannelAbortRequest request);
+  OpenchannelBumpResponse OpenChannelBump(OpenchannelBumpRequest request);
+  OpenchannelInitResponse OpenChannelInit(OpenchannelInitRequest request);
+  OpenchannelSignedResponse OpenChannelSigned(OpenchannelSignedRequest request);
+  OpenchannelUpdateResponse OpenChannelUpdate(OpenchannelUpdateRequest request);
   PingResponse Ping(PingRequest request);
   PluginResponse Plugin(PluginRequest request);
   RenepaystatusResponse RenePayStatus(RenepaystatusRequest request);
@@ -91,9 +95,10 @@ constructor();  GetinfoResponse Getinfo(GetinfoRequest request);
   SetpsbtversionResponse SetPsbtVersion(SetpsbtversionRequest request);
   SigninvoiceResponse SignInvoice(SigninvoiceRequest request);
   SignmessageResponse SignMessage(SignmessageRequest request);
-  Splice_initResponse Splice_Init(Splice_initRequest request);
-  Splice_signedResponse Splice_Signed(Splice_signedRequest request);
-  Splice_updateResponse Splice_Update(Splice_updateRequest request);
+  SpliceInitResponse SpliceInit(SpliceInitRequest request);
+  SpliceSignedResponse SpliceSigned(SpliceSignedRequest request);
+  SpliceUpdateResponse SpliceUpdate(SpliceUpdateRequest request);
+  DevspliceResponse DevSplice(DevspliceRequest request);
   UnreserveinputsResponse UnreserveInputs(UnreserveinputsRequest request);
   UpgradewalletResponse UpgradeWallet(UpgradewalletRequest request);
   WaitblockheightResponse WaitBlockHeight(WaitblockheightRequest request);
@@ -110,10 +115,29 @@ constructor();  GetinfoResponse Getinfo(GetinfoRequest request);
   BkprlistaccounteventsResponse BkprListAccountEvents(BkprlistaccounteventsRequest request);
   BkprlistbalancesResponse BkprListBalances(BkprlistbalancesRequest request);
   BkprlistincomeResponse BkprListIncome(BkprlistincomeRequest request);
+  BkpreditdescriptionbypaymentidResponse BkprEditDescriptionByPaymentId(BkpreditdescriptionbypaymentidRequest request);
+  BkpreditdescriptionbyoutpointResponse BkprEditDescriptionByOutpoint(BkpreditdescriptionbyoutpointRequest request);
   BlacklistruneResponse BlacklistRune(BlacklistruneRequest request);
   CheckruneResponse CheckRune(CheckruneRequest request);
   CreateruneResponse CreateRune(CreateruneRequest request);
   ShowrunesResponse ShowRunes(ShowrunesRequest request);
+  AskreneunreserveResponse AskReneUnreserve(AskreneunreserveRequest request);
+  AskrenelistlayersResponse AskReneListLayers(AskrenelistlayersRequest request);
+  AskrenecreatelayerResponse AskReneCreateLayer(AskrenecreatelayerRequest request);
+  AskreneremovelayerResponse AskReneRemoveLayer(AskreneremovelayerRequest request);
+  AskrenereserveResponse AskReneReserve(AskrenereserveRequest request);
+  AskreneageResponse AskReneAge(AskreneageRequest request);
+  GetroutesResponse GetRoutes(GetroutesRequest request);
+  AskrenedisablenodeResponse AskReneDisableNode(AskrenedisablenodeRequest request);
+  AskreneinformchannelResponse AskReneInformChannel(AskreneinformchannelRequest request);
+  AskrenecreatechannelResponse AskReneCreateChannel(AskrenecreatechannelRequest request);
+  AskreneupdatechannelResponse AskReneUpdateChannel(AskreneupdatechannelRequest request);
+  AskrenebiaschannelResponse AskReneBiasChannel(AskrenebiaschannelRequest request);
+  AskrenelistreservationsResponse AskReneListReservations(AskrenelistreservationsRequest request);
+  InjectpaymentonionResponse InjectPaymentOnion(InjectpaymentonionRequest request);
+  InjectonionmessageResponse InjectOnionMessage(InjectonionmessageRequest request);
+  XpayResponse Xpay(XpayRequest request);
+  SignmessagewithkeyResponse SignMessageWithKey(SignmessagewithkeyRequest request);
 };dictionary GetinfoResponse {
 };
 
@@ -172,6 +196,12 @@ dictionary DevforgetchannelResponse {
 };
 
 dictionary EmergencyrecoverResponse {
+};
+
+dictionary GetemergencyrecoverdataResponse {
+};
+
+dictionary ExposesecretResponse {
 };
 
 dictionary RecoverResponse {
@@ -276,6 +306,9 @@ dictionary DelforwardResponse {
 dictionary DisableofferResponse {
 };
 
+dictionary EnableofferResponse {
+};
+
 dictionary DisconnectResponse {
 };
 
@@ -285,16 +318,16 @@ dictionary FeeratesResponse {
 dictionary FetchinvoiceResponse {
 };
 
-dictionary Fundchannel_cancelResponse {
+dictionary FundchannelCancelResponse {
 };
 
-dictionary Fundchannel_completeResponse {
+dictionary FundchannelCompleteResponse {
 };
 
 dictionary FundchannelResponse {
 };
 
-dictionary Fundchannel_startResponse {
+dictionary FundchannelStartResponse {
 };
 
 dictionary GetlogResponse {
@@ -304,6 +337,9 @@ dictionary FunderupdateResponse {
 };
 
 dictionary GetrouteResponse {
+};
+
+dictionary ListaddressesResponse {
 };
 
 dictionary ListforwardsResponse {
@@ -327,19 +363,19 @@ dictionary MultiwithdrawResponse {
 dictionary OfferResponse {
 };
 
-dictionary Openchannel_abortResponse {
+dictionary OpenchannelAbortResponse {
 };
 
-dictionary Openchannel_bumpResponse {
+dictionary OpenchannelBumpResponse {
 };
 
-dictionary Openchannel_initResponse {
+dictionary OpenchannelInitResponse {
 };
 
-dictionary Openchannel_signedResponse {
+dictionary OpenchannelSignedResponse {
 };
 
-dictionary Openchannel_updateResponse {
+dictionary OpenchannelUpdateResponse {
 };
 
 dictionary PingResponse {
@@ -378,13 +414,16 @@ dictionary SigninvoiceResponse {
 dictionary SignmessageResponse {
 };
 
-dictionary Splice_initResponse {
+dictionary SpliceInitResponse {
 };
 
-dictionary Splice_signedResponse {
+dictionary SpliceSignedResponse {
 };
 
-dictionary Splice_updateResponse {
+dictionary SpliceUpdateResponse {
+};
+
+dictionary DevspliceResponse {
 };
 
 dictionary UnreserveinputsResponse {
@@ -435,6 +474,12 @@ dictionary BkprlistbalancesResponse {
 dictionary BkprlistincomeResponse {
 };
 
+dictionary BkpreditdescriptionbypaymentidResponse {
+};
+
+dictionary BkpreditdescriptionbyoutpointResponse {
+};
+
 dictionary BlacklistruneResponse {
 };
 
@@ -445,6 +490,57 @@ dictionary CreateruneResponse {
 };
 
 dictionary ShowrunesResponse {
+};
+
+dictionary AskreneunreserveResponse {
+};
+
+dictionary AskrenelistlayersResponse {
+};
+
+dictionary AskrenecreatelayerResponse {
+};
+
+dictionary AskreneremovelayerResponse {
+};
+
+dictionary AskrenereserveResponse {
+};
+
+dictionary AskreneageResponse {
+};
+
+dictionary GetroutesResponse {
+};
+
+dictionary AskrenedisablenodeResponse {
+};
+
+dictionary AskreneinformchannelResponse {
+};
+
+dictionary AskrenecreatechannelResponse {
+};
+
+dictionary AskreneupdatechannelResponse {
+};
+
+dictionary AskrenebiaschannelResponse {
+};
+
+dictionary AskrenelistreservationsResponse {
+};
+
+dictionary InjectpaymentonionResponse {
+};
+
+dictionary InjectonionmessageResponse {
+};
+
+dictionary XpayResponse {
+};
+
+dictionary SignmessagewithkeyResponse {
 };
 
 dictionary GetinfoRequest {
@@ -505,6 +601,12 @@ dictionary DevforgetchannelRequest {
 };
 
 dictionary EmergencyrecoverRequest {
+};
+
+dictionary GetemergencyrecoverdataRequest {
+};
+
+dictionary ExposesecretRequest {
 };
 
 dictionary RecoverRequest {
@@ -609,6 +711,9 @@ dictionary DelforwardRequest {
 dictionary DisableofferRequest {
 };
 
+dictionary EnableofferRequest {
+};
+
 dictionary DisconnectRequest {
 };
 
@@ -618,16 +723,16 @@ dictionary FeeratesRequest {
 dictionary FetchinvoiceRequest {
 };
 
-dictionary Fundchannel_cancelRequest {
+dictionary FundchannelCancelRequest {
 };
 
-dictionary Fundchannel_completeRequest {
+dictionary FundchannelCompleteRequest {
 };
 
 dictionary FundchannelRequest {
 };
 
-dictionary Fundchannel_startRequest {
+dictionary FundchannelStartRequest {
 };
 
 dictionary GetlogRequest {
@@ -637,6 +742,9 @@ dictionary FunderupdateRequest {
 };
 
 dictionary GetrouteRequest {
+};
+
+dictionary ListaddressesRequest {
 };
 
 dictionary ListforwardsRequest {
@@ -660,19 +768,19 @@ dictionary MultiwithdrawRequest {
 dictionary OfferRequest {
 };
 
-dictionary Openchannel_abortRequest {
+dictionary OpenchannelAbortRequest {
 };
 
-dictionary Openchannel_bumpRequest {
+dictionary OpenchannelBumpRequest {
 };
 
-dictionary Openchannel_initRequest {
+dictionary OpenchannelInitRequest {
 };
 
-dictionary Openchannel_signedRequest {
+dictionary OpenchannelSignedRequest {
 };
 
-dictionary Openchannel_updateRequest {
+dictionary OpenchannelUpdateRequest {
 };
 
 dictionary PingRequest {
@@ -711,13 +819,16 @@ dictionary SigninvoiceRequest {
 dictionary SignmessageRequest {
 };
 
-dictionary Splice_initRequest {
+dictionary SpliceInitRequest {
 };
 
-dictionary Splice_signedRequest {
+dictionary SpliceSignedRequest {
 };
 
-dictionary Splice_updateRequest {
+dictionary SpliceUpdateRequest {
+};
+
+dictionary DevspliceRequest {
 };
 
 dictionary UnreserveinputsRequest {
@@ -768,6 +879,12 @@ dictionary BkprlistbalancesRequest {
 dictionary BkprlistincomeRequest {
 };
 
+dictionary BkpreditdescriptionbypaymentidRequest {
+};
+
+dictionary BkpreditdescriptionbyoutpointRequest {
+};
+
 dictionary BlacklistruneRequest {
 };
 
@@ -778,5 +895,56 @@ dictionary CreateruneRequest {
 };
 
 dictionary ShowrunesRequest {
+};
+
+dictionary AskreneunreserveRequest {
+};
+
+dictionary AskrenelistlayersRequest {
+};
+
+dictionary AskrenecreatelayerRequest {
+};
+
+dictionary AskreneremovelayerRequest {
+};
+
+dictionary AskrenereserveRequest {
+};
+
+dictionary AskreneageRequest {
+};
+
+dictionary GetroutesRequest {
+};
+
+dictionary AskrenedisablenodeRequest {
+};
+
+dictionary AskreneinformchannelRequest {
+};
+
+dictionary AskrenecreatechannelRequest {
+};
+
+dictionary AskreneupdatechannelRequest {
+};
+
+dictionary AskrenebiaschannelRequest {
+};
+
+dictionary AskrenelistreservationsRequest {
+};
+
+dictionary InjectpaymentonionRequest {
+};
+
+dictionary InjectonionmessageRequest {
+};
+
+dictionary XpayRequest {
+};
+
+dictionary SignmessagewithkeyRequest {
 };
 

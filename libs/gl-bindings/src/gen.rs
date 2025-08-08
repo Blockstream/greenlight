@@ -104,6 +104,16 @@ pub struct EmergencyrecoverResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
+pub struct GetemergencyrecoverdataResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct ExposesecretResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
 pub struct RecoverResponse {
 }
 
@@ -274,6 +284,11 @@ pub struct DisableofferResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
+pub struct EnableofferResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
 pub struct DisconnectResponse {
 }
 
@@ -289,12 +304,12 @@ pub struct FetchinvoiceResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Fundchannel_cancelResponse {
+pub struct FundchannelCancelResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Fundchannel_completeResponse {
+pub struct FundchannelCompleteResponse {
 }
 
 #[allow(non_camel_case_types)]
@@ -304,7 +319,7 @@ pub struct FundchannelResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Fundchannel_startResponse {
+pub struct FundchannelStartResponse {
 }
 
 #[allow(non_camel_case_types)]
@@ -320,6 +335,11 @@ pub struct FunderupdateResponse {
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
 pub struct GetrouteResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct ListaddressesResponse {
 }
 
 #[allow(non_camel_case_types)]
@@ -359,27 +379,27 @@ pub struct OfferResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_abortResponse {
+pub struct OpenchannelAbortResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_bumpResponse {
+pub struct OpenchannelBumpResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_initResponse {
+pub struct OpenchannelInitResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_signedResponse {
+pub struct OpenchannelSignedResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_updateResponse {
+pub struct OpenchannelUpdateResponse {
 }
 
 #[allow(non_camel_case_types)]
@@ -444,17 +464,22 @@ pub struct SignmessageResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Splice_initResponse {
+pub struct SpliceInitResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Splice_signedResponse {
+pub struct SpliceSignedResponse {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Splice_updateResponse {
+pub struct SpliceUpdateResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct DevspliceResponse {
 }
 
 #[allow(non_camel_case_types)]
@@ -539,6 +564,16 @@ pub struct BkprlistincomeResponse {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
+pub struct BkpreditdescriptionbypaymentidResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct BkpreditdescriptionbyoutpointResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
 pub struct BlacklistruneResponse {
 }
 
@@ -555,6 +590,91 @@ pub struct CreateruneResponse {
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
 pub struct ShowrunesResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneunreserveResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenelistlayersResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenecreatelayerResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneremovelayerResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenereserveResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneageResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct GetroutesResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenedisablenodeResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneinformchannelResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenecreatechannelResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneupdatechannelResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenebiaschannelResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenelistreservationsResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct InjectpaymentonionResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct InjectonionmessageResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct XpayResponse {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct SignmessagewithkeyResponse {
 }
 
 #[allow(non_camel_case_types)]
@@ -655,6 +775,16 @@ pub struct DevforgetchannelRequest {
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
 pub struct EmergencyrecoverRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct GetemergencyrecoverdataRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct ExposesecretRequest {
 }
 
 #[allow(non_camel_case_types)]
@@ -829,6 +959,11 @@ pub struct DisableofferRequest {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
+pub struct EnableofferRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
 pub struct DisconnectRequest {
 }
 
@@ -844,12 +979,12 @@ pub struct FetchinvoiceRequest {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Fundchannel_cancelRequest {
+pub struct FundchannelCancelRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Fundchannel_completeRequest {
+pub struct FundchannelCompleteRequest {
 }
 
 #[allow(non_camel_case_types)]
@@ -859,7 +994,7 @@ pub struct FundchannelRequest {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Fundchannel_startRequest {
+pub struct FundchannelStartRequest {
 }
 
 #[allow(non_camel_case_types)]
@@ -875,6 +1010,11 @@ pub struct FunderupdateRequest {
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
 pub struct GetrouteRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct ListaddressesRequest {
 }
 
 #[allow(non_camel_case_types)]
@@ -914,27 +1054,27 @@ pub struct OfferRequest {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_abortRequest {
+pub struct OpenchannelAbortRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_bumpRequest {
+pub struct OpenchannelBumpRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_initRequest {
+pub struct OpenchannelInitRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_signedRequest {
+pub struct OpenchannelSignedRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Openchannel_updateRequest {
+pub struct OpenchannelUpdateRequest {
 }
 
 #[allow(non_camel_case_types)]
@@ -999,17 +1139,22 @@ pub struct SignmessageRequest {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Splice_initRequest {
+pub struct SpliceInitRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Splice_signedRequest {
+pub struct SpliceSignedRequest {
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
-pub struct Splice_updateRequest {
+pub struct SpliceUpdateRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct DevspliceRequest {
 }
 
 #[allow(non_camel_case_types)]
@@ -1094,6 +1239,16 @@ pub struct BkprlistincomeRequest {
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
+pub struct BkpreditdescriptionbypaymentidRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct BkpreditdescriptionbyoutpointRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
 pub struct BlacklistruneRequest {
 }
 
@@ -1110,6 +1265,91 @@ pub struct CreateruneRequest {
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug)]
 pub struct ShowrunesRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneunreserveRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenelistlayersRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenecreatelayerRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneremovelayerRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenereserveRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneageRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct GetroutesRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenedisablenodeRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneinformchannelRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenecreatechannelRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskreneupdatechannelRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenebiaschannelRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct AskrenelistreservationsRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct InjectpaymentonionRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct InjectonionmessageRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct XpayRequest {
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Debug)]
+pub struct SignmessagewithkeyRequest {
 }
 
 pub struct Node {
@@ -1236,6 +1476,18 @@ unimplemented!();
 
 #[allow(non_snake_case)]
 pub fn EmergencyRecover(&self, request: EmergencyrecoverRequest) -> EmergencyrecoverResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn GetEmergencyRecoverData(&self, request: GetemergencyrecoverdataRequest) -> GetemergencyrecoverdataResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn ExposeSecret(&self, request: ExposesecretRequest) -> ExposesecretResponse {
 dbg!(request);
 unimplemented!();
 }
@@ -1445,6 +1697,12 @@ unimplemented!();
 }
 
 #[allow(non_snake_case)]
+pub fn EnableOffer(&self, request: EnableofferRequest) -> EnableofferResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
 pub fn Disconnect(&self, request: DisconnectRequest) -> DisconnectResponse {
 dbg!(request);
 unimplemented!();
@@ -1463,13 +1721,13 @@ unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn FundChannel_Cancel(&self, request: Fundchannel_cancelRequest) -> Fundchannel_cancelResponse {
+pub fn FundChannelCancel(&self, request: FundchannelCancelRequest) -> FundchannelCancelResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn FundChannel_Complete(&self, request: Fundchannel_completeRequest) -> Fundchannel_completeResponse {
+pub fn FundChannelComplete(&self, request: FundchannelCompleteRequest) -> FundchannelCompleteResponse {
 dbg!(request);
 unimplemented!();
 }
@@ -1481,7 +1739,7 @@ unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn FundChannel_Start(&self, request: Fundchannel_startRequest) -> Fundchannel_startResponse {
+pub fn FundChannelStart(&self, request: FundchannelStartRequest) -> FundchannelStartResponse {
 dbg!(request);
 unimplemented!();
 }
@@ -1500,6 +1758,12 @@ unimplemented!();
 
 #[allow(non_snake_case)]
 pub fn GetRoute(&self, request: GetrouteRequest) -> GetrouteResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn ListAddresses(&self, request: ListaddressesRequest) -> ListaddressesResponse {
 dbg!(request);
 unimplemented!();
 }
@@ -1547,31 +1811,31 @@ unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn OpenChannel_Abort(&self, request: Openchannel_abortRequest) -> Openchannel_abortResponse {
+pub fn OpenChannelAbort(&self, request: OpenchannelAbortRequest) -> OpenchannelAbortResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn OpenChannel_Bump(&self, request: Openchannel_bumpRequest) -> Openchannel_bumpResponse {
+pub fn OpenChannelBump(&self, request: OpenchannelBumpRequest) -> OpenchannelBumpResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn OpenChannel_Init(&self, request: Openchannel_initRequest) -> Openchannel_initResponse {
+pub fn OpenChannelInit(&self, request: OpenchannelInitRequest) -> OpenchannelInitResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn OpenChannel_Signed(&self, request: Openchannel_signedRequest) -> Openchannel_signedResponse {
+pub fn OpenChannelSigned(&self, request: OpenchannelSignedRequest) -> OpenchannelSignedResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn OpenChannel_Update(&self, request: Openchannel_updateRequest) -> Openchannel_updateResponse {
+pub fn OpenChannelUpdate(&self, request: OpenchannelUpdateRequest) -> OpenchannelUpdateResponse {
 dbg!(request);
 unimplemented!();
 }
@@ -1649,19 +1913,25 @@ unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn Splice_Init(&self, request: Splice_initRequest) -> Splice_initResponse {
+pub fn SpliceInit(&self, request: SpliceInitRequest) -> SpliceInitResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn Splice_Signed(&self, request: Splice_signedRequest) -> Splice_signedResponse {
+pub fn SpliceSigned(&self, request: SpliceSignedRequest) -> SpliceSignedResponse {
 dbg!(request);
 unimplemented!();
 }
 
 #[allow(non_snake_case)]
-pub fn Splice_Update(&self, request: Splice_updateRequest) -> Splice_updateResponse {
+pub fn SpliceUpdate(&self, request: SpliceUpdateRequest) -> SpliceUpdateResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn DevSplice(&self, request: DevspliceRequest) -> DevspliceResponse {
 dbg!(request);
 unimplemented!();
 }
@@ -1763,6 +2033,18 @@ unimplemented!();
 }
 
 #[allow(non_snake_case)]
+pub fn BkprEditDescriptionByPaymentId(&self, request: BkpreditdescriptionbypaymentidRequest) -> BkpreditdescriptionbypaymentidResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn BkprEditDescriptionByOutpoint(&self, request: BkpreditdescriptionbyoutpointRequest) -> BkpreditdescriptionbyoutpointResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
 pub fn BlacklistRune(&self, request: BlacklistruneRequest) -> BlacklistruneResponse {
 dbg!(request);
 unimplemented!();
@@ -1782,6 +2064,108 @@ unimplemented!();
 
 #[allow(non_snake_case)]
 pub fn ShowRunes(&self, request: ShowrunesRequest) -> ShowrunesResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneUnreserve(&self, request: AskreneunreserveRequest) -> AskreneunreserveResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneListLayers(&self, request: AskrenelistlayersRequest) -> AskrenelistlayersResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneCreateLayer(&self, request: AskrenecreatelayerRequest) -> AskrenecreatelayerResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneRemoveLayer(&self, request: AskreneremovelayerRequest) -> AskreneremovelayerResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneReserve(&self, request: AskrenereserveRequest) -> AskrenereserveResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneAge(&self, request: AskreneageRequest) -> AskreneageResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn GetRoutes(&self, request: GetroutesRequest) -> GetroutesResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneDisableNode(&self, request: AskrenedisablenodeRequest) -> AskrenedisablenodeResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneInformChannel(&self, request: AskreneinformchannelRequest) -> AskreneinformchannelResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneCreateChannel(&self, request: AskrenecreatechannelRequest) -> AskrenecreatechannelResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneUpdateChannel(&self, request: AskreneupdatechannelRequest) -> AskreneupdatechannelResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneBiasChannel(&self, request: AskrenebiaschannelRequest) -> AskrenebiaschannelResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn AskReneListReservations(&self, request: AskrenelistreservationsRequest) -> AskrenelistreservationsResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn InjectPaymentOnion(&self, request: InjectpaymentonionRequest) -> InjectpaymentonionResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn InjectOnionMessage(&self, request: InjectonionmessageRequest) -> InjectonionmessageResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn Xpay(&self, request: XpayRequest) -> XpayResponse {
+dbg!(request);
+unimplemented!();
+}
+
+#[allow(non_snake_case)]
+pub fn SignMessageWithKey(&self, request: SignmessagewithkeyRequest) -> SignmessagewithkeyResponse {
 dbg!(request);
 unimplemented!();
 }
