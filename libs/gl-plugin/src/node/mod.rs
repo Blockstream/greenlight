@@ -369,6 +369,7 @@ impl Node for PluginNodeServer {
                     req.request.signer_state.len()
                 );
 
+		eprintln!("WIRE: plugin -> signer: {:?}", req);
                 if let Err(e) = tx.send(Ok(req.request)).await {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
                     break;
@@ -393,6 +394,7 @@ impl Node for PluginNodeServer {
             log::warn!("The above error was returned instead of a response.");
             return Ok(Response::new(pb::Empty::default()));
         }
+	eprintln!("WIRE: signer -> plugin: {:?}", req);
 
         // Create a state from the key-value-version tuples. Need to
         // convert here, since `pb` is duplicated in the two different
