@@ -70,12 +70,12 @@ async fn process_requests(
         if let Ok(msg) = conn.read().await {
             match msg.msgtype() {
                 9 => {
-                    debug!("Got a message from node: {:?}", &msg.body);
+                    eprintln!("Got a message from node: {:?}", &msg.body);
                     // This requests a new client fd with a given context,
                     // handle it locally, and defer the creation of the client
                     // fd on the server side until we need it.
                     let ctx = HsmRequestContext::from_client_hsmfd_msg(&msg)?;
-                    debug!("Got a request for a new client fd. Context: {:?}", ctx);
+                    eprintln!("Got a request for a new client fd. Context: {:?}", ctx);
 
                     let (local, remote) = UnixStream::pair()?;
                     let local = NodeConnection {
@@ -103,15 +103,20 @@ async fn process_requests(
                         signer_state: Vec::new(),
                     });
                     let start_time = tokio::time::Instant::now();
-                    debug!("Got a message from node: {:?}", &req);
+                    eprintln!(
+                        "WIRE: lightningd -> hsmd: Got a message from node: {:?}",
+                        &req
+                    );
+                    eprintln!("WIRE: hsmd -> plugin: Forwarding: {:?}", &req);
                     let res = server.request(req).await?.into_inner();
                     let msg = Message::from_raw(res.raw);
                     let delta = start_time.elapsed();
-                    debug!(
-                        "Got respone from hsmd: {:?} after {}ms",
+                    eprintln!(
+                        "WIRE: plugin -> hsmd: Got respone from hsmd: {:?} after {}ms",
                         &msg,
                         delta.as_millis()
                     );
+                    eprintln!("WIRE: hsmd -> lightningd: {:?}", &msg);
                     conn.write(msg).await?
                 }
             }
