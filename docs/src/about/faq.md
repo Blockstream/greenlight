@@ -97,3 +97,15 @@ Bitcoin wallet. These methods are designed to transfer the entire
 available amount and handle the associated fees differently, typically
 deducting them from the total amount being moved rather than requiring
 them to be available beforehand as an extra buffer.
+
+## Common Errors
+
+### Why am I seeing a "No such file or directory" error? <a name="no-such-file-or-directory"></a>
+
+When a client attempts to communicate with its Greenlight node, it may occasionally receive a `No such file or directory` error. This typically happens if the Core Lightning (CLN) node on the server is taking longer than usual to start up.
+
+There is a multitude of potential causes for a slow startup, however the most common one is a slow startup due to either host being overloaded, or the `bitcoind` instance serving as the nodes gateway to the Bitcoin network.
+
+If an RPC call comes in during the startup we start a deadline of several seconds, during which we continually poll for the CLN to become reachable. If the polling succeeds then the call is forwarded to the CLN node, if at expiry of the deadline the RPC has not appeared yet, we let the RPC call through, as a last ditch attempt, but if that fails too we get the `No such file or directory` error.
+
+In most cases, simply retrying the operation after a short delay should be successful.
