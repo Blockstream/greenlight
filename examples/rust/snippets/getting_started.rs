@@ -45,7 +45,7 @@ async fn create_seed() -> Vec<u8> {
     let m = Mnemonic::generate_in_with(&mut rng, Language::English, 24).unwrap();
 
     //Show seed phrase to user
-    let _phrase = m.word_iter().fold("".to_string(), |c, n| c + " " + n);
+    let _phrase = m.words().fold("".to_string(), |c, n| c + " " + n);
 
     const EMPTY_PASSPHRASE: &str = "";
     let seed = &m.to_seed(EMPTY_PASSPHRASE)[0..32]; // Only need the first 32 bytes
