@@ -4,7 +4,7 @@ use crate::pb::{hsm_client::HsmClient, Empty, HsmRequest, HsmRequestContext};
 use crate::wire::{DaemonConnection, Message};
 use anyhow::{anyhow, Context};
 use anyhow::{Error, Result};
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use std::convert::TryFrom;
 use std::env;
 use std::os::unix::io::{AsRawFd, FromRawFd};

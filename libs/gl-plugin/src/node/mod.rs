@@ -32,6 +32,8 @@ static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
     OnceCell::const_new();
 
 static RPC_CLIENT: OnceCell<Arc<Mutex<cln_rpc::ClnRpc>>> = OnceCell::const_new();
+static RPC_POLL_INTERVAL: Duration = Duration::from_millis(500);
+
 
 pub async fn get_rpc<P: AsRef<Path>>(path: P) -> Arc<Mutex<cln_rpc::ClnRpc>> {
     RPC_CLIENT
@@ -42,12 +44,9 @@ pub async fn get_rpc<P: AsRef<Path>>(path: P) -> Arc<Mutex<cln_rpc::ClnRpc>> {
                         debug!("Connected to lightning-rpc.");
                         return Arc::new(Mutex::new(client));
                     }
-                    Err(e) => {
-                        debug!(
-                            "Failed to connect to lightning-rpc: {:?}. Retrying in 50m...",
-                            e
-                        );
-                        tokio::time::sleep(Duration::from_millis(50)).await;
+                    Err(_) => {
+                        debug!("Failed to connect to lightning-rpc. Retrying in {RPC_POLL_INTERVAL:?}...");
+                        tokio::time::sleep(RPC_POLL_INTERVAL).await;
                         continue;
                     }
                 }
@@ -369,7 +368,7 @@ impl Node for PluginNodeServer {
                     req.request.signer_state.len()
                 );
 
-		eprintln!("WIRE: plugin -> signer: {:?}", req);
+                eprintln!("WIRE: plugin -> signer: {:?}", req);
                 if let Err(e) = tx.send(Ok(req.request)).await {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
                     break;
@@ -394,7 +393,7 @@ impl Node for PluginNodeServer {
             log::warn!("The above error was returned instead of a response.");
             return Ok(Response::new(pb::Empty::default()));
         }
-	eprintln!("WIRE: signer -> plugin: {:?}", req);
+        eprintln!("WIRE: signer -> plugin: {:?}", req);
 
         // Create a state from the key-value-version tuples. Need to
         // convert here, since `pb` is duplicated in the two different
