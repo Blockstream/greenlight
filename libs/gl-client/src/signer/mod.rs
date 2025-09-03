@@ -386,9 +386,16 @@ impl Signer {
     /// requests from it. The requests are then verified and processed
     /// using the `Hsmd`.
     pub async fn run_once(&self, node_uri: Uri) -> Result<(), Error> {
-        debug!("Connecting to node at {}", node_uri);
+        info!("Connecting to node at {}", node_uri);
+
+        let tls_config = if node_uri.host().unwrap_or_default().contains("blckstrm") {
+            self.tls.inner.clone()
+        } else {
+            self.tls.inner.clone().domain_name("localhost")
+        };
+
         let c = Endpoint::from_shared(node_uri.to_string())?
-            .tls_config(self.tls.inner.clone().domain_name("localhost"))?
+            .tls_config(tls_config)?
             .tcp_keepalive(Some(crate::TCP_KEEPALIVE))
             .http2_keep_alive_interval(crate::TCP_KEEPALIVE)
             .keep_alive_timeout(crate::TCP_KEEPALIVE_TIMEOUT)
@@ -725,7 +732,7 @@ impl Signer {
         &self,
         scheduler_uri: String,
     ) -> Result<SchedulerClient<tonic::transport::channel::Channel>> {
-        debug!("Connecting to scheduler at {scheduler_uri}");
+        info!("Connecting to scheduler at {scheduler_uri}");
 
         let channel = Endpoint::from_shared(scheduler_uri.clone())?
             .tls_config(self.tls.inner.clone())?
@@ -740,7 +747,7 @@ impl Signer {
         // If it fails due to connection error, sleep and retry. Re-throw all other errors.
         loop {
             #[allow(deprecated)]
-            let maybe_upgrade_res = scheduler
+            let res = scheduler
                 .maybe_upgrade(UpgradeRequest {
                     initmsg: self.init.clone(),
                     signer_version: self.version().to_owned(),
@@ -752,19 +759,19 @@ impl Signer {
                 })
                 .await;
 
-            if let Err(err_status) = maybe_upgrade_res {
-                match err_status.code() {
+            match res {
+                Err(e) => match e.code() {
                     Code::Unavailable => {
                         debug!("Cannot connect to scheduler, sleeping and retrying");
                         sleep(Duration::from_secs(3)).await;
                         continue;
                     }
-                    _ => {
-                        return Err(Error::Upgrade(err_status))?;
-                    }
+                    _ => Err(Error::Upgrade(e))?,
+                },
+                Ok(r) => {
+                    debug!("Server reports version {}", r.into_inner().old_version)
                 }
             }
-
             break;
         }
         Ok(scheduler)
