@@ -32,23 +32,3 @@ vls-core = "^0.13"
 vls-persist = "^0.13"
 vls-protocol-signer = "^0.13"
 vls-protocol = "^0.13"
-
-
-# Config for 'cargo dist'
-[workspace.metadata.dist]
-# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.4.2"
-# CI backends to support
-ci = ["github"]
-# The installers to generate for each app
-installers = []
-# Target platforms to build apps for (Rust target-triple syntax)
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "aarch64-apple-darwin",
-    "x86_64-apple-darwin",
-]
-# Publish jobs to run in CI
-pr-run-mode = "upload"
-
-allow-dirty = ["ci"]

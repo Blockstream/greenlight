@@ -7,11 +7,11 @@ on:
         required: true
         type: choice
         options:
-          - widget
-          - gadget
-          - budget
-          - fidget
-          - nugget
+          - gl-client
+          - gl-plugin
+          - gl-signerproxy
+          - gl-cli
+          - gl-util
       version:
         description: Version to release
         required: true
