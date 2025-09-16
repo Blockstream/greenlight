@@ -1,8 +1,11 @@
 [package]
 name = "gl-client"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
-authors = ["Christian Decker", "The Greenlight Team"]
+authors = [
+  "The Greenlight Team"
+]
+
 description = "Client library for Greenlight, and basis for language bindings."
 repository = "https://github.com/Blockstream/greenlight"
 license = "MIT"
