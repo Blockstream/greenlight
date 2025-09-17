@@ -80,7 +80,7 @@ FROM ubuntu:22.04 AS bitcoin-downloader
 RUN apt update && apt install -qqy wget
 ARG TARGETPLATFORM
 
-ARG BITCOIN_VERSION=25.0
+ARG BITCOIN_VERSION=28.2
 
 RUN PLATFORM=$( \
     case ${TARGETPLATFORM} in \

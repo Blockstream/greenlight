@@ -38,7 +38,7 @@ tasks:
     dir: 
     vars:
     env:
-      BITCOIN_VERSION: 28.1
+      BITCOIN_VERSION: 28.2
       BINDIR: '{{.BINDIR | default "bin"}}'
     cmds:
       - mkdir -p {{ .HOME }}/bin
