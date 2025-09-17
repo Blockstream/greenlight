@@ -6,7 +6,7 @@ FROM rust:slim-bullseye AS builder
 #---------------------------------------------------------------------
 # Build-time arguments & environment variables
 #---------------------------------------------------------------------
-ARG BITCOIN_VERSION=24.0
+ARG BITCOIN_VERSION=28.2
 ARG GID=0
 ARG UID=0
 ARG DOCKER_USER=dev
