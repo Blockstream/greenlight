@@ -1,0 +1,32 @@
+[project]
+name = "glmsggen"
+version = "0.1.0"
+description = "A tool to generate CLN-like interfaces"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.1.7",
+    "msggen",
+]
+include = [
+  "glmsggen/msggen.json",
+]
+
+exclude = [
+  ".gitignore",
+  ".taskfile.yml",
+  ".python-version",
+]
+
+[project.scripts]
+genudl = "glmsggen.__main__:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+msggen = { git = "https://github.com/ElementsProject/lightning", subdirectory = "contrib/msggen" }
