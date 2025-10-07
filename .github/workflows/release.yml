@@ -31,6 +31,19 @@ on:
       # The 'v' prefix helps distinguish version tags from other tags
       - '*-v[0-9]+.[0-9]+.[0-9]+'
 
+  # Manual trigger for dry-run testing
+  # This allows testing all validation checks without actually publishing
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: 'Crate name to test (e.g., gl-client)'
+        required: true
+        type: string
+      version:
+        description: 'Version to test (e.g., 1.2.3)'
+        required: true
+        type: string
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -48,35 +61,46 @@ jobs:
       - name: Parse tag
         id: parse
         run: |
-          # Extract the full tag name from the GitHub ref
-          # GITHUB_REF format: refs/tags/mycrate-v1.2.3
-          TAG=${GITHUB_REF#refs/tags/}
-          echo "Full tag: $TAG"
-          
-          # Parse the tag to extract crate name and version
-          # Example: mycrate-v1.2.3 → CRATE=mycrate, VERSION=1.2.3
-          # This regex removes everything from '-v' onwards to get the crate name
-          CRATE=$(echo $TAG | sed -E 's/-v[0-9]+\.[0-9]+\.[0-9]+$//')
-          
-          # This regex extracts just the version numbers after '-v'
-          VERSION=$(echo $TAG | sed -E 's/.*-v([0-9]+\.[0-9]+\.[0-9]+)$/\1/')
-          
+          # Check if this is a manual dispatch (dry-run) or tag-triggered run
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual dispatch - use inputs
+            CRATE="${{ inputs.crate }}"
+            VERSION="${{ inputs.version }}"
+            echo "🧪 DRY-RUN MODE: Testing $CRATE version $VERSION"
+            echo "dry_run=true" >> $GITHUB_OUTPUT
+          else
+            # Tag-triggered - parse from tag
+            # Extract the full tag name from the GitHub ref
+            # GITHUB_REF format: refs/tags/mycrate-v1.2.3
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "Full tag: $TAG"
+
+            # Parse the tag to extract crate name and version
+            # Example: mycrate-v1.2.3 → CRATE=mycrate, VERSION=1.2.3
+            # This regex removes everything from '-v' onwards to get the crate name
+            CRATE=$(echo $TAG | sed -E 's/-v[0-9]+\.[0-9]+\.[0-9]+$//')
+
+            # This regex extracts just the version numbers after '-v'
+            VERSION=$(echo $TAG | sed -E 's/.*-v([0-9]+\.[0-9]+\.[0-9]+)$/\1/')
+
+            echo "📦 Publishing $CRATE version $VERSION"
+            echo "dry_run=false" >> $GITHUB_OUTPUT
+          fi
+
           # Make these available to subsequent steps via GITHUB_OUTPUT
           echo "crate=$CRATE" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
+
           # Parse semantic version components for later use in semver checks
           # We need to know if this is a major/minor/patch bump to determine
           # whether breaking changes are allowed
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
-          
+
           echo "major=$MAJOR" >> $GITHUB_OUTPUT
           echo "minor=$MINOR" >> $GITHUB_OUTPUT
           echo "patch=$PATCH" >> $GITHUB_OUTPUT
-          
-          echo "📦 Publishing $CRATE version $VERSION"
       
       - uses: dtolnay/rust-toolchain@stable
       
@@ -411,6 +435,7 @@ jobs:
       # ==========================================================================
       
       - name: Publish to crates.io
+        if: steps.parse.outputs.dry_run == 'false'
         run: |
           echo "🚀 Publishing ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }} to crates.io..."
           
@@ -428,27 +453,46 @@ jobs:
         CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
       
       - name: Create GitHub Release
+        if: steps.parse.outputs.dry_run == 'false'
         uses: softprops/action-gh-release@v1
         with:
           # Use the tag that triggered this workflow
           tag_name: ${{ github.ref }}
-          
+
           # Format: "mycrate v1.2.3"
           name: ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }}
-          
+
           # Release notes body
           # In the future, you could extract the changelog section here
           # to automatically populate the release notes
           body: |
             Published ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }} to crates.io
-            
+
             🔗 [View on crates.io](https://crates.io/crates/${{ steps.parse.outputs.crate }})
-            
+
             See [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details.
         env:
           # GITHUB_TOKEN is automatically provided by GitHub Actions
           # No need to create this secret manually
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dry-run complete
+        if: steps.parse.outputs.dry_run == 'true'
+        run: |
+          echo "✅ DRY-RUN COMPLETE!"
+          echo ""
+          echo "All validation checks passed for ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }}"
+          echo ""
+          echo "The following checks were successful:"
+          echo "  ✅ Version matches Cargo.toml"
+          echo "  ✅ Changelog format is valid"
+          echo "  ✅ Changelog entry exists"
+          echo "  ✅ Semver compatibility check passed"
+          echo "  ✅ All tests passed"
+          echo ""
+          echo "To publish for real, push a tag:"
+          echo "  git tag ${{ steps.parse.outputs.crate }}-v${{ steps.parse.outputs.version }}"
+          echo "  git push origin ${{ steps.parse.outputs.crate }}-v${{ steps.parse.outputs.version }}"
 
 # ==============================================================================
 # MAINTENANCE NOTES
