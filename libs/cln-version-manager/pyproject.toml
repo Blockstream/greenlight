@@ -26,6 +26,7 @@ build-backend = "hatchling.build"
 dev = [
     "mypy>=1.14.1",
     "pytest>=7.4.4",
+    "python-kacl>=0.6.7",
     "types-requests>=2.31.0.6",
 ]
 
