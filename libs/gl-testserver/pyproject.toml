@@ -15,3 +15,15 @@ gltestserver = 'gltestserver.__main__:cli'
 
 [tool.uv.sources]
 gl-testing = { workspace = true }
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "gltestserver",
+]
