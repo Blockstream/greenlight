@@ -20,6 +20,7 @@ dependencies = [
     "sh>=1.14.3",
     "sonora>=0.2.3",
     "cln-version-manager",
+    "bip39>=0.0.2",
 ]
 
 

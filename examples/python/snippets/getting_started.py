@@ -1,3 +1,6 @@
+import os
+import sys
+from pathlib import Path
 import bip39  # type: ignore
 from glclient import Credentials, Signer, Scheduler  # type: ignore
 from pathlib import Path
@@ -48,7 +51,7 @@ def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str
     # ---8<--- [end: dev_creds]
 
     # ---8<--- [start: init_signer]
-    network = "bitcoin"
+    network = "regtest"
     signer = Signer(seed, network, developer_creds)
     # ---8<--- [end: init_signer]
 
@@ -66,16 +69,21 @@ def register_node(seed: bytes, developer_cert_path: str, developer_key_path: str
 
     # ---8<--- [end: register_node]
 
+    return scheduler, device_creds, signer
+
+
+def get_node(scheduler: Scheduler, device_creds: Credentials) -> dict:
     # ---8<--- [start: get_node]
     scheduler = scheduler.authenticate(device_creds)
     node = scheduler.node()
     # ---8<--- [end: get_node]
+    return node
 
 
 # TODO: Remove node_id from signature and add node_id to credentials
 def start_node(device_creds_path: str, node_id: bytes) -> None:
     # ---8<--- [start: start_node]
-    network = "bitcoin"
+    network = "regtest"
     device_creds = Credentials.from_path(device_creds_path)
     scheduler = Scheduler(network, device_creds)
 
@@ -106,7 +114,7 @@ def start_node(device_creds_path: str, node_id: bytes) -> None:
 def recover_node(developer_cert: bytes, developer_key: bytes) -> None:
     # ---8<--- [start: recover_node]
     seed = read_file("seed")
-    network = "bitcoin"
+    network = "regtest"
     signer_creds = Credentials.nobody_with(developer_cert, developer_key)
     signer = Signer(seed, network, signer_creds)
 
@@ -124,3 +132,42 @@ def recover_node(developer_cert: bytes, developer_key: bytes) -> None:
 
     scheduler.recover(signer)
     # ---8<--- [end: recover_node]
+
+def main():
+    NETWORK = "regtest"
+    base_dir = "/tmp/gltests/gl-testserver/certs/users"
+    developer_cert_path = Path(base_dir) / "nobody.crt"
+    developer_key_path = Path(base_dir) / "nobody-key.pem"
+
+    # Verify files exist
+    if not os.path.exists(developer_cert_path):
+        print(f"Error: Developer certificate not found at {developer_cert_path}")
+        sys.exit(1)
+        
+    if not os.path.exists(developer_key_path):
+        print(f"Error: Developer key not found at {developer_key_path}")
+        sys.exit(1)
+    
+    # Step 1: Create seed
+    print("Creating seed...")
+    seed = create_seed()
+    
+    # Step 2: Register node
+    print("Registering node...")
+    my_scheduler, device_creds, signer = register_node(seed, developer_cert_path, developer_key_path)
+    
+    # Step 3: Get GL node
+    print("Getting GL node info...")
+    node = get_node(my_scheduler, device_creds)
+
+    # Step 3: Get lightning node's information
+    print("Fetching lightning node getinfo...")
+    info = node.get_info()
+    print('Node information:')
+    print(info)
+    
+    # Remove the assert False to let the script complete normally
+    print("Script completed successfully!")
+
+if __name__ == "__main__":
+    main()
