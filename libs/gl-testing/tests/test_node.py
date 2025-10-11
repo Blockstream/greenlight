@@ -1,13 +1,49 @@
+from examples.python.snippets.getting_started import ( create_seed, register_node, get_node )
 from gltesting.identity import Identity
 from gltesting.fixtures import *
 from pyln.testing.utils import wait_for
 from rich.pretty import pprint
-from glclient import nodepb
+from glclient import Credentials, Signer, Scheduler
 from pyln import grpc as clnpb
 from flaky import flaky
 
 import time
 import pytest
+
+
+def test_code_snippets(scheduler, clients):
+    NETWORK="regtest"
+    base_dir = "/tmp/gltests/gl-testserver/certs/users"
+    developer_cert_path = Path(base_dir) / "nobody.crt"
+    developer_key_path = Path(base_dir) / "nobody-key.pem"
+
+    # Verify files exist
+    if not os.path.exists(developer_cert_path):
+        print(f"Error: Developer certificate not found at {developer_cert_path}")
+        sys.exit(1)
+        
+    if not os.path.exists(developer_key_path):
+        print(f"Error: Developer key not found at {developer_key_path}")
+        sys.exit(1)
+    
+    # Step 1: Create seed
+    print("Creating seed...")
+    seed = create_seed()
+    
+    # Step 2: Register node
+    print("Registering node...")
+    my_scheduler, device_creds, signer = register_node(seed, developer_cert_path, developer_key_path)
+    
+    # Step 3: Get GL node
+    print("Getting GL node...")
+    node = get_node(my_scheduler, device_creds)
+
+    # Step 4: Get lightning node's information
+    print("Fetching lightning node getinfo...")
+    info = node.get_info()
+    print('Node information:')
+    print(info)
+    assert False
 
 
 def test_node_start(scheduler, clients):
