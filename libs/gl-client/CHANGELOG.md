@@ -9,3 +9,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - Addressed an issue with signers being unable to connect to the node, due to an SNI header override that is no longer required
+- Parsing an invalid certificate no longer panics, instead returning an error.
+- Addressed a deprecation warning in gl-testing regarding PROTOCOL_TLS being renamed to PROTOCOL_TLS_SERVER
