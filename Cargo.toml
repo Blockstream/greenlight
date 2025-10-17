@@ -19,6 +19,8 @@ members = [
     "libs/gl-signerproxy",
     "libs/gl-cli",
     "libs/gl-util",
+    "libs/gl-sdk",
+    "libs/uniffi-bindgen",
 ]
 
 [workspace.dependencies]

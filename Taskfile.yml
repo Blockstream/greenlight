@@ -25,6 +25,10 @@ includes:
     taskfile: "libs/gl-signerproxy/.tasks.yml"
     dir: "."
 
+  sdk:
+    taskfile: "libs/gl-sdk/.tasks.yml"
+    dir: "."
+
 tasks:
   ci-check:
     deps:
