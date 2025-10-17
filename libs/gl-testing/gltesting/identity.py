@@ -55,7 +55,7 @@ class Identity(object):
         )
 
     def to_ssl_context(self):
-        s = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        s = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         s.load_cert_chain(self.cert_chain_path, keyfile=self.private_key_path)
         s.load_verify_locations(capath=self.caroot_path)
         s.set_alpn_protocols(['h2'])
