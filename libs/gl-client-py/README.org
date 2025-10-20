@@ -1,0 +1,64 @@
+
+* Introduction
+
+This library implements the RPC client for Greenlight. It does so
+using the rust library to handle the actual encryption, authentication
+and connection managemnt, freeing users from having to care about
+them.
+
+
+* Installation
+You can in most cases download a prebuilt version of this library from
+our private repository using the following command:
+
+#+begin_src bash
+pip install --extra-index-url=https://us-west2-python.pkg.dev/c-lightning/greenlight-pypi/simple/ -U gl-client-py
+#+end_src
+
+The same command can be used to pull in any updated versions from the
+repository.
+
+If you run any of the following platforms you'll get a precompiled
+version:
+
+ - MacOS `arm64` and `x86_64` (cpython 3.6, 3.7m, 3.8, 3.9 and 3.10)
+ - Linux `glibc 2.24` `x86_64` and `i686` (cpython 3.6, 3.7m, 3.8, 3.9 and 3.10, pypy 3.7)
+
+Should your platform not be among the precompiled versions you will
+need to have some additional dependencies to build it on the fly. See
+the following subsections for detailed information for your
+platform. Please also tell us about your platform so we can add it to
+our build system if possible.
+
+With the dependencies installed you should be able to install using
+the above command, and it should build the binary extension and
+install it.
+
+** Ubuntu / Debian
+
+The following dependencies are required to install from source.
+
+#+begin_src bash
+apt-get update
+apt-get install -y \
+	autoconf \
+	clang \
+	curl \
+	git \
+	libgmp-dev \
+	libsqlite3-dev \
+	libtool \
+	pkg-config \
+	python3-pip \
+	valgrind
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
+source $HOME/.cargo/env
+
+pip3 install --user maturin
+export PATH=$PATH:~/.local/bin
+#+end_src
+
+The =glclient= dependency will require at least rustc 1.56 since
+that's when the =edition2021= feature was stabilized.
+

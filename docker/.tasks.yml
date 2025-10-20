@@ -1,0 +1,50 @@
+version: "3"
+
+tasks:
+  install-dependencies:
+    vars:
+      BINDIR: '{{.BINDIR | default "{{ .HOME }}/bin"}}'
+    deps:
+      - install-cfssl
+      - install-bitcoind
+  
+  install-protoc:
+    dir: '/tmp'
+    env:
+      PROTOC_VERSION: 3.19.3
+      BINDIR: '{{.BINDIR | default "bin"}}'
+    cmds:
+      - wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip --quiet -O protoc.zip
+      - defer: rm protoc.zip
+      - unzip protoc.zip
+      - mkdir -p ${BINDIR}
+      - mv bin/protoc ${BINDIR}
+      - rm protoc.zip
+
+  install-cfssl:
+    env:
+      BASE: "https://github.com/cloudflare/cfssl/releases/download"
+      VERSION: 1.6.5
+      BINDIR: '{{.BINDIR | default "bin"}}'
+    dir: /tmp/
+    cmds:
+      - mkdir -p bin/
+      - wget -q ${BASE}/v${VERSION}/cfssl_${VERSION}_linux_amd64 -O ${BINDIR}/cfssl
+      - wget -q ${BASE}/v${VERSION}/cfssljson_${VERSION}_linux_amd64 -O ${BINDIR}/cfssljson
+      - chmod a+x ${BINDIR}/cfssljson
+      - chmod a+x ${BINDIR}/cfssl
+
+  install-bitcoind:
+    dir: 
+    vars:
+    env:
+      BITCOIN_VERSION: 28.2
+      BINDIR: '{{.BINDIR | default "bin"}}'
+    cmds:
+      - mkdir -p {{ .HOME }}/bin
+      - wget https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz -O bitcoin.tar.gz
+      - defer: rm -rf bitcoin.tar.gz /tmp/bitcoin-${BITCOIN_VERSION}
+      - tar -xvzf bitcoin.tar.gz
+      - defer: rm -rf bitcoin-${BITCOIN_VERSION}
+      - mkdir -p ${BINDIR}
+      - mv bitcoin-${BITCOIN_VERSION}/bin/bitcoin* ${BINDIR}

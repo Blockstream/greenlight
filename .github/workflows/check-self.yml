@@ -1,0 +1,65 @@
+name: Check Self
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - opened
+  workflow_dispatch:
+  merge_group:
+  push:
+    branches:
+      - master
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Task
+      uses: arduino/setup-task@v2
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
+      
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
+
+    - name: Install dependencies
+      run: task docker:install-dependencies
+
+    - name: Adjust PATH
+      run: |
+        echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
+        # Directory in which go-task deposits its binaries
+        echo $(pwd)/bin >> $GITHUB_PATH
+        echo "/tmp/bin/" >> $GITHUB_PATH
+
+    - name: Rust Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          /tmp/gltesting/cargo
+          /tmp/gltesting/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build binaries
+      run:
+        task ci-build
+        
+    - name: Check Self
+      env:
+        GL_TESTING_IGNORE_HASH: 1
+        PYTEST_OPTS: -n 6
+      run : |
+        task clientpy:check
+        task testing:check

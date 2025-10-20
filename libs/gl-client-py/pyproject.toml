@@ -1,0 +1,42 @@
+[project]
+name = "gl-client"
+version = "0.3.4"
+description = ""
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "protobuf>=4",
+    "pyln-grpc-proto>=0.1",
+]
+authors = [
+  {name = "Christian Decker", email = "decker@blockstream.com"},
+]
+[build-system]
+requires = ["maturin>=1.0"]
+build-backend = "maturin"
+
+[dependency-groups]
+dev = [
+    "gl-testing",
+    "grpcio>=1.67",
+    "maturin>=1",
+    "mypy>=1.14.1",
+    "patchelf>=0.17.2.2",
+    "protobuf>=4",
+    "pyln-grpc-proto>=0.1.2",
+    "types-protobuf>=5.29.1.20241207",
+]
+
+[tool.mypy]
+exclude = [
+    'glclient/greenlight_pb2.py',
+    'glclient/scheduler_pb2.py',
+    'glclient/greenlight_pb2_grpc.py',
+    'glclient/scheduler_pb2_grpc.py',
+]
+
+[[tool.mypy.overrides]]
+module = 'glclient'
+
+[tool.uv.sources]
+gl-testing = { workspace = true }

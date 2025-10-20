@@ -1,0 +1,95 @@
+site_name: Greenlight Documentation
+site_url: https://blockstream.github.io/greenlight/
+docs_dir: src
+repo_url: https://github.com/Blockstream/greenlight
+edit_uri: tree/main/docs/src
+
+plugins:
+  - search
+  - social
+  - redirects:
+      redirect_maps:
+        'reference/partner-certs.md': 'getting-started/certs.md'
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.inlinehilite
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.striphtml:
+      strip_comments: true
+      strip_js_on_attributes: false
+  - pymdownx.snippets:
+      base_path: ["../examples/rust/snippets", "../examples/python/snippets"]
+theme:
+  name: material
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+  features:
+    - navigation.tabs
+    - content.code.annotate
+    - navigation.instant
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - content.tabs.link
+    - content.code.copy
+
+nav:
+  - Home:
+    - index.md
+  - Getting Started:
+    - Overview: getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Get a developer certificate: getting-started/certs.md
+    - Registering a node: getting-started/register.md
+    - Starting a node: getting-started/schedule.md
+    - Recover access: getting-started/recover.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - Testing your app: tutorials/testing.md
+    - Self-Hosting: tutorials/self-hosting.md
+  - Reference:
+    - Overview: reference/index.md
+    - Client Libraries: reference/client-libraries.md
+    - Credentials: reference/creds.md
+    - reference/node-domain.md
+    - Testserver: reference/testserver.md
+    - Certificates: reference/certs.md
+    - Security: reference/security.md
+    - LSP Integration: reference/lsp.md
+    - Webhooks: reference/webhooks.md
+    - Pairing: reference/pairing.md
+  - About:
+    - About: about/index.md
+    - Frequently Asked Questions: about/faq.md
+    - Changelog: about/changelog.md

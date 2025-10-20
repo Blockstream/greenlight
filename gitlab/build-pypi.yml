@@ -1,0 +1,19 @@
+build_gl_client_py:
+  extends: .build_setup
+  when: manual
+  rules:
+    - if: $CI_COMMIT_TAG =~ /glclientpy_\d{8}(_[1-9][0-9]?)?\-.*/
+  before_script:
+    - export NEW_VER=$(echo ${CI_COMMIT_TAG} | cut -d'-' -f2)
+    - sed -i "s/^version = \".*\"/version = \"$NEW_VER\"/" libs/gl-client-py/pyproject.toml
+    - sed -i "s/^version = \".*\"/version = \"$NEW_VER\"/" libs/gl-client-py/Cargo.toml
+    - . $HOME/.cargo/env # sh doesn't have the correct PATH
+  script:
+    - uv run maturin build -m libs/gl-client-py/Cargo.toml --release || sleep 3600
+    - uv run maturin sdist -m libs/gl-client-py/Cargo.toml
+    - uv run maturin upload --username __token__ --password ${PYPI_TOKEN} target/wheels/*
+    - ls -lh target/wheels
+  artifacts:
+    expire_in: 2 weeks
+    paths:
+      - "target/wheels/*"

@@ -1,0 +1,17 @@
+[package]
+name = "gl-examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gl-client = { path = "../../libs/gl-client" }
+rand = "0.8"
+bip39 = { version = "2", features = ["rand_core"] }
+tokio = { version = "1.29.1", features = ["rt", "macros"] }
+hex = "0.4.3"
+runeauth = "0.1"
+anyhow.workspace = true
+
+[[bin]]
+name = "getting_started"
+path = "snippets/getting_started.rs"

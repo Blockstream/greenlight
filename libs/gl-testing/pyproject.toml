@@ -1,0 +1,40 @@
+[project]
+name = "gl-testing"
+version = "0.3.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "flaky>=3.8.1",
+    "gl-client",
+    "grpcio-tools>=1.66",
+    "grpcio>=1.66.0",
+    "httpx[http2]==0.27.2",
+    "purerpc>=0.8.0",
+    "pyln-client==24.2",
+    "pyln-testing==24.2",
+    "pytest-timeout>=2.3.1",
+    "pytest-xdist>=3.6.1",
+    "rich>=13.9.3",
+    "sh>=1.14.3",
+    "sonora>=0.2.3",
+    "cln-version-manager",
+    "bip39>=0.0.2",
+]
+
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+gl-client = { workspace = true }
+cln-version-manager = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "gltesting",
+]

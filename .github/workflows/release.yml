@@ -1,0 +1,540 @@
+# ==============================================================================
+# CRATE PUBLISHING WORKFLOW
+# ==============================================================================
+# Purpose: Automatically publish Rust crates from a monorepo to crates.io
+#
+# Trigger: Push a git tag matching the pattern `<cratename>-v<x.y.z>`
+# Example: `mycrate-v1.2.3`
+#
+# Safety Philosophy: This workflow implements multiple validation gates to catch
+# issues before publishing. Once a crate version is published to crates.io, it
+# cannot be unpublished (only yanked), so we want to ensure everything is correct.
+#
+# Workflow Steps:
+# 1. Version Match      - Ensures Cargo.toml version matches the tag
+# 2. Changelog Format   - Validates changelog follows Keep a Changelog format
+# 3. Changelog Entry    - Ensures this version is documented in changelog
+# 4. Semver Check       - Prevents accidental breaking changes in minor/patch bumps
+# 5. Tests              - Runs the crate's test suite
+# 6. Publish            - Publishes to crates.io and creates GitHub release
+#
+# These checks should have already passed in CI (on PRs/main branch), but we
+# run them again here as a final safety gate before the irreversible publish.
+# ==============================================================================
+
+name: Publish Crate
+
+on:
+  push:
+    tags:
+      # Matches tags like: mycrate-v1.2.3, my-crate-v0.1.0, etc.
+      # The 'v' prefix helps distinguish version tags from other tags
+      - '*-v[0-9]+.[0-9]+.[0-9]+'
+
+  # Manual trigger for dry-run testing
+  # This allows testing all validation checks without actually publishing
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: 'Crate name to test (e.g., gl-client)'
+        required: true
+        type: string
+      version:
+        description: 'Version to test (e.g., 1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      # ==========================================================================
+      # SETUP: Checkout and Parse Tag
+      # ==========================================================================
+      
+      - uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 gets the full git history, which is required for
+          # cargo-semver-checks to compare against previous published versions
+          fetch-depth: 0
+      
+      - name: Parse tag
+        id: parse
+        run: |
+          # Check if this is a manual dispatch (dry-run) or tag-triggered run
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual dispatch - use inputs
+            CRATE="${{ inputs.crate }}"
+            VERSION="${{ inputs.version }}"
+            echo "🧪 DRY-RUN MODE: Testing $CRATE version $VERSION"
+            echo "dry_run=true" >> $GITHUB_OUTPUT
+          else
+            # Tag-triggered - parse from tag
+            # Extract the full tag name from the GitHub ref
+            # GITHUB_REF format: refs/tags/mycrate-v1.2.3
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "Full tag: $TAG"
+
+            # Parse the tag to extract crate name and version
+            # Example: mycrate-v1.2.3 → CRATE=mycrate, VERSION=1.2.3
+            # This regex removes everything from '-v' onwards to get the crate name
+            CRATE=$(echo $TAG | sed -E 's/-v[0-9]+\.[0-9]+\.[0-9]+$//')
+
+            # This regex extracts just the version numbers after '-v'
+            VERSION=$(echo $TAG | sed -E 's/.*-v([0-9]+\.[0-9]+\.[0-9]+)$/\1/')
+
+            echo "📦 Publishing $CRATE version $VERSION"
+            echo "dry_run=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Make these available to subsequent steps via GITHUB_OUTPUT
+          echo "crate=$CRATE" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Parse semantic version components for later use in semver checks
+          # We need to know if this is a major/minor/patch bump to determine
+          # whether breaking changes are allowed
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+          echo "patch=$PATCH" >> $GITHUB_OUTPUT
+      
+      - uses: dtolnay/rust-toolchain@stable
+      
+      # ==========================================================================
+      # CHECK 1: Version Match
+      # ==========================================================================
+      # Rationale: The tag version must match the version in Cargo.toml.
+      # This prevents accidentally publishing the wrong version or forgetting to
+      # bump the version in Cargo.toml before tagging.
+      #
+      # Why this matters: If we published with a mismatched version, the published
+      # crate would have a different version than expected, breaking consumer
+      # dependencies and causing confusion.
+      # ==========================================================================
+      
+      - name: Verify version matches
+        run: |
+          echo "🔍 CHECK 1/5: Verifying Cargo.toml version..."
+          
+          # Use cargo metadata to extract the version from Cargo.toml
+          # This is more reliable than parsing TOML manually
+          # The jq command filters packages by name and extracts the version field
+          CARGO_VERSION=$(cargo metadata --no-deps --format-version 1 | \
+            jq -r '.packages[] | select(.name == "${{ steps.parse.outputs.crate }}") | .version')
+          
+          # Check if we found the crate in the workspace
+          if [ -z "$CARGO_VERSION" ]; then
+            echo "❌ ERROR: Crate '${{ steps.parse.outputs.crate }}' not found in workspace"
+            echo ""
+            echo "This usually means:"
+            echo "  1. The crate name in the tag doesn't match any crate in the workspace"
+            echo "  2. The crate is not included in the workspace members"
+            exit 1
+          fi
+          
+          # Compare versions
+          if [ "$CARGO_VERSION" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "❌ ERROR: Version mismatch!"
+            echo "   Tag version:       ${{ steps.parse.outputs.version }}"
+            echo "   Cargo.toml version: $CARGO_VERSION"
+            echo ""
+            echo "Please update Cargo.toml to version ${{ steps.parse.outputs.version }}"
+            echo "and create a new tag, or delete this tag and create a new one matching"
+            echo "the Cargo.toml version."
+            exit 1
+          fi
+          
+          echo "✅ Version verified: $CARGO_VERSION"
+      
+      # ==========================================================================
+      # CHECK 2: Changelog Format Validation
+      # ==========================================================================
+      # Rationale: Validates that the changelog follows the Keep a Changelog format.
+      # This ensures consistency and makes changelogs machine-readable.
+      #
+      # Why this matters: A properly formatted changelog is easier to parse
+      # programmatically, looks professional, and helps users quickly find
+      # information about specific versions. It also catches common formatting
+      # errors like missing dates, wrong heading levels, etc.
+      #
+      # Tool choice: python-kacl provides excellent error messages with line
+      # numbers and specific issues, making it easy to fix problems.
+      # ==========================================================================
+      
+      - name: Setup Python for changelog validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      
+      - name: Install python-kacl
+        run: pip install python-kacl
+      
+      - name: Validate changelog format
+        run: |
+          echo "🔍 CHECK 2/5: Validating changelog format..."
+          
+          CRATE="${{ steps.parse.outputs.crate }}"
+          
+          # Find the crate's directory in the workspace
+          # We use cargo metadata rather than assuming a directory structure
+          CRATE_DIR=$(cargo metadata --no-deps --format-version 1 | \
+            jq -r ".packages[] | select(.name == \"$CRATE\") | .manifest_path" | \
+            xargs dirname)
+          
+          # Look for changelog files in order of preference
+          # We check multiple variants because conventions vary
+          CHANGELOG=""
+          for name in CHANGELOG.md changelog.md CHANGELOG; do
+            if [ -f "$CRATE_DIR/$name" ]; then
+              CHANGELOG="$CRATE_DIR/$name"
+              break
+            fi
+          done
+          
+          if [ -z "$CHANGELOG" ]; then
+            echo "❌ ERROR: No changelog found in $CRATE_DIR"
+            echo ""
+            echo "Expected one of: CHANGELOG.md, changelog.md, CHANGELOG"
+            echo "Please create a changelog following the Keep a Changelog format:"
+            echo "https://keepachangelog.com/"
+            exit 1
+          fi
+          
+          echo "Validating $CHANGELOG..."
+          
+          # Run kacl-cli verify with JSON output for structured error reporting
+          # The JSON output makes it easier to parse and display errors
+          if kacl-cli verify --json "$CHANGELOG" > /tmp/kacl-output.json 2>&1; then
+            echo "✅ Changelog format is valid"
+          else
+            echo "❌ ERROR: Changelog format validation failed"
+            echo ""
+            echo "The following issues were found:"
+            echo ""
+            
+            # Parse and display errors in a human-readable format
+            cat /tmp/kacl-output.json | jq -r '.errors[] | "Line \(.line_number): \(.error_message)\n  → \(.line)\n"'
+            
+            echo ""
+            echo "Please fix these issues and try again."
+            echo "See https://keepachangelog.com/ for format guidelines."
+            exit 1
+          fi
+      
+      # ==========================================================================
+      # CHECK 3: Changelog Entry Exists
+      # ==========================================================================
+      # Rationale: Ensures that this specific version has been documented in the
+      # changelog before we publish it.
+      #
+      # Why this matters: Publishing without changelog documentation means users
+      # won't know what changed in this version. This is especially important for
+      # breaking changes or new features. It also enforces good release hygiene
+      # by ensuring documentation happens before release, not after.
+      #
+      # Note: This check is separate from format validation because a changelog
+      # can be properly formatted but missing the entry for the version being
+      # published (e.g., if someone forgot to move changes from Unreleased).
+      # ==========================================================================
+      
+      - name: Verify changelog entry exists
+        run: |
+          echo "🔍 CHECK 3/5: Checking for changelog entry..."
+          
+          CRATE="${{ steps.parse.outputs.crate }}"
+          VERSION="${{ steps.parse.outputs.version }}"
+          
+          # Find the changelog (same logic as CHECK 2)
+          CRATE_DIR=$(cargo metadata --no-deps --format-version 1 | \
+            jq -r ".packages[] | select(.name == \"$CRATE\") | .manifest_path" | \
+            xargs dirname)
+          
+          CHANGELOG=""
+          for name in CHANGELOG.md changelog.md CHANGELOG; do
+            if [ -f "$CRATE_DIR/$name" ]; then
+              CHANGELOG="$CRATE_DIR/$name"
+              break
+            fi
+          done
+          
+          # Search for version entry using regex that matches common formats:
+          # - ## [1.2.3]      (preferred Keep a Changelog format)
+          # - ## 1.2.3        (without brackets)
+          # - ## [v1.2.3]     (with v prefix)
+          # - # [1.2.3]       (single # for projects not using nested headers)
+          #
+          # The regex breakdown:
+          # ^##?              - Start of line, one or two # symbols
+          # \[?               - Optional opening bracket
+          # v?                - Optional 'v' prefix
+          # $VERSION          - The actual version number
+          # \]?               - Optional closing bracket
+          if grep -qE "^##? \[?v?$VERSION\]?" "$CHANGELOG"; then
+            echo "✅ Changelog entry found for version $VERSION"
+            echo ""
+            echo "Entry preview:"
+            # Show the version header and the next 10 lines to give context
+            grep -A 10 -E "^##? \[?v?$VERSION\]?" "$CHANGELOG" | head -15
+          else
+            echo "❌ ERROR: No changelog entry found for version $VERSION"
+            echo ""
+            echo "Please add a changelog entry with one of these formats:"
+            echo "  ## [$VERSION] - $(date +%Y-%m-%d)"
+            echo "  ## $VERSION"
+            echo "  ## [v$VERSION]"
+            echo ""
+            echo "Example:"
+            echo "  ## [$VERSION] - $(date +%Y-%m-%d)"
+            echo "  ### Added"
+            echo "  - New feature X"
+            echo "  ### Fixed"
+            echo "  - Bug Y"
+            echo ""
+            echo "Current changelog preview:"
+            head -30 "$CHANGELOG"
+            exit 1
+          fi
+      
+      # ==========================================================================
+      # CHECK 4: Semver Compatibility
+      # ==========================================================================
+      # Rationale: Prevents accidental breaking changes in patch and minor version
+      # bumps by comparing the API surface against the last published version.
+      #
+      # Why this matters: Semantic versioning is a contract with users. A patch
+      # bump (1.2.3 → 1.2.4) promises only bug fixes, no breaking changes. A minor
+      # bump (1.2.3 → 1.3.0) promises new features but no breaking changes. Only
+      # major bumps (1.2.3 → 2.0.0) can break compatibility. Breaking this contract
+      # causes downstream breakage and frustration.
+      #
+      # Semver rules applied:
+      # - For 1.0.0+: Breaking changes require major bump (X.0.0)
+      # - For 0.x.y:  Breaking changes require minor bump (0.X.0)
+      #               (0.x is considered unstable, so minor bump = breaking OK)
+      # - Patch bumps: Never allow breaking changes
+      #
+      # Tool: cargo-semver-checks analyzes the compiled crate's public API and
+      # detects breaking changes like removed functions, changed signatures, etc.
+      # ==========================================================================
+      
+      - name: Install cargo-semver-checks
+        run: cargo install cargo-semver-checks --locked
+      
+      - name: Check semver compatibility
+        run: |
+          echo "🔍 CHECK 4/5: Running semver checks..."
+          
+          CRATE="${{ steps.parse.outputs.crate }}"
+          
+          # Check if this crate has been published before
+          # If not, we can't run semver checks (nothing to compare against)
+          if ! cargo search "$CRATE" --limit 1 | grep -q "^$CRATE "; then
+            echo "ℹ️  Crate not yet published to crates.io - skipping semver check"
+            echo "    (First release has nothing to compare against)"
+            exit 0
+          fi
+          
+          # Determine if breaking changes are allowed based on the version bump
+          MAJOR="${{ steps.parse.outputs.major }}"
+          MINOR="${{ steps.parse.outputs.minor }}"
+          PATCH="${{ steps.parse.outputs.patch }}"
+          
+          SKIP_CHECK=false
+          
+          # Check if this is a major version bump (X.0.0)
+          if [ "$MAJOR" != "0" ]; then
+            # For stable versions (1.0.0+), only X.0.0 allows breaking changes
+            if [ "$MINOR" == "0" ] && [ "$PATCH" == "0" ]; then
+              echo "ℹ️  Major version bump detected ($MAJOR.0.0)"
+              echo "    Breaking changes are allowed per semver rules"
+              SKIP_CHECK=true
+            fi
+          else
+            # For pre-1.0 versions (0.x.y), 0.X.0 allows breaking changes
+            # Rationale: 0.x versions are considered unstable/development
+            if [ "$PATCH" == "0" ]; then
+              echo "ℹ️  Minor version bump in 0.x series (0.$MINOR.0)"
+              echo "    Breaking changes are allowed in 0.x per semver rules"
+              SKIP_CHECK=true
+            fi
+          fi
+          
+          if [ "$SKIP_CHECK" = true ]; then
+            echo "⏭️  Skipping semver check (breaking changes expected for this bump)"
+            exit 0
+          fi
+          
+          # Run semver checks
+          # If this fails, it means there are breaking changes but the version
+          # bump doesn't allow them (e.g., patch bump with breaking changes)
+          echo "Running cargo-semver-checks..."
+          echo "(Breaking changes are NOT allowed for this version bump)"
+          
+          if cargo semver-checks check-release -p "$CRATE"; then
+            echo "✅ No semver violations detected"
+          else
+            echo ""
+            echo "❌ ERROR: Semver violations detected!"
+            echo ""
+            echo "Breaking changes were found, but this version bump doesn't allow them."
+            echo ""
+            echo "Your options:"
+            echo "  1. Fix the breaking changes to maintain API compatibility"
+            if [ "$MAJOR" != "0" ]; then
+              echo "  2. Bump to next major version (e.g., $MAJOR.0.0 → $(($MAJOR + 1)).0.0)"
+            else
+              echo "  2. Bump to next minor version (e.g., 0.$MINOR.x → 0.$(($MINOR + 1)).0)"
+            fi
+            echo ""
+            echo "See cargo-semver-checks output above for details on what broke."
+            exit 1
+          fi
+      
+      # ==========================================================================
+      # CHECK 5: Run Tests
+      # ==========================================================================
+      # Rationale: Final verification that the crate's tests pass before publish.
+      #
+      # Why this matters: Even though tests should have passed in CI on the PR,
+      # we run them again here as a final gate. This catches edge cases like:
+      # - Someone force-pushed changes after CI passed
+      # - Flaky tests that passed in CI but might fail now
+      # - Issues with the tag itself or checkout process
+      #
+      # Note: We use `-p <crate>` to only test this specific crate, not the
+      # entire workspace. This is faster and only tests what we're publishing.
+      # ==========================================================================
+      
+      - name: Run tests
+        run: |
+          echo "🔍 CHECK 5/5: Running tests..."
+          
+          # -p flag: Run tests only for this specific crate
+          # This is important in a monorepo to avoid testing unrelated crates
+          cargo test -p ${{ steps.parse.outputs.crate }}
+          
+          echo "✅ All tests passed"
+      
+      # ==========================================================================
+      # PUBLISH: Publish to crates.io and Create GitHub Release
+      # ==========================================================================
+      # Rationale: All checks passed, now we can safely publish.
+      #
+      # Why two steps (crates.io + GitHub release):
+      # 1. crates.io publish - Makes the crate available to Rust users
+      # 2. GitHub release - Creates a release on GitHub with changelog notes,
+      #    providing a nice UI for browsing releases and downloading source
+      #
+      # Note: Publishing to crates.io is IRREVERSIBLE. You cannot unpublish,
+      # only yank (which hides from new installs but doesn't delete). That's
+      # why we have all the checks above!
+      # ==========================================================================
+      
+      - name: Publish to crates.io
+        if: steps.parse.outputs.dry_run == 'false'
+        run: |
+          echo "🚀 Publishing ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }} to crates.io..."
+
+          # -p flag: Publish only this specific crate from the workspace
+          # CARGO_REGISTRY_TOKEN: Authenticates with crates.io
+          # This token should be added to GitHub Secrets as CRATES_IO_TOKEN
+          cargo publish -p ${{ steps.parse.outputs.crate }}
+
+          echo "✅ Successfully published to crates.io!"
+          echo "🔗 https://crates.io/crates/${{ steps.parse.outputs.crate }}"
+        env:
+          # The token is stored in GitHub Secrets for security
+          # To create one: https://crates.io/settings/tokens
+          # Add it to repo: Settings → Secrets and variables → Actions
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      
+      - name: Create GitHub Release
+        if: steps.parse.outputs.dry_run == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          # Use the tag that triggered this workflow
+          tag_name: ${{ github.ref }}
+
+          # Format: "mycrate v1.2.3"
+          name: ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }}
+
+          # Release notes body
+          # In the future, you could extract the changelog section here
+          # to automatically populate the release notes
+          body: |
+            Published ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }} to crates.io
+
+            🔗 [View on crates.io](https://crates.io/crates/${{ steps.parse.outputs.crate }})
+
+            See [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details.
+        env:
+          # GITHUB_TOKEN is automatically provided by GitHub Actions
+          # No need to create this secret manually
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dry-run complete
+        if: steps.parse.outputs.dry_run == 'true'
+        run: |
+          echo "✅ DRY-RUN COMPLETE!"
+          echo ""
+          echo "All validation checks passed for ${{ steps.parse.outputs.crate }} v${{ steps.parse.outputs.version }}"
+          echo ""
+          echo "The following checks were successful:"
+          echo "  ✅ Version matches Cargo.toml"
+          echo "  ✅ Changelog format is valid"
+          echo "  ✅ Changelog entry exists"
+          echo "  ✅ Semver compatibility check passed"
+          echo "  ✅ All tests passed"
+          echo ""
+          echo "To publish for real, push a tag:"
+          echo "  git tag ${{ steps.parse.outputs.crate }}-v${{ steps.parse.outputs.version }}"
+          echo "  git push origin ${{ steps.parse.outputs.crate }}-v${{ steps.parse.outputs.version }}"
+
+# ==============================================================================
+# MAINTENANCE NOTES
+# ==============================================================================
+#
+# Common modifications you might want to make:
+#
+# 1. Change tag format:
+#    - Modify the regex in the `on.push.tags` section
+#    - Update the parsing logic in the "Parse tag" step
+#
+# 2. Skip semver checks entirely (not recommended):
+#    - Remove or comment out CHECK 4
+#
+# 3. Add additional checks:
+#    - cargo clippy for linting
+#    - cargo fmt --check for formatting
+#    - Documentation build check: cargo doc --no-deps
+#
+# 4. Auto-extract changelog for GitHub release:
+#    - Use kacl-cli or similar tool to extract the version section
+#    - Replace the static body in "Create GitHub Release"
+#
+# 5. Publish multiple crates at once:
+#    - This workflow publishes one crate at a time by design
+#    - For dependency order, consider using cargo-release instead
+#
+# 6. Customize python-kacl validation rules:
+#    - Create a .kacl.yml file in your crate directories
+#    - Pass it to kacl-cli: kacl-cli verify --config .kacl.yml
+#
+# Troubleshooting:
+#
+# - If semver-checks fails unexpectedly:
+#   Run locally: cargo semver-checks check-release -p <crate>
+#
+# - If changelog validation fails:
+#   Run locally: kacl-cli verify --json CHANGELOG.md | jq
+#
+# - If version mismatch:
+#   Ensure you updated Cargo.toml before tagging
+#
+# - If crate not found:
+#   Check workspace members in root Cargo.toml
+# ==============================================================================

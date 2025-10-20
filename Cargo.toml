@@ -1,0 +1,34 @@
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+[workspace]
+resolver = "2"
+members = [
+    "examples/rust",
+    "libs/gl-client",
+    "libs/gl-client-py",
+    "libs/gl-plugin",
+    "libs/gl-signerproxy",
+    "libs/gl-cli",
+    "libs/gl-util",
+]
+
+[workspace.dependencies]
+anyhow = "1"
+env_logger = "0.10"
+cln-grpc = "0.4"
+cln-rpc = "0.4"
+cln-plugin = "0.4"
+
+vls-core = "^0.13"
+vls-persist = "^0.13"
+vls-protocol-signer = "^0.13"
+vls-protocol = "^0.13"

@@ -1,0 +1,20 @@
+version: '3'
+
+tasks:
+  force-install:
+    dir: "."
+    cmds:
+      # Forces a reinstall of the latest version
+      - uv run maturin develop  
+  
+  check:
+    env:
+      PYTEST_OPTS: "-vvv"
+    deps:
+      - force-install
+    cmds:
+      - uv run pytest tests $PYTEST_OPTS
+
+  build:
+    cmds:
+      - uv build --sdist

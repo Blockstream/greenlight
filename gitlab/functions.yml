@@ -1,0 +1,45 @@
+.build_setup:
+  stage: build
+  tags:
+    - cloud
+  rules:
+    - if: $CI_COMMIT_BRANCH
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - unknown_failure
+      - stuck_or_timeout_failure
+
+build_ci_image:
+  extends: .build_setup
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_HOST: tcp://localhost:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: 1
+  image:
+    name: docker:24-dind
+  services:
+    - docker:24-dind
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        paths:
+          - docker/ci.Dockerfile
+        compare_to: main
+  script:
+    - docker pull ${CI_IMAGE}:latest || true
+    - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}-$(date +%Y%m%d)
+    - cd docker
+    - >
+      docker build
+      -f ci.Dockerfile
+      --network=host
+      --build-arg BUILDKIT_INLINE_CACHE=1
+      --cache-from ${CI_IMAGE}:latest
+      -t ${CI_IMAGE}:${IMAGE_TAG}
+      -t ${CI_IMAGE}:latest
+      .
+    - docker push ${CI_IMAGE}:${IMAGE_TAG}
+    - docker push ${CI_IMAGE}:latest

@@ -1,0 +1,39 @@
+[project]
+name = "cln-version-manager"
+version = "0.1.1"
+description = "A version manager for Core Lightning Binaries"
+license = "MIT"
+readme = "README.md"
+authors = [
+  {name = "Christian Decker", email = "decker@blockstream.com"},
+  {name = "Erik De Smedt", email = "edesmedt@blockstream.com"},
+]
+dependencies = [
+    "requests>=2.32.3",
+]
+
+[project.optional-dependencies]
+cli = [
+    "click",
+    "rich",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "pytest>=7.4.4",
+    "python-kacl>=0.6.7",
+    "types-requests>=2.31.0.6",
+]
+
+[tool.hatch.build]
+include = [
+    "clnvm",
+]
+
+[project.scripts]
+hello = "clnvm.cli:run"

@@ -1,0 +1,22 @@
+[project]
+name = "gl-public"
+version = "0.1.0"
+description = "Public tools and utilities for Greenlight"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest-timeout>=2.3.1",
+]
+
+[tool.uv.workspace]
+members = [
+  "docs",
+  "libs/gl-testing",
+  "libs/gl-client-py",
+  "libs/gl-testserver",
+  "libs/cln-version-manager",
+]
+exclude = ["packages/seeds"]

@@ -1,0 +1,34 @@
+name: ClnVersionManager
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - opened
+  workflow_dispatch:
+  merge_group:
+  push:
+    branches:
+      - main
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Build
+        run: task clnvm:build
+          
+      - name: Run tests
+        run: task clnvm:check

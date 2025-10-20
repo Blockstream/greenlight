@@ -1,0 +1,549 @@
+syntax = "proto3";
+package scheduler;
+
+import "glclient/greenlight.proto";
+
+// The scheduler service is the endpoint which allows users to
+// register a new node with greenlight, recover access to an existing
+// node if the owner lost its credentials, schedule the node to be run
+// on greenlight's infrastructure, and retrieve metadata about the
+// node.
+//
+// Node
+// ====
+//
+// A node is the basic object representing an account on
+// greenlight. Each node corresponds to a c-lightning instance bound
+// to a specific network that can be scheduled on greenlight, and must
+// have a unique `node_id`.
+//
+// Nodes are scheduled on-demand onto the infrastructure, but the time
+// to schedule a node is almost instantaneous.
+//
+// Authentication
+// ==============
+//
+// Users are authenticated using mTLS authentication. Applications are
+// provisioned with an anonymous keypair that is not bound to a node,
+// allowing access only to the unauthenticated endpoints
+// `Scheduler.GetChallenge`, `Scheduler.Register` and
+// `Scheduler.Recover`. This allows them to register or recover a
+// node, but doesn't give access to the node itself. Upon registering
+// or recovering an account the user receives a keypair that is bound
+// to the specific node. Once the user receives their personal mTLS
+// keypair they may use it to connect to greenlight, and thus get
+// access to the node-specific functionality. Please refer to the
+// documentation of your grpc library to learn how to configure grpc
+// to use the node-specific mTLS keypair.
+//
+service Scheduler {
+	// A user may register a new node with greenlight by providing
+	// some basic metadata and proving that they have access to
+	// the corresponding private key (see challenge-response
+	// mechanism below). This means that in order to register a
+	// new node the user must have access to the corresponding
+	// private keys to prove ownership, and prevent users from
+	// just registering arbitrary node_ids without actually
+	// knowing the corresponding secrets.
+	//
+	// Upon successful registration an mTLS certificate and
+	// private key are returned. These can be used to authenticate
+	// future connections to the scheduler or the node.
+	//
+	// Each node may be registered once, any later attempt will
+	// result in an error being returned. If the user lost its
+	// credentials it can make use of the Recover RPC method to
+	// recover the credentials. Notice that this also means that
+	// the same node_id cannot be reused for different networks.
+	rpc Register(RegistrationRequest) returns (RegistrationResponse) {}
+
+	// Should a user have lost its credentials (mTLS keypair) for
+	// any reason, they may regain access to their node using the
+	// Recover RPC method. Similar to the initial registration the
+	// caller needs to authenticate the call by proving access to
+	// the node's secret. This also uses the challenge-response
+	// mechanism.
+	//
+	// Upon success a newly generated mTLS certificate and private
+	// key are returned, allowing the user to authenticate going
+	// forward. Existing keypairs are not revoked, in order to
+	// avoid locking out other authenticated applications.
+	rpc Recover(RecoveryRequest) returns (RecoveryResponse) {}
+
+	// Challenges are one-time values issued by the server, used
+	// to authenticate a user/device against the server. A user or
+	// device can authenticate to the server by signing the
+	// challenge and returning the signed message as part of the
+	// request that is to be authenticated.
+	//
+	// Challenges may not be reused, and are bound to the scope
+	// they have been issued for. Attempting to reuse a challenge
+	// or use a challenge with a different scope will result in an
+	// error being returned.
+	rpc GetChallenge(ChallengeRequest) returns (ChallengeResponse) {}
+
+	// Scheduling takes a previously registered node, locates a
+	// free slot in greenlight's infrastructure and allocates it
+	// to run the node. The node then goes through the startup
+	// sequence, synchronizing with the blockchain, and finally
+	// binding its grpc interface (see Node service below) to a
+	// public IP address and port. Access is authenticated via the
+	// mTLS keypair the user received from registering or
+	// recovering the node.
+	//
+	// Upon success a NodeInfoResponse containing the grpc
+	// connection details and some metadata is returned. The
+	// application must use the grpc details and its node-specific
+	// mTLS keypair to interact with the node directly.
+	rpc Schedule(ScheduleRequest) returns (NodeInfoResponse) {}
+
+	// Much like `Schedule` this call is used to retrieve the
+	// metadata and grpc details of a node. Unlike the other call
+	// however it is passive, and will not result in the node
+	// being scheduled if it isn't already running. This can be
+	// used to check if a node is already scheduled, or to wait
+	// for it to be scheduled (e.g., if the caller is an `hsmd`
+	// that signs off on changes, but doesn't want to keep the
+	// node itself scheduled).
+	rpc GetNodeInfo(NodeInfoRequest) returns (NodeInfoResponse) {}
+
+	// The signer may want to trigger an upgrade of the node
+	// before waiting for the node to be scheduled. This ensures
+	// that the signer version is in sync with the node
+	// version. The scheduler may decide to defer upgrading if the
+	// protocols are compatible. Please do not use this directly,
+	// rather use the Signer in the client library to trigger this
+	// automatically when required. Posting an incomplete or
+	// non-functional UpgradeRequest may result in unschedulable
+	// nodes.
+	rpc MaybeUpgrade(UpgradeRequest) returns (UpgradeResponse) {}
+
+	// This call is used to fetch a list of invite codes associated
+	// with the node id of the client. These invite codes can be used
+	// for further registration of new nodes.
+	rpc ListInviteCodes(ListInviteCodesRequest) returns (ListInviteCodesResponse) {}
+
+	// Exporting a node allows users to take control of their node
+	//
+	// This method initiates the node export on Greenlight,
+	// allowing users to offboard from GL into their own
+	// infrastructure. After calling this method the node will no
+	// longer be schedulable on Greenlight, since it is never safe
+	// to assume there haven't been changes in the node's state
+	// (see CLN Backups documentation for details). `ExportNode`
+	// marks the node as `Exporting`, then generates an encryption
+	// secret which is then used to encrypt a database
+	// backup. This encrypted database backup is then made
+	// accessible through an HTTP server, and a link to it is
+	// returned as a response to `ExportNode`. After the export
+	// completes the node is marked as `Exported`. The encryption
+	// key can then be derived using the signer, using ECDH,
+	// allowing only users with the node secret to decrypt it.
+	//
+	// `ExportNode` is idempotent and may be called multiple
+	// times, without causing the node to be re-exported multiple
+	// times, should the call or the download be interrupted. DO
+	// NOT import the backup multiple times into your
+	// infrastructure, as that can lead to dataloss (old state
+	// being replayed) and loss of funds (see CLN Backups
+	// documentation for more information)
+	rpc ExportNode(ExportNodeRequest) returns (ExportNodeResponse) {}
+
+	rpc AddOutgoingWebhook(AddOutgoingWebhookRequest) returns (AddOutgoingWebhookResponse) {}
+
+	rpc ListOutgoingWebhooks(ListOutgoingWebhooksRequest) returns (ListOutgoingWebhooksResponse) {}
+
+	rpc DeleteWebhooks(DeleteOutgoingWebhooksRequest) returns (greenlight.Empty) {}
+
+	rpc RotateOutgoingWebhookSecret(RotateOutgoingWebhookSecretRequest) returns (WebhookSecretResponse) {}
+
+	// Attaches a Signer  via a bidirectional stream to the scheduler. 
+	// This is a communication channel between greenlight and the signing
+	// device that is used for requests that are not part of the node api.
+	//
+	// The stream is used to hand out the ApprovePairingRequests that
+	// the signer answers with a ApprovePairingResponse.
+	rpc SignerRequestsStream(stream SignerResponse) returns (stream SignerRequest) {};
+};
+
+message AddOutgoingWebhookRequest {
+	bytes node_id = 1;
+	string uri = 2;
+}
+
+message AddOutgoingWebhookResponse {
+	int64 id = 1;
+	string secret = 2;
+}
+
+message ListOutgoingWebhooksRequest {
+	bytes node_id = 1;
+}
+
+message Webhook {
+	int64 id = 1;
+	string uri = 2;
+}
+
+message ListOutgoingWebhooksResponse {
+	repeated Webhook outgoing_webhooks = 1;
+}
+
+message DeleteOutgoingWebhooksRequest {
+	bytes node_id = 1;
+	repeated int64 ids = 2;
+}
+
+message RotateOutgoingWebhookSecretRequest {
+	bytes node_id = 1;
+	int64 webhook_id = 2;
+}
+
+message WebhookSecretResponse {
+	string secret = 1;
+}
+
+// A service to collect debugging information from clients.
+service Debug {
+  // The signer is designed to fail closed, i.e., we reject requests
+  // that do not resolve or that go against one of its policies. This
+  // comes with some issues, such as false negatives, where we reject
+  // despite the request being valid. As more apps use the API we need
+  // to debug these false negatives, hence why we report rejections,
+  // so we can investigate the validity of the rejection, and to
+  // fine-tine the signer's ruleset.
+  rpc ReportSignerRejection(SignerRejection) returns (greenlight.Empty) {}  
+}
+
+// A service to pair signer-less clients with an existing signer.
+service Pairing {
+	// Initiates a new Pairing Sessions. This is called by the new
+	// device that wants to request a pairing from an existing device.
+	// The session lifetime is bound to the stream so closing the
+	// stream destroys the session.
+	rpc PairDevice(PairDeviceRequest) returns (PairDeviceResponse) {}
+
+	// Returns the pairing related data that belongs to a pairing
+	// session. This is meant to be called from a device that can
+	// approve a pairing request, we sometimes call it "old device".
+	rpc GetPairingData(GetPairingDataRequest) returns (GetPairingDataResponse) {}
+
+	// Approves a pairing request. The ApprovePairingRequest is
+	// forwarded to a signer for further processing.
+	rpc ApprovePairing(ApprovePairingRequest) returns (greenlight.Empty) {}
+}
+
+message ChallengeRequest {
+	ChallengeScope scope = 1;
+	bytes node_id = 2;
+};
+
+message ChallengeResponse {
+	bytes challenge = 1;
+};
+
+// Operation is the challenge associated with?
+enum ChallengeScope {
+	REGISTER = 0;
+	RECOVER = 1;
+}
+
+message RegistrationRequest {
+	// 33 bytes node public key.
+	bytes node_id = 1;
+
+	// DEPRECATED: The `init_msg` subsumes this field
+        bytes bip32_key = 2;
+
+	// Which network is this node going to run on? Options are
+	// bitcoin, testnet, and regtest.
+	string network = 4;
+
+	// An previously unused challenge as retrieved from
+	// `Scheduler.GetChallenge() with `scope=REGISTER`. In
+	// combination with the `signature` below this is used to
+	// authenticate the caller and ensure the caller has access to
+	// the secret keys corresponding to the `node_id`.
+	bytes challenge = 5;
+
+	// A signature for the `challenge` signed by the secret key
+	// corresponding to the `node_id`. Please refer to the
+	// documentation of `Scheduler.GetChallenge()` for details on
+	// how to create this signature.
+	bytes signature = 6;
+
+	// The signer_proto is required in order to determine which
+	// version the node should run. If these don't match the
+	// signer may not be able to sign incoming requests.
+	string signer_proto = 7;
+
+	// The fuil init message returned by the `libhsmd`, this
+	// supersedes the bip32_key field which was a misnomer. Notice
+	// that this includes the prefix 0x006F which is the message
+	// type.
+	bytes init_msg = 8;
+
+	// The certificate signing request that will be signed by the
+	// greenlight backend. Notice that this must have the valid
+	// CN corresponding to the node_id e.g. /users/{node_id} set.
+	bytes csr = 9;
+
+	// An optional invite code. We may want to throttle the
+	// registration rate. Therefore we might check that a registration
+	// request has a valid invite code.
+	string invite_code = 10;
+
+        // Messages stashed at the scheduler to allow signerless
+        // startups.
+        repeated StartupMessage startupmsgs = 3;
+};
+
+message RegistrationResponse {
+	// Upon registering the user receives back the signed certificate that
+	// belongs to the certificate signing request the that was sent in the
+	// registration request, so they can authenticate themselves in the future.
+	string device_cert = 1;
+
+	// The private key that was used to create the certificate with. This key
+	// is used to sign the requests to the node.
+	string device_key = 2;
+
+	// A master rune that is returned if the device that is registered has its
+	// own signer. The signer is necessary as the response is intercepted on the
+	// client side and appends the rune to the registratrion response.
+	string rune = 3;
+
+	// Creds contains a serialized version of the device_cert, the device_key 
+	// and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes creds = 4;
+};
+
+// Ask the scheduler to schedule the node to be run on an available nodelet.
+//
+// This will always cause the scheduler to kick into action. If you'd
+// like to see if a nodelet is currently taking care of this node, or
+// wait for one to start please use the
+message ScheduleRequest {
+	bytes node_id = 1;
+};
+
+// Discovery request asking the scheduler if a nodelet is currently assigned
+// the specified node_id, or wait for one to be assigned. If `wait` is set to
+// `true` the scheduler will keep the request pending until a nodelet is
+// assigned.
+message NodeInfoRequest {
+	bytes node_id = 1;
+	bool wait = 2;
+};
+
+message NodeInfoResponse {
+	bytes node_id = 1;
+	string grpc_uri = 2;
+	uint64 session_id = 3;
+};
+
+
+message RecoveryRequest {
+	bytes challenge = 1;
+	bytes signature = 2;
+	bytes node_id = 3;
+	// The certificate signing request that will be signed by the
+	// greenlight backend. Notice that this must have the valid
+	// CN corresponding to the node_id e.g. /users/{node_id} set.
+	bytes csr = 9;
+};
+
+message RecoveryResponse {
+	string device_cert = 1;
+	string device_key = 2;
+	
+	// A master rune that is returned if the device that is registered has its
+	// own signer. The signer is necessary as the response is intercepted on the
+	// client side and appends the rune to the registratrion response.
+	string rune = 3;
+
+	// Creds contains a serialized version of the device_cert, the device_key 
+	// and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes creds = 4;
+};
+
+message UpgradeRequest {
+	// The version of the signer, i.e., the maximum version of the
+	// protocol that this signer can understand.
+	string signer_version = 1;
+
+	// The new initmsg matching the above version. Necessary to
+	// schedule the node without a signer present.
+        // Deprecated: Replaced by the more generic `startupmsgs`
+	bytes initmsg = 2 [deprecated = true];
+
+        // Messages stashed at the scheduler to allow signerless startups.
+        repeated StartupMessage startupmsgs = 3;
+};
+message UpgradeResponse {
+	// The version of the node before the upgrade request has been
+	// processed.
+	string old_version = 1;
+};
+
+// A message that we know will be requested by `lightningd` at
+// startup, and that we stash a response to on the scheduler. This
+// allows the scheduler to start a node without requiring the signer
+// to connect first. Messages are stored in full, including type
+// prefix, but without the length prefix.
+message StartupMessage {
+  bytes request = 1;
+  bytes response = 2;
+}
+
+message ListInviteCodesRequest {};
+
+message ListInviteCodesResponse {
+	repeated InviteCode invite_code_list = 1;
+};
+
+message InviteCode {
+	string code = 1;
+	bool is_redeemed = 2;
+};
+
+// Empty message for now, node identity is extracted from the mTLS
+// certificate used to authenticate against the Scheduler.
+message ExportNodeRequest {}
+
+message ExportNodeResponse {
+	// URL where the encrypted backup can be retrieved from.
+	string url = 1;
+}
+
+message SignerRejection {
+  // A human-readable description of what went wrong
+  string msg = 1;
+  greenlight.HsmRequest request = 2;
+  string git_version = 3;
+  bytes node_id = 4;
+}
+
+message PairDeviceRequest {
+	// The tls public key of the new device.
+	string device_id = 1;
+
+	// The certificate signing request that will be signed by the
+	// greenlight backend if the pairing succeeds. Notice that the CN
+	// here is irrelevant.
+	bytes csr = 2;
+
+	// The name of the device that will be part of the tls certificate
+	// subjects CN field: CN=/users/<node_id>/<device_name>.
+	string device_name = 3;
+
+	// A human readable description of the device, this can be a 
+	// purpose or something similar. Can be used to display to the 
+	// user on the old device.
+	string description = 4;
+
+	// A set of restrictions that the new devices requests for the 
+	// rune. This might in the future get upgraded for easier naming.
+	string restrictions = 5;
+}
+
+message PairDeviceResponse {
+	// device_id is the public key of the new device used for the
+	// tls cert.
+	string device_id = 1;
+
+	// Upon a pairing request, the device receives back the signed certificate
+	// that belongs to the certificate signing request the that was sent with
+	// the pairing request, so they can authenticate themselves in the future.
+	string device_cert = 2;
+
+	// The private key that was used to create the certificate with. This key
+	// is used to sign the requests to the node.
+	string device_key = 3;
+
+	// A rune that is returned if the device that is created by the signer that
+	// the device pairs to.
+	string rune = 4;
+
+	// Creds contains a serialized version of the device certificate, the device 
+	// key and the rune that are used to authenticate a device at the backend, 
+	// and to authorize a request at the signer.
+	bytes creds = 5;
+}
+
+message GetPairingDataRequest {
+	// The device_id that the client got from the qr-code.
+	string device_id = 1;
+}
+
+message GetPairingDataResponse {
+	string device_id = 1;
+
+	// The certificate signing request that will be signed by the
+	// greenlight backend if the pairing succeeds. Notice that the CN
+	// here is irrelevant.
+	bytes csr = 2;
+
+	// The name of the device that will be part of the tls certificate
+	// subjects CN field: CN=/users/<node_id>/<device_name>.
+	string device_name = 3;
+
+	// A human readable description of the device, this can be a 
+	// purpose or something similar. Can be used to display to the 
+	// user on the old device.
+	string description = 4;
+
+	// A set of restrictions that the new devices requests for the 
+	// rune. This might in the future get upgraded for easier naming.
+	string restrictions = 5;
+}
+
+message ApprovePairingRequest {
+	string device_id = 1;
+
+	// The time that the old device approved the pairing request. This
+	// is used by the signer to restrict the duration an approval
+	// request is valid.
+	uint64 timestamp = 2;
+
+	// The name of the device that will be part of the tls certificate
+	// subjects CN field: CN=/users/<node_id>/<device_name>.
+	string device_name = 3;
+	
+	// The restrictions need a pubkey set.
+	string restrictions = 4;
+
+	// The signature of the above to ensure data integrity.
+	bytes sig = 5;
+	
+	// The public key corresponding to the private key that was used 
+	// to sign the request and that is part of the rune;
+	bytes pubkey = 6;
+
+	// The rune of the old device with a pubkey field corresponding to
+	// the signature above. Used to authorize the approval request.
+	string rune = 7;
+}
+
+message ApprovePairingResponse {
+	string device_id = 1;
+	bytes node_id = 2;
+	string rune =3;
+}
+
+message SignerRequest {
+	uint32 request_id = 1;
+	oneof request {
+		ApprovePairingRequest approve_pairing = 2;
+	}
+}
+
+message SignerResponse {
+	uint32 request_id = 1;
+	oneof response {
+		greenlight.Empty empty = 2;
+		ApprovePairingResponse approve_pairing = 3;
+	}
+}

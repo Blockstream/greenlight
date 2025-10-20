@@ -1,0 +1,65 @@
+version: "3"
+
+includes:
+  clnvm:
+    taskfile: "libs/cln-version-manager/.tasks.yml"
+    dir: "libs/cln-version-manager/"
+
+  clientpy:
+    taskfile: "libs/gl-client-py/.tasks.yml"
+    dir: "libs/gl-client-py/"
+
+  testing:
+    taskfile: "libs/gl-testing/.tasks.yml"
+    dir: "libs/gl-testing/"
+
+  docker:
+    taskfile: "docker/.tasks.yml"
+    dir: "."
+
+  plugin:
+    taskfile: "libs/gl-plugin/.tasks.yml"
+    dir: "."
+
+  signerproxy:
+    taskfile: "libs/gl-signerproxy/.tasks.yml"
+    dir: "."
+
+tasks:
+  ci-check:
+    deps:
+      - ci-build
+    cmds:
+      - task: clientpy:check
+      - task: testing:check
+      - task: clnvm:check
+
+  docker-ci-build:
+    cmds:
+      - >
+        docker buildx build \
+          --load \
+          --build-arg DOCKER_USER=$(whoami) \
+          --build-arg UID=$(id -u) \
+          --build-arg GID=$(id -g) \
+          --build-arg GL_TESTING_IGNORE_HASH=1 \
+          --platform=linux/amd64 \
+          -t gltesting \
+          -f docker/gl-testing/Dockerfile \
+          .
+    
+  docker-ci-check:
+    deps:
+#      - docker-ci-build
+    cmds:
+      - docker run --rm -ti -v $(pwd):/repo gltesting task ci-check
+
+  ci-build:
+    cmds:
+      - task: signerproxy:build
+      - task: plugin:build
+  clean:
+    dir: "."
+    cmds:
+      - cargo clean
+      - rm -rf .venv

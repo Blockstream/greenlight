@@ -1,0 +1,70 @@
+[package]
+name = "gl-client"
+version = "0.3.2"
+edition = "2021"
+authors = [
+  "The Greenlight Team"
+]
+
+description = "Client library for Greenlight, and basis for language bindings."
+repository = "https://github.com/Blockstream/greenlight"
+license = "MIT"
+
+[features]
+default = ["permissive", "export"]
+permissive = []
+export = ["chacha20poly1305", "secp256k1"]
+
+[dependencies]
+anyhow = "1.0.82"
+async-stream = "0.3.5"
+base64 = "^0.21"
+bech32 = "0.9.1"
+bytes = "1.2.1"
+chrono = "0.4.31"
+hex = "0.4.3"
+http = "0.2"
+http-body = "^0.4"
+log = "^0.4"
+picky = "6.3"
+picky-asn1-x509 = "0.12"
+picky-asn1-der = "0.4"
+pin-project = "1.1.5"
+prost = "0.12"
+prost-derive = "0.12"
+reqwest = { version = "^0.11", features = [
+    "json",
+    "rustls-tls-native-roots",
+], default-features = false }
+ring = "~0.16.20"
+runeauth = "0.1"
+rustls-pemfile = "1.0.4"
+sha256 = "1.5.0"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+tonic = { version = "0.11", features = ["tls", "transport"] }
+tower = { version = "0.4" }
+tempfile = "3.10.1"
+url = "2.5.0"
+serde = { version = "1", features = ["derive"] }
+rcgen = { version = "0.10.0", features = ["pem", "x509-parser"] }
+vls-core = { workspace = true }
+vls-persist = { workspace = true }
+vls-protocol-signer = { workspace = true }
+vls-protocol = { workspace = true }
+serde_json = "^1.0"
+thiserror = "1"
+cln-grpc = { workspace = true }
+chacha20poly1305 = { version = "0.10.1", optional = true }
+uuid = { version = "1.8.0", features = ["serde"] }
+secp256k1 = { version = "0.26.0", optional = true }
+mockall = "0.11.4"
+futures = "0.3.30"
+async-trait = "0.1.80"
+rand = "0.8.5"
+time = { version = "0.3", features = ["macros"] }
+x509-certificate = "0.23.1"
+
+[build-dependencies]
+tonic-build = "0.11"
+serde = { version = "1", features = ["derive"] }
