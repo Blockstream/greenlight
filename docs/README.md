@@ -9,16 +9,16 @@ You must have a working installation of `python` and `uv` to contribute to the d
 To install dependencies make sure you are at the root of the repository
 
 ```
-uv sync --only-group docs
+uv sync --package gl-docs
 ```
 
 To build the docs
 
 ```
-cd docs; mkdocs build
+cd docs; uv run mkdocs build
 ```
 
 To serve the docs locally
 ```
-cd docs; mkdocs serve
+cd docs; uv run mkdocs serve
 ```
