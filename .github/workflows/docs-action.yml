@@ -7,67 +7,134 @@ on:
     paths:
       - "docs/**.md"
       - "docs/mkdocs.yml"
+      - "examples/python/**"
+      - "examples/rust/**"
   workflow_dispatch:
 
 jobs:
-  test-examples:
-    permissions:
-      contents: read
+  build-and-deploy-docs:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - run: |
-          mkdir /tmp/protoc && \
-            cd /tmp/protoc && \
-            wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
-            unzip protoc.zip && \
-            mv /tmp/protoc/bin/protoc /usr/local/bin && \
-            chmod a+x /usr/local/bin/protoc && \
-            rm -rf /tmp/protoc
-      - run: cargo build --manifest-path ./examples/rust/Cargo.toml
-      
-  build-and-deploy:
-    needs: test-examples
     permissions:
       pages: write      # to deploy to Pages
       id-token: write   # to verify the deployment originates from an appropriate source
       contents: write
-    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-A dead-code -A unused_variables -A mismatched_lifetime_syntaxes"
+      CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+      DATA_DIR: "/tmp/gltests"
+
     steps:
-      - name: Checkout Github repo
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          ref: testing-doc-snippets
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
-          mkdir /tmp/protoc && \
-            cd /tmp/protoc && \
-            wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip && \
-            unzip protoc.zip && \
-            mv /tmp/protoc/bin/protoc /usr/local/bin && \
-            chmod a+x /usr/local/bin/protoc && \
-            rm -rf /tmp/protoc \
+          # Remove broken Git LFS source from old packagecloud, required for ACT testing 
+          sudo rm -f /etc/apt/sources.list.d/github_git-lfs.list || true
+          sudo apt-get update
+          sudo apt-get install -y python3 protobuf-compiler openssl libpq5 golang-cfssl ca-certificates
 
-      - name: Install dependencies
-        run: uv sync
-          
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          version: "0.9.5"
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: Ensure protoc is available
+        run: |
+          mkdir -p /tmp/protoc && cd /tmp/protoc
+          wget --quiet -O protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.19.3/protoc-3.19.3-linux-x86_64.zip
+          unzip protoc.zip
+          sudo mv bin/protoc /usr/local/bin
+          sudo chmod a+x /usr/local/bin/protoc
+
+      - name: Install bitcoind manually
+        run: |
+          BITCOIN_VERSION=28.2
+          curl -O https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          tar -xzf bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          sudo install -m 0755 -o root -g root -t /usr/local/bin bitcoin-${BITCOIN_VERSION}/bin/*
+
+      - name: Build Rust packages
+        run: cargo build --workspace
+
+      - name: Sync Python dependencies
+        run: |
+          uv lock
+          uv sync --locked -v --all-packages --dev
+
+      - name: Install CLN versions
+        run: |
+          cd ./libs/cln-version-manager
+          uv run --extra cli clnvm get-all
+          echo "CLN Versions Installed"
+
+      - name: Run gltestserver in background
+        shell: bash
+        run: |
+          mkdir -p $DATA_DIR
+          cd ./libs/gl-testserver
+          nohup uv run gltestserver run --directory $DATA_DIR > "$DATA_DIR"/gltestserver.log 2>&1 &
+
+          for i in {1..300}; do
+            if [ -f "$DATA_DIR/metadata.json" ]; then
+              echo "✅ metadata.json found"
+              GL_SCHEDULER_GRPC_URI=$(jq -r '.scheduler_grpc_uri' "$DATA_DIR"/metadata.json)
+              echo "GL_SCHEDULER_GRPC_URI=$GL_SCHEDULER_GRPC_URI" >> $GITHUB_ENV
+              echo "GL_CA_CRT=$DATA_DIR/gl-testserver/certs/ca.crt" >> $GITHUB_ENV
+              echo "GL_NOBODY_CRT=$DATA_DIR/gl-testserver/certs/users/nobody.crt" >> $GITHUB_ENV
+              echo "GL_NOBODY_KEY=$DATA_DIR/gl-testserver/certs/users/nobody-key.pem" >> $GITHUB_ENV
+              break
+            fi
+            echo "Waiting for metadata.json... ($i)"
+            sleep 3
+          done
+
+      - name: Run Python getting_started example
+        run: |
+          echo "Using scheduler URI for Python snippets: $GL_SCHEDULER_GRPC_URI"
+          uv run python examples/python/snippets/getting_started.py
+
+      - name: Run Rust getting_started example
+        run: |
+          echo "Using scheduler URI for Rust snippets: $GL_SCHEDULER_GRPC_URI"
+          cargo run --manifest-path examples/rust/Cargo.toml --bin getting_started
+
       - name: Build docs
         env:
           DOCSBRANCH: "gh-pages"
           DOCSREMOTE: "origin"
           GITHUB_TOKEN: "${{ secrets.GH_PAGES_PAT }}"
-        run: mkdir -p ${GITHUB_WORKSPACE}/site/
-      - run: cd docs && uv run mkdocs build --verbose --strict --clean --site-dir=${GITHUB_WORKSPACE}/site/
+        run: |
+          mkdir -p ${GITHUB_WORKSPACE}/site/
+          cd docs
+          uv run mkdocs build --verbose --strict --clean --site-dir=${GITHUB_WORKSPACE}/site/
 
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site
+
+      - name: Upload gltestserver logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gltestserver-logs
+          path: /tmp/gltests/gltestserver.log
+
+      - name: Stop gltestserver
+        run: |
+          if [ -f "$DATA_DIR"/gltestserver.pid ]; then
+            kill $(cat "$DATA_DIR"/gltestserver.pid) || true
+            echo "✅ gltestserver stopped"
+          fi
