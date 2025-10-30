@@ -9,6 +9,7 @@ dependencies = []
 [tool.uv]
 dev-dependencies = [
     "pytest-timeout>=2.3.1",
+    "python-kacl>=0.6.7",
 ]
 
 [tool.uv.workspace]

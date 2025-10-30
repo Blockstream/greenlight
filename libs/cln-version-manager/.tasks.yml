@@ -9,3 +9,7 @@ tasks:
   build:
     cmds:
       - uv build --sdist
+  publish:
+    cmds:
+      - uv tool run --from build pyproject-build
+      - uv tool run twine upload dist/*
