@@ -8,8 +8,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
-- Updated the hashes for v24.02gl1 and v24.11gl1. We applied some server-side patches for these versions.
-
-### Changed
-
-- Adjusted the expected hashes for artifacts, after patching them
+- Addressed an issue with signers being unable to connect to the node, due to an SNI header override that is no longer required
