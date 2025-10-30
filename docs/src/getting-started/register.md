@@ -91,7 +91,7 @@ node to run on. You can chose between the following networks:
  - `testnet`
  - `bitcoin`
 
-We'll pick `bitcoin`, because ... reckless 😉
+We'll set NETWORK as `bitcoin`, because ... reckless 😉
 
 === "Rust"
 	```rust
