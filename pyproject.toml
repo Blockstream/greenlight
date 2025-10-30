@@ -6,8 +6,8 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest-timeout>=2.3.1",
     "python-kacl>=0.6.7",
 ]
