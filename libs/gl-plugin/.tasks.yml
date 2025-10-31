@@ -2,5 +2,6 @@ version: '3'
 
 tasks:
   build:
+    dir: '.'
     cmds:
-      - cargo build 
+      - cargo build --bin gl-plugin
