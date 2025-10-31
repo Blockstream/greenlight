@@ -5,7 +5,6 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    #    "cln-version-manager",
     "flaky>=3.8.1",
     "gl-client",
     "grpcio-tools>=1.66",
@@ -20,6 +19,7 @@ dependencies = [
     "sh>=1.14.3",
     "sonora>=0.2.3",
     "cln-version-manager",
+    "bip39>=0.0.2",
 ]
 
 

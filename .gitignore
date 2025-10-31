@@ -1,4 +1,6 @@
 dist
+.venv/
+**/.venv/
 __pycache__
 device.crt
 device-key.pem
