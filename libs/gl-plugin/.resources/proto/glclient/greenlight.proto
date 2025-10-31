@@ -14,9 +14,14 @@ package greenlight;
 //
 // Deprecated methods are being replaced by the standardized and
 // automatically managed cln-grpc protocol you can find in
-// `node.proto`
+// `node.proto`. This interface consists mostly of
+// Greenlight-specific, and backported functionality.
 service Node {
-	// Stream incoming payments
+  // Create an invoice to request an incoming payment. Includes LSP
+  // negotiation to open a channel on-demand when needed.
+  rpc Invoice(InvoiceRequest) returns (InvoiceResponse) {}
+
+        // Stream incoming payments
 	//
 	// Currently includes off-chain payments received matching an
 	// invoice or spontaneus paymens through keysend.
@@ -220,4 +225,21 @@ message TrampolinePayResponse {
 	uint64 amount_msat = 5;
 	uint64 amount_sent_msat = 6;
 	bytes destination = 7;
+}
+
+message InvoiceRequest {
+  string lsp_id = 1; // len=0 => None
+  // Optional: for discounts/API keys
+  string token = 2; // len=0 => None
+  // Pass-through of cln invoice rpc params
+  uint64 amount_msat = 3;  // 0 => Any
+  string description = 4;
+  string label = 5;
+}
+message InvoiceResponse {
+  string bolt11 = 1;
+  uint32 created_index = 2;
+  uint32 expires_at = 3;
+  bytes payment_hash = 4;
+  bytes payment_secret = 5;
 }
