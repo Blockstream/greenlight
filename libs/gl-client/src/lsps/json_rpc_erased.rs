@@ -203,7 +203,7 @@ impl<'a> JsonRpcMethodUnerased<'a, Vec<u8>, Vec<u8>, Vec<u8>> for UneraseWrapper
 impl dyn JsonRpcMethodErased {
     // The impl promises here we return a concrete type
     // However, we'd rather keep the implementation details private in this module and don't want users messing with it
-    pub fn unerase(&self) -> impl JsonRpcMethodUnerased<Vec<u8>, Vec<u8>, Vec<u8>> {
+    pub fn unerase(&self) -> impl JsonRpcMethodUnerased<'_, Vec<u8>, Vec<u8>, Vec<u8>> {
         UneraseWrapper { inner: self }
     }
 }
