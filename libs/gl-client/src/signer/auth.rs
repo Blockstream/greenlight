@@ -12,17 +12,6 @@ pub trait Authorizer {
     ) -> Result<Vec<Approval>, Error>;
 }
 
-pub struct DummyAuthorizer {}
-
-impl Authorizer for DummyAuthorizer {
-    fn authorize(
-        &self,
-        _requests: &Vec<Request>,
-    ) -> Result<Vec<Approval>, Error> {
-        Ok(vec![])
-    }
-}
-
 pub struct GreenlightAuthorizer {}
 
 impl Authorizer for GreenlightAuthorizer {
