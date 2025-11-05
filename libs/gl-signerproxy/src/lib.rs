@@ -12,7 +12,7 @@ impl Proxy {
         Proxy {}
     }
 
-    pub async fn run(&self) -> Result<()> {
-        hsmproxy::run().await
+    pub fn run(&self) -> Result<()> {
+        hsmproxy::run()
     }
 }
