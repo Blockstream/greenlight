@@ -2,10 +2,10 @@ use crate::passfd::SyncFdPassingExt;
 use anyhow::{anyhow, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
 use log::trace;
+use std::io::{Read, Write};
 use std::os::unix::io::{AsRawFd, RawFd};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::UnixStream;
-use tokio::sync::Mutex;
+use std::os::unix::net::UnixStream;
+use std::sync::Mutex;
 
 /// A simple implementation of the inter-daemon protocol wrapping a
 /// UnixStream. Easy to read from and write to.
@@ -65,11 +65,18 @@ impl DaemonConnection {
         }
     }
 
-    pub async fn read(&self) -> Result<Message, Error> {
-        let mut sock = self.conn.lock().await;
-        let msglen = sock.read_u32().await?;
-        let mut buf = vec![0 as u8; msglen as usize];
-        sock.read_exact(&mut buf).await?;
+    pub fn read(&self) -> Result<Message, Error> {
+        let mut sock = self.conn.lock().unwrap();
+
+        // Read 4-byte length prefix in big-endian
+        let mut len_buf = [0u8; 4];
+        sock.read_exact(&mut len_buf)?;
+        let msglen = BigEndian::read_u32(&len_buf);
+
+        // Read the message body
+        let mut buf = vec![0u8; msglen as usize];
+        sock.read_exact(&mut buf)?;
+
         if buf.len() < msglen as usize {
             return Err(anyhow!("Short read from client"));
         }
@@ -77,6 +84,7 @@ impl DaemonConnection {
         let typ = BigEndian::read_u16(&buf);
         let mut fds = vec![];
 
+        // Receive any file descriptors associated with this message type
         let numfds = DaemonConnection::count_fds(typ);
         for _ in 0..numfds {
             fds.push(sock.as_raw_fd().recv_fd()?);
@@ -89,17 +97,24 @@ impl DaemonConnection {
         }
     }
 
-    pub async fn write(&self, msg: Message) -> Result<(), Error> {
+    pub fn write(&self, msg: Message) -> Result<(), Error> {
         trace!(
             "Sending message {} ({} bytes, {} FDs)",
             msg.typ,
             msg.body.len(),
             msg.fds.len()
         );
-        let mut client = self.conn.lock().await;
-        client.write_u32(msg.body.len() as u32).await?;
-        client.write_all(&msg.body).await?;
+        let mut client = self.conn.lock().unwrap();
 
+        // Write 4-byte length prefix in big-endian
+        let mut len_buf = [0u8; 4];
+        BigEndian::write_u32(&mut len_buf, msg.body.len() as u32);
+        client.write_all(&len_buf)?;
+
+        // Write the message body
+        client.write_all(&msg.body)?;
+
+        // Send any file descriptors
         for fd in msg.fds {
             client.as_raw_fd().send_fd(fd)?;
         }
