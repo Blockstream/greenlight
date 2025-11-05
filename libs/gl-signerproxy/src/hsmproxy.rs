@@ -4,17 +4,18 @@ use crate::pb::{hsm_client::HsmClient, Empty, HsmRequest, HsmRequestContext};
 use crate::wire::{DaemonConnection, Message};
 use anyhow::{anyhow, Context};
 use anyhow::{Error, Result};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::convert::TryFrom;
 use std::env;
 use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::os::unix::net::UnixStream;
+use std::path::PathBuf;
 use std::process::Command;
 use std::str;
 use std::sync::atomic;
 use std::sync::Arc;
-#[cfg(unix)]
-use tokio::net::UnixStream as TokioUnixStream;
+use std::thread;
+use tokio::runtime::Runtime;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 use which::which;
@@ -42,32 +43,35 @@ fn version() -> String {
 
 fn setup_node_stream() -> Result<DaemonConnection, Error> {
     let ms = unsafe { UnixStream::from_raw_fd(3) };
-    Ok(DaemonConnection::new(TokioUnixStream::from_std(ms)?))
+    Ok(DaemonConnection::new(ms))
 }
 
-fn start_handler(local: NodeConnection, counter: Arc<atomic::AtomicUsize>, grpc: GrpcClient) {
-    tokio::spawn(async {
-        match process_requests(local, counter, grpc)
-            .await
-            .context("processing requests")
-        {
+fn start_handler(
+    local: NodeConnection,
+    counter: Arc<atomic::AtomicUsize>,
+    grpc: GrpcClient,
+    runtime: Arc<Runtime>,
+) {
+    thread::spawn(move || {
+        match process_requests(local, counter, grpc, runtime).context("processing requests") {
             Ok(()) => panic!("why did the hsmproxy stop processing requests without an error?"),
             Err(e) => warn!("hsmproxy stopped processing requests with error: {}", e),
         }
     });
 }
 
-async fn process_requests(
+fn process_requests(
     node_conn: NodeConnection,
     request_counter: Arc<atomic::AtomicUsize>,
     mut server: GrpcClient,
+    runtime: Arc<Runtime>,
 ) -> Result<(), Error> {
     let conn = node_conn.conn;
     let context = node_conn.context;
     info!("Pinging server");
-    server.ping(Empty::default()).await?;
+    runtime.block_on(server.ping(Empty::default()))?;
     loop {
-        if let Ok(msg) = conn.read().await {
+        if let Ok(msg) = conn.read() {
             match msg.msgtype() {
                 9 => {
                     eprintln!("Got a message from node: {:?}", &msg.body);
@@ -79,7 +83,7 @@ async fn process_requests(
 
                     let (local, remote) = UnixStream::pair()?;
                     let local = NodeConnection {
-                        conn: DaemonConnection::new(TokioUnixStream::from_std(local)?),
+                        conn: DaemonConnection::new(local),
                         context: Some(ctx),
                     };
                     let remote = remote.as_raw_fd();
@@ -87,8 +91,8 @@ async fn process_requests(
 
                     let grpc = server.clone();
                     // Start new handler for the client
-                    start_handler(local, request_counter.clone(), grpc);
-                    if let Err(e) = conn.write(msg).await {
+                    start_handler(local, request_counter.clone(), grpc, runtime.clone());
+                    if let Err(e) = conn.write(msg) {
                         error!("error writing msg to node_connection: {:?}", e);
                         return Err(e);
                     }
@@ -102,22 +106,23 @@ async fn process_requests(
                         requests: Vec::new(),
                         signer_state: Vec::new(),
                     });
-                    let start_time = tokio::time::Instant::now();
+
                     eprintln!(
                         "WIRE: lightningd -> hsmd: Got a message from node: {:?}",
                         &req
                     );
-                    eprintln!("WIRE: hsmd -> plugin: Forwarding: {:?}", &req);
-                    let res = server.request(req).await?.into_inner();
-                    let msg = Message::from_raw(res.raw);
+                    let start_time = tokio::time::Instant::now();
+                    debug!("Got a message from node: {:?}", &req);
+                    let res = runtime.block_on(server.request(req))?.into_inner();
                     let delta = start_time.elapsed();
+                    let msg = Message::from_raw(res.raw);
                     eprintln!(
                         "WIRE: plugin -> hsmd: Got respone from hsmd: {:?} after {}ms",
                         &msg,
                         delta.as_millis()
                     );
                     eprintln!("WIRE: hsmd -> lightningd: {:?}", &msg);
-                    conn.write(msg).await?
+                    conn.write(msg)?
                 }
             }
         } else {
@@ -126,32 +131,34 @@ async fn process_requests(
         }
     }
 }
-use std::path::PathBuf;
-async fn grpc_connect() -> Result<GrpcClient, Error> {
-    // We will ignore this uri because uds do not use it
-    // if your connector does use the uri it will be provided
-    // as the request to the `MakeConnection`.
-    // Connect to a Uds socket
-    let channel = Endpoint::try_from("http://[::]:50051")?
-        .connect_with_connector(service_fn(|_: Uri| {
-            let sock_path = get_sock_path().unwrap();
-            let mut path = PathBuf::new();
-            if !sock_path.starts_with('/') {
-                path.push(env::current_dir().unwrap());
-            }
-            path.push(&sock_path);
 
-            let path = path.to_str().unwrap().to_string();
-            info!("Connecting to hsmserver at {}", path);
-            TokioUnixStream::connect(path)
-        }))
-        .await
-        .context("could not connect to the socket file")?;
+fn grpc_connect(runtime: &Runtime) -> Result<GrpcClient, Error> {
+    runtime.block_on(async {
+        // We will ignore this uri because uds do not use it
+        // if your connector does use the uri it will be provided
+        // as the request to the `MakeConnection`.
+        // Connect to a Uds socket
+        let channel = Endpoint::try_from("http://[::]:50051")?
+            .connect_with_connector(service_fn(|_: Uri| {
+                let sock_path = get_sock_path().unwrap();
+                let mut path = PathBuf::new();
+                if !sock_path.starts_with('/') {
+                    path.push(env::current_dir().unwrap());
+                }
+                path.push(&sock_path);
 
-    Ok(HsmClient::new(channel))
+                let path = path.to_str().unwrap().to_string();
+                info!("Connecting to hsmserver at {}", path);
+                tokio::net::UnixStream::connect(path)
+            }))
+            .await
+            .context("could not connect to the socket file")?;
+
+        Ok(HsmClient::new(channel))
+    })
 }
 
-pub async fn run() -> Result<(), Error> {
+pub fn run() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
 
     // Start the counter at 1000 so we can inject some message before
@@ -164,8 +171,16 @@ pub async fn run() -> Result<(), Error> {
 
     info!("Starting hsmproxy");
 
+    // Create a dedicated tokio runtime for gRPC operations
+    let runtime = Arc::new(
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .context("failed to create tokio runtime")?,
+    );
+
     let node = setup_node_stream()?;
-    let grpc = grpc_connect().await?;
+    let grpc = grpc_connect(&runtime)?;
 
     process_requests(
         NodeConnection {
@@ -174,6 +189,6 @@ pub async fn run() -> Result<(), Error> {
         },
         request_counter,
         grpc,
+        runtime,
     )
-    .await
 }
