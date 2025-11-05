@@ -26,11 +26,20 @@ jobs:
 
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v5
+      env:
+        UV_PYTHON: 3.11
       
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
 
+    - name: Download CLN versions
+      env:
+        UV_PYTHON: 3.11
+      run: |
+        cd libs/cln-version-manager
+        uv run --extra cli clnvm get-all
+        
     - name: Install Protoc
       uses: arduino/setup-protoc@v3
 
@@ -38,6 +47,8 @@ jobs:
       run: task docker:install-dependencies
 
     - name: Adjust PATH
+      env:
+        UV_PYTHON: 3.11
       run: |
         echo "/home/runner/.cargo/bin" >> $GITHUB_PATH
         # Directory in which go-task deposits its binaries
@@ -53,13 +64,16 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build binaries
+      env:
+        UV_PYTHON: 3.11
       run:
         task ci-build
-        
+
     - name: Check Self
       env:
         GL_TESTING_IGNORE_HASH: 1
         PYTEST_OPTS: -n 6
+        UV_PYTHON: 3.11
       run : |
         task clientpy:check
         task testing:check
