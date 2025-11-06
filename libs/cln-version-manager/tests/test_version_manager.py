@@ -5,8 +5,7 @@ import os
 
 import requests
 
-from clnvm.cln_version_manager import ClnVersionManager
-from clnvm.cln_version_manager import CLN_VERSIONS
+from clnvm.cln_version_manager import ClnVersionManager, VersionDescriptor
 
 
 def get_tmp_dir(name: str) -> str:
@@ -18,14 +17,18 @@ def get_tmp_dir(name: str) -> str:
 
 
 def test_download_cln_version() -> None:
-    # Only download the first 2 versions in the test
-    versions = CLN_VERSIONS[-2:]
-    vm = ClnVersionManager(
+    # Download the latest 2 versions from the manifest
+    vm = ClnVersionManager(cln_path=get_tmp_dir("test_download_cln_version"))
+    # Get all versions from the manifest and use the last 2
+    all_versions = vm.get_versions()
+    versions = all_versions[-2:] if len(all_versions) >= 2 else all_versions
+
+    vm_test = ClnVersionManager(
         cln_versions=versions, cln_path=get_tmp_dir("test_download_cln_version")
     )
-    vm.get_all()
+    vm_test.get_all()
 
     # get them again to verify we don't download them
     with mock.patch("requests.get") as request_mock:
-        vm.get_all()
+        vm_test.get_all()
         assert not request_mock.get.called
