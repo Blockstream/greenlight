@@ -27,6 +27,8 @@ class GlNodeFactory(NodeFactory):
             options = {}
         options["allow-deprecated-apis"] = True
         options["developer"] = None
+        # Disable cln-grpc plugin to avoid port conflicts with GL nodes
+        options["disable-plugin"] = "cln-grpc"
         return NodeFactory.get_node(self, options=options, *args, **kwargs)
 
 
