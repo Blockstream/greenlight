@@ -17,6 +17,14 @@ from clnvm.errors import UnrunnableVersion, HashMismatch, VersionMismatch
 
 PathLike = Union[os.PathLike, str]
 
+# Unless the URL is an absolute URL, use this prefix to complete the URL.
+BASE_URL = "https://storage.googleapis.com/greenlight-artifacts/cln"
+MANIFEST_URL = f"{BASE_URL}/manifest.json"
+PUBKEY_FINGERPRINT = "0976C14E5F02F4EE03210680F1F616F50DD92681"
+PUBKEY_URL = f"{BASE_URL}/{PUBKEY_FINGERPRINT}.pub"
+_LIGHTNINGD_REL_PATH = Path("usr/local/bin/lightningd")
+_BIN_REL_PATH = Path("usr/local/bin")
+
 
 @dataclass
 class VersionDescriptor:
@@ -26,74 +34,6 @@ class VersionDescriptor:
 
 
 logger = logging.getLogger(__name__)
-
-# Stores all versions of cln that can be scheduled
-CLN_VERSIONS = [
-    VersionDescriptor(
-        tag="v0.10.1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v0.10.1.tar.bz2",
-        checksum="928f09a46c707f68c8c5e1385f6a51e10f7b1e57c5cef52f5b73c7d661500af5",
-    ),
-    VersionDescriptor(
-        tag="v0.10.2",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v0.10.2.tar.bz2",
-        checksum="c323f2e41ffde962ac76b2aeaba3f2360b3aa6481028f11f12f114f408507bfe",
-    ),
-    VersionDescriptor(
-        tag="v0.11.0.1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v0.11.0.1.tar.bz2",
-        checksum="0f1a49bb8696db44a9ab93d8a226e82b4d3de03c9bae2eb38b750d75d4bcaceb",
-    ),
-    VersionDescriptor(
-        tag="v0.11.2gl2",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v0.11.2gl2.tar.bz2",
-        checksum="b15866b7beea239aaf4e38931fe09ee85bf2e58ad61c2ec79b83bb361364bf97",
-    ),
-    VersionDescriptor(
-        tag="v0.11.2",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v0.11.2.tar.bz2",
-        checksum="95209242d8ddc4879b959fb5e4594b4d2dcf7bac7227ec7c421ab05019de8633",
-    ),
-    VersionDescriptor(
-        tag="v22.11gl1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v22.11gl1.tar.bz2",
-        checksum="40b6c50babdc74d9fd251816efa46de0c12cac88d72e0c7b02457a8949d2690b",
-    ),
-    VersionDescriptor(
-        tag="v23.05gl1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v23.05gl1.tar.bz2",
-        checksum="e1a57a8ced59fd92703fad8e34926c014b71ee0c13cc7f863cb18b2ca19a58b9",
-    ),
-    VersionDescriptor(
-        tag="v23.08gl1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v23.08gl1.tar.bz2",
-        checksum="0e392c5117e14dc37cf72393f47657a09821f69ab8b45937d7e79ca8d91d17e9",
-    ),
-    VersionDescriptor(
-        tag="v24.02gl1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v24.02gl1.tar.bz2",
-        checksum="31fc7e79eddfa5c4083d8d516b3c95477e65b0d2c6b671fd12170819db3217be",
-    ),
-    VersionDescriptor(
-        tag="v24.02",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v24.02.tar.bz2",
-        checksum="690f5b3ce0404504913bb7cde22d88efeabe72226aefe31a70916cf89905455d",
-    ),
-    VersionDescriptor(
-        tag="v24.11gl1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v24.11gl1.tar.bz2",
-        checksum="06818569d3a68d578cf390d01a6d09a5c969b7c6fdef9291dfe6fb707bb02fcc",
-    ),
-    VersionDescriptor(
-        tag="v25.05gl1",
-        url="https://storage.googleapis.com/greenlight-artifacts/cln/lightningd-v25.05gl1.tar.bz2",
-        checksum="b62a340d2aadade0cdd015748781fb065f979ce7a83ba050b1942d830f9c1a52",
-    ),
-]
-
-
-_LIGHTNINGD_REL_PATH = Path("usr/local/bin/lightningd")
-_BIN_REL_PATH = Path("usr/local/bin")
 
 
 def _get_cln_version_path(cln_path: Optional[PathLike] = None) -> Path:
@@ -125,7 +65,18 @@ class ClnVersionManager:
         if cln_versions is not None:
             self._cln_versions = cln_versions
         else:
-            self._cln_versions = CLN_VERSIONS
+            self.update()
+
+    def update(self) -> None:
+        """Fetch the manifest, and populate our list of versions."""
+        manifest = requests.get(MANIFEST_URL).json()
+        versions = [
+            VersionDescriptor(
+                tag=k, url=f"{BASE_URL}/{v['filename']}", checksum=v["sha256"]
+            )
+            for k, v in manifest["versions"].items()
+        ]
+        self._cln_versions = versions
 
     def get_versions(self) -> List[VersionDescriptor]:
         """
@@ -170,7 +121,7 @@ class ClnVersionManager:
         return Path(self._cln_path) / cln_version.checksum / cln_version.tag
 
     def get_descriptor_from_tag(self, tag: str) -> VersionDescriptor:
-        cln_dict = {d.tag: d for d in CLN_VERSIONS}
+        cln_dict = {d.tag: d for d in self._cln_versions}
         descriptor = cln_dict.get(tag, None)
 
         if descriptor is None:
@@ -208,7 +159,12 @@ class ClnVersionManager:
             root_path=target_path,
         )
 
-    def _download(self, cln_version: VersionDescriptor, target_path: Path, verify_tag:bool = False) -> None:
+    def _download(
+        self,
+        cln_version: VersionDescriptor,
+        target_path: Path,
+        verify_tag: bool = False,
+    ) -> None:
         """Downloads the provided cln_version"""
         tag = cln_version.tag
         logger.info("Downloading version %s to %s", tag, target_path)
