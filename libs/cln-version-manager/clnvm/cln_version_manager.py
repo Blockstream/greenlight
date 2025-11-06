@@ -13,7 +13,12 @@ from multiprocessing.pool import ThreadPool as Pool
 
 import requests
 from clnvm.utils import NodeVersion
-from clnvm.errors import UnrunnableVersion, HashMismatch, VersionMismatch
+from clnvm.errors import (
+    UnrunnableVersion,
+    HashMismatch,
+    VersionMismatch,
+    SignatureVerificationFailed,
+)
 
 PathLike = Union[os.PathLike, str]
 
@@ -31,9 +36,66 @@ class VersionDescriptor:
     tag: str
     url: str
     checksum: str
+    signature: Optional[str] = None
 
 
 logger = logging.getLogger(__name__)
+
+
+def _verify_signature(
+    file_path: Path,
+    signature: str,
+    tag: str,
+    pubkey_fingerprint: str = PUBKEY_FINGERPRINT,
+) -> None:
+    """
+    Verify the GPG signature of a file.
+
+    Args:
+        file_path: Path to the file to verify
+        signature: The ASCII-armored PGP signature
+        tag: Version tag (for error messages)
+        pubkey_fingerprint: The fingerprint of the public key to use
+
+    Raises:
+        SignatureVerificationFailed: If signature verification fails
+    """
+    logger.debug("Verifying GPG signature for version %s", tag)
+
+    # Create a temporary GPG keyring
+    logger.debug("Fetching public key from %s", PUBKEY_URL)
+    pubkey_response = requests.get(PUBKEY_URL)
+    if pubkey_response.status_code != 200:
+        raise SignatureVerificationFailed(
+            tag=tag, reason=f"Failed to fetch public key: {pubkey_response.status_code}"
+        )
+
+    pubkey_data = pubkey_response.text
+    pubkey_path = file_path.parent / "pubkey.pem"
+    with Path(pubkey_path).open(mode="w") as f:
+        f.write(pubkey_data)
+
+    try:
+        subprocess.check_call(["gpg", "--import", pubkey_path])
+    except:
+        raise SignatureVerificationFailed(tag=tag, reason="Failed to import public key")
+    logger.debug("Imported public key.")
+
+    sig_file = Path(file_path.parent / "signature.asc")
+    with sig_file.open(mode="w") as f:
+        f.write(signature)
+
+    try:
+        subprocess.check_call(["gpg", "--verify", sig_file, file_path])
+    except Exception as e:
+        raise SignatureVerificationFailed(
+            tag=tag, reason=f"Invalid signature: {repr(e)}"
+        )
+
+    logger.debug(
+        "Successfully verified signature for version %s with key",
+        tag,
+    )
 
 
 def _get_cln_version_path(cln_path: Optional[PathLike] = None) -> Path:
@@ -72,7 +134,10 @@ class ClnVersionManager:
         manifest = requests.get(MANIFEST_URL).json()
         versions = [
             VersionDescriptor(
-                tag=k, url=f"{BASE_URL}/{v['filename']}", checksum=v["sha256"]
+                tag=k,
+                url=f"{BASE_URL}/{v['filename']}",
+                checksum=v["sha256"],
+                signature=v.get("signature"),
             )
             for k, v in manifest["versions"].items()
         ]
@@ -170,7 +235,7 @@ class ClnVersionManager:
         logger.info("Downloading version %s to %s", tag, target_path)
 
         # Retrieve the version from the provided url
-        response = requests.get(cln_version.url)
+        response = requests.get(cln_version.url, stream=True)
         if response.status_code != 200:
             logger.warning(
                 "Failed to retrieve %s: %s - %s",
@@ -180,50 +245,68 @@ class ClnVersionManager:
             )
             raise Exception(f"Failed to find version {tag}")
 
-        data = response.content
+        # Write to a temporary file and compute hash in one pass
+        import tempfile
 
-        # We check the hash of the downloaded data
-        # If the hash doesn't match we stop and alert the user
-        m = hashlib.sha256()
-        m.update(data)
-        content_sha = m.hexdigest()
+        tmp_dir = tempfile.mkdtemp()
+        tmp_file = Path(tmp_dir) / "download.tar"
 
-        logger.debug("Downloaded version %s with checksum %s", tag, content_sha)
-        ignore_hash = bool(os.environ.get("GL_TESTING_IGNORE_HASH", False))
-        if ignore_hash:
-            logger.warning(
-                "Checking the hash of remote versions is disabled which is unsafe. "
-                "Try to unset GL_TESTING_IGNORE_HASH"
-            )
+        try:
+            m = hashlib.sha256()
+            with open(tmp_file, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        m.update(chunk)
 
-        if (not ignore_hash) and content_sha != cln_version.checksum:
-            raise HashMismatch(
-                tag=cln_version.tag, expected=cln_version.checksum, actual=content_sha
-            )
+            content_sha = m.hexdigest()
+            logger.debug("Downloaded version %s with checksum %s", tag, content_sha)
 
-        # We extract the downloaded tar-file in the section below.
-        # Note, that we never put the tar-file on disk. We extract
-        # it straight from memory
-        #
-        # In python 3.12 the `filter`-argument was introduced
-        # to `TarFile.extractall`.
-        #
-        # Using this argument provide us extra security against
-        # malicious .tar-files.
-        #
-        # The extra security is nice to have. We used the hash to
-        # check the authenticity of our .tar-files a few lines above.
-        #
-        # We'll use the filter argument if it is available.
-        # In the other case we rely on the hash to keep our users safe
-        content_fh = BytesIO(data)
-        tf = tarfile.open(fileobj=content_fh)
+            # Verify signature if available
+            if cln_version.signature:
+                logger.info("Verifying GPG signature for version %s", tag)
+                _verify_signature(tmp_file, cln_version.signature, tag)
+            else:
+                logger.warning("No signature available for version %s", tag)
 
-        current_version = sys.version_info
-        if current_version.minor >= 12:
-            tf.extractall(path=target_path, filter="data")
-        else:
-            tf.extractall(path=target_path)
+            # Check the hash
+            ignore_hash = bool(os.environ.get("GL_TESTING_IGNORE_HASH", False))
+            if ignore_hash:
+                logger.warning(
+                    "Checking the hash of remote versions is disabled which is unsafe. "
+                    "Try to unset GL_TESTING_IGNORE_HASH"
+                )
+
+            if (not ignore_hash) and content_sha != cln_version.checksum:
+                raise HashMismatch(
+                    tag=cln_version.tag,
+                    expected=cln_version.checksum,
+                    actual=content_sha,
+                )
+
+            # We extract the downloaded tar-file in the section below.
+            # In python 3.12 the `filter`-argument was introduced
+            # to `TarFile.extractall`.
+            #
+            # Using this argument provide us extra security against
+            # malicious .tar-files.
+            #
+            # The extra security is nice to have. We used the hash and
+            # signature to check the authenticity of our .tar-files above.
+            #
+            # We'll use the filter argument if it is available.
+            # In the other case we rely on the hash to keep our users safe
+            tf = tarfile.open(str(tmp_file))
+
+            current_version = sys.version_info
+            if current_version.minor >= 12:
+                tf.extractall(path=target_path, filter="data")
+            else:
+                tf.extractall(path=target_path)
+
+        finally:
+            # Clean up temporary file
+            shutil.rmtree(tmp_dir)
 
         if verify_tag:
             try:

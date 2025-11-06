@@ -47,3 +47,16 @@ class HashMismatch(Exception):
 
     def __repr__(self) -> str:
         return f"HashMismatch(tag={self.tag}, actual={self.actual}, expected={self.expected})"
+
+
+class SignatureVerificationFailed(Exception):
+
+    def __init__(self, tag: str, reason: str):
+        self.tag = tag
+        self.reason = reason
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    def __repr__(self) -> str:
+        return f"SignatureVerificationFailed(tag={self.tag}, reason={self.reason})"
