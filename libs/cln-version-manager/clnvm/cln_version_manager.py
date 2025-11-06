@@ -25,11 +25,11 @@ PathLike = Union[os.PathLike, str]
 # Unless the URL is an absolute URL, use this prefix to complete the URL.
 BASE_URL = "https://storage.googleapis.com/greenlight-artifacts/cln"
 MANIFEST_URL = f"{BASE_URL}/manifest.json"
-PUBKEY_FINGERPRINT = "0976C14E5F02F4EE03210680F1F616F50DD92681"
+PUBKEY_FINGERPRINT = "1E832A80A25B69C6C7123285AB5187B13F8DD139"
 PUBKEY_URL = f"{BASE_URL}/{PUBKEY_FINGERPRINT}.pub"
 _LIGHTNINGD_REL_PATH = Path("usr/local/bin/lightningd")
 _BIN_REL_PATH = Path("usr/local/bin")
-
+GPG_OPTS = ['--no-default-keyring', '--keyring=/tmp/clnvm-keyring.gpg']
 
 @dataclass
 class VersionDescriptor:
@@ -41,6 +41,43 @@ class VersionDescriptor:
 
 logger = logging.getLogger(__name__)
 
+
+def _get_cache_dir() -> Path:
+    cln_cache_dir = os.environ.get("CLNVM_CACHE_DIR")
+    if cln_cache_dir is not None:
+        return Path(cln_cache_dir).resolve()
+
+    xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
+    if xdg_cache_home is not None:
+        return Path(xdg_cache_home).resolve() / "clnvm"
+
+    else:
+        return Path("~/.cache").expanduser().resolve() / "clnvm"
+
+def _ensure_pubkey() -> Path:
+    """Ensure we have the pubkey that signs the releases in the cache.
+
+    Download if we don't yet.
+    """
+    fpath = _get_cache_dir()
+    fpath.mkdir(parents=True, exist_ok=True)
+    pubkey_path = fpath / f"{PUBKEY_FINGERPRINT}.asc"
+    if not pubkey_path.exists():
+        logger.debug("Fetching public key from %s", PUBKEY_URL)
+        pubkey_response = requests.get(PUBKEY_URL)
+        if pubkey_response.status_code != 200:
+            raise ValueError(
+                f"Failed to fetch public key: {pubkey_response.status_code}"
+            )
+        with Path(pubkey_path).open(mode="w") as f:
+            f.write(pubkey_response.text)
+        try:
+            subprocess.check_call(["gpg", *GPG_OPTS, "--import", pubkey_path])
+        except:
+            raise ValueError("Failed to import public key")
+        logger.debug("Imported public key.")
+
+    return pubkey_path
 
 def _verify_signature(
     file_path: Path,
@@ -62,31 +99,12 @@ def _verify_signature(
     """
     logger.debug("Verifying GPG signature for version %s", tag)
 
-    # Create a temporary GPG keyring
-    logger.debug("Fetching public key from %s", PUBKEY_URL)
-    pubkey_response = requests.get(PUBKEY_URL)
-    if pubkey_response.status_code != 200:
-        raise SignatureVerificationFailed(
-            tag=tag, reason=f"Failed to fetch public key: {pubkey_response.status_code}"
-        )
-
-    pubkey_data = pubkey_response.text
-    pubkey_path = file_path.parent / "pubkey.pem"
-    with Path(pubkey_path).open(mode="w") as f:
-        f.write(pubkey_data)
-
-    try:
-        subprocess.check_call(["gpg", "--import", pubkey_path])
-    except:
-        raise SignatureVerificationFailed(tag=tag, reason="Failed to import public key")
-    logger.debug("Imported public key.")
-
+    pubkey_path = _ensure_pubkey()
     sig_file = Path(file_path.parent / "signature.asc")
     with sig_file.open(mode="w") as f:
         f.write(signature)
-
     try:
-        subprocess.check_call(["gpg", "--verify", sig_file, file_path])
+        subprocess.check_call(["gpg", *GPG_OPTS, "--verify", sig_file, file_path])
     except Exception as e:
         raise SignatureVerificationFailed(
             tag=tag, reason=f"Invalid signature: {repr(e)}"
@@ -104,17 +122,7 @@ def _get_cln_version_path(cln_path: Optional[PathLike] = None) -> Path:
     """
     if cln_path is not None:
         return Path(cln_path).resolve()
-
-    cln_cache_dir = os.environ.get("CLNVM_CACHE_DIR")
-    if cln_cache_dir is not None:
-        return Path(cln_cache_dir).resolve()
-
-    xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
-    if xdg_cache_home is not None:
-        return Path(xdg_cache_home).resolve() / "clnvm"
-
-    else:
-        return Path("~/.cache").expanduser().resolve() / "clnvm"
+    return _get_cache_dir()
 
 
 class ClnVersionManager:
