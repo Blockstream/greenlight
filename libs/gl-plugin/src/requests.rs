@@ -207,3 +207,71 @@ pub struct Keysend {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ListIncoming {}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct InvoiceRequest {
+    pub lsp_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+    pub amount_msat: cln_rpc::primitives::AmountOrAny,
+    pub description: String,
+    pub label: String,
+}
+
+use cln_rpc::model::TypedRequest;
+
+impl From<crate::pb::InvoiceRequest> for InvoiceRequest {
+    fn from(o: crate::pb::InvoiceRequest) -> InvoiceRequest {
+        InvoiceRequest {
+            lsp_id: o.lsp_id,
+            token: match o.token.as_ref() {
+                "" => None,
+                o => Some(o.to_owned()),
+            },
+            amount_msat: match o.amount_msat {
+                0 => cln_rpc::primitives::AmountOrAny::Any,
+                o => cln_rpc::primitives::AmountOrAny::Amount(
+                    cln_grpc::pb::Amount { msat: o }.into(),
+                ),
+            },
+            description: o.description,
+            label: o.label,
+        }
+    }
+}
+
+impl TypedRequest for InvoiceRequest {
+    type Response = super::responses::InvoiceResponse;
+
+    fn method(&self) -> &str {
+        "lsps-lsps2-invoice"
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_invoice_response() {
+        let tests = vec![
+            (crate::pb::InvoiceRequest {
+                lsp_id: "lsp_id".to_owned(),
+                token: "".to_owned(),
+                amount_msat: 0,
+                description: "description".to_owned(),
+                label: "label".to_owned(),
+            }),
+            crate::pb::InvoiceRequest {
+                lsp_id: "lsp_id".to_owned(),
+                token: "token".to_owned(),
+                amount_msat: 1337,
+                description: "description".to_owned(),
+                label: "label".to_owned(),
+            },
+        ];
+
+        for t in tests {
+            let _actual: super::InvoiceRequest = t.into();
+        }
+    }
+}

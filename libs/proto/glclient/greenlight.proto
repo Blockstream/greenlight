@@ -228,7 +228,7 @@ message TrampolinePayResponse {
 }
 
 message InvoiceRequest {
-  string lsp_id = 1; // len=0 => None
+  string lsp_id = 1; // len=0 => None, let the server decide.
   // Optional: for discounts/API keys
   string token = 2; // len=0 => None
   // Pass-through of cln invoice rpc params

@@ -183,9 +183,19 @@ impl Node for PluginNodeServer {
 
     async fn invoice(
         &self,
-        _: Request<pb::InvoiceRequest>,
+        req: Request<pb::InvoiceRequest>,
     ) -> Result<Response<pb::InvoiceResponse>, Status> {
-        unimplemented!()
+        let req: pb::InvoiceRequest = req.into_inner();
+        let invreq: crate::requests::InvoiceRequest = req.into();
+        let rpc_arc = get_rpc(&self.rpc_path).await;
+
+        let mut rpc = rpc_arc.lock().await;
+        let res = rpc
+            .call_typed(&invreq)
+            .await
+            .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+
+        Ok(Response::new(res.into()))
     }
 
     async fn stream_custommsg(
