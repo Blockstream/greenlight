@@ -1389,7 +1389,7 @@ dependencies = [
  "mockall",
  "picky",
  "picky-asn1-der 0.4.1",
- "picky-asn1-x509 0.12.0",
+ "picky-asn1-x509 0.15.2",
  "pin-project 1.1.10",
  "prost 0.12.6",
  "prost-derive 0.12.6",
@@ -2789,6 +2789,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "picky-asn1"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ff038f9360b934342fb3c0a1d6e82c438a2624b51c3c6e3e6d7cf252b6f3ee3"
+dependencies = [
+ "oid",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "picky-asn1-der"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2811,6 +2822,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "picky-asn1-der"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b491eb61603cba1ad5c6be0269883538f8d74136c35e3641a840fb0fbcd41efc"
+dependencies = [
+ "picky-asn1 0.10.1",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "picky-asn1-x509"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2826,14 +2848,14 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-x509"
-version = "0.12.0"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c5f20f71a68499ff32310f418a6fad8816eac1a2859ed3f0c5c741389dd6208"
+checksum = "c97cd14d567a17755910fa8718277baf39d08682a980b1b1a4b4da7d0bc61a04"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "oid",
- "picky-asn1 0.8.0",
- "picky-asn1-der 0.4.1",
+ "picky-asn1 0.10.1",
+ "picky-asn1-der 0.5.4",
  "serde",
 ]
 
