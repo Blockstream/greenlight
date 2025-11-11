@@ -1,4 +1,5 @@
 # Pytest fixtures
+from rich.pretty import pprint
 import tempfile
 from .scheduler import Scheduler
 from gltesting.clients import Clients, Client
@@ -224,8 +225,7 @@ def grpc_web_proxy(scheduler, grpc_test_server):
 
 @pytest.fixture
 def node_grpc_web_proxy(scheduler):
-    """A grpc-web proxy that knows how to talk to nodes.
-    """
+    """A grpc-web proxy that knows how to talk to nodes."""
     p = GrpcWebProxy(scheduler=scheduler, grpc_port=0)
     p.handler_cls = NodeHandler
     p.start()
@@ -233,3 +233,30 @@ def node_grpc_web_proxy(scheduler):
     yield p
 
     p.stop()
+
+
+@pytest.fixture
+def lsps_server(node_factory):
+    """Provision and start an LSPs server."""
+    from gltesting import get_plugins_dir
+
+    policy_plugin = get_plugins_dir() / "lsps2_policy.py"
+
+    lsp = node_factory.get_node(
+        options={
+            "experimental-lsps2-service": None,
+            "experimental-lsps2-promise-secret": "A" * 64,
+            "important-plugin": policy_plugin,
+            "disable-plugin": "cln-grpc",
+        }
+    )
+
+    # Most of the params below are ignored, this is just a smoke test either way
+    pprint(lsp.rpc.lsps2_policy_getpolicy())
+    pprint(
+        lsp.rpc.lsps2_policy_getchannelcapacity(
+            init_payment_size=10**6, scid="1x1x1", opening_fee_params=None
+        )
+    )
+
+    yield lsp
