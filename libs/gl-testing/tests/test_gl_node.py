@@ -17,7 +17,7 @@ def test_node_network_gl_fund(node_factory, clients, bitcoind):
     l1 -> l2 -> gl1
     ```
     """
-    l1, l2 = node_factory.line_graph(2)
+    l1, l2 = node_factory.line_graph(2, opts=[{'disable-plugin': 'cln-grpc'}]*2)
     c = clients.new()
     c.register(configure=True)
     gl1 = c.node()

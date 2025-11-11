@@ -129,7 +129,6 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     # calling `trampoline_pay` with an unkown tmrp_node_id must fail.
     with pytest.raises(
         expected_exception=ValueError,
-
         match=f"Unknown peer {l3.info['id']}",
     ):
         res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l3.info["id"]))
