@@ -53,11 +53,9 @@ jobs:
     # - armv7
     steps:
       - uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        
       - name: Install Protoc
         uses: arduino/setup-protoc@v2
         with:
@@ -84,16 +82,17 @@ jobs:
           install: |
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
-            pip3 install -U pip pytest
+            uv sync
           run: |
-            pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
+            uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
             python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
       - name: Install built wheel (native)
         if: matrix.target == 'x86_64'
         run: |
-          pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+          uv sync
+          uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
+          uv run python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -102,7 +101,7 @@ jobs:
           path: libs/gl-client-py/dist/
 
   macos:
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
@@ -114,7 +113,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.9
-          architecture: x64
+
       - uses: dtolnay/rust-toolchain@nightly
 
       - name: Install Protoc
@@ -134,10 +133,13 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: 10.9
 
       - name: Install built wheel
+        env:
+          PATH: $PATH:$HOME/.local/bin
         if: matrix.target == 'x86_64'
         run: |
-          pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+          $HOME/.local/bin/uv sync
+          $HOME/.local/bin/uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
+          $HOME/.local/bin/uv run python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
