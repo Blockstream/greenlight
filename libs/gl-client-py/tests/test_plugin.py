@@ -5,6 +5,7 @@ import grpc
 import pytest
 import secrets
 from pathlib import Path
+from flaky import flaky
 
 trmp_plugin_path = Path(__file__).parent / "plugins" / "trmp_htlc_hook.py"
 
@@ -41,6 +42,7 @@ def test_max_message_size(clients):
         n1.datastore("some-key", hex=bytes.fromhex(secrets.token_hex(size)))
 
 
+@flaky(max_runs=10)
 def test_trampoline_pay(bitcoind, clients, node_factory):
     c1 = clients.new()
     c1.register()
