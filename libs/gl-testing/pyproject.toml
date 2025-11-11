@@ -37,4 +37,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 include = [
     "gltesting",
+    "plugins",
+]
+exclude = [
+    "**/.#*",
+    "**/*~",
+    "**/*.swp",
 ]
