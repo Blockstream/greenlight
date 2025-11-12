@@ -12,13 +12,14 @@ lto = "thin"
 [workspace]
 resolver = "2"
 members = [
-    "examples/rust",
-    "libs/gl-client",
-    "libs/gl-client-py",
-    "libs/gl-plugin",
-    "libs/gl-signerproxy",
-    "libs/gl-cli",
-    "libs/gl-util",
+  "examples/rust",
+  "libs/gl-client",
+  "libs/gl-client-py",
+  "libs/gl-plugin",
+  "libs/gl-signerproxy",
+  "libs/gl-cli",
+  "libs/gl-util",
+  "libs/gl-bindings",
 ]
 
 [workspace.dependencies]
