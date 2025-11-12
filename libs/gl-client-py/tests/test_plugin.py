@@ -203,3 +203,42 @@ def test_trampoline_multi_htlc(bitcoind, clients, node_factory):
     res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l2.info["id"]))
     assert res
     assert res.parts == 2
+
+
+def test_lsps_plugin_calls(
+        clients, bitcoind, node_factory, lsps_server
+):
+    """Test that we can call the `lsps-jitchannel` method from a
+    variety of places.
+
+    ```ditaa
+    S --- LSP --- R1
+    ```
+
+    """
+    # Bootstrap a very simple network
+    lsp_id = lsps_server.info["id"]
+    (r1,) = node_factory.get_nodes(1, opts=[{"disable-plugin": "cln-grpc"}])
+
+    # Get the GL node
+    c = clients.new()
+    c.register()
+    s = c1.node()
+    s.connect(lsps_server)
+
+    res = s.localrpc.lsps_lsps2_invoice(
+        lsp_id=lsp_id,
+        token=None,
+        amount_msat="1337msat",
+        description="description",
+        label="lbl1",
+    )
+
+    inv = s.localrpc.decodepay(res['bolt11'])
+    pprint(inv)
+
+    # Only one routehint, with only one hop, the LSP to the destination
+    assert len(inv['routes']) == 1 and len(inv['routes'][0]) == 1
+    assert inv['description'] == 'description'
+    rh = inv['routes'][0][0]
+    assert rh['pubkey'] == lsp_id
