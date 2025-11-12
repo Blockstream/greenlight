@@ -63,6 +63,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     l2 = node_factory.get_node(
         options={
             "plugin": trmp_plugin_path,
+            "disable-plugin": "cln-grpc",
         }
     )
     n1.connect_peer(l2.info["id"], f"localhost:{l2.port}")
@@ -118,7 +119,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     assert len(ch.htlcs) == 0
 
     # new unknown unconnected node without the trampoline featurebit.
-    l3 = node_factory.get_node()
+    l3 = node_factory.get_node(options={"disable-plugin": "cln-grpc"})
     inv = l2.rpc.invoice(
         amount_msat=1000000,
         label="trampoline-pay-test-2",
