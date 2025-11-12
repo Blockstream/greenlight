@@ -25,7 +25,7 @@ jobs:
           python-version: 3.9
           architecture: x64
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
 
@@ -54,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         
       - name: Install Protoc
         uses: arduino/setup-protoc@v2
@@ -116,6 +116,10 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@nightly
 
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
       - name: Install Protoc
         uses: arduino/setup-protoc@v2
         with:
@@ -135,11 +139,11 @@ jobs:
       - name: Install built wheel
         env:
           PATH: $PATH:$HOME/.local/bin
-        if: matrix.target == 'x86_64'
+        if: matrix.target == 'aarch64'
         run: |
-          $HOME/.local/bin/uv sync
-          $HOME/.local/bin/uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          $HOME/.local/bin/uv run python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+          uv sync
+          uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
+          uv run python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
