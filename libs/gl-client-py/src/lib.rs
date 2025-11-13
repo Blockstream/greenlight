@@ -5,7 +5,6 @@ use pyo3::prelude::*;
 extern crate log;
 
 mod credentials;
-mod lsps;
 mod node;
 mod pairing;
 mod runtime;
@@ -13,7 +12,6 @@ mod scheduler;
 mod signer;
 mod tls;
 
-pub use lsps::LspClient;
 pub use node::Node;
 pub use scheduler::Scheduler;
 pub use signer::{Signer, SignerHandle};
@@ -41,7 +39,6 @@ fn glclient(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Node>()?;
     m.add_class::<Scheduler>()?;
     m.add_class::<TlsConfig>()?;
-    m.add_class::<LspClient>()?;
     m.add_class::<credentials::Credentials>()?;
     m.add_class::<pairing::NewDeviceClient>()?;
     m.add_class::<pairing::AttestationDeviceClient>()?;
