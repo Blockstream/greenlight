@@ -14,9 +14,14 @@ package greenlight;
 //
 // Deprecated methods are being replaced by the standardized and
 // automatically managed cln-grpc protocol you can find in
-// `node.proto`
+// `node.proto`. This interface consists mostly of
+// Greenlight-specific, and backported functionality.
 service Node {
-	// Stream incoming payments
+  // Create an invoice to request an incoming payment. Includes LSP
+  // negotiation to open a channel on-demand when needed.
+  rpc Invoice(InvoiceRequest) returns (InvoiceResponse) {}
+
+        // Stream incoming payments
 	//
 	// Currently includes off-chain payments received matching an
 	// invoice or spontaneus paymens through keysend.
@@ -98,233 +103,6 @@ service Hsm {
 	rpc Ping(Empty) returns (Empty) {}
 }
 
-enum NetAddressType {
-	Ipv4 = 0;
-	Ipv6 = 1;
-	TorV2 = 2;
-	TorV3 = 3;
-}
-message Address {
-	NetAddressType type = 1;
-	string addr = 2;
-	uint32 port = 3;
-}
-
-message GetInfoRequest {}
-
-message GetInfoResponse {
-	bytes node_id = 1;
-	string alias = 2;
-	bytes color = 3;
-	uint32 num_peers = 4;
-	repeated Address addresses = 5;
-	string version = 6;
-	uint32 blockheight = 7;
-	string network = 8;
-}
-
-message StopRequest {}
-message StopResponse {}
-
-message ConnectRequest {
-	string node_id = 1;
-	string addr = 2;
-}
-
-message ConnectResponse {
-	string node_id = 1;
-	string features = 2;
-}
-
-
-message ListPeersRequest {
-	string node_id = 1;
-}
-
-message Htlc {
-	string direction = 1;
-	uint64 id = 2;
-	string amount = 3;
-	uint64 expiry = 4;
-	string payment_hash = 5;
-	string state = 6;
-	bool local_trimmed = 7;
-}
-
-message Aliases {
-	string local = 1;
-	string remote = 2;
-}
-
-message Channel {
-	string state = 1;
-	string owner = 2;
-	Aliases alias = 18;
-	string short_channel_id = 3;
-	uint32 direction = 4;
-	string channel_id = 5;
-	string funding_txid = 6;
-	string close_to_addr = 7;
-	string close_to = 8;
-	bool private = 9;
-	string total = 10;
-	string dust_limit = 11;
-	string spendable = 12;
-	string receivable = 13;
-	uint32 their_to_self_delay = 14;
-	uint32 our_to_self_delay = 15;
-	repeated string status = 16;
-	repeated Htlc htlcs = 17;
-}
-
-message Peer {
-	bytes id = 1;
-	bool connected = 2;
-	repeated Address addresses = 3;
-	string features = 4;
-	repeated Channel channels = 5;
-}
-
-message ListPeersResponse {
-	repeated Peer peers = 1;
-}
-
-message DisconnectRequest {
-	string node_id = 1;
-	bool force = 2;
-}
-
-message DisconnectResponse {}
-
-enum BtcAddressType {
-	BECH32 = 0; // Default
-	P2SH_SEGWIT = 1;
-}
-
-message NewAddrRequest {
-	BtcAddressType address_type = 1;
-}
-message NewAddrResponse {
-	BtcAddressType address_type = 1;
-	string address = 2;
-}
-
-message ListFundsRequest {
-	Confirmation minconf = 1;
-}
-
-enum OutputStatus {
-	CONFIRMED = 0;
-	UNCONFIRMED = 1;
-}
-
-message ListFundsOutput {
-	Outpoint output = 1;
-	Amount amount = 2;
-	string address = 4;
-	OutputStatus status = 5;
-	bool reserved = 6;
-	uint32 reserved_to_block = 7;
-}
-
-message ListFundsChannel {
-	bytes peer_id = 1;
-	bool connected = 2;
-	uint64 short_channel_id = 3;
-	uint64 our_amount_msat = 4;
-	uint64 amount_msat = 5;
-	bytes funding_txid = 6;
-	uint32 funding_output = 7;
-}
-
-message ListFundsResponse {
-	repeated ListFundsOutput outputs = 1;
-	repeated ListFundsChannel channels = 2;
-}
-
-// Let the node decide what feerate to apply based on its internal
-// view of the network's current feerate.
-enum FeeratePreset {
-	NORMAL = 0;
-	SLOW = 1;
-	URGENT = 2;
-}
-
-message Feerate {
-	oneof value {
-		FeeratePreset preset = 1;
-		uint64 perkw = 5;
-		uint64 perkb = 6;
-	}
-}
-
-message Confirmation {
-	uint32 blocks = 1;
-}
-
-message WithdrawRequest {
-	string destination = 1;
-	Amount amount = 2;
-	Feerate feerate = 3;
-	Confirmation minconf = 7;
-	repeated Outpoint utxos = 8;
-}
-
-message WithdrawResponse {
-	bytes tx = 1;
-	bytes txid = 2;
-}
-
-// TODO: Extract AmountOrAll into its own message
-// TODO: Extract Feerate into its own message
-
-message FundChannelRequest {
-	bytes node_id = 1;
-	Amount amount = 2;
-	Feerate feerate = 3;
-	bool announce = 7;
-	Confirmation minconf = 8;
-	//TODO Maybe add UTXOS
-	string close_to = 10;
-}
-
-message Outpoint {
-	bytes txid = 1;
-	uint32 outnum = 2;
-}
-
-message FundChannelResponse {
-	bytes tx = 1;
-	Outpoint outpoint = 2;
-	bytes channel_id = 3;
-	string close_to = 4;
-}
-
-message Timeout {
-	uint32 seconds = 1;
-}
-
-message BitcoinAddress {
-	string address = 1;
-}
-
-message CloseChannelRequest {
-	bytes node_id = 1;
-	Timeout unilateraltimeout = 2;
-	BitcoinAddress destination = 3;
-}
-
-enum CloseChannelType {
-	MUTUAL = 0;
-	UNILATERAL = 1;
-}
-
-message CloseChannelResponse {
-	CloseChannelType close_type = 1;
-	bytes tx = 2;
-	bytes txid = 3;
-}
-
 message Amount {
 	oneof unit {
 		uint64 millisatoshi = 1;
@@ -335,111 +113,8 @@ message Amount {
 	}
 }
 
-message InvoiceRequest {
-	Amount amount = 1;
-	string label = 2;
-	string description = 3;
-	bytes preimage = 4;
-}
-
-enum InvoiceStatus {
-	UNPAID = 0;
-	PAID = 1;
-	EXPIRED = 2;
-}
-
-message Invoice {
-	string label = 1;
-	string description = 2;
-	Amount amount = 3;
-	Amount received = 4;
-	InvoiceStatus status = 5;
-	uint32 payment_time = 6;
-	uint32 expiry_time = 7;
-	string bolt11 = 8;
-	bytes payment_hash = 9;
-	bytes payment_preimage = 10;
-}
-
-message PayRequest {
-	string bolt11 = 1;
-
-	// Only needed when the invoice does not specify an amount.
-	Amount amount = 2;
-
-	// Non-zero number of seconds before we should stop retrying
-	// the payment and return an error.
-	uint32 timeout = 3;
-
-	double maxfeepercent = 4;
-
-	Amount maxfee = 5;
-}
-
-enum PayStatus {
-	PENDING = 0;
-	COMPLETE = 1;
-	FAILED = 2;
-}
-
-message Payment {
-	bytes destination = 1;
-	bytes payment_hash = 2;
-	bytes payment_preimage = 3;
-	PayStatus status = 4;
-	Amount amount = 5;
-	Amount amount_sent = 6;
-	string bolt11 = 7;
-
-	// UTC Unix timestamp of the time the invoice was created.
-	double created_at = 8;
-	// UTC Unix timestamp of the time the payment was completed
-	// (successfully or failed). 0 if not completed yet.
-	uint64 completed_at = 9;
-}
-
-// A payment identifier is a way to reference a unique payment, either
-// by its bolt11 string or just the payment hash. Only one of the two
-// may be provided at once, since having multiple ones may conflict
-// with each other.
-message PaymentIdentifier {
-	oneof id {
-		string bolt11 = 1;
-		bytes payment_hash = 2;
-	}
-}
-
-// Request a list of payments that this node has performed. Optionally
-// the query can be narrowed to a single payment by providing an
-// identifier.
-message ListPaymentsRequest {
-	PaymentIdentifier identifier = 1;
-}
-
-// The response matching `ListPaymentRequest`. It returns a list of
-// PayResponses, i.e., the same format as `Pay` returned its result.
-message ListPaymentsResponse {
-	repeated Payment payments = 1;
-}
-
-message InvoiceIdentifier {
-	oneof id {
-		string label = 1;
-		string invstring = 2;
-		bytes payment_hash = 3;
-	}
-}
-
-message ListInvoicesRequest {
-	InvoiceIdentifier identifier = 1;
-}
-
 // Options to stream_incoming to specify what to stream.
 message StreamIncomingFilter {
-}
-
-message ListInvoicesResponse {
-	repeated Invoice invoices = 1;
 }
 
 message TlvField {
@@ -462,27 +137,6 @@ message IncomingPayment {
 	oneof details {
 		OffChainPayment offchain = 1;
 	}
-}
-
-// A single hop in a Routehint
-message RoutehintHop {
-	bytes node_id = 1;
-	string short_channel_id = 2;
-	uint64 fee_base = 3;
-	uint32 fee_prop = 4;
-	uint32 cltv_expiry_delta = 5;
-}
-
-message Routehint {
-	repeated RoutehintHop hops = 1;
-}
-
-message KeysendRequest {
-	bytes node_id = 1;
-	Amount amount = 2;
-	string label = 3;
-	repeated Routehint routehints = 4;
-	repeated TlvField extratlvs = 5;
 }
 
 message StreamLogRequest {};
@@ -571,4 +225,21 @@ message TrampolinePayResponse {
 	uint64 amount_msat = 5;
 	uint64 amount_sent_msat = 6;
 	bytes destination = 7;
+}
+
+message InvoiceRequest {
+  string lsp_id = 1; // len=0 => None, let the server decide.
+  // Optional: for discounts/API keys
+  string token = 2; // len=0 => None
+  // Pass-through of cln invoice rpc params
+  uint64 amount_msat = 3;  // 0 => Any
+  string description = 4;
+  string label = 5;
+}
+message InvoiceResponse {
+  string bolt11 = 1;
+  uint32 created_index = 2;
+  uint32 expires_at = 3;
+  bytes payment_hash = 4;
+  bytes payment_secret = 5;
 }

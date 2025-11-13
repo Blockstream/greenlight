@@ -91,6 +91,27 @@ impl Node {
 
         return Ok(());
     }
+
+    fn lsps_invoice(
+        &self,
+        amount_msat: Option<u64>,
+        description: String,
+        label: String,
+        token: Option<String>,
+    ) -> PyResult<Vec<u8>> {
+        let req = pb::LspInvoiceRequest {
+            amount_msat: amount_msat.unwrap_or_default(),
+            description: description,
+            label: label,
+            lsp_id: "".to_owned(),
+            token: token.unwrap_or_default(),
+        };
+
+        let res = exec(async { self.client.clone().lsp_invoice(req).await })
+            .map_err(error_calling_remote_method)
+            .map(|x| x.into_inner())?;
+        convert(Ok(res))
+    }
 }
 
 fn error_decoding_request<D: core::fmt::Display>(e: D) -> PyErr {
