@@ -12,6 +12,8 @@ dev = [
     "python-kacl>=0.6.7",
 ]
 
+[tool.uv]
+
 [tool.uv.workspace]
 members = [
   "docs",

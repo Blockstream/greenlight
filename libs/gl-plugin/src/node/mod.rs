@@ -34,7 +34,6 @@ static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
 static RPC_CLIENT: OnceCell<Arc<Mutex<cln_rpc::ClnRpc>>> = OnceCell::const_new();
 static RPC_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
-
 pub async fn get_rpc<P: AsRef<Path>>(path: P) -> Arc<Mutex<cln_rpc::ClnRpc>> {
     RPC_CLIENT
         .get_or_init(|| async {
@@ -181,6 +180,23 @@ impl Node for PluginNodeServer {
     type StreamCustommsgStream = ReceiverStream<Result<pb::Custommsg, Status>>;
     type StreamHsmRequestsStream = ReceiverStream<Result<pb::HsmRequest, Status>>;
     type StreamLogStream = ReceiverStream<Result<pb::LogEntry, Status>>;
+
+    async fn invoice(
+        &self,
+        req: Request<pb::InvoiceRequest>,
+    ) -> Result<Response<pb::InvoiceResponse>, Status> {
+        let req: pb::InvoiceRequest = req.into_inner();
+        let invreq: crate::requests::InvoiceRequest = req.into();
+        let rpc_arc = get_rpc(&self.rpc_path).await;
+
+        let mut rpc = rpc_arc.lock().await;
+        let res = rpc
+            .call_typed(&invreq)
+            .await
+            .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+
+        Ok(Response::new(res.into()))
+    }
 
     async fn stream_custommsg(
         &self,

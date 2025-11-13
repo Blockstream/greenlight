@@ -108,12 +108,12 @@ def test_list_lsp_server(
 ):
     # Create a network
     n1: LightningNode = node_factory.get_node(
-        options=dict(plugin=get_lsps_dummy_plugin_path())
+        options={"plugin": get_lsps_dummy_plugin_path(), "disable-plugin": "cln-grpc"}
     )
     n2: LightningNode = node_factory.get_node(
-        options=dict(plugin=get_lsps_dummy_plugin_path())
+        options={"plugin": get_lsps_dummy_plugin_path(), "disable-plugin": "cln-grpc"}
     )
-    n3: LightningNode = node_factory.get_node()
+    n3: LightningNode = node_factory.get_node(options={"disable-plugin": "cln-grpc"})
 
     # Create the channel-graph
     n1.fundchannel(n2, announce_channel=True)

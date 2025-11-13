@@ -334,6 +334,27 @@ pub struct ListFunds {
     pub channels: Vec<ListFundsChannel>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct InvoiceResponse {
+    pub bolt11: String,
+    pub created_index: u32,
+    pub expires_at: u32,
+    pub payment_hash: String,
+    pub payment_secret: String,
+}
+
+impl From<InvoiceResponse> for crate::pb::InvoiceResponse {
+    fn from(o: InvoiceResponse) -> crate::pb::InvoiceResponse {
+        crate::pb::InvoiceResponse {
+            bolt11: o.bolt11,
+            created_index: o.created_index,
+            expires_at: o.expires_at,
+            payment_hash: hex::decode(o.payment_hash).unwrap(),
+            payment_secret: hex::decode(o.payment_secret).unwrap(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -364,6 +385,21 @@ mod test {
         for t in tests {
             let v: V = serde_json::from_str(t.input).unwrap();
             assert_eq!(v.value.0, t.output);
+        }
+    }
+
+    #[test]
+    fn test_invoice_response() {
+        let tests: Vec<InvoiceResponse> = vec![InvoiceResponse {
+            bolt11: "ln1test".to_owned(),
+            created_index: 0,
+            expires_at: 123,
+            payment_hash: "AABBCCDDEEFF".to_owned(),
+            payment_secret: "1122334455".to_owned(),
+        }];
+
+        for t in tests {
+            let _actual: crate::pb::InvoiceResponse = t.into();
         }
     }
 }

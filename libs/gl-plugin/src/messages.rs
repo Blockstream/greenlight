@@ -6,13 +6,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "method", content = "params")]
-#[serde(rename_all = "snake_case")]
-enum JsonRpcCall {
-    //HtlcAccepted(HtlcAcceptedCall),
-}
-
 #[derive(Debug)]
 pub struct ParserError {
     reason: String,
@@ -24,14 +17,6 @@ impl std::fmt::Display for ParserError {
     }
 }
 impl std::error::Error for ParserError {}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct JsonRpcRequest {
-    id: Option<Value>,
-    jsonrpc: String,
-    method: String,
-    params: JsonRpcCall,
-}
 
 // "Inspired" by https://github.com/serde-rs/serde/issues/1028#issuecomment-325434041
 #[derive(Serialize, Deserialize, Debug)]
