@@ -1,6 +1,6 @@
+use crate::credentials::Credentials;
 use crate::runtime::exec;
 use crate::scheduler::convert;
-use crate::{credentials::Credentials, lsps::LspClient};
 use gl_client as gl;
 use gl_client::pb;
 use prost::Message;
@@ -80,10 +80,6 @@ impl Node {
             .map_err(error_calling_remote_method)?
             .into_inner();
         convert(Ok(res))
-    }
-
-    fn get_lsp_client(&self) -> LspClient {
-        LspClient::new(self.client.clone(), self.cln_client.clone())
     }
 
     fn configure(&self, payload: &[u8]) -> PyResult<()> {

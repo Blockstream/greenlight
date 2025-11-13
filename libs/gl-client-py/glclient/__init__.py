@@ -9,7 +9,6 @@ from google.protobuf.message import Message as PbMessage
 from binascii import hexlify, unhexlify
 from typing import Optional, List, Iterable, Any, Type, TypeVar
 import logging
-from glclient.lsps import LspClient
 from glclient.glclient import Credentials
 
 
@@ -504,12 +503,6 @@ class Node(object):
         req = clnpb.ListdatastoreRequest(key=key).SerializeToString()
         res = clnpb.ListdatastoreResponse
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))
-
-    def get_lsp_client(
-        self,
-    ) -> LspClient:
-        native_lsps = self.inner.get_lsp_client()
-        return LspClient(native_lsps)
 
     def configure(self, close_to_addr: str) -> None:
         req = nodepb.GlConfig(close_to_addr=close_to_addr).SerializeToString()
