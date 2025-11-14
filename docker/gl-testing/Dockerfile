@@ -165,6 +165,7 @@ ENV PYTHONUNBUFFERED=1
 # yet, but we will put the tools in those directories.
 ENV PATH=$HOME/.local/bin:/opt/cln-latest/usr/local/bin:/opt/bitcoin/bin:/opt/cln-latest/usr/local/bin:/usr/local/bin:$PATH
 ENV UV_INSTALL_DIR=/usr/local/bin/
+ENV UV_PROJECT_ENVIRONMENT=/tmp/venv/
 # grpcio == 1.46 produces spammy log messages, silence them
 ENV GRPC_ENABLE_FORK_SUPPORT=0
 
