@@ -19,7 +19,7 @@ package greenlight;
 service Node {
   // Create an invoice to request an incoming payment. Includes LSP
   // negotiation to open a channel on-demand when needed.
-  rpc Invoice(InvoiceRequest) returns (InvoiceResponse) {}
+  rpc LspInvoice(LspInvoiceRequest) returns (LspInvoiceResponse) {}
 
         // Stream incoming payments
 	//
@@ -227,7 +227,7 @@ message TrampolinePayResponse {
 	bytes destination = 7;
 }
 
-message InvoiceRequest {
+message LspInvoiceRequest {
   string lsp_id = 1; // len=0 => None, let the server decide.
   // Optional: for discounts/API keys
   string token = 2; // len=0 => None
@@ -236,7 +236,7 @@ message InvoiceRequest {
   string description = 4;
   string label = 5;
 }
-message InvoiceResponse {
+message LspInvoiceResponse {
   string bolt11 = 1;
   uint32 created_index = 2;
   uint32 expires_at = 3;

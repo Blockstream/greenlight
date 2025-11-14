@@ -1192,7 +1192,7 @@ impl WrappedNodeServer {
 
 use crate::pb::{
     node_server::Node as GlNode, Custommsg, Empty, HsmRequest, HsmResponse, IncomingPayment,
-    InvoiceRequest, InvoiceResponse, LogEntry, StreamCustommsgRequest, StreamIncomingFilter,
+    LogEntry, LspInvoiceRequest, LspInvoiceResponse, StreamCustommsgRequest, StreamIncomingFilter,
     StreamLogRequest,
 };
 
@@ -1203,11 +1203,11 @@ impl GlNode for WrappedNodeServer {
     type StreamLogStream = ReceiverStream<Result<LogEntry, Status>>;
     type StreamIncomingStream = ReceiverStream<Result<IncomingPayment, Status>>;
 
-    async fn invoice(
+    async fn lsp_invoice(
         &self,
-        req: Request<InvoiceRequest>,
-    ) -> Result<Response<InvoiceResponse>, Status> {
-        self.node_server.invoice(req).await
+        req: Request<LspInvoiceRequest>,
+    ) -> Result<Response<LspInvoiceResponse>, Status> {
+        self.node_server.lsp_invoice(req).await
     }
 
     async fn stream_incoming(

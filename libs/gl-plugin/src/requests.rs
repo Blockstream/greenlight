@@ -220,8 +220,8 @@ pub struct InvoiceRequest {
 
 use cln_rpc::model::TypedRequest;
 
-impl From<crate::pb::InvoiceRequest> for InvoiceRequest {
-    fn from(o: crate::pb::InvoiceRequest) -> InvoiceRequest {
+impl From<crate::pb::LspInvoiceRequest> for InvoiceRequest {
+    fn from(o: crate::pb::LspInvoiceRequest) -> InvoiceRequest {
         InvoiceRequest {
             lsp_id: o.lsp_id,
             token: match o.token.as_ref() {
@@ -254,14 +254,14 @@ mod test {
     #[test]
     fn test_invoice_response() {
         let tests = vec![
-            (crate::pb::InvoiceRequest {
+            (crate::pb::LspInvoiceRequest {
                 lsp_id: "lsp_id".to_owned(),
                 token: "".to_owned(),
                 amount_msat: 0,
                 description: "description".to_owned(),
                 label: "label".to_owned(),
             }),
-            crate::pb::InvoiceRequest {
+            crate::pb::LspInvoiceRequest {
                 lsp_id: "lsp_id".to_owned(),
                 token: "token".to_owned(),
                 amount_msat: 1337,

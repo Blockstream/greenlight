@@ -570,6 +570,14 @@ class Node(object):
         res = clnpb.WaitResponse
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
+    def lsp_invoice(self, label: str, description: str, amount_msat: int | None = None):
+        uri = "/greenlight.Node/LspInvoice"
+        req = nodepb.LspInvoiceRequest(
+            label=label, description=description, amount_msat=amount_msat
+        ).SerializeToString()
+        res = nodepb.LspInvoiceResponse
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
+
 
 def normalize_node_id(node_id, string=False):
     if len(node_id) == 66:

@@ -94,9 +94,9 @@ impl Node {
 
     fn lsps_invoice(
         &self,
-        amount_msat: Option<u64>,
-        description: String,
         label: String,
+        description: String,
+        amount_msat: Option<u64>,
         token: Option<String>,
     ) -> PyResult<Vec<u8>> {
         let req = pb::LspInvoiceRequest {
