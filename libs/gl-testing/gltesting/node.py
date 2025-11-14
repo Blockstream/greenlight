@@ -98,6 +98,7 @@ class NodeProcess(TailableProc):
             '--allow-deprecated-apis=true',
             #'--experimental-anchors',
             '--developer',  # TODO Make this multi-version capable
+            '--experimental-lsps-client',
         ]
 
     def write_node_config(self, network: str):
@@ -129,7 +130,7 @@ class NodeProcess(TailableProc):
         self.grpc_uri = f"https://localhost:{self.grpc_port}"
         self.env.update({
             "GL_CERT_PATH": self.directory / "certs",
-            "PATH": f"{self.version.lightningd}:{libexec_path}:{path}",
+            "PATH": f"{self.version.lightningd.parent}:{libexec_path}:{path}",
             "CLN_VERSION": self.version.name,
             "GL_NODE_NETWORK": self.network,
             "GL_NODE_ID": self.node_id.hex(),
