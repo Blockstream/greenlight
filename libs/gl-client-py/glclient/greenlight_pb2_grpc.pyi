@@ -31,10 +31,19 @@ class NodeStub:
 
     Deprecated methods are being replaced by the standardized and
     automatically managed cln-grpc protocol you can find in
-    `node.proto`
+    `node.proto`. This interface consists mostly of
+    Greenlight-specific, and backported functionality.
     """
 
     def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
+    LspInvoice: grpc.UnaryUnaryMultiCallable[
+        glclient.greenlight_pb2.LspInvoiceRequest,
+        glclient.greenlight_pb2.LspInvoiceResponse,
+    ]
+    """Create an invoice to request an incoming payment. Includes LSP
+    negotiation to open a channel on-demand when needed.
+    """
+
     StreamIncoming: grpc.UnaryStreamMultiCallable[
         glclient.greenlight_pb2.StreamIncomingFilter,
         glclient.greenlight_pb2.IncomingPayment,
@@ -114,7 +123,16 @@ class NodeAsyncStub:
 
     Deprecated methods are being replaced by the standardized and
     automatically managed cln-grpc protocol you can find in
-    `node.proto`
+    `node.proto`. This interface consists mostly of
+    Greenlight-specific, and backported functionality.
+    """
+
+    LspInvoice: grpc.aio.UnaryUnaryMultiCallable[
+        glclient.greenlight_pb2.LspInvoiceRequest,
+        glclient.greenlight_pb2.LspInvoiceResponse,
+    ]
+    """Create an invoice to request an incoming payment. Includes LSP
+    negotiation to open a channel on-demand when needed.
     """
 
     StreamIncoming: grpc.aio.UnaryStreamMultiCallable[
@@ -196,8 +214,19 @@ class NodeServicer(metaclass=abc.ABCMeta):
 
     Deprecated methods are being replaced by the standardized and
     automatically managed cln-grpc protocol you can find in
-    `node.proto`
+    `node.proto`. This interface consists mostly of
+    Greenlight-specific, and backported functionality.
     """
+
+    @abc.abstractmethod
+    def LspInvoice(
+        self,
+        request: glclient.greenlight_pb2.LspInvoiceRequest,
+        context: _ServicerContext,
+    ) -> typing.Union[glclient.greenlight_pb2.LspInvoiceResponse, collections.abc.Awaitable[glclient.greenlight_pb2.LspInvoiceResponse]]:
+        """Create an invoice to request an incoming payment. Includes LSP
+        negotiation to open a channel on-demand when needed.
+        """
 
     @abc.abstractmethod
     def StreamIncoming(

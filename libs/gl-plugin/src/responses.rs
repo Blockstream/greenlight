@@ -343,9 +343,9 @@ pub struct InvoiceResponse {
     pub payment_secret: String,
 }
 
-impl From<InvoiceResponse> for crate::pb::InvoiceResponse {
-    fn from(o: InvoiceResponse) -> crate::pb::InvoiceResponse {
-        crate::pb::InvoiceResponse {
+impl From<InvoiceResponse> for crate::pb::LspInvoiceResponse {
+    fn from(o: InvoiceResponse) -> crate::pb::LspInvoiceResponse {
+        crate::pb::LspInvoiceResponse {
             bolt11: o.bolt11,
             created_index: o.created_index,
             expires_at: o.expires_at,
@@ -399,7 +399,7 @@ mod test {
         }];
 
         for t in tests {
-            let _actual: crate::pb::InvoiceResponse = t.into();
+            let _actual: crate::pb::LspInvoiceResponse = t.into();
         }
     }
 }

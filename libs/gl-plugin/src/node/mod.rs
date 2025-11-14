@@ -181,11 +181,11 @@ impl Node for PluginNodeServer {
     type StreamHsmRequestsStream = ReceiverStream<Result<pb::HsmRequest, Status>>;
     type StreamLogStream = ReceiverStream<Result<pb::LogEntry, Status>>;
 
-    async fn invoice(
+    async fn lsp_invoice(
         &self,
-        req: Request<pb::InvoiceRequest>,
-    ) -> Result<Response<pb::InvoiceResponse>, Status> {
-        let req: pb::InvoiceRequest = req.into_inner();
+        req: Request<pb::LspInvoiceRequest>,
+    ) -> Result<Response<pb::LspInvoiceResponse>, Status> {
+        let req: pb::LspInvoiceRequest = req.into_inner();
         let invreq: crate::requests::InvoiceRequest = req.into();
         let rpc_arc = get_rpc(&self.rpc_path).await;
 
