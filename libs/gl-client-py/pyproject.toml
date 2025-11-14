@@ -5,7 +5,7 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.8,<4"
 dependencies = [
-    "protobuf>=4",
+    "protobuf>=6",
     "pyln-grpc-proto>=0.1",
 ]
 authors = [
@@ -27,8 +27,9 @@ dev = [
     "mypy>=1.14.1",
     "mypy-protobuf>=3.6.0",
     "patchelf>=0.17.2.2",
-    "protobuf>=4",
+    "protobuf>=6",
     "pyln-grpc-proto>=0.1.2",
+    "python-kacl>=0.6.7",
     "types-protobuf>=5.29.1.20241207",
 ]
 
