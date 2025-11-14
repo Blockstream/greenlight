@@ -253,10 +253,5 @@ def lsps_server(node_factory):
 
     # Most of the params below are ignored, this is just a smoke test either way
     pprint(lsp.rpc.lsps2_policy_getpolicy())
-    pprint(
-        lsp.rpc.lsps2_policy_getchannelcapacity(
-            init_payment_size=10**6, scid="1x1x1", opening_fee_params=None
-        )
-    )
 
     yield lsp

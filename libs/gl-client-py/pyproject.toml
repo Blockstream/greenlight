@@ -25,6 +25,7 @@ dev = [
     "grpcio>=1.67",
     "maturin>=1",
     "mypy>=1.14.1",
+    "mypy-protobuf>=3.6.0",
     "patchelf>=0.17.2.2",
     "protobuf>=4",
     "pyln-grpc-proto>=0.1.2",
