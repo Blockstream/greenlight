@@ -205,9 +205,7 @@ def test_trampoline_multi_htlc(bitcoind, clients, node_factory):
     assert res.parts == 2
 
 
-def test_lsps_plugin_calls(
-        clients, bitcoind, node_factory, lsps_server
-):
+def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     """Test that we can call the `lsps-jitchannel` method from a
     variety of places.
 
@@ -223,22 +221,18 @@ def test_lsps_plugin_calls(
     # Get the GL node
     c = clients.new()
     c.register()
-    s = c1.node()
-    s.connect(lsps_server)
+    s1 = c.signer()
+    s1.run_in_thread()
+    s = c.node()
+    s.connect_peer(lsps_server.info["id"], f"localhost:{lsps_server.port}")
 
-    res = s.localrpc.lsps_lsps2_invoice(
-        lsp_id=lsp_id,
-        token=None,
-        amount_msat="1337msat",
-        description="description",
-        label="lbl1",
-    )
-
-    inv = s.localrpc.decodepay(res['bolt11'])
+    # Try the pyo3 bindings from gl-client-py
+    res = s.lsp_invoice(label="lbl2", description="description", amount_msat=42)
+    inv = s.decodepay(res["bolt11"])
     pprint(inv)
 
     # Only one routehint, with only one hop, the LSP to the destination
-    assert len(inv['routes']) == 1 and len(inv['routes'][0]) == 1
-    assert inv['description'] == 'description'
-    rh = inv['routes'][0][0]
-    assert rh['pubkey'] == lsp_id
+    assert len(inv["routes"]) == 1 and len(inv["routes"][0]) == 1
+    assert inv["description"] == "description"
+    rh = inv["routes"][0][0]
+    assert rh["pubkey"] == lsp_id
