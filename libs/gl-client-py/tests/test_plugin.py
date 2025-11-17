@@ -234,4 +234,4 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     # Only one routehint, with only one hop, the LSP to the destination
     assert len(inv.route_hints.route_hints) == 1
     rh = inv.route_hints.route_hints[0]
-    assert rh["pubkey"] == bytes.fromhex(lsp_id)
+    assert rh.pubkey == bytes.fromhex(lsp_id)
