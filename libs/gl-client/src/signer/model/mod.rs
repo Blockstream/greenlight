@@ -9,6 +9,7 @@ pub mod greenlight;
 #[derive(Clone, Debug)]
 pub enum Request {
     GlConfig(greenlight::GlConfig),
+    LspInvoice(greenlight::LspInvoiceRequest),
     Getinfo(cln::GetinfoRequest),
     ListPeers(cln::ListpeersRequest),
     ListFunds(cln::ListfundsRequest),

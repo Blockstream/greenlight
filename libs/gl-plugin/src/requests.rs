@@ -209,7 +209,7 @@ pub struct Keysend {
 pub struct ListIncoming {}
 
 #[derive(Debug, Clone, Serialize)]
-pub struct InvoiceRequest {
+pub struct LspInvoiceRequest {
     pub lsp_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
@@ -218,11 +218,18 @@ pub struct InvoiceRequest {
     pub label: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct LspGetinfoRequest {
+    pub lsp_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+}
+
 use cln_rpc::model::TypedRequest;
 
-impl From<crate::pb::LspInvoiceRequest> for InvoiceRequest {
-    fn from(o: crate::pb::LspInvoiceRequest) -> InvoiceRequest {
-        InvoiceRequest {
+impl From<crate::pb::LspInvoiceRequest> for LspInvoiceRequest {
+    fn from(o: crate::pb::LspInvoiceRequest) -> LspInvoiceRequest {
+        LspInvoiceRequest {
             lsp_id: o.lsp_id,
             token: match o.token.as_ref() {
                 "" => None,
@@ -240,11 +247,17 @@ impl From<crate::pb::LspInvoiceRequest> for InvoiceRequest {
     }
 }
 
-impl TypedRequest for InvoiceRequest {
+impl TypedRequest for LspInvoiceRequest {
     type Response = super::responses::InvoiceResponse;
-
     fn method(&self) -> &str {
         "lsps-lsps2-invoice"
+    }
+}
+
+impl TypedRequest for LspGetinfoRequest {
+    type Response = super::responses::LspGetinfoResponse;
+    fn method(&self) -> &str {
+        "lsps-lsps2-getinfo"
     }
 }
 
@@ -271,7 +284,7 @@ mod test {
         ];
 
         for t in tests {
-            let _actual: super::InvoiceRequest = t.into();
+            let _actual: super::LspInvoiceRequest = t.into();
         }
     }
 }

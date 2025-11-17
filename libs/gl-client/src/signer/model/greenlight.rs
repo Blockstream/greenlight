@@ -12,6 +12,10 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
         "/greenlight.Node/TrampolinePay" => {
             Request::TrampolinePay(crate::pb::TrampolinePayRequest::decode(p)?)
         }
+        "/greenlight.Node/LspInvoice" => {
+            Request::LspInvoice(crate::pb::LspInvoiceRequest::decode(p)?)
+        }
+
         uri => return Err(anyhow!("Unknown URI {}, can't decode payload", uri)),
     })
 }
