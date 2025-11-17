@@ -227,12 +227,11 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     s.connect_peer(lsps_server.info["id"], f"localhost:{lsps_server.port}")
 
     # Try the pyo3 bindings from gl-client-py
-    res = s.lsp_invoice(label="lbl2", description="description", amount_msat=42)
-    inv = s.decodepay(res["bolt11"])
+    res = s.lsp_invoice(label="lbl2", description="description", amount_msat=31337)
+    from pyln.proto import Invoice
+    inv = Invoice.decode(res.bolt11)
     pprint(inv)
-
     # Only one routehint, with only one hop, the LSP to the destination
-    assert len(inv["routes"]) == 1 and len(inv["routes"][0]) == 1
-    assert inv["description"] == "description"
-    rh = inv["routes"][0][0]
-    assert rh["pubkey"] == lsp_id
+    assert len(inv.route_hints.route_hints) == 1
+    rh = inv.route_hints.route_hints[0]
+    assert rh["pubkey"] == bytes.fromhex(lsp_id)

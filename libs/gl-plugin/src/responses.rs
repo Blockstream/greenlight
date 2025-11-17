@@ -343,6 +343,24 @@ pub struct InvoiceResponse {
     pub payment_secret: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct LspGetinfoResponse {
+pub opening_fee_params_menu: Vec<OpeningFeeParams>,
+
+}
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)] // LSPS2 requires the client to fail if a field is unrecognized.
+pub struct OpeningFeeParams {
+    pub min_fee_msat: String,
+    pub proportional: u64,
+    pub valid_until: String,
+    pub min_lifetime: u32,
+    pub max_client_to_self_delay: u32,
+    pub min_payment_size_msat: String ,
+    pub max_payment_size_msat: String ,
+    pub promise: String, // Max 512 bytes
+}
+
 impl From<InvoiceResponse> for crate::pb::LspInvoiceResponse {
     fn from(o: InvoiceResponse) -> crate::pb::LspInvoiceResponse {
         crate::pb::LspInvoiceResponse {

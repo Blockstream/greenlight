@@ -34,6 +34,8 @@ static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
 static RPC_CLIENT: OnceCell<Arc<Mutex<cln_rpc::ClnRpc>>> = OnceCell::const_new();
 static RPC_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
+const OPT_SUPPORTS_LSPS: usize = 729;
+
 pub async fn get_rpc<P: AsRef<Path>>(path: P) -> Arc<Mutex<cln_rpc::ClnRpc>> {
     RPC_CLIENT
         .get_or_init(|| async {
@@ -186,15 +188,31 @@ impl Node for PluginNodeServer {
         req: Request<pb::LspInvoiceRequest>,
     ) -> Result<Response<pb::LspInvoiceResponse>, Status> {
         let req: pb::LspInvoiceRequest = req.into_inner();
-        let invreq: crate::requests::InvoiceRequest = req.into();
+        let mut invreq: crate::requests::LspInvoiceRequest = req.into();
         let rpc_arc = get_rpc(&self.rpc_path).await;
 
         let mut rpc = rpc_arc.lock().await;
+
+        // In case the client did not specify an LSP to work with,
+        // let's enumerate them, and select the best option ourselves.
+        let lsps = self.get_lsps_offers(&mut rpc).await.map_err(|_e| {
+            Status::not_found("Could not retrieve LSPS peers for invoice negotiation.")
+        })?;
+
+        if lsps.len() < 1 {
+            return Err(Status::not_found(
+                "Could not find an LSP peer to negotiate the LSPS2 channel for this invoice.",
+            ));
+        }
+
+        let lsp = &lsps[0];
+        log::info!("Selecting {:?} for invoice negotiation", lsp);
+        invreq.lsp_id = lsp.node_id.to_owned();
+
         let res = rpc
             .call_typed(&invreq)
             .await
             .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
-
         Ok(Response::new(res.into()))
     }
 
@@ -595,6 +613,12 @@ impl Node for PluginNodeServer {
 
 use cln_grpc::pb::node_server::NodeServer;
 
+#[derive(Clone, Debug)]
+struct Lsps2Offer {
+    node_id: String,
+    params: Vec<crate::responses::OpeningFeeParams>,
+}
+
 impl PluginNodeServer {
     pub async fn run(self) -> Result<()> {
         let addr = self.grpc_binding.parse().unwrap();
@@ -655,17 +679,99 @@ impl PluginNodeServer {
         return Ok(());
     }
 
+    async fn list_peers(
+        &self,
+        rpc: &mut cln_rpc::ClnRpc,
+    ) -> Result<cln_rpc::model::responses::ListpeersResponse, Error> {
+        rpc.call_typed(&cln_rpc::model::requests::ListpeersRequest {
+            id: None,
+            level: None,
+        })
+        .await
+        .map_err(|e| e.into())
+    }
+
+    async fn get_lsps_offers(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<Vec<Lsps2Offer>, Error> {
+        // Collect peers offering LSP functionality
+        let lpeers = self.list_peers(rpc).await?;
+
+        // Filter out the ones that do not announce the LSPs features.
+        // TODO: Re-enable the filtering once the cln-lsps-service plugin announces the features.
+        let _lsps: Vec<cln_rpc::model::responses::ListpeersPeers> = lpeers
+            .peers
+            .into_iter()
+            //.filter(|p| has_feature(
+            //    hex::decode(p.features.clone().unwrap_or_default()).expect("featurebits are hex"),
+            //    OPT_SUPPORTS_LSPS
+            //))
+            .collect();
+
+        // Query all peers for their LSPS offers, but with a brief
+        // timeout so the invoice creation isn't help up too long.
+        let futs: Vec<
+            tokio::task::JoinHandle<(
+                String,
+                Result<
+                    Result<crate::responses::LspGetinfoResponse, cln_rpc::RpcError>,
+                    tokio::time::error::Elapsed,
+                >,
+            )>,
+        > = _lsps
+            .into_iter()
+            .map(|peer| {
+                let rpc_path = self.rpc_path.clone();
+                tokio::spawn(async move {
+                    let peer_id = format!("{:x}", peer.id);
+                    let mut rpc = cln_rpc::ClnRpc::new(rpc_path.clone()).await.unwrap();
+                    let req = crate::requests::LspGetinfoRequest {
+                        lsp_id: peer_id.clone(),
+                        token: None,
+                    };
+
+                    (
+                        peer_id,
+                        tokio::time::timeout(
+                            tokio::time::Duration::from_secs(2),
+                            rpc.call_typed(&req),
+                        )
+                        .await,
+                    )
+                })
+            })
+            .collect();
+
+        let mut res = vec![];
+        for f in futs {
+            match f.await {
+                //TODO We need to drag the node_id along.
+                Ok((node_id, Ok(Ok(r)))) => res.push(Lsps2Offer {
+                    node_id: node_id,
+                    params: r.opening_fee_params_menu,
+                }),
+                Ok((node_id, Err(e))) => warn!(
+                    "Error fetching LSPS menu items from peer_id={}: {:?}",
+                    node_id, e
+                ),
+                Ok((node_id, Ok(Err(e)))) => warn!(
+                    "Error fetching LSPS menu items from peer_id={}: {:?}",
+                    node_id, e
+                ),
+                Err(_) => warn!("Timeout fetching LSPS menu items"),
+            }
+        }
+
+        log::info!("Gathered {} LSP menus", res.len());
+        log::trace!("LSP menus: {:?}", &res);
+
+        Ok(res)
+    }
+
     async fn get_reconnect_peers(
         &self,
     ) -> Result<Vec<cln_rpc::model::requests::ConnectRequest>, Error> {
         let rpc_arc = get_rpc(&self.rpc_path).await;
         let mut rpc = rpc_arc.lock().await;
-        let peers = rpc
-            .call_typed(&cln_rpc::model::requests::ListpeersRequest {
-                id: None,
-                level: None,
-            })
-            .await?;
+        let peers = self.list_peers(&mut rpc).await?;
 
         let mut requests: Vec<cln_rpc::model::requests::ConnectRequest> = peers
             .peers
