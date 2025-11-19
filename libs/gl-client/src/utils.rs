@@ -31,7 +31,7 @@ pub fn get_node_id_from_tls_config(tls_config: &TlsConfig) -> Result<Vec<u8>> {
             "Could not parse subject common name: {}",
             subject_common_name
         ));
-    } else if (split_subject_common_name[1] != "users") {
+    } else if split_subject_common_name[1] != "users" {
         return Err(anyhow!("Not a users certificate: {}", subject_common_name));
     }
 
