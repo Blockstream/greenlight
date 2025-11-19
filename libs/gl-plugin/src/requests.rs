@@ -250,8 +250,10 @@ impl From<crate::pb::LspInvoiceRequest> for LspInvoiceRequest {
 impl TypedRequest for LspInvoiceRequest {
     type Response = super::responses::InvoiceResponse;
     fn method(&self) -> &str {
-        "lsps-lsps2-invoice"
-    }
+	// TODO Rename after the CLN rename has been deployed.
+        // "lsps-lsps2-invoice"
+	"lsps-jitchannel"
+	    }
 }
 
 impl TypedRequest for LspGetinfoRequest {
