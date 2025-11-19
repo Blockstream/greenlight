@@ -14,6 +14,9 @@ pub enum Error {
     #[error("The passphrase you provided fails the checksum")]
     PhraseCorrupted(),
 
+    #[error("Error calling the rpc: {0}")]
+    Rpc(String),
+    
     #[error("Generic error: {0}")]
     Other(String),
 }
