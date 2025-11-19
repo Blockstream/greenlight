@@ -34,6 +34,7 @@ tasks:
     deps:
       - ci-build
     cmds:
+      - task: sdk:test
       - task: clientpy:check
       - task: testing:check
       - task: clnvm:check

@@ -19,4 +19,8 @@ impl Credentials {
             inner: DeviceCredentials::from_bytes(raw),
         })
     }
+
+    pub(crate) fn save(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.inner.to_bytes())
+    }
 }
