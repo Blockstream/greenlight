@@ -1,5 +1,5 @@
 use crate::{Credentials, Error};
-use bip39::{Language, Mnemonic};
+use bip39::Mnemonic;
 use std::str::FromStr;
 
 #[derive(uniffi::Object, Clone)]
@@ -13,7 +13,7 @@ pub struct Signer {
 impl Signer {
     #[uniffi::constructor()]
     fn new(phrase: String) -> Result<Signer, Error> {
-        let phrase = Mnemonic::from_str(phrase.as_str()).map_err(|e| Error::PhraseCorrupted())?;
+        let phrase = Mnemonic::from_str(phrase.as_str()).map_err(|_e| Error::PhraseCorrupted())?;
         let seed = phrase.to_seed_normalized(&"").to_vec();
 
         // FIXME: We may need to give the signer real credentials to
@@ -52,7 +52,7 @@ impl Signer {
     }
 
     fn start(&self) -> Result<Handle, Error> {
-        let (mut tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
 
         let clone = self.clone();
         tokio::spawn(async move {
@@ -70,7 +70,10 @@ impl Signer {
 // Not exported through uniffi, internal logic only.
 impl Signer {
     async fn run(&self, signal: tokio::sync::mpsc::Receiver<()>) {
-        self.inner.run_forever(signal).await.expect("Error running signer loop");
+        self.inner
+            .run_forever(signal)
+            .await
+            .expect("Error running signer loop");
     }
 }
 

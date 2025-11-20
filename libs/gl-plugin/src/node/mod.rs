@@ -34,6 +34,7 @@ static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
 static RPC_CLIENT: OnceCell<Arc<Mutex<cln_rpc::ClnRpc>>> = OnceCell::const_new();
 static RPC_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
+#[allow(unused)]
 const OPT_SUPPORTS_LSPS: usize = 729;
 
 pub async fn get_rpc<P: AsRef<Path>>(path: P) -> Arc<Mutex<cln_rpc::ClnRpc>> {
@@ -616,6 +617,7 @@ use cln_grpc::pb::node_server::NodeServer;
 #[derive(Clone, Debug)]
 struct Lsps2Offer {
     node_id: String,
+    #[allow(unused)]
     params: Vec<crate::responses::OpeningFeeParams>,
 }
 

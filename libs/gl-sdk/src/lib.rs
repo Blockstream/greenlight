@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error("Error calling the rpc: {0}")]
     Rpc(String),
+
+    #[error("Invalid argument: {0}={1}")]
+    Argument(String, String),
     
     #[error("Generic error: {0}")]
     Other(String),
