@@ -68,3 +68,7 @@ tasks:
     cmds:
       - cargo clean
       - rm -rf .venv
+
+  kotlin-multiplatform:
+    cmds:
+      - echo DUMMY BUILD

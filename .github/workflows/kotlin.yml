@@ -1,0 +1,52 @@
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'gl-sdk-*'
+  pull_request: {}
+
+name: Build & Publish framework for Kotlin library
+
+jobs:
+
+  build:
+    runs-on: macos-26
+    steps:
+      - name: "Show default version of NDK"
+        run: echo $ANDROID_NDK_ROOT
+
+      - name: "Check out PR branch"
+        uses: actions/checkout@v4
+
+      - name: "Set up JDK"
+        uses: actions/setup-java@v5
+        with:
+          distribution: jetbrains
+          java-version: 21
+
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
+
+      - uses: pnorton5432/setup-task@v1
+
+      - name: "Install NDK"
+        run: |
+          cargo install cargo-ndk --version 3.5.4
+
+      - name: "Build Kotlin Multiplatform bindings"
+        run: |
+          task kotlin-multiplatform
+
+      #- name: "Build Android library"
+      #  working-directory: lwk_bindings/android_bindings
+      #  run: |
+      #    ./gradlew assemble --console=plain
+
+      #- name: Temporarily save artifact
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: glsdk-artifact
+      #    path: lwk_bindings/android_bindings
+      #    retention-days: 1
