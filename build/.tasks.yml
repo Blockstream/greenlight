@@ -1,0 +1,35 @@
+version: "3"
+
+tasks:
+  android:
+    deps:
+      - linux-android-aarch64
+      - linux-androideabi-armv7
+      - linux-android-i686
+      - linux-android-x86_64
+    cmds:
+      - cp -a target/release/android/jniLibs libs/gl-sdk-android/lib/src/androidMain
+      
+  kotlin:
+    deps:
+      - android
+    cmds:
+      - cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.2.0
+      - gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform
+      - cp -a ./target/release/kotlin-multiplatform/* libs/gl-sdk-android/lib/src/
+
+  aarch64-linux-android:
+    cmds:
+      - exit 1
+
+  armv7-linux-androideabi:
+    cmds:
+      - exit 1
+
+  linux-*-*:
+    vars:
+      ABI: '{{index .MATCH 0}}'
+      ARCH: '{{index .MATCH 1}}'
+    cmds:
+      - cargo ndk -t {{.ARCH}}-linux-{{.ABI}} -o target/release/android/jniLibs build -p gl-sdk
+
