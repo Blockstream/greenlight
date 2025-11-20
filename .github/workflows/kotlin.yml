@@ -28,6 +28,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
+        
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
 
       - name: Setup Task
         run: |
@@ -39,7 +42,7 @@ jobs:
 
       - name: "Build Kotlin Multiplatform bindings"
         run: |
-          /usr/local/bin/task kotlin-multiplatform
+          /usr/local/bin/task build:android
 
       - name: "Build Android library"
         working-directory: libs/gl-sdk-android
