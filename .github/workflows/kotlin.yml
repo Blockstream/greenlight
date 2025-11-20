@@ -30,6 +30,9 @@ jobs:
           targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
 
       - uses: pnorton5432/setup-task@v1
+      - name: Setup Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
       - name: "Install NDK"
         run: |
@@ -37,7 +40,7 @@ jobs:
 
       - name: "Build Kotlin Multiplatform bindings"
         run: |
-          task kotlin-multiplatform
+          /usr/local/bin/task kotlin-multiplatform
 
       #- name: "Build Android library"
       #  working-directory: lwk_bindings/android_bindings
