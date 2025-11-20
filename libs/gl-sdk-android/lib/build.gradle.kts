@@ -20,9 +20,10 @@ kotlin {
     jvm()
 
     val xcf = XCFramework()
+    /*
     listOf(
-        iosArm64(),
-        iosSimulatorArm64()
+        //iosArm64(),
+        //iosSimulatorArm64()
     ).forEach {
 
         it.binaries.framework {
@@ -44,7 +45,7 @@ kotlin {
             }
         }
     }
-
+*/
     compilerOptions.freeCompilerArgs.add("-Xexpect-actual-classes")
 
     sourceSets {
