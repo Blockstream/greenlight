@@ -76,7 +76,6 @@ tasks:
     cmds:
       - task: build-release
       - task: bindings-python
-      - uv run python build.py
       - uv build
 
   install-python:
@@ -84,6 +83,7 @@ tasks:
     dir: "{{.ROOT_DIR}}/libs/gl-sdk"
     cmds:
       - task: package-python
+      - uv sync
       - uv pip install -e .
 
   prepare-test:
@@ -91,8 +91,7 @@ tasks:
     dir: "{{.ROOT_DIR}}/libs/gl-sdk"
     cmds:
       - task: bindings-python
-      - uv run python build.py
-
+      - task: install-python
   test:
     desc: "Run gl-sdk tests (loads library from source)"
     dir: "{{.ROOT_DIR}}/libs/gl-sdk"

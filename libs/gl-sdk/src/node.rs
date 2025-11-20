@@ -35,6 +35,7 @@ impl Node {
         })
     }
 
+    /// Stop the node if it is currently running.
     pub fn stop(&self) -> Result<(), Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
@@ -43,7 +44,7 @@ impl Node {
         // It's ok, the error here is expected and should just be
         // telling us that we've lost the connection. This is to
         // be expected on shutdown, so we clamp this to success.
-        exec(cln_client.stop(req));
+        let _ = exec(cln_client.stop(req));
         Ok(())
     }
 
@@ -78,18 +79,95 @@ impl Node {
         Ok(ReceiveResponse { bolt11: res.bolt11 })
     }
 
-    fn onchain_send(&self, req: &OnchainSendRequest) -> Result<OnchainSendResponse, Error> {
-        unimplemented!()
-    }
-    fn onchain_receive(
-        &self,
-        addresstype: Option<AddressType>,
-    ) -> Result<OnchainReceiveResponse, Error> {
-        unimplemented!()
+    fn send(&self, invoice: String, amount_msat: Option<u64>) -> Result<SendResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+        let req = clnpb::PayRequest {
+            amount_msat: match amount_msat {
+                Some(a) => Some(clnpb::Amount { msat: a }),
+                None => None,
+            },
+
+            bolt11: invoice,
+            description: None,
+            exclude: vec![],
+            exemptfee: None,
+            label: None,
+            localinvreqid: None,
+            maxdelay: None,
+            maxfee: None,
+            maxfeepercent: None,
+            partial_msat: None,
+            retry_for: None,
+            riskfactor: None,
+        };
+        exec(cln_client.pay(req))
+            .map_err(|e| Error::Rpc(e.to_string()))
+            .map(|r| r.into_inner().into())
     }
 
-    fn send(&self, invoice: String) -> SendResponse {
-        unimplemented!()
+    fn onchain_send(
+        &self,
+        destination: String,
+        amount_or_all: String,
+    ) -> Result<OnchainSendResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        // Decode what the user intends to do. Either we have `all`,
+        // or we have an amount that we can parse.
+        let (num, suffix): (String, String) = amount_or_all.chars().partition(|c| c.is_digit(10));
+
+        let num = if num.len() > 0 {
+            num.parse::<u64>().unwrap()
+        } else {
+            0
+        };
+        let satoshi = match (num, suffix.as_ref()) {
+            (n, "") | (n, "sat") => clnpb::AmountOrAll {
+                // No value suffix, interpret as satoshis. This is an
+                // onchain RPC method, hence the sat denomination by
+                // default.
+                value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                    msat: n * 1000,
+                })),
+            },
+            (n, "msat") => clnpb::AmountOrAll {
+                // No value suffix, interpret as satoshis. This is an
+                // onchain RPC method, hence the sat denomination by
+                // default.
+                value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                    msat: n * 1000,
+                })),
+            },
+            (0, "all") => clnpb::AmountOrAll {
+                value: Some(clnpb::amount_or_all::Value::All(true)),
+            },
+            (_, _) => return Err(Error::Argument("amount_or_all".to_owned(), amount_or_all)),
+        };
+
+        let req = clnpb::WithdrawRequest {
+            destination: destination,
+            minconf: None,
+            feerate: None,
+            satoshi: Some(satoshi),
+            utxos: vec![],
+        };
+
+        exec(cln_client.withdraw(req))
+            .map_err(|e| Error::Rpc(e.to_string()))
+            .map(|r| r.into_inner().into())
+    }
+
+    fn onchain_receive(&self) -> Result<OnchainReceiveResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::NewaddrRequest {
+            addresstype: Some(clnpb::newaddr_request::NewaddrAddresstype::All.into()),
+        };
+
+        let res = exec(cln_client.new_addr(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
     }
 }
 
@@ -113,31 +191,92 @@ impl Node {
     }
 }
 
+#[allow(unused)]
 #[derive(uniffi::Object)]
-struct OnchainSendResponse {}
-
-#[derive(uniffi::Object)]
-struct OnchainSendRequest {
-    label: String,
-    description: String,
-    amount_msat: Option<u64>,
+struct OnchainSendResponse {
+    tx: Vec<u8>,
+    txid: Vec<u8>,
+    psbt: String,
 }
 
-#[derive(uniffi::Enum)]
-enum AddressType {
-    BECH32,
-    P2TR,
+impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
+    fn from(other: clnpb::WithdrawResponse) -> Self {
+        Self {
+            tx: other.tx,
+            txid: other.txid,
+            psbt: other.psbt,
+        }
+    }
 }
 
+#[allow(unused)]
 #[derive(uniffi::Object)]
 struct OnchainReceiveResponse {
-    address: String,
+    bech32: String,
+    p2tr: String,
 }
 
-#[derive(uniffi::Object)]
-struct SendResponse {}
+impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
+    fn from(other: clnpb::NewaddrResponse) -> Self {
+        OnchainReceiveResponse {
+            bech32: other.bech32.unwrap_or_default(),
+            p2tr: other.p2tr.unwrap_or_default(),
+        }
+    }
+}
 
+#[allow(unused)]
+#[derive(uniffi::Object)]
+struct SendResponse {
+    status: PayStatus,
+    preimage: Vec<u8>,
+    amount_msat: u64,
+    amount_sent_msat: u64,
+    parts: u32,
+}
+
+impl From<clnpb::PayResponse> for SendResponse {
+    fn from(other: clnpb::PayResponse) -> Self {
+        Self {
+            status: other.status.into(),
+            preimage: other.payment_preimage,
+            amount_msat: other.amount_msat.unwrap().msat,
+            amount_sent_msat: other.amount_sent_msat.unwrap().msat,
+            parts: other.parts,
+        }
+    }
+}
+
+#[allow(unused)]
 #[derive(uniffi::Object)]
 struct ReceiveResponse {
     bolt11: String,
+}
+
+#[derive(uniffi::Enum)]
+enum PayStatus {
+    COMPLETE = 0,
+    PENDING = 1,
+    FAILED = 2,
+}
+
+impl From<clnpb::pay_response::PayStatus> for PayStatus {
+    fn from(other: clnpb::pay_response::PayStatus) -> Self {
+        match other {
+            clnpb::pay_response::PayStatus::Complete => PayStatus::COMPLETE,
+            clnpb::pay_response::PayStatus::Failed => PayStatus::FAILED,
+            clnpb::pay_response::PayStatus::Pending => PayStatus::PENDING,
+        }
+    }
+}
+
+impl From<i32> for PayStatus {
+    fn from(i: i32) -> Self {
+        match i {
+            0 => PayStatus::COMPLETE,
+            1 => PayStatus::PENDING,
+            2 => PayStatus::FAILED,
+            o => panic!("Unknown pay_status {}", o),
+        }
+    }
 }
