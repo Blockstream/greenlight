@@ -1,6 +1,10 @@
 version: "3"
 
 includes:
+  build:
+    taskfile: "build/.tasks.yml"
+    dir: "."
+
   clnvm:
     taskfile: "libs/cln-version-manager/.tasks.yml"
     dir: "libs/cln-version-manager/"
