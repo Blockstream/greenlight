@@ -6,7 +6,7 @@ on:
       - 'gl-sdk-*'
   pull_request: {}
 
-name: Build & Publish framework for Kotlin library
+name: Kotlin library
 
 jobs:
 

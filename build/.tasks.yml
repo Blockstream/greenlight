@@ -18,13 +18,16 @@ tasks:
       - gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform
       - cp -a ./target/release/kotlin-multiplatform/* libs/gl-sdk-android/lib/src/
 
-  aarch64-linux-android:
+  swift:
+    deps:
+      - ios
+      - ios-sim
     cmds:
-      - exit 1
-
-  armv7-linux-androideabi:
-    cmds:
-      - exit 1
+      - cargo run --features bindings -- generate --library ./target/aarch64-apple-ios/release/libglsdk.a --language swift --out-dir ./target/swift
+      - mkdir -p ./target/swift/include
+      - mv target/swift/glsdkFFI.h target/swift/include
+      - mv target/swift/glsdkFFI.modulemap  target/swift/include/module.modulemap
+      - xcodebuild -create-xcframework -library target/lipo-ios-sim/release/libglsdk.a -headers target/swift/include -library target/aarch64-apple-ios/release/libglsdk.a -headers target/swift/include -output target/glsdkFFI.xcframework
 
   linux-*-*:
     vars:
@@ -33,3 +36,23 @@ tasks:
     cmds:
       - cargo ndk -t {{.ARCH}}-linux-{{.ABI}} -o target/release/android/jniLibs build -p gl-sdk
 
+  ios:
+    deps:
+      - ios-apple-aarch64
+      - ios-apple-x86_64
+
+  ios-sim:
+    deps:
+      - ios-sim-apple-aarch64
+      
+  ios-apple-*:
+    vars:
+      ARCH: '{{ index .MATCH 0 }}'
+    cmds:
+      - IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target {{.ARCH}}-apple-ios -p gl-sdk
+
+  ios-sim-apple-*:
+    vars:
+      ARCH: '{{ index .MATCH 0 }}'
+    cmds:
+      - IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target {{.ARCH}}-apple-ios-sim -p gl-sdl
