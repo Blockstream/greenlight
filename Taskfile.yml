@@ -2,7 +2,7 @@ version: "3"
 
 includes:
   build:
-    taskfile: "build/.tasks.yml"
+    taskfile: ".tasks.build.yml"
     dir: "."
 
   clnvm:
