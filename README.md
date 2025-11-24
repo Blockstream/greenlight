@@ -117,3 +117,4 @@ the grpc connections open and reuse them whenever possible.
 
 [bip39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
 [protos]: https://github.com/Blockstream/greenlight/blob/main/libs/proto/
+.

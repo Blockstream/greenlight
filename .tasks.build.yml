@@ -23,6 +23,9 @@ tasks:
       - ios
       - ios-sim
     cmds:
+      - find ./target -type f
+      - ls -lha ./target/aarch64-apple-ios/release/
+      - find . -type f
       - cargo run --bin uniffi-bindgen -- generate --library ./target/aarch64-apple-ios/release/libglsdk.a --language swift --out-dir ./target/swift
       - mkdir -p ./target/swift/include
       - mv target/swift/glsdkFFI.h target/swift/include
@@ -44,7 +47,11 @@ tasks:
   ios-sim:
     deps:
       - ios-sim-apple-aarch64
-      
+      - ios
+    cmds:
+      - mkdir -p target/lipo-ios-sim/release
+      - lipo target/aarch64-apple-ios-sim/release/libglsdk.a target/x86_64-apple-ios/release/libglsdk.a -create -output target/lipo-ios-sim/release/libglsdk.a
+
   ios-apple-*:
     vars:
       ARCH: '{{ index .MATCH 0 }}'
