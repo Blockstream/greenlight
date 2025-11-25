@@ -56,10 +56,10 @@ tasks:
           -t gltesting \
           -f docker/gl-testing/Dockerfile \
           .
-    
+
   docker-ci-check:
     deps:
-#      - docker-ci-build
+      - docker-ci-build
     cmds:
       - docker run --rm -ti -v $(pwd):/repo gltesting task ci-check
 

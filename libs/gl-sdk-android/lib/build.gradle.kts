@@ -22,8 +22,8 @@ kotlin {
     val xcf = XCFramework()
     /*
     listOf(
-        //iosArm64(),
-        //iosSimulatorArm64()
+        iosArm64(),
+        iosSimulatorArm64()
     ).forEach {
 
         it.binaries.framework {
@@ -110,8 +110,8 @@ mavenPublishing {
     coordinates(groupId = "com.blockstream", artifactId = "glsdk", version = libraryVersion)
 
     pom {
-        name = "LWK"
-        description = "Liquid Wallet Kit"
+        name = "glsdk"
+        description = "GreenlightSDK"
         url = "https://blockstream.com"
         licenses {
             license {
@@ -121,14 +121,9 @@ mavenPublishing {
         }
         developers {
             developer {
-                id = "rcasatta"
-                name = "Riccardo Casatta"
-                email = "riccardo@blockstream.com"
-            }
-            developer {
-                id = "leocomandini"
-                name = "Leonardo Comandini"
-                email = "leonardo@blockstream.com"
+                id = "cdecker"
+                name = "Christian Decker"
+                email = "decker@blockstream.com"
             }
         }
         scm {
@@ -138,8 +133,8 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral()
-    signAllPublications()
+    //publishToMavenCentral()
+    //signAllPublications()
 }
 
 extensions.configure<SigningExtension> {

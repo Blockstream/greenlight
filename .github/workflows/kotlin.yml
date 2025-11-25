@@ -22,15 +22,17 @@ jobs:
       - name: "Set up JDK"
         uses: actions/setup-java@v5
         with:
-          distribution: jetbrains
+          distribution: temurin
           java-version: 21
 
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
-        
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Task
         run: |
@@ -47,11 +49,16 @@ jobs:
       - name: "Build Android library"
         working-directory: libs/gl-sdk-android
         run: |
-          ./gradlew assemble --console=plain
+          ./gradlew :lib:assemble --console=plain
+
+      - name: "Puiblish to Maven"
+        working-directory: libs/gl-sdk-android
+        run: |
+          ./gradlew :lib:publishToMavenLocal
 
       - name: Temporarily save artifact
         uses: actions/upload-artifact@v4
         with:
           name: glsdk-artifact
-          path: libs/gl-sdk-android
-          retention-days: 1
+          path: libs/gl-sdk-android/lib/build/outputs/
+          retention-days: 14
