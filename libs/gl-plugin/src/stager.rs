@@ -98,16 +98,22 @@ impl Stage {
     }
 
     pub async fn is_stuck(&self) -> bool {
-        let sticky = self
+        let sticky_types: Vec<u16> = vec![5, 28];
+        let sticky: Vec<Request> = self
             .requests
             .lock()
             .await
             .values()
-            .filter(|r| r.request.raw[0..2] == [0u8, 5])
-            .count();
+            .filter(|r| {
+                let head: [u16; 2] = [r.request.raw[0].into(), r.request.raw[1].into()];
+                let typ = head[0] << 8 | head[1];
+                sticky_types.contains(&typ)
+            })
+            .map(|r| r.clone())
+            .collect();
 
-        trace!("Found {sticky} sticky requests.");
-        sticky != 0
+        trace!("Found {:?} sticky requests.", sticky);
+        sticky.len() != 0
     }
 }
 
