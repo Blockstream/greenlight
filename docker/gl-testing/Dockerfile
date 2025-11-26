@@ -225,6 +225,10 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ADD . /repo
 WORKDIR /repo
 
+# Build gl-sdk and copy the shared library for Python bindings
+RUN cargo build -p gl-sdk && \
+    cp target/debug/libglsdk.so libs/gl-sdk/glsdk/
+
 # Populate `uv` cache
 RUN uv sync --all-packages --dev
 
