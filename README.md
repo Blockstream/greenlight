@@ -44,14 +44,17 @@ present at a time, freeing others from that duty.
 
 The easiest way to begin using __Greenlight__ is with its command-line
 interface `glcli`. You can install it directly from __crates.io__ by running:
+
 ```bash
 cargo install gl-cli
 ```
 
 Once installed execute:
+
 ```bash
 glcli --help
 ```
+
 This command will display an overview of all available commands.
 
 For additional details and usage examples, refer to `glcli` [README][glcli-doc].
