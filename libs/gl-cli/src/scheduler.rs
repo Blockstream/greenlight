@@ -52,6 +52,8 @@ pub enum Command {
         )]
         pairing_data: String,
     },
+    /// Export the node from Greenlight infrastructure
+    Export,
 }
 
 pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) -> Result<()> {
@@ -76,6 +78,7 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
         Command::ApprovePairing { pairing_data } => {
             approve_pairing_handler(config, &pairing_data).await
         }
+        Command::Export => export_handler(config).await,
     }
 }
 
@@ -271,6 +274,60 @@ async fn pair_device_handler<P: AsRef<Path>>(
         };
     }
     Err(Error::custom("Connection to scheduler has been closed"))
+}
+
+async fn export_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
+    let creds = util::read_credentials(&creds_path);
+    if creds.is_none() {
+        println!("Could not find credentials at {}", creds_path.display());
+        return Err(Error::credentials_not_found(format!(
+            "could not read from {}",
+            creds_path.display()
+        )));
+    }
+
+    let creds = creds.unwrap(); // we checked if it is none before.
+    let scheduler = Scheduler::new(config.network, creds)
+        .await
+        .map_err(|e| Error::custom(format!("Failed to create scheduler: {}", e)))?;
+
+    // Confirm export action with the user
+    print!(
+        "WARNING: Exporting your node will make it no longer schedulable on Greenlight.
+After export, you will need to run the node on your own infrastructure.
+This operation is idempotent and can be called multiple times.
+
+Are you sure you want to export your node? (y/N) "
+    );
+    io::stdout().flush().expect("Failed to flush stdout");
+
+    let input = task::spawn_blocking(|| {
+        let mut input = String::new();
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
+        input
+    })
+    .await
+    .expect("Task failed");
+
+    if !input.trim().eq_ignore_ascii_case("y") {
+        println!("Export cancelled.");
+        return Ok(());
+    }
+
+    // Initiate the node export
+    let res = scheduler
+        .export_node()
+        .await
+        .map_err(|e| Error::custom(format!("Failed to export node: {}", e)))?;
+
+    println!("Node export initiated successfully!");
+    println!("Download the encrypted backup from: {}", res.url);
+    println!("\nNote: After exporting, the node will no longer be schedulable on Greenlight.");
+    println!("The backup is encrypted and can only be decrypted with your node secret.");
+    Ok(())
 }
 
 async fn approve_pairing_handler<P: AsRef<Path>>(

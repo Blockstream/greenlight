@@ -1,0 +1,52 @@
+kacl:
+  file: CHANGELOG.md
+  allowed_header_titles:
+    - Changelog
+    - Change Log
+  allowed_version_sections:
+    - Added
+    - Changed
+    - Deprecated
+    - Removed
+    - Fixed
+    - Security
+  default_content:
+    - All notable changes to this project will be documented in this file.
+    - The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+  release:
+    add_unreleased: True
+  git:
+    commit: False
+    commit_message: "[skip ci] Releasing Changelog version {new_version}"
+    commit_additional_files: []
+    tag: False
+    tag_name: "v{new_version}"
+    tag_description: "Version v{new_version} released"
+  links:
+    auto_generate: False
+    compare_versions_template: '{host}/compare/{previous_version}...{version}'
+    unreleased_changes_template: '{host}/compare/{latest_version}...master'
+    initial_version_template: '{host}/tree/{version}'
+  extension:
+    post_release_version_prefix: null
+  issue_tracker:
+    jira:
+      host: null
+      username: null
+      password: null
+      issue_patterns: ["[A-Z]+-[0-9]+"]
+      comment_template: |
+        # 🚀 New version [v{new_version}]({link})
+
+        A new release has been created referencing this issue. Please check it out.
+
+        ## 🚧 Changes in this version
+
+        {changes}
+
+        ## 🧭 Reference
+
+        Code: [Source Code Management System]({link})
+  stash:
+    directory: .kacl_stash
+    always: False
