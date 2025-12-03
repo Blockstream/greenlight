@@ -17,8 +17,8 @@ build-backend = "hatchling.build"
 packages = ["glsdk"]
 
 # Include the shared library as package data
-[tool.hatch.build.targets.wheel.force-include]
-"glsdk/libglsdk.so" = "glsdk/libglsdk.so"
+[tool.hatch.build.hooks.custom]
+path = "hooks/libglsdk_force_include.py"
 
 [dependency-groups]
 dev = [
