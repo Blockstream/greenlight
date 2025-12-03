@@ -1,5 +1,20 @@
 version: "3"
 
+vars:
+  LIB_EXT:
+    sh: |
+      case "$(uname -s)" in
+        Darwin*)
+          echo "dylib"
+          ;;
+        MINGW*|MSYS*|CYGWIN*)
+          echo "dll"
+          ;;
+        *)
+          echo "so"
+          ;;
+      esac
+
 tasks:
   build:
     desc: "Build the gl-sdk library"
@@ -20,8 +35,9 @@ tasks:
       - build-release
     cmds:
       - |
+        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.so \
+          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
           --language python \
           --out-dir ./libs/gl-sdk/bindings
 
@@ -32,8 +48,9 @@ tasks:
       - build-release
     cmds:
       - |
+        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.so \
+          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
           --language kotlin \
           --out-dir ./libs/gl-sdk/bindings
 
@@ -44,8 +61,9 @@ tasks:
       - build-release
     cmds:
       - |
+        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.so \
+          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
           --language swift \
           --out-dir ./libs/gl-sdk/bindings
 
@@ -56,8 +74,9 @@ tasks:
       - build-release
     cmds:
       - |
+        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.so \
+          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
           --language ruby \
           --out-dir ./libs/gl-sdk/bindings
 
@@ -106,6 +125,6 @@ tasks:
     cmds:
       - rm -rf ./bindings
       - rm -rf dist/ build/ *.egg-info
-      - rm -f glsdk/*.so glsdk/glsdk.py
+      - rm -f glsdk/*.{{.LIB_EXT}} glsdk/glsdk.py
       - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
       - find . -type f -name "*.pyc" -delete

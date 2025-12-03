@@ -39,8 +39,8 @@ pygrpc: ${PROTOSRC}
 	cd ${PYDIR}; uv run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
 
 check-py:
-	#uv run --all-packages mypy ${PYDIR}/glclient
-	uv run --all-packages pytest tests -n $(shell nproc) ${PYDIR}/tests
+	#uv run --reinstall-package='gl-sdk' --all-packages mypy ${PYDIR}/glclient
+	uv run --reinstall-package='gl-sdk' --all-packages pytest tests -n $(shell nproc) ${PYDIR}/tests
 
 clean-py:
 	rm -f ${PYPROTOS} ${PYDIR}/build ${PYDIR}/dist
