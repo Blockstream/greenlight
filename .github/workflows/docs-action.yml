@@ -68,6 +68,11 @@ jobs:
       - name: Build Rust packages
         run: cargo build --workspace
 
+      - name: Copy gl-sdk shared library to Python package location
+        run: |
+          mkdir -p libs/gl-sdk/glsdk
+          cp target/debug/libglsdk.so libs/gl-sdk/glsdk/libglsdk.so
+
       - name: Sync Python dependencies
         run: |
           uv lock
