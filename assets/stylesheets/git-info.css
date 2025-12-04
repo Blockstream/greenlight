@@ -1,0 +1,34 @@
+.git-info-bar {
+  font-size: 0.5rem;
+}
+
+.git-info-bar .md-grid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: .75;
+}
+
+.git-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding-right: 0.3rem;
+}
+
+.git-info-item:last-child {
+  padding-right: 1rem;
+}
+
+.git-info-item svg {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.git-info-item a {
+  text-decoration: none;
+}
+
+.git-info-item a:hover {
+  text-decoration: none;
+}
