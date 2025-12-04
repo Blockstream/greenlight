@@ -20,5 +20,5 @@ cd docs; uv run mkdocs build
 
 To serve the docs locally
 ```
-cd docs; uv run mkdocs serve
+cd docs; uv run mkdocs serve --verbose --livereload
 ```
