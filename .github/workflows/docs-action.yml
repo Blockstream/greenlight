@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/docs-action.yml"
       - "docs/**.md"
       - "docs/mkdocs.yml"
       - "examples/python/**"
@@ -114,6 +115,7 @@ jobs:
           DOCSBRANCH: "gh-pages"
           DOCSREMOTE: "origin"
           GITHUB_TOKEN: "${{ secrets.GH_PAGES_PAT }}"
+          DOCS_COMMIT_SHA: ${{ github.sha }}
         run: |
           mkdir -p ${GITHUB_WORKSPACE}/site/
           cd docs
