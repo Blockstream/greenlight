@@ -90,7 +90,7 @@ ENV PATH=/opt/build-tools:$PATH
 #---------------------------------------------------------------------
 WORKDIR ${REPO_PATH}
 COPY --chown=${DOCKER_USER}:users ../../Cargo.toml ${REPO_PATH}/
-COPY --chown=${DOCKER_USER}:users ../../pyproject.toml ../../uv.lock ${REPO_PATH}/
+COPY --chown=${DOCKER_USER}:users ../../pyproject.toml ${REPO_PATH}/
 COPY --chown=${DOCKER_USER}:users ../../libs ${REPO_PATH}/libs
 COPY --chown=${DOCKER_USER}:users ../../examples ${REPO_PATH}/examples
 
@@ -103,6 +103,10 @@ RUN cargo build --release \
     cargo build --release \
     --manifest-path libs/gl-signerproxy/Cargo.toml --bin gl-signerproxy && \
     strip ${CARGO_TARGET_DIR}/release/gl-plugin ${CARGO_TARGET_DIR}/release/gl-signerproxy
+
+# Build gl-sdk and copy the shared library for Python bindings
+RUN cargo build -p gl-sdk && \
+    cp ${CARGO_TARGET_DIR}/debug/libglsdk.so libs/gl-sdk/glsdk/
 
 #---------------------------------------------------------------------
 # Lock and sync Python dependencies using uv
@@ -138,7 +142,7 @@ FROM ubuntu:24.04 AS final
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
-    libpq5 curl openssl ca-certificates build-essential \
+    libpq5 curl openssl ca-certificates build-essential git gnupg libsodium23 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 #---------------------------------------------------------------------
