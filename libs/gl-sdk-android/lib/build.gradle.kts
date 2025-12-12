@@ -17,35 +17,38 @@ kotlin {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }
     }
 
-    jvm()
-
-    val xcf = XCFramework()
     /*
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
+    jvm()
+     */
 
-        it.binaries.framework {
-            baseName = "glsdk"
-            xcf.add(this)
-        }
+    /*
+        val xcf = XCFramework()
 
-        val platform = when (it.targetName) {
-            "iosSimulatorArm64" -> "ios_simulator_arm64"
-            "iosArm64" -> "ios_arm64"
-            else -> error("Unsupported target $name")
-        }
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+
+            it.binaries.framework {
+                baseName = "glsdk"
+                xcf.add(this)
+            }
+
+            val platform = when (it.targetName) {
+                "iosSimulatorArm64" -> "ios_simulator_arm64"
+                "iosArm64" -> "ios_arm64"
+                else -> error("Unsupported target $name")
+            }
 
 
-        it.compilations["main"].cinterops {
-            create("glsdkCInterop") {
-                defFile(project.file("src/nativeInterop/cinterop/glsdk.def"))
-                includeDirs(project.file("src/nativeInterop/cinterop/headers/glsdk/"), project.file("src/libs/$platform"))
+            it.compilations["main"].cinterops {
+                create("glsdkCInterop") {
+                    defFile(project.file("src/nativeInterop/cinterop/glsdk.def"))
+                    includeDirs(project.file("src/nativeInterop/cinterop/headers/glsdk/"), project.file("src/libs/$platform"))
+                }
             }
         }
-    }
-*/
+    */
     compilerOptions.freeCompilerArgs.add("-Xexpect-actual-classes")
 
     sourceSets {
@@ -139,4 +142,14 @@ mavenPublishing {
 
 extensions.configure<SigningExtension> {
     useGpgCmd()
+}
+
+// Do not require signing when publishing to Maven Local
+// Allows `./gradlew publishToMavenLocal` (or `publishToLocalMaven`) without GPG setup
+tasks.withType<Sign>().configureEach {
+    onlyIf {
+        val taskNames = gradle.startParameter.taskNames
+        // Skip signing if the build is targeting the local Maven repository
+        taskNames.none { it.contains("publishToMavenLocal", ignoreCase = true) || it.contains("publishToLocalMaven", ignoreCase = true) }
+    }
 }

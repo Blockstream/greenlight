@@ -1,5 +1,5 @@
 # Kotlin Multiplatform https://gobley.dev/docs/bindgen#bindgen-configuration
-package_name = "glsdk"
+package_name = "com.blockstream.glsdk"
 kotlin_multiplatform = true
 kotlin_targets = ["jvm", "android", "native"]
 kotlin_target_version = "2.2.20"
