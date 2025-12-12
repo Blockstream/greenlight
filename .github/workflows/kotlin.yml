@@ -44,7 +44,7 @@ jobs:
 
       - name: "Build Kotlin Multiplatform bindings"
         run: |
-          /usr/local/bin/task build:android
+          /usr/local/bin/task build:kotlin
 
       - name: "Build Android library"
         working-directory: libs/gl-sdk-android

@@ -34,3 +34,6 @@ metadata.json
 examples/javascript/node_modules
 examples/javascript/response.bin
 examples/javascript/package-lock.json
+
+# IntelliJ
+.idea/
