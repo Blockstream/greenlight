@@ -55,4 +55,4 @@ tasks:
     vars:
       ARCH: '{{ index .MATCH 0 }}'
     cmds:
-      - IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target {{.ARCH}}-apple-ios-sim -p gl-sdl
+      - IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target {{.ARCH}}-apple-ios-sim -p gl-sdk
