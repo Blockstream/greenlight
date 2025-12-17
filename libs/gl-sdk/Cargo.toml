@@ -13,6 +13,7 @@ gl-client = { version = "0.3.1", path = "../gl-client" }
 once_cell = "1.21.3"
 thiserror = "2.0.17"
 tokio = { version = "1", features = ["sync"] }
+tracing = { version = "0.1.43", features = ["async-await", "log"] }
 uniffi = { version = "0.29.4" }
 
 [build-dependencies]
