@@ -1,6 +1,7 @@
 use crate::{Credentials, Error};
 use bip39::Mnemonic;
 use std::str::FromStr;
+use tracing;
 
 #[derive(uniffi::Object, Clone)]
 pub struct Signer {
@@ -53,17 +54,24 @@ impl Signer {
 
     fn start(&self) -> Result<Handle, Error> {
         let (tx, rx) = tokio::sync::mpsc::channel(1);
-
-        let clone = self.clone();
-        tokio::spawn(async move {
-            clone.run(rx).await;
+        let inner = self.inner.clone();
+        std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("building tokio runtime");
+            runtime.block_on(async move {
+                if let Err(e) = inner.run_forever(rx).await {
+                    tracing::error!("Error running signer in thread: {e}")
+                }
+            })
         });
 
         Ok(Handle { chan: tx })
     }
 
     fn node_id(&self) -> Vec<u8> {
-        unimplemented!()
+        self.inner.node_id()
     }
 }
 
