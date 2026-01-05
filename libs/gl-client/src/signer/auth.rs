@@ -19,16 +19,24 @@ impl Authorizer for GreenlightAuthorizer {
         &self,
         requests: &Vec<Request>,
     ) -> Result<Vec<Approval>, Error> {
-        let approvals : Vec<_> = requests.iter().flat_map(|request| {
+        let mut approvals = Vec::new();
+        for request in requests.iter() {
             match request {
                 Request::Pay(req) => {
-                    // TODO error handling
-                    Some(Approval::Invoice(Invoice::from_str(&req.bolt11)
-                        .expect("")))
+                    match Invoice::from_str(&req.bolt11) {
+                        Ok(invoice) => {
+                            approvals.push(Approval::Invoice(invoice));
+                        }
+                        Err(e) => {
+                            return Err(crate::Error::IllegalArgument(
+                                format!("Failed to parse invoice from Pay request: {:?}", e)
+                            ));
+                        }
+                    }
                 }
-                _ => None,
+                _ => {}
             }
-        }).collect();
+        }
         Ok(approvals)
     }
 }
