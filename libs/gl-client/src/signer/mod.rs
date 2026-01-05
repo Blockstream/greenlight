@@ -195,7 +195,9 @@ impl Signer {
         // we need for the rest of the run.
         let init = Signer::initmsg(&mut handler)?;
 
-        let init = HsmdInitReplyV4::from_vec(init).unwrap();
+        let init = HsmdInitReplyV4::from_vec(init).map_err(|e| {
+            anyhow!("Failed to parse init message as HsmdInitReplyV4: {:?}", e)
+        })?;
 
         let id = init.node_id.0.to_vec();
         use vls_protocol::msgs::SerBolt;
@@ -235,7 +237,7 @@ impl Signer {
     fn handler(&self) -> Result<handler::RootHandler, anyhow::Error> {
         let mut h = self.init_handler()?;
         h.handle(Signer::initreq())
-            .expect("handling the hsmd_init message");
+            .map_err(|e| anyhow!("Failed to handle hsmd_init message: {:?}", e))?;
         Ok(h.into())
     }
 
@@ -253,7 +255,7 @@ impl Signer {
         .build()
         .map_err(|e| crate::signer::Error::Other(anyhow!("Could not create handler: {:?}", e)))?;
         h.handle(Signer::initreq())
-            .expect("handling the hsmd_init message");
+            .map_err(|e| Error::Other(anyhow!("Failed to handle hsmd_init message: {:?}", e)))?;
         Ok(h.into())
     }
 
@@ -276,12 +278,10 @@ impl Signer {
     }
 
     fn initmsg(handler: &mut vls_protocol_signer::handler::InitHandler) -> Result<Vec<u8>, Error> {
-        Ok(handler
+        let (_req, response) = handler
             .handle(Signer::initreq())
-            .unwrap()
-            .1
-            .map(|a| a.as_vec())
-            .unwrap_or_default())
+            .map_err(|e| Error::Other(anyhow!("Failed to handle init request: {:?}", e)))?;
+        Ok(response.map(|a| a.as_vec()).unwrap_or_default())
     }
 
     /// Filter out any request that is not signed, such that the
@@ -427,7 +427,7 @@ impl Signer {
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
 
-            match self.process_request(req).await {
+            match self.process_request(req.clone()).await {
                 Ok(response) => {
                     trace!("Sending response {}", hex::encode(&response.raw));
                     client
@@ -436,6 +436,17 @@ impl Signer {
                         .map_err(|e| Error::NodeDisconnect(e))?;
                 }
                 Err(e) => {
+                    // Report the rejection to the server for debugging
+                    // Note: process_request already reports some errors, but we ensure
+                    // all errors are reported here as a safety net
+                    report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                        msg: format!("Error in run_once loop: {:?}", e),
+                        request: Some(req.clone()),
+                        git_version: GITHASH.to_string(),
+                        node_id: self.node_id(),
+                    })
+                    .await;
+
                     let response = HsmResponse {
                         raw: vec![],
                         request_id,
@@ -447,8 +458,8 @@ impl Signer {
                         .await
                         .map_err(|e| Error::NodeDisconnect(e))?;
                     warn!(
-                        "Ignoring error {} for request {} with state {:?}",
-                        e, hex_req, signer_state,
+                        "Rejected request {} with error: {}. State: {:?}",
+                        hex_req, e, signer_state,
                     )
                 }
             };
@@ -478,8 +489,12 @@ impl Signer {
 
         let prestate = {
             debug!("Updating local signer state with state from node");
-            let mut state = self.state.lock().unwrap();
-            state.merge(&diff).unwrap();
+            let mut state = self.state.lock().map_err(|e| {
+                Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
+            })?;
+            state.merge(&diff).map_err(|e| {
+                Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
+            })?;
             trace!("Processing request {}", hex::encode(&req.raw));
             state.clone()
         };
@@ -512,7 +527,10 @@ impl Signer {
 
         let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
-        log::trace!("Signer state {}", serde_json::to_string(&prestate).unwrap());
+        log::trace!(
+            "Signer state {}",
+            serde_json::to_string(&prestate).unwrap_or_else(|_| "<failed to serialize>".to_string())
+        );
 
         if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
             report::Reporter::report(crate::pb::scheduler::SignerRejection {
@@ -580,7 +598,10 @@ impl Signer {
                 root_handler.handle(msg)
             }
             Some(c) => {
-                let pk: [u8; 33] = c.node_id.try_into().unwrap();
+                let node_id_len = c.node_id.len();
+                let pk: [u8; 33] = c.node_id.try_into().map_err(|_| {
+                    Error::Other(anyhow!("Invalid node_id length in context: expected 33 bytes, got {}", node_id_len))
+                })?;
                 let pk = vls_protocol::model::PubKey(pk);
                 root_handler
                     .for_new_client(1 as u64, pk, c.dbid)
@@ -588,21 +609,25 @@ impl Signer {
             }
         };
 
-        if let Err(e) = response {
-            report::Reporter::report(crate::pb::scheduler::SignerRejection {
-                msg: format!("{:?}", e),
-                request: Some(req.clone()),
-                git_version: GITHASH.to_string(),
-                node_id: self.node_id(),
-            })
-            .await;
-            return Err(Error::Other(anyhow!("processing request: {e:?}")));
-        }
+        let response = match response {
+            Ok(r) => r,
+            Err(e) => {
+                report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                    msg: format!("{:?}", e),
+                    request: Some(req.clone()),
+                    git_version: GITHASH.to_string(),
+                    node_id: self.node_id(),
+                })
+                .await;
+                return Err(Error::Other(anyhow!("processing request: {e:?}")));
+            }
+        };
 
-        let response = response.unwrap();
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
-            let state = self.state.lock().unwrap();
+            let state = self.state.lock().map_err(|e| {
+                Error::Other(anyhow!("Failed to acquire state lock for serialization: {:?}", e))
+            })?;
             state.clone().into()
         };
         Ok(HsmResponse {
@@ -687,18 +712,30 @@ impl Signer {
 
     pub fn bip32_ext_key(&self) -> Vec<u8> {
         use vls_protocol::{msgs, msgs::Message};
-        let initmsg = msgs::from_vec(self.init.clone()).expect("unparseable init message");
+        // This should never fail since we validated it during construction
+        let initmsg = msgs::from_vec(self.init.clone())
+            .expect("init message should be valid (validated during Signer::new)");
 
         match initmsg {
             Message::HsmdInit2Reply(m) => m.bip32.0.to_vec(),
             Message::HsmdInitReplyV4(m) => m.bip32.0.to_vec(),
             Message::HsmdInitReplyV2(m) => m.bip32.0.to_vec(),
-            m => panic!("Unknown initmsg {:?}, cannot extract bip32 key", m),
+            m => {
+                // This should never happen, but log and return empty instead of panicking
+                error!("Unknown initmsg type {:?}, cannot extract bip32 key", m);
+                vec![]
+            }
         }
     }
 
     pub fn legacy_bip32_ext_key(&self) -> Vec<u8> {
-        let mut handler = self.init_handler().expect("retrieving the handler");
+        let mut handler = match self.init_handler() {
+            Ok(h) => h,
+            Err(e) => {
+                error!("Failed to retrieve handler for legacy bip32 key: {:?}", e);
+                return vec![];
+            }
+        };
         let req = vls_protocol::msgs::Message::HsmdInit(vls_protocol::msgs::HsmdInit {
             key_version: vls_protocol::model::Bip32KeyVersion {
                 pubkey_version: 0,
@@ -714,13 +751,18 @@ impl Signer {
             hsm_wire_max_version: 2,
         });
 
-        let initmsg = handler
-            .handle(req)
-            .expect("handling legacy init message")
-            .1
-            .map(|a| a.as_vec())
-            .unwrap_or_default();
+        let initmsg = match handler.handle(req) {
+            Ok((_req, response)) => response.map(|a| a.as_vec()).unwrap_or_default(),
+            Err(e) => {
+                error!("Failed to handle legacy init message: {:?}", e);
+                return vec![];
+            }
+        };
 
+        if initmsg.len() <= 35 {
+            error!("Legacy init message too short: expected >35 bytes, got {}", initmsg.len());
+            return vec![];
+        }
         initmsg[35..].to_vec()
     }
 

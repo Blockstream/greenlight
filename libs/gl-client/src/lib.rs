@@ -61,6 +61,9 @@ use thiserror::Error;
 pub enum Error {
     #[error("The signature request does not match any authorized RPC calls")]
     MissingAuthorization,
+
+    #[error("Illegal argument: {0}")]
+    IllegalArgument(String),
 }
 
 pub use lightning_signer::bitcoin;
