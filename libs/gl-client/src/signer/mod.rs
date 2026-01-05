@@ -409,7 +409,7 @@ impl Signer {
             .await?
             .into_inner();
 
-        debug!("Starting to stream signer requests");
+        info!("Starting to stream signer requests");
         loop {
             let req = match stream
                 .message()
@@ -560,8 +560,17 @@ impl Signer {
         let root_handler = self.handler_with_approver(approver)?;
 
         log::trace!("Updating state from context");
-        update_state_from_context(&ctxrequests, &root_handler)
-            .expect("Updating state from context requests");
+        if let Err(e) = update_state_from_context(&ctxrequests, &root_handler) {
+            error!("Failed to update state from context: {:?}", e);
+            report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                msg: format!("Failed to update state from context: {:?}", e),
+                request: Some(req.clone()),
+                git_version: GITHASH.to_string(),
+                node_id: self.node_id(),
+            })
+            .await;
+            return Err(Error::Other(anyhow!("Failed to update state from context: {:?}", e)));
+        }
         log::trace!("State updated");
 
         // Match over root and client handler.
@@ -746,6 +755,8 @@ impl Signer {
         // Upgrade node if necessary.
         // If it fails due to connection error, sleep and retry. Re-throw all other errors.
         loop {
+            let call_start = tokio::time::Instant::now();
+            debug!("Sending maybe_upgrade to {}", self.version());
             #[allow(deprecated)]
             let res = scheduler
                 .maybe_upgrade(UpgradeRequest {
@@ -758,6 +769,11 @@ impl Signer {
                         .collect(),
                 })
                 .await;
+            debug!(
+                "Server returned {:?} after {}s",
+                res,
+                call_start.elapsed().as_secs()
+            );
 
             match res {
                 Err(e) => match e.code() {
@@ -785,7 +801,7 @@ impl Signer {
         mut scheduler: SchedulerClient<tonic::transport::channel::Channel>,
     ) -> Result<(), anyhow::Error> {
         loop {
-            debug!("Calling scheduler.get_node_info");
+            info!("Calling scheduler.get_node_info");
             let node_info_res = scheduler
                 .get_node_info(NodeInfoRequest {
                     node_id: self.id.clone(),
@@ -801,7 +817,7 @@ impl Signer {
 
             let node_info = match node_info_res.map(|v| v.into_inner()) {
                 Ok(v) => {
-                    debug!("Got node_info from scheduler: {:?}", v);
+                    info!("Got node_info from scheduler: {:?}", v);
                     v
                 }
                 Err(e) => {
@@ -1141,7 +1157,11 @@ fn update_state_from_context(
 
     requests
         .iter()
-        .for_each(|r| update_state_from_request(r, &node).unwrap());
+        .for_each(|r| {
+            if let Err(e) = update_state_from_request(r, &node) {
+                log::warn!("Failed to update state from request: {:?}", e);
+            }
+        });
     Ok(())
 }
 
@@ -1155,13 +1175,21 @@ fn update_state_from_request(
         model::Request::SendPay(model::cln::SendpayRequest {
             bolt11: Some(inv), ..
         }) => {
-            let invoice = Invoice::from_str(inv).unwrap();
-            log::debug!(
-                "Adding invoice {:?} as side-effect of this sendpay {:?}",
-                invoice,
-                request
-            );
-            node.add_invoice(invoice).unwrap();
+            match Invoice::from_str(inv) {
+                Ok(invoice) => {
+                    log::debug!(
+                        "Adding invoice {:?} as side-effect of this sendpay {:?}",
+                        invoice,
+                        request
+                    );
+                    if let Err(e) = node.add_invoice(invoice) {
+                        log::warn!("Failed to add invoice to node state: {:?}", e);
+                    }
+                }
+                Err(e) => {
+                    log::warn!("Failed to parse invoice from sendpay request: {:?}", e);
+                }
+            }
         }
         _ => {}
     }
