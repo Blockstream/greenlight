@@ -528,13 +528,12 @@ impl Node for PluginNodeServer {
 
         match bitcoin::Address::from_str(&gl_config.close_to_addr) {
             Ok(address) => {
-                if address.network != network {
+                if let Err(e) = address.require_network(network) {
                     return Err(Status::new(
                         Code::Unknown,
                         format!(
-                            "Network mismatch: \
-                            Expected an address for {} but received an address for {}",
-                            network, address.network
+                            "Network validation failed: {}",
+                            e
                         ),
                     ));
                 }

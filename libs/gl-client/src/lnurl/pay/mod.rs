@@ -1,7 +1,7 @@
 use super::models;
 use super::utils::parse_lnurl;
 
-use crate::lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescription};
+use crate::lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescriptionRef};
 use crate::lnurl::{
     models::{LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse},
     utils::parse_invoice,
@@ -108,8 +108,8 @@ pub fn validate_invoice_from_callback_response(
     );
 
     let description_hash: String = match invoice.description() {
-        Bolt11InvoiceDescription::Direct(d) => sha256::digest(d.to_string()),
-        Bolt11InvoiceDescription::Hash(h) => h.0.to_string(),
+        Bolt11InvoiceDescriptionRef::Direct(d) => sha256::digest(d.to_string()),
+        Bolt11InvoiceDescriptionRef::Hash(h) => h.0.to_string(),
     };
 
     ensure!(

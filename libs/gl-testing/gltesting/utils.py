@@ -4,6 +4,7 @@ from pathlib import Path
 
 from clnvm.utils import NodeVersion
 
+
 @dataclass
 class SignerVersion:
     name: str
@@ -21,13 +22,13 @@ class SignerVersion:
             "v24.02": ["v24.02gl1"],
             "v24.11": ["v24.11gl1"],
             "v25.05": ["v25.05gl1"],
+            "v25.12": ["v25.12gl1"],
         }
 
         return self.name in compat[nv.name]
 
     def get_node_version(self):
-        """Return the node version we should start for this signer version.
-        """
+        """Return the node version we should start for this signer version."""
         m = {
             "v0.10.1": "v0.10.1",
             "v0.10.2": "v0.10.2",
@@ -39,6 +40,7 @@ class SignerVersion:
             "v24.02": "v24.02gl1",
             "v24.11": "v24.11gl1",
             "v25.05": "v25.05gl1",
+            "v25.12": "v25.12gl1",
         }
         return m[self.name]
 

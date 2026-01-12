@@ -475,8 +475,12 @@ impl Persist for MemoryPersister {
         let state = self.state.lock().unwrap();
         let key = hex::encode(node_id.serialize());
         let key = format!("{ALLOWLIST_PREFIX}/{key}");
-        let allowlist: Vec<String> =
-            serde_json::from_value(state.values.get(&key).unwrap().1.clone()).unwrap();
+        
+        // If allowlist doesn't exist (e.g., node created before VLS 0.14), default to empty
+        let allowlist: Vec<String> = match state.values.get(&key) {
+            Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
+            None => Vec::new(),
+        };
 
         Ok(allowlist)
     }
@@ -515,6 +519,8 @@ impl Persist for MemoryPersister {
                 0u64,
                 /* dbid_high_water_mark: prevents reuse of
                  * channel dbid, 0 disables enforcement. */
+                vec![],
+                /* allowlist: empty allowlist */
             );
 
             let entry = lightning_signer::persist::model::NodeEntry {
