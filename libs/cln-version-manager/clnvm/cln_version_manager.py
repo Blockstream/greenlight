@@ -29,7 +29,8 @@ PUBKEY_FINGERPRINT = "1E832A80A25B69C6C7123285AB5187B13F8DD139"
 PUBKEY_URL = f"{BASE_URL}/{PUBKEY_FINGERPRINT}.pub"
 _LIGHTNINGD_REL_PATH = Path("usr/local/bin/lightningd")
 _BIN_REL_PATH = Path("usr/local/bin")
-GPG_OPTS = ['--no-default-keyring', '--keyring=/tmp/clnvm-keyring.gpg']
+GPG_OPTS = ["--no-default-keyring", "--keyring=/tmp/clnvm-keyring.gpg"]
+
 
 @dataclass
 class VersionDescriptor:
@@ -54,14 +55,30 @@ def _get_cache_dir() -> Path:
     else:
         return Path("~/.cache").expanduser().resolve() / "clnvm"
 
+
 def _ensure_pubkey() -> Path:
     """Ensure we have the pubkey that signs the releases in the cache.
 
-    Download if we don't yet.
+    Download if we don't yet, and verify the fingerprint matches.
     """
     fpath = _get_cache_dir()
     fpath.mkdir(parents=True, exist_ok=True)
     pubkey_path = fpath / f"{PUBKEY_FINGERPRINT}.asc"
+
+    # Check if the key is already imported in the GPG keyring
+    try:
+        result = subprocess.run(
+            ["gpg", *GPG_OPTS, "--list-keys", "--with-colons", PUBKEY_FINGERPRINT],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            logger.debug("Public key already imported in keyring.")
+            return pubkey_path
+    except Exception:
+        pass  # Key not found, continue with download/import
+
     if not pubkey_path.exists():
         logger.debug("Fetching public key from %s", PUBKEY_URL)
         pubkey_response = requests.get(PUBKEY_URL)
@@ -71,13 +88,44 @@ def _ensure_pubkey() -> Path:
             )
         with Path(pubkey_path).open(mode="w") as f:
             f.write(pubkey_response.text)
-        try:
-            subprocess.check_call(["gpg", *GPG_OPTS, "--import", pubkey_path])
-        except:
-            raise ValueError("Failed to import public key")
-        logger.debug("Imported public key.")
+
+    # Import the key
+    try:
+        subprocess.check_call(["gpg", *GPG_OPTS, "--import", pubkey_path])
+    except Exception as e:
+        raise ValueError(f"Failed to import public key: {e}")
+
+    # Verify the fingerprint matches what we expect
+    try:
+        result = subprocess.run(
+            ["gpg", *GPG_OPTS, "--list-keys", "--with-colons", "--fingerprint"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        # Parse the output to find the fingerprint
+        found_fingerprint = False
+        for line in result.stdout.split("\n"):
+            if line.startswith("fpr:"):
+                # Format is: fpr:::::::::FINGERPRINT:
+                parts = line.split(":")
+                if len(parts) >= 10 and parts[9] == PUBKEY_FINGERPRINT:
+                    found_fingerprint = True
+                    break
+
+        if not found_fingerprint:
+            raise ValueError(
+                f"Imported key fingerprint does not match expected {PUBKEY_FINGERPRINT}"
+            )
+
+        logger.debug(
+            "Imported and verified public key with fingerprint %s", PUBKEY_FINGERPRINT
+        )
+    except subprocess.CalledProcessError as e:
+        raise ValueError(f"Failed to verify key fingerprint: {e}")
 
     return pubkey_path
+
 
 def _verify_signature(
     file_path: Path,

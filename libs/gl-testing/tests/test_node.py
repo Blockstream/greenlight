@@ -455,10 +455,17 @@ def test_vls_crash_repro(
 ) -> None:
     """Reproduce an overflow panic in VLS v0.10.0."""
     (l1,) = node_factory.line_graph(1, opts={"experimental-anchors": None})
-    assert l1.rpc.getinfo()["version"] == "v25.05gl1"
-
+    
     c = clients.new()
     c.register(configure=True)
+    
+    # Get the expected node version from the signer version mapping
+    from gltesting.utils import SignerVersion
+    signer_version_str = c.signer().version()
+    signer_version = SignerVersion(name=signer_version_str)
+    expected_node_version = signer_version.get_node_version()
+    
+    assert l1.rpc.getinfo()["version"] == expected_node_version
     s = c.signer().run_in_thread()
     gl1 = c.node()
 
