@@ -103,7 +103,6 @@ tasks:
     cmds:
       - task: package-python
       - uv sync
-      - uv pip install -e .
 
   prepare-test:
     desc: "Prepare test environment by copying bindings to package"
