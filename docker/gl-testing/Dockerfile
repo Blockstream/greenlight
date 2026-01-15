@@ -33,7 +33,7 @@
 # files and installs them in a `venv`.
 #
 # Later, we'll copy this venv to our project
-FROM ubuntu:22.04 AS python-builder
+FROM ubuntu:24.04 AS python-builder
 RUN apt update && apt install -qqy curl python3 python3-pip python3-venv libpq-dev
 
 # Create a python-venv that will include all dependencies
@@ -52,7 +52,7 @@ WORKDIR /repo
 # STAGE: rust-builder
 # --------------------------------------------
 # Installs rustc and cargo using rust-up
-FROM ubuntu:22.04 AS rust-base
+FROM ubuntu:24.04 AS rust-base
 RUN apt update && apt install curl build-essential -qqy
 
 ENV RUSTUP_HOME=/opt/rustup
@@ -76,7 +76,7 @@ RUN chmod a+rwx -R $CARGO_HOME
 # STAGE: bitcoin-downloader
 # ------------------------------------
 # Downloads bitcoin-core
-FROM ubuntu:22.04 AS bitcoin-downloader
+FROM ubuntu:24.04 AS bitcoin-downloader
 RUN apt update && apt install -qqy wget
 ARG TARGETPLATFORM
 
@@ -98,7 +98,7 @@ RUN PLATFORM=$( \
 # STAGE: cfssl-downloader
 # --------------------------------------
 # Downloads cloudlfares SSL binaries
-FROM ubuntu:22.04 AS cfssl-downloader
+FROM ubuntu:24.04 AS cfssl-downloader
 ARG TARGETARCH
 
 RUN apt update && apt install -qqy wget
@@ -111,7 +111,7 @@ RUN wget -q https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssljs
 # ----------------------------------------
 # STAGE: protoc-downloader
 # ----------------------------------------
-FROM ubuntu:22.04 AS protoc-downloader
+FROM ubuntu:24.04 AS protoc-downloader
 ARG TARGETPLATFORM
 
 RUN apt update && apt install -qqy wget unzip
@@ -236,4 +236,4 @@ RUN uv sync --all-packages --dev
 RUN uv run python3 -m clnvm --verbose get-all
 
 # Create a symlink to the latest cln-version and add it to the path
-RUN ln -s $(uv run --package cln-version-manager latest --root-path) /opt/cln-latest
+RUN ln -s $(uv run --package cln-version-manager clnvm latest --root-path) /opt/cln-latest

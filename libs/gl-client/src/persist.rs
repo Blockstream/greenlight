@@ -11,6 +11,7 @@ use lightning_signer::SendSync;
 use log::{trace, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -503,11 +504,36 @@ impl Persist for MemoryPersister {
         for node_id in node_ids.iter() {
             let node_key = format!("{NODE_PREFIX}/{node_id}");
             let state_key = format!("{NODE_STATE_PREFIX}/{node_id}");
+            let allowlist_key = format!("{ALLOWLIST_PREFIX}/{node_id}");
 
             let node: vls_persist::model::NodeEntry =
                 serde_json::from_value(state.values.get(&node_key).unwrap().1.clone()).unwrap();
             let state_e: vls_persist::model::NodeStateEntry =
                 serde_json::from_value(state.values.get(&state_key).unwrap().1.clone()).unwrap();
+
+            // Load allowlist, defaulting to empty if not found (for nodes created before VLS 0.14)
+            let allowlist_strings: Vec<String> = match state.values.get(&allowlist_key) {
+                Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
+                None => Vec::new(),
+            };
+
+            // Parse allowlist strings into Allowable objects
+            use lightning_signer::node::Allowable;
+            let network = lightning_signer::bitcoin::Network::from_str(&node.network)
+                .map_err(|e| Error::Internal(format!("Invalid network: {}", e)))?;
+            
+            let allowlist: Vec<Allowable> = allowlist_strings
+                .into_iter()
+                .filter_map(|s| {
+                    match Allowable::from_str(&s, network) {
+                        Ok(a) => Some(a),
+                        Err(e) => {
+                            warn!("Failed to parse allowlist entry '{}': {}", s, e);
+                            None
+                        }
+                    }
+                })
+                .collect();
 
             let state = CoreNodeState::restore(
                 state_e.invoices,
@@ -519,8 +545,7 @@ impl Persist for MemoryPersister {
                 0u64,
                 /* dbid_high_water_mark: prevents reuse of
                  * channel dbid, 0 disables enforcement. */
-                vec![],
-                /* allowlist: empty allowlist */
+                allowlist,
             );
 
             let entry = lightning_signer::persist::model::NodeEntry {
