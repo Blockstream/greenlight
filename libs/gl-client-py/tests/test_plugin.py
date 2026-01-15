@@ -229,6 +229,7 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     # Try the pyo3 bindings from gl-client-py
     res = s.lsp_invoice(label="lbl2", description="description", amount_msat=31337)
     from pyln.proto import Invoice
+
     inv = Invoice.decode(res.bolt11)
     pprint(inv)
     # Only one routehint, with only one hop, the LSP to the destination
