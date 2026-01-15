@@ -5,13 +5,18 @@ from glclient import Credentials
 import glclient.scheduler_pb2 as schedpb
 import pytest
 
+
 @pytest.fixture
 def attestation_device(clients):
     c = clients.new()
     c.register()
     yield c
 
+
 def test_pairing_session(sclient, signer, creds):
+    # register attestation device.
+    res = sclient.register(signer)
+
     # Run the signer in the background
     signer.run_in_thread()
 
@@ -26,18 +31,16 @@ def test_pairing_session(sclient, signer, creds):
     m = next(session_iter)
     assert m
 
-    # register attestation device.
-    res = sclient.register(signer)
     creds = Credentials.from_bytes(res.creds)
     scheduler = Scheduler(network="regtest", creds=creds)
     scheduler.schedule()
 
     # check for pairing data.
     assert isinstance(m, str)
-    device_id = m.split(':')[1]
+    device_id = m.split(":")[1]
     ac = AttestationDeviceClient(creds=creds)
     m = ac.get_pairing_data(device_id)
-    assert(isinstance(m, schedpb.GetPairingDataResponse))
+    assert isinstance(m, schedpb.GetPairingDataResponse)
     assert m.device_id
     assert m.csr
     assert m.device_name == name
@@ -47,11 +50,7 @@ def test_pairing_session(sclient, signer, creds):
     # We are happy with the pairing_data and want to approve the
     # request. Therefor we need a PairingService with our tls cert
     # and with our rune.
-    ac.approve_pairing(
-        m.device_id,
-        m.device_name,
-        m.restrictions
-    )
+    ac.approve_pairing(m.device_id, m.device_name, m.restrictions)
 
     # check that response is returned.
     m = next(session_iter)
@@ -64,6 +63,7 @@ def test_pairing_session(sclient, signer, creds):
     signer.shutdown()
     # FIXME: add a blocking shutdown call that waits for the signer to shutdown.
     time.sleep(2)
+
 
 def test_paring_data_validation(attestation_device, creds):
     """A simple test to ensure that data validation works as intended.
@@ -88,11 +88,7 @@ def test_paring_data_validation(attestation_device, creds):
     assert ac.verify_pairing_data(m) is None
 
     # Change the public key and try again
-    pk = (
-        "01" + m.device_id[2:]
-        if m.device_id[0:1] == "00"
-        else "00" + m.device_id[2:]
-    )
+    pk = "01" + m.device_id[2:] if m.device_id[0:1] == "00" else "00" + m.device_id[2:]
     m.device_id = pk
 
     with pytest.raises(
