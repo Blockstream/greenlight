@@ -192,6 +192,7 @@ RUN apt-get update && apt install -qqy \
     git \
     jq \
     libpq5 \
+    libsodium23 \
     python3 \
     python3-venv \
     python3-pip \
