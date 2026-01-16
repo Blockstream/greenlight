@@ -33,15 +33,21 @@ except Exception:
 
 @click.group()
 @click.option("--verbose", is_flag=True)
-def cli(verbose: bool) -> None:
+@click.option("--cache", type=click.Path(), help="Cache directory to store CLN versions")
+@click.pass_context
+def cli(ctx: click.Context, verbose: bool, cache: str) -> None:
     if verbose:
         configure_logging()
+    # Store cache path in context for subcommands
+    ctx.ensure_object(dict)
+    ctx.obj['cache'] = cache
 
 
 @cli.command()
 @click.option("--force", is_flag=True)
-def get_all(force: bool) -> None:
-    version_manager = ClnVersionManager()
+@click.pass_context
+def get_all(ctx: click.Context, force: bool) -> None:
+    version_manager = ClnVersionManager(cln_path=ctx.obj.get('cache'))
     versions = version_manager.get_versions()
     logging.info(f"Fetching {len(versions)} versions")
     for version in versions:
@@ -56,9 +62,10 @@ def get_all(force: bool) -> None:
 @cli.command()
 @click.option("--tag", required=True)
 @click.option("--force", is_flag=True)
-def get(tag: str, force: bool) -> None:
+@click.pass_context
+def get(ctx: click.Context, tag: str, force: bool) -> None:
     try:
-        version_manager = ClnVersionManager()
+        version_manager = ClnVersionManager(cln_path=ctx.obj.get('cache'))
         descriptor = version_manager.get_descriptor_from_tag(tag)
         node_version = version_manager.get(descriptor, force)
         click.echo(node_version.lightningd)
@@ -73,8 +80,9 @@ def get(tag: str, force: bool) -> None:
 @click.option("--lightningd", is_flag=True)
 @click.option("--root-path", is_flag=True)
 @click.option("--bin-path", is_flag=True)
-def latest(tag: bool, lightningd: bool, root_path: bool, bin_path: bool) -> None:
-    version_manager = ClnVersionManager()
+@click.pass_context
+def latest(ctx: click.Context, tag: bool, lightningd: bool, root_path: bool, bin_path: bool) -> None:
+    version_manager = ClnVersionManager(cln_path=ctx.obj.get('cache'))
     latest = version_manager.latest()
 
     if tag:
@@ -90,11 +98,12 @@ def latest(tag: bool, lightningd: bool, root_path: bool, bin_path: bool) -> None
 
 
 @cli.command()
-def info() -> None:
-    version_manager = ClnVersionManager()
+@click.pass_context
+def info(ctx: click.Context) -> None:
+    version_manager = ClnVersionManager(cln_path=ctx.obj.get('cache'))
     click.echo(f"cln Version Manager {clnvm.__version__}")
     click.echo("")
-    click.echo(f"path = {version_manager._cln_path}")
+    click.echo(f"cache = {version_manager._cln_path}")
 
 
 def run() -> None:
