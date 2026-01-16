@@ -68,7 +68,6 @@ class Signer(object):
 
 
 class Scheduler(object):
-
     def __init__(self, network: str, creds: Optional[Credentials] = None):
         self.network = network
         self.creds = creds if creds is not None else native.Credentials()
@@ -82,7 +81,9 @@ class Scheduler(object):
         res = self.inner.get_node_info(wait)
         return schedpb.NodeInfoResponse.FromString(bytes(res))
 
-    def register(self, signer: Signer, invite_code: Optional[str] = None) -> schedpb.RegistrationResponse:
+    def register(
+        self, signer: Signer, invite_code: Optional[str] = None
+    ) -> schedpb.RegistrationResponse:
         res = self.inner.register(signer.inner, invite_code)
         return schedpb.RegistrationResponse.FromString(bytes(res))
 
@@ -126,21 +127,18 @@ class Scheduler(object):
     def delete_outgoing_webhooks(self, webhook_ids: List[int]) -> None:
         res = self.inner.delete_outgoing_webhooks(webhook_ids)
 
-    def rotate_outgoing_webhook_secret(self, webhook_id: int) -> schedpb.WebhookSecretResponse:
+    def rotate_outgoing_webhook_secret(
+        self, webhook_id: int
+    ) -> schedpb.WebhookSecretResponse:
         res = self.inner.rotate_outgoing_webhook_secret(webhook_id)
         return schedpb.WebhookSecretResponse.FromString(bytes(res))
 
 
 class Node(object):
-
-    def __init__(
-        self, node_id: bytes, grpc_uri: str, creds: Credentials
-    ) -> None:
+    def __init__(self, node_id: bytes, grpc_uri: str, creds: Credentials) -> None:
         self.creds = creds
         self.grpc_uri = grpc_uri
-        self.inner = native.Node(
-            node_id=node_id, grpc_uri=grpc_uri, creds=creds
-        )
+        self.inner = native.Node(node_id=node_id, grpc_uri=grpc_uri, creds=creds)
         self.logger = logging.getLogger("glclient.Node")
 
     def get_info(self) -> clnpb.GetinfoResponse:
@@ -180,22 +178,17 @@ class Node(object):
         req = clnpb.ListpeersRequest().SerializeToString()
         res = clnpb.ListpeersResponse
 
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def list_peer_channels(
-            self,
-            node_id: Optional[bytes] = None
+        self, node_id: Optional[bytes] = None
     ) -> clnpb.ListpeerchannelsResponse:
         uri = "/cln.Node/ListPeerChannels"
         req = clnpb.ListpeerchannelsRequest(
             id=node_id,
         ).SerializeToString()
         res = clnpb.ListpeerchannelsResponse
-        return res.FromString(
-            bytes(self.inner.call(uri, bytes(req)))
-        )
+        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def list_closed_channels(self) -> clnpb.ListclosedchannelsResponse:
         uri = "/cln.Node/ListClosedChannels"
@@ -332,7 +325,6 @@ class Node(object):
         announce: Optional[bool] = False,
         minconf: Optional[int] = 1,
     ) -> clnpb.FundchannelResponse:
-
         if len(id) != 33:
             raise ValueError("id is not 33 bytes long")
 
@@ -413,11 +405,11 @@ class Node(object):
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def trampoline_pay(
-            self,
-            bolt11: str,
-            trampoline_node_id: bytes,
-            amount_msat: Optional[int] = None,
-            label: Optional[str] = None
+        self,
+        bolt11: str,
+        trampoline_node_id: bytes,
+        amount_msat: Optional[int] = None,
+        label: Optional[str] = None,
     ):
         res = self.inner.trampoline_pay(
             bolt11=bolt11,
