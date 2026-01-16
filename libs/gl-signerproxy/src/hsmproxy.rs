@@ -97,6 +97,11 @@ fn process_requests(
                         return Err(e);
                     }
                 }
+		28 => {
+		    eprintln!("Locally handling the `hsmd_check_pubkey` call");
+		    let msg = Message::new(vec![0, 128, 1]);
+		    conn.write(msg)?
+		},
                 _ => {
                     // By default we forward to the remote HSMd
                     let req = tonic::Request::new(HsmRequest {
