@@ -1,6 +1,6 @@
 [package]
 name = "gl-plugin"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 authors = ["Christian Decker", "The Greenlight Team"]
 description = "Python bindings for the Greenlight client library."

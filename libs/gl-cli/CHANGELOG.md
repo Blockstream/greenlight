@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.1.2] - 2026-01-16
+
 ### Added
 
 - Added `scheduler export` subcommand to take control of your own node.
+
+### Changed
+
+- Updated gl-client dependency to support CLN v25.12 signer.

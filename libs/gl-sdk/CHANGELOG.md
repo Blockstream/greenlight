@@ -6,9 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
-## [0.3.1] - 2026-01-16
+## [0.1.1] - 2026-01-16
 
 ### Changed
 
-- Added message type 28 (`hsmd_check_pubkey`) to the list of sticky signer request.
 - Updated gl-client dependency to support CLN v25.12 signer.
