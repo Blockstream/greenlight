@@ -13,9 +13,12 @@ def attestation_device(clients):
     yield c
 
 
-def test_pairing_session(sclient, signer, creds):
+def test_pairing_session(scheduler, sclient, signer, creds):
     # register attestation device.
     res = sclient.register(signer)
+    creds = Credentials.from_bytes(res.creds)
+    scheduler = Scheduler(network="regtest", creds=creds)
+    scheduler.schedule()
 
     # Run the signer in the background
     signer.run_in_thread()
@@ -30,10 +33,6 @@ def test_pairing_session(sclient, signer, creds):
     # check that qr data str is returned.
     m = next(session_iter)
     assert m
-
-    creds = Credentials.from_bytes(res.creds)
-    scheduler = Scheduler(network="regtest", creds=creds)
-    scheduler.schedule()
 
     # check for pairing data.
     assert isinstance(m, str)
