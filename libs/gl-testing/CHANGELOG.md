@@ -10,5 +10,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-- Added message type 28 (`hsmd_check_pubkey`) to the list of sticky signer request.
 - Updated gl-client dependency to support CLN v25.12 signer.
