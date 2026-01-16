@@ -219,6 +219,16 @@ pub struct LspInvoiceRequest {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct LspInvoiceRequestV2 {
+    pub lsp_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+    pub amount_msat: cln_rpc::primitives::AmountOrAny,
+    pub description: String,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct LspGetinfoRequest {
     pub lsp_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -247,12 +257,37 @@ impl From<crate::pb::LspInvoiceRequest> for LspInvoiceRequest {
     }
 }
 
+impl From<crate::pb::LspInvoiceRequest> for LspInvoiceRequestV2 {
+    fn from(o: crate::pb::LspInvoiceRequest) -> LspInvoiceRequestV2 {
+        LspInvoiceRequestV2 {
+            lsp_id: o.lsp_id,
+            token: match o.token.as_ref() {
+                "" => None,
+                o => Some(o.to_owned()),
+            },
+            amount_msat: match o.amount_msat {
+                0 => cln_rpc::primitives::AmountOrAny::Any,
+                o => cln_rpc::primitives::AmountOrAny::Amount(
+                    cln_grpc::pb::Amount { msat: o }.into(),
+                ),
+            },
+            description: o.description,
+            label: o.label,
+        }
+    }
+}
+
 impl TypedRequest for LspInvoiceRequest {
     type Response = super::responses::InvoiceResponse;
     fn method(&self) -> &str {
-        // TODO Rename after the CLN rename has been deployed.
-        // "lsps-lsps2-invoice"
         "lsps-jitchannel"
+    }
+}
+
+impl TypedRequest for LspInvoiceRequestV2 {
+    type Response = super::responses::InvoiceResponse;
+    fn method(&self) -> &str {
+        "lsps-lsps2-invoice"
     }
 }
 

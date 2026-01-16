@@ -189,10 +189,16 @@ impl Node for PluginNodeServer {
         req: Request<pb::LspInvoiceRequest>,
     ) -> Result<Response<pb::LspInvoiceResponse>, Status> {
         let req: pb::LspInvoiceRequest = req.into_inner();
-        let mut invreq: crate::requests::LspInvoiceRequest = req.into();
         let rpc_arc = get_rpc(&self.rpc_path).await;
 
         let mut rpc = rpc_arc.lock().await;
+
+        // Get the CLN version to determine which RPC method to use
+        let version = rpc
+            .call_typed(&cln_rpc::model::requests::GetinfoRequest {})
+            .await
+            .map_err(|e| Status::new(Code::Internal, format!("Failed to get version: {}", e)))?
+            .version;
 
         // In case the client did not specify an LSP to work with,
         // let's enumerate them, and select the best option ourselves.
@@ -208,12 +214,22 @@ impl Node for PluginNodeServer {
 
         let lsp = &lsps[0];
         log::info!("Selecting {:?} for invoice negotiation", lsp);
-        invreq.lsp_id = lsp.node_id.to_owned();
 
-        let res = rpc
-            .call_typed(&invreq)
-            .await
-            .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+        // Use the new RPC method name for versions > v25.05gl1
+        let res = if *version > *"v25.05gl1" {
+            let mut invreq: crate::requests::LspInvoiceRequestV2 = req.into();
+            invreq.lsp_id = lsp.node_id.to_owned();
+            rpc.call_typed(&invreq)
+                .await
+                .map_err(|e| Status::new(Code::Internal, e.to_string()))?
+        } else {
+            let mut invreq: crate::requests::LspInvoiceRequest = req.into();
+            invreq.lsp_id = lsp.node_id.to_owned();
+            rpc.call_typed(&invreq)
+                .await
+                .map_err(|e| Status::new(Code::Internal, e.to_string()))?
+        };
+
         Ok(Response::new(res.into()))
     }
 
