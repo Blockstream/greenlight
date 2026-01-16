@@ -106,6 +106,62 @@ def info(ctx: click.Context) -> None:
     click.echo(f"cache = {version_manager._cln_path}")
 
 
+@cli.command()
+@click.argument('version', required=False)
+@click.pass_context
+def link(ctx: click.Context, version: str) -> None:
+    """Create symlinks in current directory to cached versions.
+    
+    VERSION: Specific version to link (optional). If not provided, links all versions.
+    """
+    import os
+    from pathlib import Path
+    
+    version_manager = ClnVersionManager(cln_path=ctx.obj.get('cache'))
+    cache_path = Path(version_manager._cln_path)
+    cwd = Path.cwd()
+    
+    # If a specific version is requested
+    if version:
+        descriptor = version_manager.get_descriptor_from_tag(version)
+        # Get the version to ensure it's downloaded
+        node_version = version_manager.get(descriptor)
+        
+        # Create symlink in current directory
+        link_name = cwd / version
+        target = node_version.root_path
+        
+        if link_name.exists() and link_name.is_symlink():
+            click.echo(f"Symlink already exists: {version}")
+        elif link_name.exists():
+            click.echo(click.style(f"Path exists but is not a symlink: {version}", fg="yellow"), err=True)
+        else:
+            link_name.symlink_to(target, target_is_directory=True)
+            click.echo(f"Created symlink: {version} -> {target}")
+    else:
+        # Link all versions
+        versions = version_manager.get_versions()
+        for descriptor in versions:
+            try:
+                # Check if version is already downloaded
+                if not version_manager.is_available(descriptor):
+                    continue
+                
+                node_version = version_manager.get(descriptor)
+                link_name = cwd / descriptor.tag
+                target = node_version.root_path
+                
+                if link_name.exists() and link_name.is_symlink():
+                    click.echo(f"Symlink already exists: {descriptor.tag}")
+                elif link_name.exists():
+                    click.echo(click.style(f"Path exists but is not a symlink: {descriptor.tag}", fg="yellow"), err=True)
+                else:
+                    link_name.symlink_to(target, target_is_directory=True)
+                    click.echo(f"Created symlink: {descriptor.tag} -> {target}")
+            except Exception as e:
+                click.echo(click.style(f"Failed to link {descriptor.tag}: {e}", fg="red"), err=True)
+
+
 def run() -> None:
     cli()
 
