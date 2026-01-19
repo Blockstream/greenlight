@@ -1,0 +1,3 @@
+[submodule "libs/gl-sdk-swift"]
+	path = libs/gl-sdk-swift
+	url = https://github.com/Blockstream/gl-sdk-swift.git

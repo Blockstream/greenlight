@@ -1,13 +1,16 @@
 version: "3"
 
 vars:
+  PROFILE: '{{.PROFILE | default "release"}}'
+  PROFILE_DIR: '{{if eq .PROFILE "release"}}release{{else}}debug{{end}}'
+  CARGO_FLAGS: '{{if eq .PROFILE "release"}}--release{{else}}{{end}}'
   LIB_EXT:
     sh: |
       case "$(uname -s)" in
         Darwin*)
           echo "dylib"
           ;;
-        MINGW*|MSYS*|CYGWIN*)
+        MINGW*|MSYS*|CYGWIN*) 
           echo "dll"
           ;;
         *)
@@ -20,69 +23,70 @@ tasks:
     desc: "Build the gl-sdk library"
     dir: "{{.ROOT_DIR}}"
     cmds:
-      - cargo build -p gl-sdk
+      - cargo build -p gl-sdk {{.CARGO_FLAGS}}
 
   build-release:
     desc: "Build the gl-sdk library in release mode"
-    dir: "{{.ROOT_DIR}}"
+    dir: "."
     cmds:
-      - cargo build -p gl-sdk --release
+      - task: build
+        vars: { PROFILE: "release" }
 
   bindings-python:
     desc: "Generate Python bindings"
-    dir: "{{.ROOT_DIR}}"
+    dir: "../.."
     deps:
-      - build-release
+      - build
     cmds:
       - |
-        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
+        cp ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
+          --library ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} \
           --language python \
           --out-dir ./libs/gl-sdk/bindings
 
   bindings-kotlin:
     desc: "Generate Kotlin bindings"
-    dir: "{{.ROOT_DIR}}"
+    dir: "../.."
     deps:
-      - build-release
+      - build
     cmds:
       - |
-        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
+        cp ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
+          --library ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} \
           --language kotlin \
           --out-dir ./libs/gl-sdk/bindings
 
   bindings-swift:
     desc: "Generate Swift bindings"
-    dir: "{{.ROOT_DIR}}"
+    dir: "../.."
     deps:
-      - build-release
+      - build
     cmds:
       - |
-        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
+        cp ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
+          --library ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} \
           --language swift \
           --out-dir ./libs/gl-sdk/bindings
 
   bindings-ruby:
     desc: "Generate Ruby bindings"
-    dir: "{{.ROOT_DIR}}"
+    dir: "../.."
     deps:
-      - build-release
+      - build
     cmds:
       - |
-        cp ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
+        cp ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
         cargo run --bin uniffi-bindgen -- generate \
-          --library ${CARGO_TARGET_DIR:-target}/release/libglsdk.{{.LIB_EXT}} \
+          --library ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} \
           --language ruby \
           --out-dir ./libs/gl-sdk/bindings
 
   bindings-all:
     desc: "Generate all language bindings"
-    dir: "{{.ROOT_DIR}}"
+    dir: "../.."
     deps:
       - bindings-python
       - bindings-kotlin
@@ -91,28 +95,28 @@ tasks:
 
   package-python:
     desc: "Build Python wheel package"
-    dir: "{{.ROOT_DIR}}/libs/gl-sdk"
+    dir: "../../libs/gl-sdk"
     cmds:
-      - task: build-release
+      - task: build
       - task: bindings-python
       - uv build
 
   install-python:
     desc: "Install Python package in development mode"
-    dir: "{{.ROOT_DIR}}/libs/gl-sdk"
+    dir: "../../libs/gl-sdk"
     cmds:
       - task: package-python
       - uv sync
 
   prepare-test:
     desc: "Prepare test environment by copying bindings to package"
-    dir: "{{.ROOT_DIR}}/libs/gl-sdk"
+    dir: "../../libs/gl-sdk"
     cmds:
       - task: bindings-python
       - task: install-python
   test:
     desc: "Run gl-sdk tests (loads library from source)"
-    dir: "{{.ROOT_DIR}}/libs/gl-sdk"
+    dir: "../../libs/gl-sdk"
     deps:
       - prepare-test
     cmds:
@@ -120,7 +124,7 @@ tasks:
 
   clean:
     desc: "Clean generated bindings and build artifacts"
-    dir: "{{.ROOT_DIR}}/libs/gl-sdk"
+    dir: "../../libs/gl-sdk"
     cmds:
       - rm -rf ./bindings
       - rm -rf dist/ build/ *.egg-info
