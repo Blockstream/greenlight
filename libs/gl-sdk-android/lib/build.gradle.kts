@@ -136,8 +136,8 @@ mavenPublishing {
         }
     }
 
-    //publishToMavenCentral()
-    //signAllPublications()
+    publishToMavenCentral()
+    signAllPublications()
 }
 
 extensions.configure<SigningExtension> {
