@@ -4,6 +4,7 @@ variables:
 
 stages:
   - build
+  - deploy
 
 default:
   image: ${CI_IMAGE}:${CI_IMAGE_VER} # set in CI env vars

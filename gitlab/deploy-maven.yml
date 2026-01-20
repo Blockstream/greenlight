@@ -1,0 +1,52 @@
+# maven credentials and gpg settings
+# in runner's ~/.gradle/gradle.properties
+publish_to_maven:
+  stage: deploy
+  tags:
+    - m4
+  rules:
+    - if: "$CI_COMMIT_TAG"
+      when: manual
+  needs: []
+  script:
+    - cd libs/gl-sdk-android
+    - ./gradlew publish --no-daemon
+  artifacts:
+    paths:
+      - libs/gl-sdk-android/lib/build/libs
+      - libs/gl-sdk-android/lib/build/outputs
+      - libs/gl-sdk-android/lib/build/publications
+    when: always
+    expire_in: 7 days
+  allow_failure: true
+
+publish_snapshot_to_maven:
+  stage: deploy
+  tags:
+    - m4
+  needs: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
+  script:
+    - cd libs/gl-sdk-android
+    - RAW_VERSION=$(grep '^libraryVersion=' gradle.properties | cut -d'=' -f2)
+    - BASE_VERSION=${RAW_VERSION%-SNAPSHOT}
+    - VERSION_CORE=$(echo "$BASE_VERSION" | sed -E 's/[^0-9.].*$//')
+    - IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_CORE"
+    - MAJOR=${MAJOR:-0}
+    - MINOR=${MINOR:-0}
+    - PATCH=${PATCH:-0}
+    - NEXT_PATCH=$((PATCH + 1))
+    - NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
+    - SNAPSHOT_VERSION="${NEXT_VERSION}-SNAPSHOT"
+    - echo "Publishing snapshot version ${SNAPSHOT_VERSION} (base=${BASE_VERSION})"
+    - ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION} publish --no-daemon
+  artifacts:
+    paths:
+      - libs/gl-sdk-android/lib/build/libs
+      - libs/gl-sdk-android/lib/build/outputs
+      - libs/gl-sdk-android/lib/build/publications
+    when: always
+    expire_in: 7 days
+  allow_failure: true
