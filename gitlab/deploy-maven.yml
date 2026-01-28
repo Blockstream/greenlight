@@ -28,6 +28,7 @@ publish_snapshot_to_maven:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: on_success
+    - when: manual
   script:
     - cd libs/gl-sdk-android
     - RAW_VERSION=$(grep '^libraryVersion=' gradle.properties | cut -d'=' -f2)
@@ -42,11 +43,4 @@ publish_snapshot_to_maven:
     - SNAPSHOT_VERSION="${NEXT_VERSION}-SNAPSHOT"
     - echo "Publishing snapshot version ${SNAPSHOT_VERSION} (base=${BASE_VERSION})"
     - ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION} publish --no-daemon
-  artifacts:
-    paths:
-      - libs/gl-sdk-android/lib/build/libs
-      - libs/gl-sdk-android/lib/build/outputs
-      - libs/gl-sdk-android/lib/build/publications
-    when: always
-    expire_in: 7 days
   allow_failure: true
