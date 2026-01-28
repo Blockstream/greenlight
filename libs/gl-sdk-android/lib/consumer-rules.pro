@@ -1,0 +1,6 @@
+-dontwarn java.awt.*
+-keep class com.sun.jna.* { *; }
+-keep class com.blockstream.glsdk.** { *; }
+-keepclassmembers class * extends com.sun.jna.* { public *; }
+-keepclassmembers class * extends com.blockstream.glsdk.** { public *; }
+-dontwarn java.lang.invoke.StringConcatFactory
