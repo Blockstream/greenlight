@@ -9,10 +9,12 @@ tasks:
       - linux-android-x86_64
     cmds:
       - cp -a target/release/android/jniLibs libs/gl-sdk-android/lib/src/androidMain
-      
+
   kotlin:
     deps:
       - android
+      - ios
+      - ios-sim
     vars:
       OS_NAME:
         sh: uname | tr '[:upper:]' '[:lower:]'
@@ -20,6 +22,10 @@ tasks:
       - cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.3.7
       - gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform
       - cp -a ./target/release/kotlin-multiplatform/* libs/gl-sdk-android/lib/src/
+      - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-arm64
+      - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-simulator-arm64
+      - cp ./target/aarch64-apple-ios/release/libglsdk.a libs/gl-sdk-android/lib/src/lib/ios-arm64/
+      - cp ./target/aarch64-apple-ios-sim/release/libglsdk.a libs/gl-sdk-android/lib/src/lib/ios-simulator-arm64/
       - cp -a {{.ANDROID_NDK_HOME}}/toolchains/llvm/prebuilt/{{.OS_NAME}}-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so libs/gl-sdk-android/lib/src/androidMain/jniLibs/arm64-v8a/
       - cp -a {{.ANDROID_NDK_HOME}}/toolchains/llvm/prebuilt/{{.OS_NAME}}-x86_64/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so libs/gl-sdk-android/lib/src/androidMain/jniLibs/armeabi-v7a/
       - cp -a {{.ANDROID_NDK_HOME}}/toolchains/llvm/prebuilt/{{.OS_NAME}}-x86_64/sysroot/usr/lib/i686-linux-android/libc++_shared.so libs/gl-sdk-android/lib/src/androidMain/jniLibs/x86/
@@ -46,12 +52,12 @@ tasks:
   ios:
     deps:
       - ios-apple-aarch64
-      - ios-apple-x86_64
+#      - ios-apple-x86_64
 
   ios-sim:
     deps:
       - ios-sim-apple-aarch64
-      
+
   ios-apple-*:
     vars:
       ARCH: '{{ index .MATCH 0 }}'
