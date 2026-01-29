@@ -9,6 +9,9 @@ publish_to_maven:
       when: manual
   needs: []
   script:
+    - mkdir -p .bin
+    - curl -sL https://taskfile.dev/install.sh | sh -s -- -b .bin v3.37.2
+    - ./.bin/task build:kotlin
     - cd libs/gl-sdk-android
     - ./gradlew publish --no-daemon
   artifacts:
@@ -28,7 +31,11 @@ publish_snapshot_to_maven:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: on_success
+    - when: manual
   script:
+    - mkdir -p .bin
+    - curl -sL https://taskfile.dev/install.sh | sh -s -- -b .bin v3.37.2
+    - ./.bin/task build:kotlin
     - cd libs/gl-sdk-android
     - RAW_VERSION=$(grep '^libraryVersion=' gradle.properties | cut -d'=' -f2)
     - BASE_VERSION=${RAW_VERSION%-SNAPSHOT}
