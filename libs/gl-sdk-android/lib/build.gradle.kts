@@ -17,9 +17,7 @@ kotlin {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }
     }
 
-    /*
     jvm()
-     */
 
     val xcf = XCFramework()
 
@@ -38,7 +36,6 @@ kotlin {
             "iosArm64" -> "ios_arm64"
             else -> error("Unsupported target $name")
         }
-
 
         it.compilations["main"].cinterops {
             create("glsdkCInterop") {
@@ -69,11 +66,9 @@ kotlin {
                 artifact { type = "aar" }
             }
         }
-        /*
         jvmMain.dependencies {
             implementation(libs.jna)
         }
-         */
         androidUnitTest.dependencies {
             implementation(libs.junit)
         }
@@ -82,11 +77,10 @@ kotlin {
             implementation(libs.espresso.core)
         }
     }
-
 }
 
 android {
-    namespace = "com.blockstream.glsdk_bindings"
+    namespace = "com.blockstream.glsdk"
     compileSdk = 36
 
     defaultConfig {
@@ -96,15 +90,6 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8

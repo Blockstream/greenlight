@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "glsdk"
+rootProject.name = "glsdk_kmp_bindings"
 include(":lib")
