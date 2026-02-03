@@ -59,6 +59,12 @@ phrase and then convert it into a seed secret we can use:
 --8<-- "getting_started.py:create_seed"
 	```
 
+=== "Bash"
+    ```bash
+    # For example gl-cli can be used to create an hsm_secret file
+    gl-cli signer generate-secret
+    ```
+
 !!! important
 	Remember to store the seed somewhere (file on disk, registry, etc)
 	because without it, you will not have access to the node, and any
