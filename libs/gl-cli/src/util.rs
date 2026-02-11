@@ -19,6 +19,12 @@ pub fn generate_seed(words: Option<String>) -> Result<([u8; 32], bip39::Mnemonic
         Some(sentence) => bip39::Mnemonic::parse(sentence)?,
         None => bip39::Mnemonic::generate(12)?,
     };
+    let n = mnemonic.word_count();
+    if n != 12 {
+        return Err(UtilsError::custom(format!(
+            "Mnemonic contains {n} words, but 12 were expected."
+        )));
+    }
     let seed: [u8; 32] = mnemonic.to_seed("")[0..32].try_into()?;
     Ok((seed, mnemonic))
 }
@@ -86,6 +92,14 @@ pub enum UtilsError {
     MnemonicError(#[from] bip39::Error),
     #[error(transparent)]
     DataError(#[from] std::array::TryFromSliceError),
+    #[error("{0}")]
+    Custom(String),
+}
+
+impl UtilsError {
+    pub fn custom(e: impl std::fmt::Display) -> UtilsError {
+        UtilsError::Custom(e.to_string())
+    }
 }
 
 type Result<T, E = UtilsError> = core::result::Result<T, E>;
