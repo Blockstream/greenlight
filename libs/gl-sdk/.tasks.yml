@@ -21,20 +21,20 @@ vars:
 tasks:
   build:
     desc: "Build the gl-sdk library"
-    dir: "{{.ROOT_DIR}}"
+    dir: "{{.TASKFILE_DIR}}/../.."
     cmds:
       - cargo build -p gl-sdk {{.CARGO_FLAGS}}
 
   build-release:
     desc: "Build the gl-sdk library in release mode"
-    dir: "."
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - task: build
         vars: { PROFILE: "release" }
 
   bindings-python:
     desc: "Generate Python bindings"
-    dir: "../.."
+    dir: "{{.TASKFILE_DIR}}/../.."
     deps:
       - build
     cmds:
@@ -47,7 +47,7 @@ tasks:
 
   bindings-kotlin:
     desc: "Generate Kotlin bindings"
-    dir: "../.."
+    dir: "{{.TASKFILE_DIR}}/../.."
     deps:
       - build
     cmds:
@@ -60,7 +60,7 @@ tasks:
 
   bindings-swift:
     desc: "Generate Swift bindings"
-    dir: "../.."
+    dir: "{{.TASKFILE_DIR}}/../.."
     deps:
       - build
     cmds:
@@ -73,7 +73,7 @@ tasks:
 
   bindings-ruby:
     desc: "Generate Ruby bindings"
-    dir: "../.."
+    dir: "{{.TASKFILE_DIR}}/../.."
     deps:
       - build
     cmds:
@@ -86,7 +86,7 @@ tasks:
 
   bindings-all:
     desc: "Generate all language bindings"
-    dir: "../.."
+    dir: "{{.TASKFILE_DIR}}/../.."
     deps:
       - bindings-python
       - bindings-kotlin
@@ -95,7 +95,7 @@ tasks:
 
   package-python:
     desc: "Build Python wheel package"
-    dir: "../../libs/gl-sdk"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - task: build
       - task: bindings-python
@@ -103,20 +103,20 @@ tasks:
 
   install-python:
     desc: "Install Python package in development mode"
-    dir: "../../libs/gl-sdk"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - task: package-python
       - uv sync
 
   prepare-test:
     desc: "Prepare test environment by copying bindings to package"
-    dir: "../../libs/gl-sdk"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - task: bindings-python
       - task: install-python
   test:
     desc: "Run gl-sdk tests (loads library from source)"
-    dir: "../../libs/gl-sdk"
+    dir: "{{.TASKFILE_DIR}}"
     deps:
       - prepare-test
     cmds:
@@ -124,7 +124,7 @@ tasks:
 
   clean:
     desc: "Clean generated bindings and build artifacts"
-    dir: "../../libs/gl-sdk"
+    dir: "{{.TASKFILE_DIR}}"
     cmds:
       - rm -rf ./bindings
       - rm -rf dist/ build/ *.egg-info
