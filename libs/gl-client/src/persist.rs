@@ -308,12 +308,6 @@ impl StateSketch {
         }
     }
 
-    /// Replace all versions with those from `state`.
-    pub fn reset_from_state(&mut self, state: &State) {
-        self.versions.clear();
-        self.apply_state(state);
-    }
-
     /// Build a `State` containing entries newer than those recorded in the sketch.
     pub fn diff_state(&self, state: &State) -> State {
         let mut values = BTreeMap::new();
@@ -643,5 +637,114 @@ impl Persist for MemoryPersister {
         // such we should not need to differentiate them. We therefore
         // just return a static dummy ID.
         [0u8; 16]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{State, StateSketch};
+    use serde_json::json;
+    use std::collections::BTreeMap;
+
+    fn mk_state(entries: Vec<(&str, u64, serde_json::Value)>) -> State {
+        let mut values = BTreeMap::new();
+        for (key, version, value) in entries {
+            values.insert(key.to_string(), (version, value));
+        }
+        State { values }
+    }
+
+    #[test]
+    fn diff_state_only_includes_new_or_newer_entries() {
+        let old = mk_state(vec![
+            ("k1", 1, json!({"v": 1})),
+            ("k2", 2, json!({"v": 2})),
+            ("k3", 3, json!({"v": 3})),
+        ]);
+        let new = mk_state(vec![
+            // unchanged version, changed value should still be ignored
+            ("k1", 1, json!({"v": 999})),
+            // newer version should be included
+            ("k2", 3, json!({"v": 22})),
+            // older version should be ignored
+            ("k3", 2, json!({"v": 33})),
+            // brand new key should be included
+            ("k4", 0, json!({"v": 4})),
+        ]);
+
+        let diff = old.diff_state(&new);
+
+        assert_eq!(diff.values.len(), 2);
+        assert_eq!(diff.values.get("k2").unwrap().0, 3);
+        assert_eq!(diff.values.get("k4").unwrap().0, 0);
+        assert!(diff.values.get("k1").is_none());
+        assert!(diff.values.get("k3").is_none());
+    }
+
+    #[test]
+    fn sate_diff_with_empty_old_state_includes_all_entries() {
+        let old = State::new();
+        let new = mk_state(vec![
+            ("k1", 1, json!({"v": 1})),
+            ("k2", 2, json!({"v": 2})),
+        ]);
+
+        let diff = old.diff_state(&new);
+
+        assert_eq!(diff.values.len(), 2);
+        assert_eq!(diff.values.get("k1").unwrap().0, 1);
+        assert_eq!(diff.values.get("k2").unwrap().0, 2);
+    }
+
+    #[test]
+    fn sketch_diff_matches_state_diff() {
+        let old = mk_state(vec![
+            ("a", 5, json!(1)),
+            ("b", 2, json!(2)),
+            ("c", 7, json!(3)),
+        ]);
+        let new = mk_state(vec![
+            ("a", 5, json!(10)),
+            ("b", 3, json!(20)),
+            ("c", 6, json!(30)),
+            ("d", 1, json!(40)),
+        ]);
+
+        let state_diff = old.diff_state(&new);
+        let sketch_diff = old.sketch().diff_state(&new);
+
+        assert_eq!(state_diff.values, sketch_diff.values);
+    }
+
+    #[test]
+    fn sketch_diff_with_empty_sketch_includes_all_entries() {
+        let state = mk_state(vec![
+            ("a", 1, json!(1)),
+            ("b", 2, json!(2)),
+        ]);
+        let sketch = StateSketch::new();
+
+        let diff = sketch.diff_state(&state);
+
+        assert_eq!(diff.values.len(), 2);
+        assert_eq!(diff.values.get("a").unwrap().0, 1);
+        assert_eq!(diff.values.get("b").unwrap().0, 2);
+    }
+
+    #[test]
+    fn sketch_apply_follow_version_updates() {
+        let base = mk_state(vec![("a", 1, json!(1)), ("b", 2, json!(2))]);
+        let mut sketch = StateSketch::new();
+        sketch.apply_state(&base);
+
+        let next = mk_state(vec![("a", 2, json!(10)), ("b", 2, json!(20)), ("c", 0, json!(30))]);
+        let first_diff = sketch.diff_state(&next);
+        assert_eq!(first_diff.values.len(), 2);
+        assert!(first_diff.values.get("a").is_some());
+        assert!(first_diff.values.get("c").is_some());
+
+        sketch.apply_state(&first_diff);
+        let second_diff = sketch.diff_state(&next);
+        assert!(second_diff.values.is_empty());
     }
 }

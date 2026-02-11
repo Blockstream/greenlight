@@ -377,7 +377,7 @@ impl Node for PluginNodeServer {
                 if let Err(e) = tx.send(Ok(req)).await {
                     log::warn!("Failed to send heartbeat message to signer: {}", e);
                 } else {
-                    last_sent_sketch.reset_from_state(&state_snapshot);
+                    last_sent_sketch = state_snapshot.sketch();
                 }
             }
 
