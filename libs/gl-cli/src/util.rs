@@ -103,3 +103,52 @@ impl UtilsError {
 }
 
 type Result<T, E = UtilsError> = core::result::Result<T, E>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gen_seed1() {
+        let (_, mnemonic) = generate_seed(None).unwrap();
+        assert_eq!(mnemonic.word_count(), 12);
+    }
+
+    #[test]
+    fn gen_seed2() {
+        let sentence = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
+        let expected_seed = [
+            0x5e, 0xb0, 0x0b, 0xbd, 0xdc, 0xf0, 0x69, 0x08, 0x48, 0x89, 0xa8, 0xab, 0x91, 0x55,
+            0x56, 0x81, 0x65, 0xf5, 0xc4, 0x53, 0xcc, 0xb8, 0x5e, 0x70, 0x81, 0x1a, 0xae, 0xd6,
+            0xf6, 0xda, 0x5f, 0xc1,
+        ];
+        let (seed, mnemonic) = generate_seed(Some(sentence.clone())).unwrap();
+        assert_eq!(seed, expected_seed);
+        assert_eq!(mnemonic.to_string(), sentence);
+    }
+
+    #[test]
+    fn gen_seed3() {
+        // 0 words, invalid mnemonic
+        let result = generate_seed(Some("".to_string()));
+        assert!(result.is_err_and(|e| e.to_string().contains("invalid word count: 0")));
+
+        // 11 words, invalid mnemonic
+        let result = generate_seed(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon".to_string()));
+        assert!(result.is_err_and(|e| e.to_string().contains("invalid word count: 11")));
+
+        // 15 words, valid mnemonic but we want 12 words
+        let result = generate_seed(Some("birth danger dismiss bounce ostrich museum model glory depth seed clip pitch skull carpet myself".to_string()));
+        assert!(result.is_err_and(|e| e
+            .to_string()
+            .contains("contains 15 words, but 12 were expected")));
+
+        // 12 words, but invalid word at the end
+        let result = generate_seed(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon pizzzzza".to_string()));
+        assert!(result.is_err_and(|e| e.to_string().contains("unknown word (word 11)")));
+
+        // 12 words, but invalid checksum
+        let result = generate_seed(Some("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon pizza".to_string()));
+        assert!(result.is_err_and(|e| e.to_string().contains("invalid checksum")));
+    }
+}
