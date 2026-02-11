@@ -1,10 +1,13 @@
 use crate::error::{Error, Result};
 use crate::model;
-use crate::util::{self, CREDENTIALS_FILE_NAME};
+use crate::util::{self, CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
+use bip39::Mnemonic;
 use clap::Subcommand;
 use futures::stream::StreamExt;
 use gl_client::pb::StreamLogRequest;
 use gl_client::{bitcoin::Network, pb::cln};
+use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 
 pub struct Config<P: AsRef<Path>> {
@@ -14,6 +17,12 @@ pub struct Config<P: AsRef<Path>> {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
+    /// Creates a new node
+    #[command(name = "init")]
+    Init {
+        #[arg(long)]
+        mnemonic: Option<String>,
+    },
     /// Stream logs to stdout
     Log,
     /// Returns some basic node info
@@ -98,6 +107,7 @@ pub enum Command {
 
 pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) -> Result<()> {
     match cmd {
+        Command::Init { mnemonic } => init_handler(config, mnemonic).await,
         Command::Log => log(config).await,
         Command::GetInfo => getinfo_handler(config).await,
         Command::Invoice {
@@ -189,6 +199,49 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
         }
         Command::Stop => stop(config).await,
     }
+}
+
+async fn init_handler<P: AsRef<Path>>(config: Config<P>, mnemonic: Option<String>) -> Result<()> {
+    // Check if seed already exists in the configuration path
+    let seed_path = config.data_dir.as_ref().join(SEED_FILE_NAME);
+    if let Some(_) = util::read_seed(&seed_path) {
+        return Err(Error::custom(format!(
+            "Seed already exists at {}",
+            seed_path.to_string_lossy()
+        )));
+    } else {
+        std::fs::create_dir_all(config.data_dir.as_ref())
+            .map_err(|e| Error::custom(format!("Failed to create data directory: {e}")))?;
+        println!(
+            "Local greenlight directory created at {}",
+            config.data_dir.as_ref().to_string_lossy()
+        );
+    }
+
+    let message;
+    // generate mnemonic if not provided
+    let mnemonic = match mnemonic {
+        Some(sentence) => {
+            message = "Secret seed derived from user provided mnemonic";
+            Mnemonic::parse(sentence).map_err(|e| Error::custom(format!("Bad mnemonic: {e}")))?
+        }
+        None => {
+            message = "Your recovery mnemonic is";
+            Mnemonic::generate(12)
+                .map_err(|e| Error::custom(format!("Failed to generate mnemonic: {e}")))?
+        }
+    };
+
+    // create hsm_secret file
+    let seed = &mnemonic.to_seed("")[0..32];
+    let mut file = File::create(seed_path)
+        .map_err(|e| Error::custom(format!("Failed to create seed: {e}")))?;
+    file.write_all(seed)
+        .map_err(|e| Error::custom(format!("Failed to write seed to file: {e}")))?;
+
+    // report after success
+    println!("{message}: {mnemonic}");
+    Ok(())
 }
 
 async fn log<P: AsRef<Path>>(config: Config<P>) -> Result<()> {

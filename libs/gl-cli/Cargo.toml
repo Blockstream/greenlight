@@ -18,6 +18,7 @@ test = true
 doc = true
 
 [dependencies]
+bip39 = { version = "2.2", features = ["rand"] }
 clap = { version = "4.5", features = ["derive"] }
 dirs = "6.0"
 env_logger = "0.11"
