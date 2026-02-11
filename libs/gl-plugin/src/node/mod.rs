@@ -25,6 +25,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::{transport::ServerTlsConfig, Code, Request, Response, Status};
 mod wrapper;
 use gl_client::bitcoin;
+use std::borrow::Borrow;
 use std::str::FromStr;
 pub use wrapper::WrappedNodeServer;
 
@@ -218,7 +219,7 @@ impl Node for PluginNodeServer {
                 );
 
                 // Create a regular invoice without JIT channel negotiation
-                let invreq = crate::requests::Invoice {
+                let invreq = cln_rpc::model::requests::InvoiceRequest {
                     amount_msat: cln_rpc::primitives::AmountOrAny::Amount(
                         cln_rpc::primitives::Amount::from_msat(req.amount_msat),
                     ),
@@ -230,24 +231,19 @@ impl Node for PluginNodeServer {
                     cltv: Some(144),
                     deschashonly: None,
                     exposeprivatechannels: None,
-                    dev_routes: None,
                 };
 
-                let res: crate::responses::Invoice = rpc
-                    .call_raw("invoice", &invreq)
+                let res = rpc
+                    .call_typed(&invreq)
                     .await
                     .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
 
                 return Ok(Response::new(pb::LspInvoiceResponse {
                     bolt11: res.bolt11,
-                    created_index: 0, // Not available in our Invoice response
-                    expires_at: res.expiry_time,
-                    payment_hash: hex::decode(&res.payment_hash)
-                        .map_err(|e| Status::new(Code::Internal, format!("Invalid payment_hash: {}", e)))?,
-                    payment_secret: res
-                        .payment_secret
-                        .map(|s| hex::decode(&s).unwrap_or_default())
-                        .unwrap_or_default(),
+                    created_index: res.created_index.unwrap_or(0) as u32,
+                    expires_at: res.expires_at as u32,
+                    payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(&res.payment_hash).to_vec(),
+                    payment_secret: res.payment_secret.to_vec(),
                 }));
             }
 
