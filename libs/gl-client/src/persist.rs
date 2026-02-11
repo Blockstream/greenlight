@@ -209,10 +209,6 @@ impl State {
         self.values.len()
     }
 
-    pub fn values_size_bytes(&self) -> usize {
-        self.values.values().map(|v: &(u64, serde_json::Value)| serde_json::to_vec(&v.1).unwrap().len()).sum()
-    }
-
     /// Take another `State` and attempt to update ourselves with any
     /// entry that is newer than ours. This may fail if the other
     /// state includes states that are older than our own.
