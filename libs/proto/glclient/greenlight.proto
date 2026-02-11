@@ -75,6 +75,7 @@ message HsmResponse {
 	// A list of updated key-value-version tuples that is to be
 	// merged into the state tracked by the plugin.
 	repeated SignerStateEntry signer_state = 5;
+	// TODO: make it diff-aware?
 
 	// If the signer reported an error, and did therefore not include
 	// `raw`, this is the stringified error, so we can print it in the
@@ -179,8 +180,8 @@ message NodeConfig {
 
 
 // The `GlConfig` is used to pass greenlight-specific startup parameters
-// to the node. The `gl-plugin` will look for a serialized config object in 
-// the node's datastore to load these values from. Please refer to the 
+// to the node. The `gl-plugin` will look for a serialized config object in
+// the node's datastore to load these values from. Please refer to the
 // individual fields to learn what they do.
 message GlConfig {
 	string close_to_addr = 1;

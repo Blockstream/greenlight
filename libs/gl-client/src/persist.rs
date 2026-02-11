@@ -205,6 +205,14 @@ impl State {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    pub fn values_size_bytes(&self) -> usize {
+        self.values.values().map(|v: &(u64, serde_json::Value)| serde_json::to_vec(&v.1).unwrap().len()).sum()
+    }
+
     /// Take another `State` and attempt to update ourselves with any
     /// entry that is newer than ours. This may fail if the other
     /// state includes states that are older than our own.
@@ -256,6 +264,75 @@ impl State {
                 (Some((oldver, _)), (newver, _)) => oldver < newver,
             })
             .collect())
+    }
+
+    /// Return a `State` containing only entries that are newer in `other` than in `self`.
+    /// This is useful for sending compact state diffs.
+    pub fn diff_state(&self, other: &State) -> State {
+        let mut values = BTreeMap::new();
+        for (key, (newver, newval)) in other.values.iter() {
+            match self.values.get(key) {
+                None => {
+                    values.insert(key.clone(), (*newver, newval.clone()));
+                }
+                Some((oldver, _)) if oldver < newver => {
+                    values.insert(key.clone(), (*newver, newval.clone()));
+                }
+                _ => {}
+            }
+        }
+        State { values }
+    }
+
+    pub fn sketch(&self) -> StateSketch {
+        StateSketch::from_state(self)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct StateSketch {
+    versions: BTreeMap<String, u64>,
+}
+
+impl StateSketch {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn from_state(state: &State) -> Self {
+        let mut sketch = Self::new();
+        sketch.apply_state(state);
+        sketch
+    }
+
+    /// Apply versions from `state` without clearing existing entries.
+    pub fn apply_state(&mut self, state: &State) {
+        for (key, (ver, _)) in state.values.iter() {
+            self.versions.insert(key.clone(), *ver);
+        }
+    }
+
+    /// Replace all versions with those from `state`.
+    pub fn reset_from_state(&mut self, state: &State) {
+        self.versions.clear();
+        self.apply_state(state);
+    }
+
+    /// Build a `State` containing entries newer than those recorded in the sketch.
+    pub fn diff_state(&self, state: &State) -> State {
+        let mut values = BTreeMap::new();
+        for (key, (newver, newval)) in state.values.iter() {
+            match self.versions.get(key) {
+                None => {
+                    values.insert(key.clone(), (*newver, newval.clone()));
+                }
+                Some(oldver) if oldver < newver => {
+                    values.insert(key.clone(), (*newver, newval.clone()));
+                }
+                _ => {}
+            }
+        }
+        State { values }
     }
 }
 
@@ -476,7 +553,7 @@ impl Persist for MemoryPersister {
         let state = self.state.lock().unwrap();
         let key = hex::encode(node_id.serialize());
         let key = format!("{ALLOWLIST_PREFIX}/{key}");
-        
+
         // If allowlist doesn't exist (e.g., node created before VLS 0.14), default to empty
         let allowlist: Vec<String> = match state.values.get(&key) {
             Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
@@ -521,7 +598,7 @@ impl Persist for MemoryPersister {
             use lightning_signer::node::Allowable;
             let network = lightning_signer::bitcoin::Network::from_str(&node.network)
                 .map_err(|e| Error::Internal(format!("Invalid network: {}", e)))?;
-            
+
             let allowlist: Vec<Allowable> = allowlist_strings
                 .into_iter()
                 .filter_map(|s| {

@@ -7,7 +7,7 @@ use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
 use cln_rpc::Notification;
-use gl_client::persist::State;
+use gl_client::persist::{State, StateSketch};
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -389,8 +389,11 @@ impl Node for PluginNodeServer {
 
         tokio::spawn(async move {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
+            let mut last_sent_sketch = StateSketch::new();
 
             {
+                // TODO: Check this edge case
+
                 // We start by immediately injecting a
                 // vls_protocol::Message::GetHeartbeat. This serves two
                 // purposes: already send the initial snapshot of the
@@ -400,9 +403,10 @@ impl Node for PluginNodeServer {
                 // presumably time-critical messages, do not have to carry
                 // the large state with them.
 
-                let state = signer_state.lock().await.clone();
-                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
-                let state: Vec<pb::SignerStateEntry> = state
+                let state_snapshot = signer_state.lock().await.clone();
+                let state_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    state_snapshot.clone().into();
+                let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
                     .map(|s| pb::SignerStateEntry {
                         key: s.key,
@@ -410,14 +414,22 @@ impl Node for PluginNodeServer {
                         value: s.value,
                     })
                     .collect();
-
+                let state_value_bytes: usize = state_entries.iter().map(|e| e.value.len()).sum();
+                let state_key_bytes: usize = state_entries.iter().map(|e| e.key.len()).sum();
+                trace!(
+                    "Signer state heartbeat to hsm_id={} entries={}, value_bytes={}, key_bytes={}",
+                    hsm_id,
+                    state_entries.len(),
+                    state_value_bytes,
+                    state_key_bytes
+                );
                 let msg = vls_protocol::msgs::GetHeartbeat {};
                 use vls_protocol::msgs::SerBolt;
                 let req = crate::pb::HsmRequest {
                     // Notice that the request_counter starts at 1000, to
                     // avoid collisions.
                     request_id: 0,
-                    signer_state: state,
+                    signer_state: state_entries,
                     raw: msg.as_vec(),
                     requests: vec![], // No pending requests yet, nothing to authorize.
                     context: None,
@@ -425,6 +437,8 @@ impl Node for PluginNodeServer {
 
                 if let Err(e) = tx.send(Ok(req)).await {
                     log::warn!("Failed to send heartbeat message to signer: {}", e);
+                } else {
+                    last_sent_sketch.reset_from_state(&state_snapshot);
                 }
             }
 
@@ -445,11 +459,14 @@ impl Node for PluginNodeServer {
                     hsm_id
                 );
 
-                let state = signer_state.lock().await.clone();
-                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
+
+                // Send only the changes since the last time we sent state to this signer.
+                let state_snapshot = signer_state.lock().await.clone();
+                let diff_state = last_sent_sketch.diff_state(&state_snapshot);
+                let diff_entries: Vec<gl_client::pb::SignerStateEntry> = diff_state.clone().into();
 
                 // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
-                let state: Vec<pb::SignerStateEntry> = state
+                let diff_entries: Vec<pb::SignerStateEntry> = diff_entries
                     .into_iter()
                     .map(|s| pb::SignerStateEntry {
                         key: s.key,
@@ -458,7 +475,18 @@ impl Node for PluginNodeServer {
                     })
                     .collect();
 
-                req.request.signer_state = state.into();
+                let diff_value_bytes: usize = diff_entries.iter().map(|e| e.value.len()).sum();
+                let diff_key_bytes: usize = diff_entries.iter().map(|e| e.key.len()).sum();
+                trace!(
+                    "Signer state diff to hsm_id={} request_id={} entries={}, value_bytes={}, key_bytes={}",
+                    hsm_id,
+                    req.request.request_id,
+                    diff_entries.len(),
+                    diff_value_bytes,
+                    diff_key_bytes
+                );
+
+                req.request.signer_state = diff_entries;
                 req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
 
                 let serialized_configure_request = SERIALIZED_CONFIGURE_REQUEST.lock().await;
@@ -485,6 +513,7 @@ impl Node for PluginNodeServer {
                     warn!("Error streaming request {:?} to hsm_id={}", e, hsm_id);
                     break;
                 }
+                last_sent_sketch.apply_state(&diff_state);
             }
             info!("Signer hsm_id={} exited", hsm_id);
             SIGNER_COUNT.fetch_sub(1, Ordering::SeqCst);
@@ -506,6 +535,8 @@ impl Node for PluginNodeServer {
             return Ok(Response::new(pb::Empty::default()));
         }
         eprintln!("WIRE: signer -> plugin: {:?}", req);
+
+        // Merge diff entries returned by signer.
 
         // Create a state from the key-value-version tuples. Need to
         // convert here, since `pb` is duplicated in the two different

@@ -487,7 +487,7 @@ impl Signer {
         debug!("Processing request {:?}", req);
         let diff: crate::persist::State = req.signer_state.clone().into();
 
-        let prestate = {
+        let (prestate_sketch, prestate_log) = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
@@ -496,7 +496,9 @@ impl Signer {
                 Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
             })?;
             trace!("Processing request {}", hex::encode(&req.raw));
-            state.clone()
+            let log_state = serde_json::to_string(&*state)
+                .unwrap_or_else(|_| "<failed to serialize>".to_string());
+            (state.sketch(), log_state)
         };
 
         // The first two bytes represent the message type. Check that
@@ -527,10 +529,7 @@ impl Signer {
 
         let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
-        log::trace!(
-            "Signer state {}",
-            serde_json::to_string(&prestate).unwrap_or_else(|_| "<failed to serialize>".to_string())
-        );
+        log::trace!("Signer state {}", prestate_log);
 
         if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
             report::Reporter::report(crate::pb::scheduler::SignerRejection {
@@ -628,7 +627,17 @@ impl Signer {
             let state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock for serialization: {:?}", e))
             })?;
-            state.clone().into()
+            let diff_state = prestate_sketch.diff_state(&state);
+            let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
+            let diff_value_bytes: usize = diff_entries.iter().map(|e| e.value.len()).sum();
+            let diff_key_bytes: usize = diff_entries.iter().map(|e| e.key.len()).sum();
+            trace!(
+                "Signer state diff entries={}, value_bytes={}, key_bytes={}",
+                diff_entries.len(),
+                diff_value_bytes,
+                diff_key_bytes
+            );
+            diff_entries
         };
         Ok(HsmResponse {
             raw: response.as_vec(),
