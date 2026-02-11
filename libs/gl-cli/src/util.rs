@@ -1,5 +1,4 @@
 use dirs;
-use gl_client::bitcoin::secp256k1::rand::{self, RngCore};
 use gl_client::credentials;
 use std::path::PathBuf;
 use std::{
@@ -15,11 +14,13 @@ pub const DEFAULT_GREENLIGHT_DIR: &str = "greenlight";
 
 // -- Seed section
 
-pub fn generate_seed() -> [u8; 32] {
-    let mut seed = [0u8; 32];
-    let mut rng = rand::thread_rng();
-    rng.fill_bytes(&mut seed);
-    seed
+pub fn generate_seed(words: Option<String>) -> Result<([u8; 32], bip39::Mnemonic)> {
+    let mnemonic = match words {
+        Some(sentence) => bip39::Mnemonic::parse(sentence)?,
+        None => bip39::Mnemonic::generate(12)?,
+    };
+    let seed: [u8; 32] = mnemonic.to_seed("")[0..32].try_into()?;
+    Ok((seed, mnemonic))
 }
 
 pub fn read_seed(file_path: impl AsRef<Path>) -> Option<Vec<u8>> {
@@ -81,6 +82,10 @@ impl AsRef<Path> for DataDir {
 pub enum UtilsError {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[error(transparent)]
+    MnemonicError(#[from] bip39::Error),
+    #[error(transparent)]
+    DataError(#[from] std::array::TryFromSliceError),
 }
 
 type Result<T, E = UtilsError> = core::result::Result<T, E>;
