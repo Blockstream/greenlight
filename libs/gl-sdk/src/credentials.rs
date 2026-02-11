@@ -14,13 +14,13 @@ pub struct Credentials {
 #[uniffi::export]
 impl Credentials {
     #[uniffi::constructor()]
-    pub(crate) fn load(raw: Vec<u8>) -> Result<Credentials, Error> {
+    pub fn load(raw: Vec<u8>) -> Result<Credentials, Error> {
         Ok(Self {
             inner: DeviceCredentials::from_bytes(raw),
         })
     }
 
-    pub(crate) fn save(&self) -> Result<Vec<u8>, Error> {
+    pub fn save(&self) -> Result<Vec<u8>, Error> {
         Ok(self.inner.to_bytes())
     }
 }

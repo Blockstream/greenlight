@@ -1,0 +1,9 @@
+target/
+node_modules/
+*.node
+*.log
+.DS_Store
+*.tgz
+npm/
+index.js
+index.d.ts
