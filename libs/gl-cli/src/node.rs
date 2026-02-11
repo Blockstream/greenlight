@@ -1,13 +1,10 @@
 use crate::error::{Error, Result};
 use crate::model;
 use crate::util::{self, CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
-use bip39::Mnemonic;
 use clap::Subcommand;
 use futures::stream::StreamExt;
 use gl_client::pb::StreamLogRequest;
 use gl_client::{bitcoin::Network, pb::cln};
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 
 pub struct Config<P: AsRef<Path>> {
@@ -218,26 +215,12 @@ async fn init_handler<P: AsRef<Path>>(config: Config<P>, mnemonic: Option<String
         );
     }
 
-    let message;
-    // generate mnemonic if not provided
-    let mnemonic = match mnemonic {
-        Some(sentence) => {
-            message = "Secret seed derived from user provided mnemonic";
-            Mnemonic::parse(sentence).map_err(|e| Error::custom(format!("Bad mnemonic: {e}")))?
-        }
-        None => {
-            message = "Your recovery mnemonic is";
-            Mnemonic::generate(12)
-                .map_err(|e| Error::custom(format!("Failed to generate mnemonic: {e}")))?
-        }
+    let message = match mnemonic {
+        Some(_) => "Secret seed derived from user provided mnemonic",
+        None => "Your recovery mnemonic is",
     };
-
-    // create hsm_secret file
-    let seed = &mnemonic.to_seed("")[0..32];
-    let mut file = File::create(seed_path)
-        .map_err(|e| Error::custom(format!("Failed to create seed: {e}")))?;
-    file.write_all(seed)
-        .map_err(|e| Error::custom(format!("Failed to write seed to file: {e}")))?;
+    let (seed, mnemonic) = util::generate_seed(mnemonic)?;
+    util::write_seed(&seed_path, &seed)?;
 
     // report after success
     println!("{message}: {mnemonic}");
