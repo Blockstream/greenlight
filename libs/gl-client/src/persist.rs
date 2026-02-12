@@ -20,6 +20,7 @@ const NODE_STATE_PREFIX: &str = "nodestates";
 const CHANNEL_PREFIX: &str = "channels";
 const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
+const TOMBSTONE_PREFIX: &str = "tombs";
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
@@ -27,6 +28,14 @@ pub struct State {
 }
 
 impl State {
+    fn put_tombstone(&mut self, live_key: &str) {
+        let tombstone_key = Self::tombstone_key(live_key);
+        let version = self.next_version_for_live_key(live_key);
+        self.values
+            .insert(tombstone_key, (version, serde_json::Value::Null));
+        self.values.remove(live_key);
+    }
+
     fn insert_node(
         &mut self,
         key: &str,
@@ -35,17 +44,14 @@ impl State {
     ) -> Result<(), Error> {
         let node_key = format!("{NODE_PREFIX}/{key}");
         let state_key = format!("{NODE_STATE_PREFIX}/{key}");
-        assert!(!self.values.contains_key(&node_key), "inserting node twice");
-        assert!(
-            !self.values.contains_key(&state_key),
-            "inserting node_state twice"
-        );
+        let node_version = self.next_version_for_live_key(&node_key);
+        let state_version = self.next_version_for_live_key(&state_key);
 
         self.values
-            .insert(node_key, (0u64, serde_json::to_value(node_entry).unwrap()));
+            .insert(node_key, (node_version, serde_json::to_value(node_entry).unwrap()));
         self.values.insert(
             state_key,
-            (0u64, serde_json::to_value(node_state_entry).unwrap()),
+            (state_version, serde_json::to_value(node_state_entry).unwrap()),
         );
         Ok(())
     }
@@ -71,9 +77,23 @@ impl State {
     fn delete_node(&mut self, key: &str) -> Result<(), Error> {
         let node_key = format!("{NODE_PREFIX}/{key}");
         let state_key = format!("{NODE_STATE_PREFIX}/{key}");
+        let allowlist_key = format!("{ALLOWLIST_PREFIX}/{key}");
+        let tracker_key = format!("{TRACKER_PREFIX}/{key}");
+        let channel_prefix = format!("{CHANNEL_PREFIX}/{key}");
+        let channel_keys: Vec<String> = self
+            .values
+            .keys()
+            .filter(|k| k.starts_with(&channel_prefix))
+            .cloned()
+            .collect();
 
-        self.values.remove(&node_key);
-        self.values.remove(&state_key);
+        self.put_tombstone(&node_key);
+        self.put_tombstone(&state_key);
+        self.put_tombstone(&allowlist_key);
+        self.put_tombstone(&tracker_key);
+        for channel_key in channel_keys {
+            self.put_tombstone(&channel_key);
+        }
         Ok(())
     }
 
@@ -83,14 +103,15 @@ impl State {
         channel_entry: vls_persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
-        assert!(!self.values.contains_key(&key));
+        let version = self.next_version_for_live_key(&key);
         self.values
-            .insert(key, (0u64, serde_json::to_value(channel_entry).unwrap()));
+            .insert(key, (version, serde_json::to_value(channel_entry).unwrap()));
         Ok(())
     }
 
     fn delete_channel(&mut self, key: &str) {
-        self.values.remove(key);
+        let live_key = format!("{CHANNEL_PREFIX}/{key}");
+        self.put_tombstone(&live_key);
     }
 
     fn update_channel(
@@ -113,7 +134,13 @@ impl State {
         key: &str,
     ) -> Result<lightning_signer::persist::model::ChannelEntry, Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
-        let value = self.values.get(&key).unwrap();
+        if self.is_tombstoned(&key) {
+            return Err(Error::Internal(format!("channel {} has been deleted", key)));
+        }
+        let value = self
+            .values
+            .get(&key)
+            .ok_or_else(|| Error::Internal(format!("missing channel state for key {}", key)))?;
         let entry: vls_persist::model::ChannelEntry =
             serde_json::from_value(value.1.clone()).unwrap();
         Ok(entry.into())
@@ -135,6 +162,7 @@ impl State {
             .values
             .iter()
             .filter(|(k, _)| k.starts_with(&prefix))
+            .filter(|(k, _)| !self.is_tombstoned(k))
             .map(|(k, v)| {
                 let key = k.split('/').last().unwrap();
                 let key = vls_persist::model::NodeChannelId(hex::decode(&key).unwrap());
@@ -153,12 +181,12 @@ impl State {
     ) -> Result<(), Error> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
-        assert!(!self.values.contains_key(&key));
+        let version = self.next_version_for_live_key(&key);
 
         let tracker: vls_persist::model::ChainTrackerEntry = tracker.into();
 
         self.values
-            .insert(key, (0u64, serde_json::to_value(tracker).unwrap()));
+            .insert(key, (version, serde_json::to_value(tracker).unwrap()));
         Ok(())
     }
 
@@ -166,6 +194,47 @@ impl State {
         self.values.clear();
         Ok(())
     }
+
+        fn tombstone_key(live_key: &str) -> String {
+        format!("{TOMBSTONE_PREFIX}/{live_key}")
+    }
+
+    fn tombstone_target_key(key: &str) -> Option<&str> {
+        key.strip_prefix(TOMBSTONE_PREFIX)
+            .and_then(|rest| rest.strip_prefix('/'))
+    }
+
+    fn is_tombstone_key(key: &str) -> bool {
+        Self::tombstone_target_key(key).is_some()
+    }
+
+    fn tombstone_version_for_live_key(&self, live_key: &str) -> Option<u64> {
+        let tombstone_key = Self::tombstone_key(live_key);
+        self.values.get(&tombstone_key).map(|v| v.0)
+    }
+
+    fn next_version_for_live_key(&self, live_key: &str) -> u64 {
+        let live_ver = self.values.get(live_key).map(|v| v.0);
+        let tombstone_ver = self.tombstone_version_for_live_key(live_key);
+        live_ver
+            .into_iter()
+            .chain(tombstone_ver)
+            .max()
+            .map(|v| v.saturating_add(1))
+            .unwrap_or(0)
+    }
+
+    fn is_tombstoned(&self, live_key: &str) -> bool {
+        let live_ver = self.values.get(live_key).map(|v| v.0);
+        let tombstone_ver = self.tombstone_version_for_live_key(live_key);
+
+        match (live_ver, tombstone_ver) {
+            (_, None) => false,
+            (None, Some(_)) => true,
+            (Some(live), Some(tomb)) => tomb >= live,
+        }
+    }
+
 }
 
 #[derive(Debug)]
@@ -215,6 +284,53 @@ impl State {
     pub fn merge(&mut self, other: &State) -> anyhow::Result<Vec<(String, Option<u64>, u64)>> {
         let mut res = Vec::new();
         for (key, (newver, newval)) in other.values.iter() {
+            if Self::is_tombstone_key(key) {
+                let local = self.values.get_mut(key);
+                match local {
+                    None => {
+                        trace!("Insert new tombstone key {}: version={}", key, newver);
+                        res.push((key.to_owned(), None, *newver));
+                        self.values.insert(key.clone(), (*newver, newval.clone()));
+                    }
+                    Some(v) => {
+                        if v.0 == *newver {
+                            // Idempotent re-application, but still enforce live-key cleanup below.
+                        } else if v.0 > *newver {
+                            warn!("Ignoring outdated tombstone version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, serde_json::to_string(newval), serde_json::to_string(&v.1));
+                            // Keep the newer local tombstone and still enforce live-key cleanup below.
+                        } else {
+                            trace!(
+                                "Updating tombstone key {}: version={} => version={}",
+                                key,
+                                v.0,
+                                *newver
+                            );
+                            res.push((key.to_owned(), Some(v.0), *newver));
+                            *v = (*newver, newval.clone());
+                        }
+                    }
+                }
+
+                if let Some(live_key) = Self::tombstone_target_key(key) {
+                    if self.is_tombstoned(live_key) {
+                        self.values.remove(live_key);
+                    }
+                }
+                continue;
+            }
+
+            if self
+                .tombstone_version_for_live_key(key)
+                .map(|tomb| tomb >= *newver)
+                .unwrap_or(false)
+            {
+                trace!(
+                    "Ignoring live key {} version={} because a tombstone is newer or equal",
+                    key, newver
+                );
+                continue;
+            }
+
             let local = self.values.get_mut(key);
 
             match local {
@@ -504,8 +620,19 @@ impl Persist for MemoryPersister {
         let key = format!("{TRACKER_PREFIX}/{key}");
 
         let state = self.state.lock().unwrap();
+        if state.is_tombstoned(&key) {
+            return Err(Error::Internal(format!("tracker {} has been deleted", key)));
+        }
         let v: vls_persist::model::ChainTrackerEntry =
-            serde_json::from_value(state.values.get(&key).unwrap().1.clone()).unwrap();
+            serde_json::from_value(
+                state
+                    .values
+                    .get(&key)
+                    .ok_or_else(|| Error::Internal(format!("missing tracker state {}", key)))?
+                    .1
+                    .clone(),
+            )
+            .unwrap();
 
         Ok(v.into_tracker(node_id, validator_factory))
     }
@@ -531,9 +658,10 @@ impl Persist for MemoryPersister {
                 *v = (v.0 + 1, serde_json::to_value(allowlist).unwrap());
             }
             None => {
+                let version = state.next_version_for_live_key(&key);
                 state
                     .values
-                    .insert(key, (0u64, serde_json::to_value(allowlist).unwrap()));
+                    .insert(key, (version, serde_json::to_value(allowlist).unwrap()));
             }
         }
         Ok(())
@@ -543,6 +671,9 @@ impl Persist for MemoryPersister {
         let state = self.state.lock().unwrap();
         let key = hex::encode(node_id.serialize());
         let key = format!("{ALLOWLIST_PREFIX}/{key}");
+        if state.is_tombstoned(&key) {
+            return Ok(Vec::new());
+        }
 
         // If allowlist doesn't exist (e.g., node created before VLS 0.14), default to empty
         let allowlist: Vec<String> = match state.values.get(&key) {
@@ -562,9 +693,9 @@ impl Persist for MemoryPersister {
         let node_ids: Vec<&str> = state
             .values
             .keys()
-            .map(|k| k.split('/'))
-            .filter(|k| k.clone().next().unwrap() == NODE_PREFIX)
-            .map(|k| k.clone().last().unwrap())
+            .filter(|k| k.starts_with(&format!("{NODE_PREFIX}/")))
+            .filter(|k| !state.is_tombstoned(k))
+            .filter_map(|k| k.split('/').last())
             .collect();
 
         let mut res = Vec::new();
@@ -573,15 +704,27 @@ impl Persist for MemoryPersister {
             let state_key = format!("{NODE_STATE_PREFIX}/{node_id}");
             let allowlist_key = format!("{ALLOWLIST_PREFIX}/{node_id}");
 
-            let node: vls_persist::model::NodeEntry =
-                serde_json::from_value(state.values.get(&node_key).unwrap().1.clone()).unwrap();
-            let state_e: vls_persist::model::NodeStateEntry =
-                serde_json::from_value(state.values.get(&state_key).unwrap().1.clone()).unwrap();
+            if state.is_tombstoned(&node_key) || state.is_tombstoned(&state_key) {
+                continue;
+            }
+
+            let node: vls_persist::model::NodeEntry = match state.values.get(&node_key) {
+                Some(value) => serde_json::from_value(value.1.clone()).unwrap(),
+                None => continue,
+            };
+            let state_e: vls_persist::model::NodeStateEntry = match state.values.get(&state_key) {
+                Some(value) => serde_json::from_value(value.1.clone()).unwrap(),
+                None => continue,
+            };
 
             // Load allowlist, defaulting to empty if not found (for nodes created before VLS 0.14)
-            let allowlist_strings: Vec<String> = match state.values.get(&allowlist_key) {
-                Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
-                None => Vec::new(),
+            let allowlist_strings: Vec<String> = if state.is_tombstoned(&allowlist_key) {
+                Vec::new()
+            } else {
+                match state.values.get(&allowlist_key) {
+                    Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
+                    None => Vec::new(),
+                }
             };
 
             // Parse allowlist strings into Allowable objects
@@ -642,7 +785,10 @@ impl Persist for MemoryPersister {
 
 #[cfg(test)]
 mod tests {
-    use super::{State, StateSketch};
+    use super::{
+        State, StateSketch, ALLOWLIST_PREFIX, CHANNEL_PREFIX, NODE_PREFIX, NODE_STATE_PREFIX,
+        TOMBSTONE_PREFIX, TRACKER_PREFIX,
+    };
     use serde_json::json;
     use std::collections::BTreeMap;
 
@@ -746,5 +892,88 @@ mod tests {
         sketch.apply_state(&first_diff);
         let second_diff = sketch.diff_state(&next);
         assert!(second_diff.values.is_empty());
+    }
+
+    #[test]
+    fn merge_tombstone_deletes_older_live_entry() {
+        let live_key = format!("{CHANNEL_PREFIX}/abc");
+        let tombstone_key = format!("{TOMBSTONE_PREFIX}/{live_key}");
+        let mut state = mk_state(vec![(live_key.as_str(), 2, json!({"v": 1}))]);
+        let incoming = mk_state(vec![(tombstone_key.as_str(), 3, serde_json::Value::Null)]);
+
+        state.merge(&incoming).unwrap();
+
+        assert!(state.values.get(&live_key).is_none());
+        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 3);
+    }
+
+    #[test]
+    fn merge_ignores_live_entry_if_tombstone_is_newer_or_equal() {
+        let live_key = format!("{CHANNEL_PREFIX}/abc");
+        let tombstone_key = format!("{TOMBSTONE_PREFIX}/{live_key}");
+        let mut state = mk_state(vec![(tombstone_key.as_str(), 5, serde_json::Value::Null)]);
+        let incoming = mk_state(vec![(live_key.as_str(), 4, json!({"v": 1}))]);
+
+        state.merge(&incoming).unwrap();
+
+        assert!(state.values.get(&live_key).is_none());
+        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 5);
+    }
+
+    #[test]
+    fn merge_accepts_live_entry_if_newer_than_tombstone() {
+        let live_key = format!("{CHANNEL_PREFIX}/abc");
+        let tombstone_key = format!("{TOMBSTONE_PREFIX}/{live_key}");
+        let mut state = mk_state(vec![(tombstone_key.as_str(), 5, serde_json::Value::Null)]);
+        let incoming = mk_state(vec![(live_key.as_str(), 6, json!({"v": 2}))]);
+
+        state.merge(&incoming).unwrap();
+
+        assert_eq!(state.values.get(&live_key).unwrap().0, 6);
+        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 5);
+    }
+
+    #[test]
+    fn delete_channel_creates_tombstone_and_bumps_version() {
+        let live_key = format!("{CHANNEL_PREFIX}/abc");
+        let tombstone_key = format!("{TOMBSTONE_PREFIX}/{live_key}");
+        let mut state = mk_state(vec![(live_key.as_str(), 7, json!({"v": 1}))]);
+
+        state.delete_channel("abc");
+
+        assert!(state.values.get(&live_key).is_none());
+        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 8);
+    }
+
+    #[test]
+    fn delete_node_creates_tombstones_for_node_related_keys() {
+        let node_id = "deadbeef";
+        let node_key = format!("{NODE_PREFIX}/{node_id}");
+        let node_state_key = format!("{NODE_STATE_PREFIX}/{node_id}");
+        let allowlist_key = format!("{ALLOWLIST_PREFIX}/{node_id}");
+        let tracker_key = format!("{TRACKER_PREFIX}/{node_id}");
+        let channel_key = format!("{CHANNEL_PREFIX}/{node_id}cafebabe");
+
+        let mut state = mk_state(vec![
+            (node_key.as_str(), 1, json!({"n": 1})),
+            (node_state_key.as_str(), 2, json!({"s": 1})),
+            (allowlist_key.as_str(), 3, json!(["127.0.0.1"])),
+            (tracker_key.as_str(), 4, json!({"t": 1})),
+            (channel_key.as_str(), 5, json!({"c": 1})),
+        ]);
+
+        state.delete_node(node_id).unwrap();
+
+        for (live_key, old_version) in vec![
+            (node_key, 1u64),
+            (node_state_key, 2u64),
+            (allowlist_key, 3u64),
+            (tracker_key, 4u64),
+            (channel_key, 5u64),
+        ] {
+            assert!(state.values.get(&live_key).is_none());
+            let tombstone_key = format!("{TOMBSTONE_PREFIX}/{live_key}");
+            assert_eq!(state.values.get(&tombstone_key).unwrap().0, old_version + 1);
+        }
     }
 }
