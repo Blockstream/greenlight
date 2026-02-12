@@ -487,18 +487,24 @@ impl Signer {
         debug!("Processing request {:?}", req);
         let diff: crate::persist::State = req.signer_state.clone().into();
 
-        let (prestate_sketch, prestate_log) = {
+        let (prestate_sketch, prestate_log, force_full_sync) = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
             })?;
-            state.merge(&diff).map_err(|e| {
+            let merge_res = state.safe_merge(&diff).map_err(|e| {
                 Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
             })?;
+            if merge_res.has_conflicts() {
+                warn!(
+                    "State merge conflict detected (count={}), forcing full signer state sync",
+                    merge_res.conflict_count
+                );
+            }
             trace!("Processing request {}", hex::encode(&req.raw));
             let log_state = serde_json::to_string(&*state)
                 .unwrap_or_else(|_| "<failed to serialize>".to_string());
-            (state.sketch(), log_state)
+            (state.sketch(), log_state, merge_res.has_conflicts())
         };
 
         // The first two bytes represent the message type. Check that
@@ -627,17 +633,30 @@ impl Signer {
             let state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock for serialization: {:?}", e))
             })?;
-            let diff_state = prestate_sketch.diff_state(&state);
-            let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
-            let diff_value_bytes: usize = diff_entries.iter().map(|e| e.value.len()).sum();
-            let diff_key_bytes: usize = diff_entries.iter().map(|e| e.key.len()).sum();
-            trace!(
-                "Signer state diff entries={}, value_bytes={}, key_bytes={}",
-                diff_entries.len(),
-                diff_value_bytes,
-                diff_key_bytes
-            );
-            diff_entries
+            if force_full_sync {
+                let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
+                let full_value_bytes: usize = full_entries.iter().map(|e| e.value.len()).sum();
+                let full_key_bytes: usize = full_entries.iter().map(|e| e.key.len()).sum();
+                trace!(
+                    "Signer state full sync entries={}, value_bytes={}, key_bytes={}",
+                    full_entries.len(),
+                    full_value_bytes,
+                    full_key_bytes
+                );
+                full_entries
+            } else {
+                let diff_state = prestate_sketch.diff_state(&state);
+                let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
+                let diff_value_bytes: usize = diff_entries.iter().map(|e| e.value.len()).sum();
+                let diff_key_bytes: usize = diff_entries.iter().map(|e| e.key.len()).sum();
+                trace!(
+                    "Signer state diff entries={}, value_bytes={}, key_bytes={}",
+                    diff_entries.len(),
+                    diff_value_bytes,
+                    diff_key_bytes
+                );
+                diff_entries
+            }
         };
         Ok(HsmResponse {
             raw: response.as_vec(),
