@@ -244,6 +244,18 @@ pub struct StateChange {
     new: (u64, serde_json::Value),
 }
 
+#[derive(Debug, Default)]
+pub struct SafeMergeResult {
+    pub changes: Vec<(String, Option<u64>, u64)>,
+    pub conflict_count: usize,
+}
+
+impl SafeMergeResult {
+    pub fn has_conflicts(&self) -> bool {
+        self.conflict_count > 0
+    }
+}
+
 use core::fmt::Display;
 
 impl Display for StateChange {
@@ -278,18 +290,19 @@ impl State {
         self.values.len()
     }
 
-    /// Take another `State` and attempt to update ourselves with any
-    /// entry that is newer than ours. This may fail if the other
-    /// state includes states that are older than our own.
-    pub fn merge(&mut self, other: &State) -> anyhow::Result<Vec<(String, Option<u64>, u64)>> {
-        let mut res = Vec::new();
+    /// Merge incoming state and track potential version conflicts.
+    ///
+    /// A conflict means the incoming state is stale or incompatible with local
+    /// tombstone knowledge. Callers may use this signal to trigger a full sync.
+    pub fn safe_merge(&mut self, other: &State) -> anyhow::Result<SafeMergeResult> {
+        let mut res = SafeMergeResult::default();
         for (key, (newver, newval)) in other.values.iter() {
             if Self::is_tombstone_key(key) {
                 let local = self.values.get_mut(key);
                 match local {
                     None => {
                         trace!("Insert new tombstone key {}: version={}", key, newver);
-                        res.push((key.to_owned(), None, *newver));
+                        res.changes.push((key.to_owned(), None, *newver));
                         self.values.insert(key.clone(), (*newver, newval.clone()));
                     }
                     Some(v) => {
@@ -298,6 +311,7 @@ impl State {
                         } else if v.0 > *newver {
                             warn!("Ignoring outdated tombstone version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, serde_json::to_string(newval), serde_json::to_string(&v.1));
                             // Keep the newer local tombstone and still enforce live-key cleanup below.
+                            res.conflict_count += 1;
                         } else {
                             trace!(
                                 "Updating tombstone key {}: version={} => version={}",
@@ -305,7 +319,7 @@ impl State {
                                 v.0,
                                 *newver
                             );
-                            res.push((key.to_owned(), Some(v.0), *newver));
+                            res.changes.push((key.to_owned(), Some(v.0), *newver));
                             *v = (*newver, newval.clone());
                         }
                     }
@@ -328,6 +342,7 @@ impl State {
                     "Ignoring live key {} version={} because a tombstone is newer or equal",
                     key, newver
                 );
+                res.conflict_count += 1;
                 continue;
             }
 
@@ -336,7 +351,7 @@ impl State {
             match local {
                 None => {
                     trace!("Insert new key {}: version={}", key, newver);
-                    res.push((key.to_owned(), None, *newver));
+                    res.changes.push((key.to_owned(), None, *newver));
                     self.values.insert(key.clone(), (*newver, newval.clone()));
                 }
                 Some(v) => {
@@ -344,6 +359,7 @@ impl State {
                         continue;
                     } else if v.0 > *newver {
                         warn!("Ignoring outdated state version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, serde_json::to_string(newval), serde_json::to_string(&v.1));
+                        res.conflict_count += 1;
                         continue;
                     } else {
                         trace!(
@@ -352,13 +368,18 @@ impl State {
                             v.0,
                             *newver
                         );
-                        res.push((key.to_owned(), Some(v.0), *newver));
+                        res.changes.push((key.to_owned(), Some(v.0), *newver));
                         *v = (*newver, newval.clone());
                     }
                 }
             }
         }
         Ok(res)
+    }
+
+    /// Backward-compatible merge API.
+    pub fn merge(&mut self, other: &State) -> anyhow::Result<Vec<(String, Option<u64>, u64)>> {
+        Ok(self.safe_merge(other)?.changes)
     }
 
     pub fn diff(&self, other: &State) -> anyhow::Result<Vec<StateChange>> {
@@ -901,10 +922,11 @@ mod tests {
         let mut state = mk_state(vec![(live_key.as_str(), 2, json!({"v": 1}))]);
         let incoming = mk_state(vec![(tombstone_key.as_str(), 3, serde_json::Value::Null)]);
 
-        state.merge(&incoming).unwrap();
+        let res = state.safe_merge(&incoming).unwrap();
 
         assert!(state.values.get(&live_key).is_none());
         assert_eq!(state.values.get(&tombstone_key).unwrap().0, 3);
+        assert_eq!(res.conflict_count, 0);
     }
 
     #[test]
@@ -914,10 +936,11 @@ mod tests {
         let mut state = mk_state(vec![(tombstone_key.as_str(), 5, serde_json::Value::Null)]);
         let incoming = mk_state(vec![(live_key.as_str(), 4, json!({"v": 1}))]);
 
-        state.merge(&incoming).unwrap();
+        let res = state.safe_merge(&incoming).unwrap();
 
         assert!(state.values.get(&live_key).is_none());
         assert_eq!(state.values.get(&tombstone_key).unwrap().0, 5);
+        assert_eq!(res.conflict_count, 1);
     }
 
     #[test]
@@ -927,10 +950,22 @@ mod tests {
         let mut state = mk_state(vec![(tombstone_key.as_str(), 5, serde_json::Value::Null)]);
         let incoming = mk_state(vec![(live_key.as_str(), 6, json!({"v": 2}))]);
 
-        state.merge(&incoming).unwrap();
+        let res = state.safe_merge(&incoming).unwrap();
 
         assert_eq!(state.values.get(&live_key).unwrap().0, 6);
         assert_eq!(state.values.get(&tombstone_key).unwrap().0, 5);
+        assert_eq!(res.conflict_count, 0);
+    }
+
+    #[test]
+    fn safe_merge_reports_conflict_for_outdated_live_version() {
+        let mut state = mk_state(vec![("k1", 5, json!({"v": 5}))]);
+        let incoming = mk_state(vec![("k1", 4, json!({"v": 4}))]);
+
+        let res = state.safe_merge(&incoming).unwrap();
+
+        assert_eq!(res.conflict_count, 1);
+        assert_eq!(state.values.get("k1").unwrap().0, 5);
     }
 
     #[test]
