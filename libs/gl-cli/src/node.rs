@@ -98,6 +98,8 @@ pub enum Command {
         )]
         status: Option<String>,
     },
+    /// Generates a new bitcoin address to receive funds
+    Newaddr,
     /// Stop the node
     Stop,
 }
@@ -194,6 +196,7 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
 
             listpays_handler(config, bolt11, payment_hash, status).await
         }
+        Command::Newaddr => newaddr_handler(config).await,
         Command::Stop => stop(config).await,
     }
 }
@@ -225,6 +228,25 @@ async fn init_handler<P: AsRef<Path>>(config: Config<P>, mnemonic: Option<String
     // report after success
     println!("{message}: {mnemonic}");
     Ok(())
+}
+
+async fn get_node<P: AsRef<Path>>(config: Config<P>) -> Result<gl_client::node::ClnClient> {
+    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
+    let creds = match util::read_credentials(&creds_path) {
+        Some(c) => c,
+        None => {
+            return Err(Error::CredentialsNotFoundError(format!(
+                "could not read from {}",
+                creds_path.display()
+            )))
+        }
+    };
+
+    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
+        .await
+        .map_err(Error::custom)?;
+
+    scheduler.node().await.map_err(Error::custom)
 }
 
 async fn log<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
@@ -268,6 +290,17 @@ async fn log<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+async fn newaddr_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .new_addr(cln::NewaddrRequest { addresstype: None })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
     Ok(())
 }
 
