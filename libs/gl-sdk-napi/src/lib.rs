@@ -76,31 +76,6 @@ pub struct Node {
 }
 
 // ============================================================================
-// Internal Implementations (non-NAPI)
-// ============================================================================
-
-impl Credentials {
-    /// Internal constructor for creating Credentials from GlCredentials
-    pub(crate) fn from_inner(inner: GlCredentials) -> Self {
-        Self { inner }
-    }
-}
-
-impl Signer {
-    /// Internal constructor for creating Signer from GlSigner
-    pub(crate) fn from_inner(inner: GlSigner) -> Self {
-        Self { inner }
-    }
-}
-
-impl Handle {
-    /// Internal constructor for creating Handle from GlHandle
-    pub(crate) fn from_inner(inner: GlHandle) -> Self {
-        Self { inner }
-    }
-}
-
-// ============================================================================
 // NAPI Implementations
 // ============================================================================
 
@@ -110,15 +85,15 @@ impl Credentials {
     #[napi(factory)]
     pub fn load(raw: Buffer) -> Result<Credentials> {
         let inner = GlCredentials::load(raw.to_vec())
-            .map_err(|e| Error::from_reason(format!("Failed to load credentials: {:?}", e)))?;
-        Ok(Credentials::from_inner(inner))
+            .map_err(|e| Error::from_reason(e.to_string()))?;
+        Ok(Self { inner })
     }
 
     /// Save credentials to raw bytes
     #[napi]
     pub fn save(&self) -> Result<Buffer> {
         let bytes = self.inner.save()
-            .map_err(|e| Error::from_reason(format!("Failed to save credentials: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
 
         Ok(Buffer::from(bytes))
     }
@@ -143,7 +118,7 @@ impl Scheduler {
         };
         
         let inner = GlScheduler::new(gl_network)
-            .map_err(|e| Error::from_reason(format!("Failed to create scheduler: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(Self { inner })
     }
@@ -157,9 +132,9 @@ impl Scheduler {
     pub fn register(&self, signer: &Signer, code: Option<String>) -> Result<Credentials> {
         let inner = self.inner
             .register(&signer.inner, code)
-            .map_err(|e| Error::from_reason(format!("Registration failed: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
-        Ok(Credentials::from_inner(inner))
+        Ok(Credentials { inner })
     }
 
     /// Recover node credentials
@@ -170,9 +145,9 @@ impl Scheduler {
     pub fn recover(&self, signer: &Signer) -> Result<Credentials> {
         let inner = self.inner
             .recover(&signer.inner)
-            .map_err(|e| Error::from_reason(format!("Recovery failed: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
-        Ok(Credentials::from_inner(inner))
+        Ok(Credentials { inner })
     }
 }
 
@@ -185,7 +160,7 @@ impl Signer {
     #[napi(constructor)]
     pub fn new(phrase: String) -> Result<Self> {
         let inner = GlSigner::new(phrase)
-            .map_err(|e| Error::from_reason(format!("Failed to create signer: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(Self { inner })
     }
@@ -197,9 +172,9 @@ impl Signer {
     #[napi]
     pub fn authenticate(&self, credentials: &Credentials) -> Result<Signer> {
         let inner = self.inner.authenticate(&credentials.inner)
-            .map_err(|e| Error::from_reason(format!("Authentication failed: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
-        Ok(Signer::from_inner(inner))
+        Ok(Signer { inner })
     }
 
     /// Start the signer's background task
@@ -207,9 +182,9 @@ impl Signer {
     #[napi]
     pub fn start(&self) -> Result<Handle> {
         let inner = self.inner.start()
-            .map_err(|e| Error::from_reason(format!("Failed to start signer: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
 
-        Ok(Handle::from_inner(inner))
+        Ok(Handle { inner })
     }
 
     /// Get the node ID for this signer
@@ -238,7 +213,7 @@ impl Node {
     #[napi(constructor)]
     pub fn new(credentials: &Credentials) -> Result<Self> {
         let inner = GlNode::new(&credentials.inner)
-            .map_err(|e| Error::from_reason(format!("Failed to create node: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(Self { inner })
     }
@@ -266,10 +241,10 @@ impl Node {
 
         let amount = amount_msat.map(|a| a as u64);
         let response = self.inner.receive(label, description, amount)
-            .map_err(|e| Error::from_reason(format!("Failed to create invoice: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(ReceiveResponse {
-            bolt11: response.bolt11(),
+            bolt11: response.bolt11,
         })
     }
 
@@ -282,14 +257,14 @@ impl Node {
     pub fn send(&self, invoice: String, amount_msat: Option<i64>) -> Result<SendResponse> {
         let amount = amount_msat.map(|a| a as u64);
         let response = self.inner.send(invoice, amount)
-            .map_err(|e| Error::from_reason(format!("Payment failed: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(SendResponse {
-            status: response.status() as u32,
-            preimage: Buffer::from(response.preimage()),
-            amount_msat: response.amount_msat() as i64,
-            amount_sent_msat: response.amount_sent_msat() as i64,
-            parts: response.parts(),
+            status: response.status as u32,
+            preimage: Buffer::from(response.preimage),
+            amount_msat: response.amount_msat as i64,
+            amount_sent_msat: response.amount_sent_msat as i64,
+            parts: response.parts,
         })
     }
 
@@ -305,12 +280,12 @@ impl Node {
         amount_or_all: String,
     ) -> Result<OnchainSendResponse> {
         let response = self.inner.onchain_send(destination, amount_or_all)
-            .map_err(|e| Error::from_reason(format!("On-chain send failed: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(OnchainSendResponse {
-            tx: Buffer::from(response.tx()),
-            txid: Buffer::from(response.txid()),
-            psbt: response.psbt(),
+            tx: Buffer::from(response.tx),
+            txid: Buffer::from(response.txid),
+            psbt: response.psbt,
         })
     }
 
@@ -318,11 +293,11 @@ impl Node {
     #[napi]
     pub fn onchain_receive(&self) -> Result<OnchainReceiveResponse> {
         let response = self.inner.onchain_receive()
-            .map_err(|e| Error::from_reason(format!("Failed to generate address: {:?}", e)))?;
+            .map_err(|e| Error::from_reason(e.to_string()))?;
         
         Ok(OnchainReceiveResponse {
-            bech32: response.bech32(),
-            p2tr: response.p2tr(),
+            bech32: response.bech32,
+            p2tr: response.p2tr,
         })
     }
 }
