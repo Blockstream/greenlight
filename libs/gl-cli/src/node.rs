@@ -269,22 +269,7 @@ async fn newaddr_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 }
 
 async fn stop<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .stop(cln::StopRequest {})
         .await
@@ -295,22 +280,7 @@ async fn stop<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 }
 
 async fn getinfo_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .getinfo(cln::GetinfoRequest {})
         .await
@@ -331,22 +301,7 @@ async fn invoice_handler<P: AsRef<Path>>(
     cltv: Option<u32>,
     deschashonly: Option<bool>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .invoice(cln::InvoiceRequest {
             exposeprivatechannels: vec![],
@@ -372,22 +327,7 @@ async fn connect_handler<P: AsRef<Path>>(
     host: Option<String>,
     port: Option<u32>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .connect_peer(cln::ConnectRequest { id, host, port })
         .await
@@ -403,22 +343,7 @@ async fn listpays_handler<P: AsRef<Path>>(
     payment_hash: Option<Vec<u8>>,
     status: Option<i32>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .list_pays(cln::ListpaysRequest {
             index: None,
@@ -450,22 +375,7 @@ async fn pay_handler<P: AsRef<Path>>(
     maxfee: Option<u64>,
     description: Option<String>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .pay(cln::PayRequest {
             bolt11,
