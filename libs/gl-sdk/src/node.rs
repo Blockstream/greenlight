@@ -191,30 +191,11 @@ impl Node {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
+#[derive(uniffi::Record)]
 pub struct OnchainSendResponse {
-    tx: Vec<u8>,
-    txid: Vec<u8>,
-    psbt: String,
-}
-
-#[uniffi::export]
-impl OnchainSendResponse {
-    /// Get the raw transaction bytes
-    pub fn tx(&self) -> Vec<u8> {
-        self.tx.clone()
-    }
-    
-    /// Get the transaction ID
-    pub fn txid(&self) -> Vec<u8> {
-        self.txid.clone()
-    }
-    
-    /// Get the PSBT string
-    pub fn psbt(&self) -> String {
-        self.psbt.clone()
-    }
+    pub tx: Vec<u8>,
+    pub txid: Vec<u8>,
+    pub psbt: String,
 }
 
 impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
@@ -227,24 +208,10 @@ impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
+#[derive(uniffi::Record)]
 pub struct OnchainReceiveResponse {
-    bech32: String,
-    p2tr: String,
-}
-
-#[uniffi::export]
-impl OnchainReceiveResponse {
-    /// Get the bech32 (native segwit) address
-    pub fn bech32(&self) -> String {
-        self.bech32.clone()
-    }
-    
-    /// Get the taproot (P2TR) address
-    pub fn p2tr(&self) -> String {
-        self.p2tr.clone()
-    }
+    pub bech32: String,
+    pub p2tr: String,
 }
 
 impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
@@ -256,42 +223,13 @@ impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
+#[derive(uniffi::Record)]
 pub struct SendResponse {
-    status: PayStatus,
-    preimage: Vec<u8>,
-    amount_msat: u64,
-    amount_sent_msat: u64,
-    parts: u32,
-}
-
-#[uniffi::export]
-impl SendResponse {
-    /// Get the payment status
-    pub fn status(&self) -> PayStatus {
-        self.status.clone()
-    }
-    
-    /// Get the payment preimage
-    pub fn preimage(&self) -> Vec<u8> {
-        self.preimage.clone()
-    }
-    
-    /// Get the amount in millisatoshis
-    pub fn amount_msat(&self) -> u64 {
-        self.amount_msat
-    }
-    
-    /// Get the amount sent in millisatoshis
-    pub fn amount_sent_msat(&self) -> u64 {
-        self.amount_sent_msat
-    }
-    
-    /// Get the number of parts used
-    pub fn parts(&self) -> u32 {
-        self.parts
-    }
+    pub status: PayStatus,
+    pub preimage: Vec<u8>,
+    pub amount_msat: u64,
+    pub amount_sent_msat: u64,
+    pub parts: u32,
 }
 
 impl From<clnpb::PayResponse> for SendResponse {
@@ -306,18 +244,9 @@ impl From<clnpb::PayResponse> for SendResponse {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
+#[derive(uniffi::Record)]
 pub struct ReceiveResponse {
-    bolt11: String,
-}
-
-#[uniffi::export]
-impl ReceiveResponse {
-    /// Get the BOLT11 invoice string
-    pub fn bolt11(&self) -> String {
-        self.bolt11.clone()
-    }
+    pub bolt11: String,
 }
 
 #[derive(uniffi::Enum, Clone)]
