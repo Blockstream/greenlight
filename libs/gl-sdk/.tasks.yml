@@ -84,6 +84,16 @@ tasks:
           --language ruby \
           --out-dir ./libs/gl-sdk/bindings
 
+  bindings-typescript:
+    desc: "Generate Typescript bindings"
+    dir: "{{.TASKFILE_DIR}}/../gl-sdk-napi"
+    deps:
+      - build
+    cmds:
+      - |
+        npm install
+        npm run build
+
   bindings-all:
     desc: "Generate all language bindings"
     dir: "{{.TASKFILE_DIR}}/../.."
@@ -92,6 +102,7 @@ tasks:
       - bindings-kotlin
       - bindings-swift
       - bindings-ruby
+      - bindings-typescript
 
   package-python:
     desc: "Build Python wheel package"
