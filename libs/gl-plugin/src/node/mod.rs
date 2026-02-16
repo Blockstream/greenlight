@@ -8,6 +8,9 @@ use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
 use cln_rpc::Notification;
 use gl_client::persist::{State, StateSketch};
+use gl_client::metrics::{
+    signer_state_request_wire_bytes, savings_percent,
+};
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -410,6 +413,7 @@ impl Node for PluginNodeServer {
                 let state_snapshot = signer_state.lock().await.clone();
                 let state_entries: Vec<gl_client::pb::SignerStateEntry> =
                     state_snapshot.clone().into();
+                let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
                 let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
                     .map(|s| pb::SignerStateEntry {
@@ -418,14 +422,11 @@ impl Node for PluginNodeServer {
                         value: s.value,
                     })
                     .collect();
-                let state_value_bytes: usize = state_entries.iter().map(|e| e.value.len()).sum();
-                let state_key_bytes: usize = state_entries.iter().map(|e| e.key.len()).sum();
                 trace!(
-                    "Signer state heartbeat to hsm_id={} entries={}, value_bytes={}, key_bytes={}",
+                    "Signer state heartbeat to hsm_id={} entries={}, wire_bytes={}",
                     hsm_id,
                     state_entries.len(),
-                    state_value_bytes,
-                    state_key_bytes
+                    state_wire_bytes
                 );
                 let msg = vls_protocol::msgs::GetHeartbeat {};
                 use vls_protocol::msgs::SerBolt;
@@ -472,6 +473,7 @@ impl Node for PluginNodeServer {
                     last_seen_sync_epoch = current_sync_epoch;
                 }
 
+                let mut full_wire_bytes: Option<usize> = None;
                 let outgoing_entries: Vec<gl_client::pb::SignerStateEntry> = if force_full_sync {
                     trace!(
                         "Forcing full signer state sync to hsm_id={} request_id={}",
@@ -482,11 +484,15 @@ impl Node for PluginNodeServer {
                     state_snapshot.clone().into()
                 } else {
                     // Send only the changes since the last time we sent state to this signer.
+                    let full_entries: Vec<gl_client::pb::SignerStateEntry> =
+                        state_snapshot.clone().into();
+                    full_wire_bytes = Some(signer_state_request_wire_bytes(&full_entries));
                     let diff_state = last_sent_sketch.diff_state(&state_snapshot);
                     let diff_entries: Vec<gl_client::pb::SignerStateEntry> = diff_state.clone().into();
                     last_sent_sketch.apply_state(&diff_state);
                     diff_entries
                 };
+                let outgoing_wire_bytes = signer_state_request_wire_bytes(&outgoing_entries);
 
                 // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
                 let outgoing_entries: Vec<pb::SignerStateEntry> = outgoing_entries
@@ -498,25 +504,26 @@ impl Node for PluginNodeServer {
                     })
                     .collect();
 
-                let value_bytes: usize = outgoing_entries.iter().map(|e| e.value.len()).sum();
-                let key_bytes: usize = outgoing_entries.iter().map(|e| e.key.len()).sum();
                 if force_full_sync {
                     trace!(
-                        "Signer state full sync to hsm_id={} request_id={} entries={}, value_bytes={}, key_bytes={}",
+                        "Signer state full sync to hsm_id={} request_id={} entries={}, wire_bytes={}",
                         hsm_id,
                         req.request.request_id,
                         outgoing_entries.len(),
-                        value_bytes,
-                        key_bytes
+                        outgoing_wire_bytes
                     );
                 } else {
+                    let full_wire_bytes = full_wire_bytes.unwrap_or(outgoing_wire_bytes);
+                    let saved_percent =
+                        savings_percent(full_wire_bytes, outgoing_wire_bytes);
                     trace!(
-                        "Signer state diff to hsm_id={} request_id={} entries={}, value_bytes={}, key_bytes={}",
+                        "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
                         hsm_id,
                         req.request.request_id,
                         outgoing_entries.len(),
-                        value_bytes,
-                        key_bytes
+                        outgoing_wire_bytes,
+                        full_wire_bytes,
+                        saved_percent
                     );
                 }
 
