@@ -10,6 +10,9 @@ use crate::pb::PendingRequest;
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::runes;
 use crate::signer::resolve::Resolver;
+use crate::metrics::{
+    signer_state_response_wire_bytes, savings_percent,
+};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Result};
@@ -635,25 +638,28 @@ impl Signer {
             })?;
             if force_full_sync {
                 let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
-                let full_value_bytes: usize = full_entries.iter().map(|e| e.value.len()).sum();
-                let full_key_bytes: usize = full_entries.iter().map(|e| e.key.len()).sum();
+                let full_wire_bytes = signer_state_response_wire_bytes(&full_entries);
                 trace!(
-                    "Signer state full sync entries={}, value_bytes={}, key_bytes={}",
+                    "Signer state full sync entries={}, wire_bytes={}",
                     full_entries.len(),
-                    full_value_bytes,
-                    full_key_bytes
+                    full_wire_bytes
                 );
                 full_entries
             } else {
+                let full_wire_bytes = {
+                    let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
+                    signer_state_response_wire_bytes(&full_entries)
+                };
                 let diff_state = prestate_sketch.diff_state(&state);
                 let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
-                let diff_value_bytes: usize = diff_entries.iter().map(|e| e.value.len()).sum();
-                let diff_key_bytes: usize = diff_entries.iter().map(|e| e.key.len()).sum();
+                let diff_wire_bytes = signer_state_response_wire_bytes(&diff_entries);
+                let saved_percent = savings_percent(full_wire_bytes, diff_wire_bytes);
                 trace!(
-                    "Signer state diff entries={}, value_bytes={}, key_bytes={}",
+                    "Signer state diff entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
                     diff_entries.len(),
-                    diff_value_bytes,
-                    diff_key_bytes
+                    diff_wire_bytes,
+                    full_wire_bytes,
+                    saved_percent
                 );
                 diff_entries
             }
