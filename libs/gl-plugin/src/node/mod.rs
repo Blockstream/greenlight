@@ -397,6 +397,10 @@ impl Node for PluginNodeServer {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
             let mut last_sent_sketch = StateSketch::new();
             let mut last_seen_sync_epoch = state_sync_epoch.load(Ordering::SeqCst);
+            enum SyncMode {
+                Full,
+                Diff { full_wire_bytes: usize },
+            }
 
             {
                 // We start by immediately injecting a
@@ -471,26 +475,31 @@ impl Node for PluginNodeServer {
                     last_seen_sync_epoch = current_sync_epoch;
                 }
 
-                let mut full_wire_bytes: Option<usize> = None;
-                let outgoing_entries: Vec<gl_client::pb::SignerStateEntry> = if force_full_sync {
+                let (outgoing_entries, sync_mode): (
+                    Vec<gl_client::pb::SignerStateEntry>,
+                    SyncMode,
+                ) = if force_full_sync {
                     trace!(
                         "Forcing full signer state sync to hsm_id={} request_id={}",
                         hsm_id,
                         req.request.request_id
                     );
                     last_sent_sketch = state_snapshot.sketch();
-                    state_snapshot.clone().into()
+                    (state_snapshot.clone().into(), SyncMode::Full)
                 } else {
                     // Send only the changes since the last time we sent state to this signer.
                     let full_entries: Vec<gl_client::pb::SignerStateEntry> =
                         state_snapshot.clone().into();
-                    full_wire_bytes = Some(signer_state_request_wire_bytes(&full_entries));
+                    let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
                     let diff_state = last_sent_sketch.diff_state(&state_snapshot);
-                    let diff_entries: Vec<gl_client::pb::SignerStateEntry> = diff_state.clone().into();
+                    let diff_entries: Vec<gl_client::pb::SignerStateEntry> =
+                        diff_state.clone().into();
                     last_sent_sketch.apply_state(&diff_state);
-                    diff_entries
+                    (diff_entries, SyncMode::Diff { full_wire_bytes })
                 };
+
                 let outgoing_wire_bytes = signer_state_request_wire_bytes(&outgoing_entries);
+                let outgoing_entry_count = outgoing_entries.len();
 
                 // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
                 let outgoing_entries: Vec<pb::SignerStateEntry> = outgoing_entries
@@ -502,27 +511,28 @@ impl Node for PluginNodeServer {
                     })
                     .collect();
 
-                if force_full_sync {
-                    trace!(
-                        "Signer state full sync to hsm_id={} request_id={} entries={}, wire_bytes={}",
-                        hsm_id,
-                        req.request.request_id,
-                        outgoing_entries.len(),
-                        outgoing_wire_bytes
-                    );
-                } else {
-                    let full_wire_bytes = full_wire_bytes.unwrap_or(outgoing_wire_bytes);
-                    let saved_percent =
-                        savings_percent(full_wire_bytes, outgoing_wire_bytes);
-                    trace!(
-                        "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
-                        hsm_id,
-                        req.request.request_id,
-                        outgoing_entries.len(),
-                        outgoing_wire_bytes,
-                        full_wire_bytes,
-                        saved_percent
-                    );
+                match sync_mode {
+                    SyncMode::Full => {
+                        trace!(
+                            "Signer state full sync to hsm_id={} request_id={} entries={}, wire_bytes={}",
+                            hsm_id,
+                            req.request.request_id,
+                            outgoing_entry_count,
+                            outgoing_wire_bytes
+                        );
+                    }
+                    SyncMode::Diff { full_wire_bytes } => {
+                        let saved_percent = savings_percent(full_wire_bytes, outgoing_wire_bytes);
+                        trace!(
+                            "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
+                            hsm_id,
+                            req.request.request_id,
+                            outgoing_entry_count,
+                            outgoing_wire_bytes,
+                            full_wire_bytes,
+                            saved_percent
+                        );
+                    }
                 }
 
                 req.request.signer_state = outgoing_entries;
