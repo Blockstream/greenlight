@@ -399,8 +399,6 @@ impl Node for PluginNodeServer {
             let mut last_seen_sync_epoch = state_sync_epoch.load(Ordering::SeqCst);
 
             {
-                // TODO: Check this edge case
-
                 // We start by immediately injecting a
                 // vls_protocol::Message::GetHeartbeat. This serves two
                 // purposes: already send the initial snapshot of the

@@ -75,7 +75,6 @@ message HsmResponse {
 	// A list of updated key-value-version tuples that is to be
 	// merged into the state tracked by the plugin.
 	repeated SignerStateEntry signer_state = 5;
-	// TODO: make it diff-aware?
 
 	// If the signer reported an error, and did therefore not include
 	// `raw`, this is the stringified error, so we can print it in the
@@ -233,7 +232,7 @@ message LspInvoiceRequest {
   // Optional: for discounts/API keys
   string token = 2; // len=0 => None
   // Pass-through of cln invoice rpc params
-  uint64 amount_msat = 3;  // 0 => Any
+  uint64 amount_msat = 3; // 0 => Any
   string description = 4;
   string label = 5;
 }
