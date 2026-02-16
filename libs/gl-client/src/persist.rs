@@ -22,6 +22,10 @@ const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
 const TOMBSTONE_PREFIX: &str = "tombs";
 
+/**
+ * TODO: consider tombstone garbage collection strategy if we expect a large number of deletes.
+ */
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
     values: BTreeMap<String, (u64, serde_json::Value)>,
