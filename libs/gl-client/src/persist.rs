@@ -28,14 +28,6 @@ pub struct State {
 }
 
 impl State {
-    fn put_tombstone(&mut self, live_key: &str) {
-        let tombstone_key = Self::tombstone_key(live_key);
-        let version = self.next_version_for_live_key(live_key);
-        self.values
-            .insert(tombstone_key, (version, serde_json::Value::Null));
-        self.values.remove(live_key);
-    }
-
     fn insert_node(
         &mut self,
         key: &str,
@@ -44,8 +36,8 @@ impl State {
     ) -> Result<(), Error> {
         let node_key = format!("{NODE_PREFIX}/{key}");
         let state_key = format!("{NODE_STATE_PREFIX}/{key}");
-        let node_version = self.next_version_for_live_key(&node_key);
-        let state_version = self.next_version_for_live_key(&state_key);
+        let node_version = self.next_version(&node_key);
+        let state_version = self.next_version(&state_key);
 
         self.values
             .insert(node_key, (node_version, serde_json::to_value(node_entry).unwrap()));
@@ -103,7 +95,7 @@ impl State {
         channel_entry: vls_persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
-        let version = self.next_version_for_live_key(&key);
+        let version = self.next_version(&key);
         self.values
             .insert(key, (version, serde_json::to_value(channel_entry).unwrap()));
         Ok(())
@@ -181,7 +173,7 @@ impl State {
     ) -> Result<(), Error> {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
-        let version = self.next_version_for_live_key(&key);
+        let version = self.next_version(&key);
 
         let tracker: vls_persist::model::ChainTrackerEntry = tracker.into();
 
@@ -195,7 +187,15 @@ impl State {
         Ok(())
     }
 
-        fn tombstone_key(live_key: &str) -> String {
+    fn put_tombstone(&mut self, live_key: &str) {
+        let tombstone_key = Self::tombstone_key(live_key);
+        let version = self.next_version(live_key);
+        self.values
+            .insert(tombstone_key, (version, serde_json::Value::Null));
+        self.values.remove(live_key);
+    }
+
+    fn tombstone_key(live_key: &str) -> String {
         format!("{TOMBSTONE_PREFIX}/{live_key}")
     }
 
@@ -208,14 +208,14 @@ impl State {
         Self::tombstone_target_key(key).is_some()
     }
 
-    fn tombstone_version_for_live_key(&self, live_key: &str) -> Option<u64> {
+    fn tombstone_version(&self, live_key: &str) -> Option<u64> {
         let tombstone_key = Self::tombstone_key(live_key);
         self.values.get(&tombstone_key).map(|v| v.0)
     }
 
-    fn next_version_for_live_key(&self, live_key: &str) -> u64 {
+    fn next_version(&self, live_key: &str) -> u64 {
         let live_ver = self.values.get(live_key).map(|v| v.0);
-        let tombstone_ver = self.tombstone_version_for_live_key(live_key);
+        let tombstone_ver = self.tombstone_version(live_key);
         live_ver
             .into_iter()
             .chain(tombstone_ver)
@@ -226,7 +226,7 @@ impl State {
 
     fn is_tombstoned(&self, live_key: &str) -> bool {
         let live_ver = self.values.get(live_key).map(|v| v.0);
-        let tombstone_ver = self.tombstone_version_for_live_key(live_key);
+        let tombstone_ver = self.tombstone_version(live_key);
 
         match (live_ver, tombstone_ver) {
             (_, None) => false,
@@ -334,7 +334,7 @@ impl State {
             }
 
             if self
-                .tombstone_version_for_live_key(key)
+                .tombstone_version(key)
                 .map(|tomb| tomb >= *newver)
                 .unwrap_or(false)
             {
@@ -679,7 +679,7 @@ impl Persist for MemoryPersister {
                 *v = (v.0 + 1, serde_json::to_value(allowlist).unwrap());
             }
             None => {
-                let version = state.next_version_for_live_key(&key);
+                let version = state.next_version(&key);
                 state
                     .values
                     .insert(key, (version, serde_json::to_value(allowlist).unwrap()));
