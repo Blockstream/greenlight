@@ -102,6 +102,13 @@ pub enum Command {
     Newaddr,
     /// List available funds, both on-chain and payment channels
     Listfunds,
+    /// Send on-chain funds to external wallet
+    Withdraw {
+        #[arg(long, help = "Bitcoin address for the destination")]
+        destination: String,
+        #[arg(long, help = "Amount is sats or the string \"all\"")]
+        amount_sat: model::AmountSatOrAll,
+    },
     /// Stop the node
     Stop,
 }
@@ -200,6 +207,10 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
         }
         Command::Newaddr => newaddr_handler(config).await,
         Command::Listfunds => listfunds_handler(config).await,
+        Command::Withdraw {
+            destination,
+            amount_sat,
+        } => withdraw_handler(config, destination, amount_sat).await,
         Command::Stop => stop(config).await,
     }
 }
@@ -311,6 +322,27 @@ async fn listfunds_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .list_funds(cln::ListfundsRequest { spent: None })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn withdraw_handler<P: AsRef<Path>>(
+    config: Config<P>,
+    destination: String,
+    amount_sat: model::AmountSatOrAll,
+) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .withdraw(cln::WithdrawRequest {
+            destination: destination,
+            satoshi: Some(amount_sat.into()),
+            feerate: None,
+            minconf: Some(0),
+            utxos: vec![],
+        })
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();

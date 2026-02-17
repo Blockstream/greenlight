@@ -1,4 +1,4 @@
-use gl_client::pb::cln::{self, amount_or_any};
+use gl_client::pb::cln::{self, amount_or_all, amount_or_any};
 
 #[derive(Debug, Clone)]
 enum AmountOrAnyValue {
@@ -36,6 +36,49 @@ impl Into<cln::AmountOrAny> for AmountOrAny {
             },
             AmountOrAnyValue::Amount(msat) => cln::AmountOrAny {
                 value: Some(amount_or_any::Value::Amount(cln::Amount { msat })),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum AmountSatOrAllValue {
+    All,
+    AmountSat(u64),
+}
+
+#[derive(Debug, Clone)]
+pub struct AmountSatOrAll {
+    value: AmountSatOrAllValue,
+}
+
+impl From<&str> for AmountSatOrAll {
+    fn from(value: &str) -> Self {
+        if value == "all" {
+            return Self {
+                value: AmountSatOrAllValue::All,
+            };
+        } else {
+            return match value.parse::<u64>() {
+                Ok(sat) => Self {
+                    value: AmountSatOrAllValue::AmountSat(sat),
+                },
+                Err(e) => panic!("{}", e),
+            };
+        }
+    }
+}
+
+impl Into<cln::AmountOrAll> for AmountSatOrAll {
+    fn into(self) -> cln::AmountOrAll {
+        match self.value {
+            AmountSatOrAllValue::All => cln::AmountOrAll {
+                value: Some(amount_or_all::Value::All(true)),
+            },
+            AmountSatOrAllValue::AmountSat(sat) => cln::AmountOrAll {
+                value: Some(amount_or_all::Value::Amount(cln::Amount {
+                    msat: sat * 1000,
+                })),
             },
         }
     }
