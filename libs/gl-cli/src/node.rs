@@ -100,6 +100,8 @@ pub enum Command {
     },
     /// Generates a new bitcoin address to receive funds
     Newaddr,
+    /// List available funds, both on-chain and payment channels
+    Listfunds,
     /// Stop the node
     Stop,
 }
@@ -197,6 +199,7 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             listpays_handler(config, bolt11, payment_hash, status).await
         }
         Command::Newaddr => newaddr_handler(config).await,
+        Command::Listfunds => listfunds_handler(config).await,
         Command::Stop => stop(config).await,
     }
 }
@@ -297,6 +300,17 @@ async fn newaddr_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .new_addr(cln::NewaddrRequest { addresstype: None })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn listfunds_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .list_funds(cln::ListfundsRequest { spent: None })
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
