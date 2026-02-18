@@ -103,6 +103,13 @@ pub enum Command {
         #[arg(long, help = "Amount is sats or the string \"all\"")]
         amount_sat: model::AmountSatOrAll,
     },
+    /// Open a channel with peer
+    Fundchannel {
+        #[arg(long, help = "Peer id")]
+        id: Vec<u8>,
+        #[arg(long, help = "Amount in sats or the string \"all\"")]
+        amount_sat: model::AmountSatOrAll,
+    },
     /// Close a channel with peer
     Close {
         #[arg(long, help = "Peer id, channel id or short channel id")]
@@ -209,6 +216,9 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             destination,
             amount_sat,
         } => withdraw_handler(config, destination, amount_sat).await,
+        Command::Fundchannel { id, amount_sat } => {
+            fundchannel_handler(config, id, amount_sat).await
+        }
         Command::Close { id } => close_handler(config, id).await,
         Command::Stop => stop(config).await,
     }
@@ -312,6 +322,35 @@ async fn withdraw_handler<P: AsRef<Path>>(
             feerate: None,
             minconf: Some(0),
             utxos: vec![],
+        })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn fundchannel_handler<P: AsRef<Path>>(
+    config: Config<P>,
+    id: Vec<u8>,
+    amount_sat: model::AmountSatOrAll,
+) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .fund_channel(cln::FundchannelRequest {
+            id: id,
+            amount: Some(amount_sat.into()),
+            feerate: None,
+            announce: None,
+            minconf: None,
+            push_msat: None,
+            close_to: None,
+            request_amt: None,
+            compact_lease: None,
+            utxos: vec![],
+            mindepth: None,
+            reserve: None,
+            channel_type: vec![],
         })
         .await
         .map_err(|e| Error::custom(e.message()))?
