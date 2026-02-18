@@ -12,7 +12,7 @@ Node.js bindings for Blockstream's Greenlight SDK using [napi-rs](https://napi.r
 ### From npm
 
 ```bash
-npm install @blockstream/gl-sdk
+npm install @greenlightcln/glsdk
 ```
 
 ### Building from source
@@ -44,6 +44,29 @@ npm run build
 
 This will compile the Rust code and generate the Node.js native module.
 
+## Supported Platforms
+
+Prebuilt binaries are available for the following platforms:
+
+| OS      | Architecture | Target                      |
+|---------|--------------|-----------------------------|
+| Linux   | x64          | x86_64-unknown-linux-gnu    |
+| Linux   | arm64        | aarch64-unknown-linux-gnu   |
+| macOS   | x64          | x86_64-apple-darwin         |
+| macOS   | arm64 (M1/M2)| aarch64-apple-darwin        |
+| Windows | x64          | x86_64-pc-windows-msvc      |
+
+### For Unsupported Platforms:
+
+1. Follow the instructions in the [Building from source](#building-from-source) section above.
+
+2. Then install the package from your local directory:
+
+```bash
+cd /path/to/your/project
+npm install /path/to/greenlight/libs/gl-sdk-napi
+```
+
 ## Project Structure
 
 ```
@@ -58,43 +81,87 @@ gl-sdk-napi/
 
 ## Usage Example
 
-```typescript
-import { Scheduler, Signer, Node, Credentials } from '@blockstream/gl-sdk';
-import { randomBytes } from 'crypto';
+**Async/Await**: All network operations are asynchronous. Always use await or handle returned promises properly to avoid unhandled rejections or unexpected behavior.
 
-async function quickStart() {
-  // 1. Register a new node
-  const scheduler = new Scheduler('regtest');
-  const seed = randomBytes(32);
-  
-  const regResult = await scheduler.register(seed, 'INVITE_CODE');
-  const { device_cert, device_key } = JSON.parse(regResult);
-  
-  // 2. Create credentials
-  const credentials = new Credentials(
-    Buffer.from(device_cert),
-    Buffer.from(device_key)
-  );
-  
-  // 3. Start the signer
-  const signer = new Signer(seed, 'regtest', credentials);
-  await signer.start();
-  
-  // 4. Connect to the node
-  const nodeId = await signer.nodeId();
-  const scheduleInfo = await scheduler.schedule(nodeId);
-  const { grpc_uri } = JSON.parse(scheduleInfo);
-  
-  const node = await Node.connect(credentials, grpc_uri);
-  
-  const address = await node.onchainReceive();
-  console.log('New address:', address.bech32);
-  
-  // 6. Cleanup
-  await signer.stop();
+
+```typescript
+import { Scheduler, Signer, Node, Credentials, OnchainReceiveResponse } from '@greenlightcln/glsdk';
+
+type Network = 'bitcoin' | 'regtest';
+
+class GreenlightApp {
+  private credentials: Credentials | null = null;
+  private scheduler: Scheduler;
+  private signer: Signer;
+  private node: Node | null = null;
+
+  constructor(phrase: string, network: Network) {
+    this.scheduler = new Scheduler(network);
+    this.signer = new Signer(phrase);
+    const nodeId = this.signer.nodeId();
+    console.log(`✓ Signer created. Node ID: ${nodeId.toString('hex')}`);
+  }
+
+  async registerOrRecover(inviteCode?: string): Promise<void> {
+    try {
+      console.log('Attempting to register node...');
+      this.credentials = await this.scheduler.register(this.signer, inviteCode || '');
+      console.log('✓ Node registered successfully');
+    } catch (e: any) {
+      const match = e.message.match(/message: "([^"]+)"/);
+      console.error(`✗ Registration failed: ${match ? match[1] : e.message}`);
+      console.log('Attempting recovery...');
+      try {
+        this.credentials = await this.scheduler.recover(this.signer);
+        console.log('✓ Node recovered successfully');
+      } catch (recoverError) {
+        console.error('✗ Recovery failed:', recoverError);
+        throw recoverError;
+      }
+    }
+  }
+
+  createNode(): Node {
+    if (!this.credentials) { throw new Error('Must register/recover before creating node'); }
+    console.log('Creating node instance...');
+    this.node = new Node(this.credentials);
+    console.log('✓ Node created');
+    return this.node;
+  }
+
+  async getOnchainAddress(): Promise<OnchainReceiveResponse> {
+    if (!this.node) { this.createNode(); }
+    console.log('Generating on-chain address...');
+    return await this.node!.onchainReceive();
+  }
+
+  async cleanup(): Promise<void> {
+    if (this.node) {
+      await this.node.stop();
+      console.log('✓ Node stopped');
+    }
+  }
 }
 
-quickStart().catch(console.error);
+async function quickStart(): Promise<void> {
+  const phrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const network: Network = 'regtest';
+  console.log('=== Greenlight SDK Demo ===');
+  const app = new GreenlightApp(phrase, network);
+  try {
+    await app.registerOrRecover();
+    app.createNode();
+    const address = await app.getOnchainAddress();
+    console.log(`✓ Bech32 Address: ${address.bech32}`);
+    console.log(`✓ P2TR Address: ${address.p2Tr}`);
+  } catch (e) {
+    console.error('✗ Error:', e);
+  } finally {
+    await app.cleanup();
+  }
+}
+
+quickStart();
 ```
 
 ## Development
@@ -105,27 +172,25 @@ quickStart().catch(console.error);
 npm test
 ```
 
-### Building for Production
+### Local npm Publishing
+This workflow only builds for local platform. For multi-platform builds, use the GitHub Actions workflow which cross-compiles for all supported targets.
 
 ```bash
+# Clean previous builds
+npm run clean
+
+# Build the native binary for your platform
 npm run build
+
+# Preview what will be included in the package (Tarball Contents)
+npm pack --dry-run
+
+# Bump version (patch: 0.1.4 → 0.1.5, minor: 0.1.4 → 0.2.0, major: 0.1.4 → 1.0.0)
+npm version patch/minor/major
+
+# Publish to npm registry (requires authentication)
+npm publish --access public
 ```
-
-### Cross-compilation
-
-Build for multiple platforms:
-
-```bash
-npm run build -- --target x86_64-unknown-linux-gnu
-npm run build -- --target aarch64-apple-darwin
-npm run build -- --target x86_64-pc-windows-msvc
-```
-
-## Important Notes
-
-1. **Async/Await**: All network operations are asynchronous. Always use await or handle returned promises properly to avoid unhandled rejections or unexpected behavior.
-
-2. **Napi Macros**: We do not combine N-API (napi) macros with UniFFI macros in the same crate. They are incompatible, and mixing them within a single crate would cause conflicts and break the UniFFI-generated mobile bindings.
 
 ## Resources
 
