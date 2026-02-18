@@ -109,6 +109,11 @@ pub enum Command {
         #[arg(long, help = "Amount is sats or the string \"all\"")]
         amount_sat: model::AmountSatOrAll,
     },
+    /// Close a channel with peer
+    Close {
+        #[arg(long, help = "Peer id, channel id or short channel id")]
+        id: String,
+    },
     /// Stop the node
     Stop,
 }
@@ -211,6 +216,7 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             destination,
             amount_sat,
         } => withdraw_handler(config, destination, amount_sat).await,
+        Command::Close { id } => close_handler(config, id).await,
         Command::Stop => stop(config).await,
     }
 }
@@ -342,6 +348,25 @@ async fn withdraw_handler<P: AsRef<Path>>(
             feerate: None,
             minconf: Some(0),
             utxos: vec![],
+        })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn close_handler<P: AsRef<Path>>(config: Config<P>, id: String) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .close(cln::CloseRequest {
+            id: id,
+            unilateraltimeout: None,
+            destination: None,
+            fee_negotiation_step: None,
+            wrong_funding: None,
+            force_lease_closed: None,
+            feerange: vec![],
         })
         .await
         .map_err(|e| Error::custom(e.message()))?
