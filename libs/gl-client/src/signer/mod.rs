@@ -505,8 +505,11 @@ impl Signer {
                 );
             }
             trace!("Processing request {}", hex::encode(&req.raw));
-            let log_state = serde_json::to_string(&*state)
-                .unwrap_or_else(|_| "<failed to serialize>".to_string());
+            let log_state = serde_json::to_string(&*state).map_err(|e| {
+                Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
+            })?;
+
+
             (state.sketch(), log_state, merge_res.has_conflicts())
         };
 
