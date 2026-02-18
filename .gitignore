@@ -38,3 +38,6 @@ examples/javascript/package-lock.json
 
 # IntelliJ
 .idea/
+
+# VSCode
+.vscode/
