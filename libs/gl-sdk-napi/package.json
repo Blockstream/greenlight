@@ -1,45 +1,47 @@
 {
-  "name": "@blockstream/gl-sdk",
-  "version": "0.1.0",
+  "name": "@greenlightcln/glsdk",
+  "version": "0.0.3",
   "description": "Node.js bindings for Blockstream Greenlight SDK",
+  "author": "The Greenlight Team",
   "main": "index.js",
   "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node",
+    "README.md",
+    "package.json"
+  ],
   "keywords": [
     "bitcoin",
     "lightning",
     "greenlight",
     "blockstream",
-    "napi-rs"
+    "gl-sdk"
   ],
   "license": "MIT",
   "napi": {
-    "name": "gl-sdk-napi",
-    "triples": {
-      "defaults": true,
-      "additional": [
-        "x86_64-unknown-linux-musl",
-        "aarch64-unknown-linux-gnu",
-        "aarch64-apple-darwin",
-        "x86_64-pc-windows-msvc",
-        "aarch64-pc-windows-msvc"
-      ]
-    }
+    "binaryName": "gl-sdk",
+    "targets": [
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc"
+    ]
   },
   "scripts": {
-    "artifacts": "napi artifacts",
+    "clean": "rm -rf ../../target && rm -rf index.js && rm -rf index.d.ts && rm -rf *.node",
     "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
-    "prepublishOnly": "napi prepublish -t npm",
-    "test": "jest",
-    "version": "napi version"
+    "test": "jest"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.0",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^20.0.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.4.6",
-    "typescript": "^5.0.0"
+    "@napi-rs/cli": "2.18.4",
+    "@types/jest": "30.0.0",
+    "@types/node": "20.19.33",
+    "jest": "29.7.0",
+    "ts-jest": "29.4.6",
+    "typescript": "5.9.3"
   },
   "engines": {
     "node": ">= 16"
@@ -48,5 +50,9 @@
     "type": "git",
     "url": "https://github.com/Blockstream/greenlight.git",
     "directory": "libs/gl-sdk-napi"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/Blockstream/greenlight/issues"
+  },
+  "homepage": "https://github.com/Blockstream/greenlight#readme"
 }
