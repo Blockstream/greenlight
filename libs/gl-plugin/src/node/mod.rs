@@ -414,7 +414,7 @@ impl Node for PluginNodeServer {
 
                 let state_snapshot = signer_state.lock().await.clone();
                 let state_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
-                    .full_state_without_tombstones()
+                    .omit_tombstones()
                     .into();
                 let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
                 let state_entries: Vec<pb::SignerStateEntry> = state_entries
