@@ -352,8 +352,9 @@ impl Node for PluginNodeServer {
                 // the large state with them.
 
                 let state_snapshot = signer_state.lock().await.clone();
-                let state_entries: Vec<gl_client::pb::SignerStateEntry> =
-                    state_snapshot.clone().into();
+                let state_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
+                    .full_state_without_tombstones()
+                    .into();
                 let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
                 let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
@@ -424,11 +425,15 @@ impl Node for PluginNodeServer {
                         req.request.request_id
                     );
                     last_sent_sketch = state_snapshot.sketch();
-                    (state_snapshot.clone().into(), SyncMode::Full)
+                    (
+                        state_snapshot.omit_tombstones().into(),
+                        SyncMode::Full,
+                    )
                 } else {
                     // Send only the changes since the last time we sent state to this signer.
-                    let full_entries: Vec<gl_client::pb::SignerStateEntry> =
-                        state_snapshot.clone().into();
+                    let full_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
+                        .omit_tombstones()
+                        .into();
                     let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
                     let diff_state = last_sent_sketch.diff_state(&state_snapshot);
                     let diff_entries: Vec<gl_client::pb::SignerStateEntry> =

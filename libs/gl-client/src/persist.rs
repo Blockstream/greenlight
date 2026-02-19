@@ -378,6 +378,17 @@ impl State {
     pub fn sketch(&self) -> StateSketch {
         StateSketch::from_state(self)
     }
+
+    // Return a copy of the state with tombstoned entries omitted.
+    pub fn omit_tombstones(&self) -> State {
+        let values = self
+            .values
+            .iter()
+            .filter(|(_, (version, _))| *version != TOMBSTONE_VERSION)
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        State { values }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
@@ -797,6 +808,20 @@ mod tests {
 
     fn assert_tombstone(state: &State, key: &str) {
         assert_entry(state, key, TOMBSTONE_VERSION, serde_json::Value::Null);
+    }
+
+    #[test]
+    fn omit_tombstones_omits_tombstoned_entries() {
+        let state = mk_state(vec![
+            ("k1", 1, json!({"v": 1})),
+            ("k2", TOMBSTONE_VERSION, serde_json::Value::Null),
+        ]);
+
+        let filtered = state.omit_tombstones();
+
+        assert_eq!(filtered.values.len(), 1);
+        assert_entry(&filtered, "k1", 1, json!({"v": 1}));
+        assert_entry_absent(&filtered, "k2");
     }
 
     #[test]
