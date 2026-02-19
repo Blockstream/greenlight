@@ -11,6 +11,7 @@ extern crate gl_util;
 
 mod awaitables;
 pub mod config;
+pub mod events;
 pub mod hsm;
 mod lsp;
 pub mod messages;
@@ -26,6 +27,9 @@ pub mod tramp;
 mod unix;
 
 mod context;
+
+// Re-export the event types for convenience and backwards compatibility
+pub use events::{ErasedEvent, ErasedEventExt, ErasedInternal, Event, EventBus};
 
 #[derive(Clone)]
 pub struct GlPlugin {
@@ -288,17 +292,6 @@ async fn on_invoice_payment(plugin: Plugin, v: serde_json::Value) -> Result<serd
         Err(_) => warn!("No active listener for the incoming payment"),
     }
     Ok(json!({"result": "continue"}))
-}
-
-/// An event that we can observe during the operation of the plugin.
-#[derive(Clone, Debug)]
-pub enum Event {
-    Stop(Arc<stager::Stage>),
-
-    /// A grpc call. The first element is the URI of the request.
-    RpcCall(String),
-    IncomingPayment(pb::IncomingPayment),
-    CustomMsg(pb::Custommsg),
 }
 
 pub use cln_grpc as grpc;
