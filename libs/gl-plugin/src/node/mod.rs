@@ -461,17 +461,18 @@ impl Node for PluginNodeServer {
 
 
                 let state_snapshot = signer_state.lock().await.clone();
-                // Send only the changes since the last time we sent state to this signer.
+                // Estimate the size of the full state to calculate the bandwidth savings of sending diffs
                 let full_entries: Vec<gl_client::pb::SignerStateEntry> =
                     state_snapshot.omit_tombstones().into();
                 let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
+
+                // Send only the changes since the last time we sent state to this signer.
                 let diff_state = last_sent_sketch.diff_state(&state_snapshot);
                 let outgoing_entries: Vec<gl_client::pb::SignerStateEntry> =
                     diff_state.clone().into();
-                last_sent_sketch.apply_state(&diff_state);
-
                 let outgoing_wire_bytes = signer_state_request_wire_bytes(&outgoing_entries);
                 let outgoing_entry_count = outgoing_entries.len();
+                last_sent_sketch.apply_state(&diff_state);
 
                 // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
                 let outgoing_entries: Vec<pb::SignerStateEntry> = outgoing_entries
