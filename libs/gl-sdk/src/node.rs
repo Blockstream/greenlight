@@ -169,6 +169,69 @@ impl Node {
             .into_inner();
         Ok(res.into())
     }
+
+    /// Get information about the node.
+    ///
+    /// Returns basic information about the node including its ID,
+    /// alias, network, and channel counts.
+    fn get_info(&self) -> Result<GetInfoResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::GetinfoRequest {};
+
+        let res = exec(cln_client.getinfo(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
+    }
+
+    /// List all peers connected to this node.
+    ///
+    /// Returns information about all peers including their connection
+    /// status.
+    fn list_peers(&self) -> Result<ListPeersResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::ListpeersRequest {
+            id: None,
+            level: None,
+        };
+
+        let res = exec(cln_client.list_peers(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
+    }
+
+    /// List all channels with peers.
+    ///
+    /// Returns detailed information about all channels including their
+    /// state, capacity, and balances.
+    fn list_peer_channels(&self) -> Result<ListPeerChannelsResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::ListpeerchannelsRequest { id: None };
+
+        let res = exec(cln_client.list_peer_channels(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
+    }
+
+    /// List all funds available to the node.
+    ///
+    /// Returns information about on-chain outputs and channel funds
+    /// that are available or pending.
+    fn list_funds(&self) -> Result<ListFundsResponse, Error> {
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::ListfundsRequest { spent: None };
+
+        let res = exec(cln_client.list_funds(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
+    }
 }
 
 // Not exported through uniffi
@@ -276,3 +339,280 @@ impl From<i32> for PayStatus {
         }
     }
 }
+
+// ============================================================
+// GetInfo response types
+// ============================================================
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct GetInfoResponse {
+    pub id: Vec<u8>,
+    pub alias: Option<String>,
+    pub color: Vec<u8>,
+    pub num_peers: u32,
+    pub num_pending_channels: u32,
+    pub num_active_channels: u32,
+    pub num_inactive_channels: u32,
+    pub version: String,
+    pub lightning_dir: String,
+    pub blockheight: u32,
+    pub network: String,
+    pub fees_collected_msat: u64,
+}
+
+impl From<clnpb::GetinfoResponse> for GetInfoResponse {
+    fn from(other: clnpb::GetinfoResponse) -> Self {
+        Self {
+            id: other.id,
+            alias: other.alias,
+            color: other.color,
+            num_peers: other.num_peers,
+            num_pending_channels: other.num_pending_channels,
+            num_active_channels: other.num_active_channels,
+            num_inactive_channels: other.num_inactive_channels,
+            version: other.version,
+            lightning_dir: other.lightning_dir,
+            blockheight: other.blockheight,
+            network: other.network,
+            fees_collected_msat: other.fees_collected_msat.map(|a| a.msat).unwrap_or(0),
+        }
+    }
+}
+
+
+
+// ============================================================
+// ListPeers response types
+// ============================================================
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct ListPeersResponse {
+    pub peers: Vec<Peer>,
+}
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct Peer {
+    id: Vec<u8>,
+    connected: bool,
+    num_channels: Option<u32>,
+    netaddr: Vec<String>,
+    remote_addr: Option<String>,
+    features: Option<Vec<u8>>,
+}
+
+impl From<clnpb::ListpeersResponse> for ListPeersResponse {
+    fn from(other: clnpb::ListpeersResponse) -> Self {
+        Self {
+            peers: other.peers.into_iter().map(|p| p.into()).collect(),
+        }
+    }
+}
+
+impl From<clnpb::ListpeersPeers> for Peer {
+    fn from(other: clnpb::ListpeersPeers) -> Self {
+        Self {
+            id: other.id,
+            connected: other.connected,
+            num_channels: other.num_channels,
+            netaddr: other.netaddr,
+            remote_addr: other.remote_addr,
+            features: other.features,
+        }
+    }
+}
+
+
+
+// ============================================================
+// ListPeerChannels response types
+// ============================================================
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct ListPeerChannelsResponse {
+    pub channels: Vec<PeerChannel>,
+}
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct PeerChannel {
+    peer_id: Vec<u8>,
+    peer_connected: bool,
+    state: ChannelState,
+    short_channel_id: Option<String>,
+    channel_id: Option<Vec<u8>>,
+    funding_txid: Option<Vec<u8>>,
+    funding_outnum: Option<u32>,
+    to_us_msat: Option<u64>,
+    total_msat: Option<u64>,
+    spendable_msat: Option<u64>,
+    receivable_msat: Option<u64>,
+}
+
+#[derive(Clone, uniffi::Enum)]
+pub enum ChannelState {
+    Openingd,
+    ChanneldAwaitingLockin,
+    ChanneldNormal,
+    ChanneldShuttingDown,
+    ClosingdSigexchange,
+    ClosingdComplete,
+    AwaitingUnilateral,
+    FundingSpendSeen,
+    Onchain,
+    DualopendOpenInit,
+    DualopendAwaitingLockin,
+    DualopendOpenCommitted,
+    DualopendOpenCommitReady,
+}
+
+impl ChannelState {
+    fn from_i32(value: i32) -> Self {
+        match value {
+            0 => ChannelState::Openingd,
+            1 => ChannelState::ChanneldAwaitingLockin,
+            2 => ChannelState::ChanneldNormal,
+            3 => ChannelState::ChanneldShuttingDown,
+            4 => ChannelState::ClosingdSigexchange,
+            5 => ChannelState::ClosingdComplete,
+            6 => ChannelState::AwaitingUnilateral,
+            7 => ChannelState::FundingSpendSeen,
+            8 => ChannelState::Onchain,
+            9 => ChannelState::DualopendOpenInit,
+            10 => ChannelState::DualopendAwaitingLockin,
+            11 => ChannelState::DualopendOpenCommitted,
+            12 => ChannelState::DualopendOpenCommitReady,
+            _ => ChannelState::Onchain, // Default fallback
+        }
+    }
+}
+
+impl From<clnpb::ListpeerchannelsResponse> for ListPeerChannelsResponse {
+    fn from(other: clnpb::ListpeerchannelsResponse) -> Self {
+        Self {
+            channels: other.channels.into_iter().map(|c| c.into()).collect(),
+        }
+    }
+}
+
+impl From<clnpb::ListpeerchannelsChannels> for PeerChannel {
+    fn from(other: clnpb::ListpeerchannelsChannels) -> Self {
+        let state = ChannelState::from_i32(other.state);
+        Self {
+            peer_id: other.peer_id,
+            peer_connected: other.peer_connected,
+            state,
+            short_channel_id: other.short_channel_id,
+            channel_id: other.channel_id,
+            funding_txid: other.funding_txid,
+            funding_outnum: other.funding_outnum,
+            to_us_msat: other.to_us_msat.map(|a| a.msat),
+            total_msat: other.total_msat.map(|a| a.msat),
+            spendable_msat: other.spendable_msat.map(|a| a.msat),
+            receivable_msat: other.receivable_msat.map(|a| a.msat),
+        }
+    }
+}
+
+
+
+// ============================================================
+// ListFunds response types
+// ============================================================
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct ListFundsResponse {
+    pub outputs: Vec<FundOutput>,
+    pub channels: Vec<FundChannel>,
+}
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct FundOutput {
+    txid: Vec<u8>,
+    output: u32,
+    amount_msat: u64,
+    status: OutputStatus,
+    address: Option<String>,
+    blockheight: Option<u32>,
+}
+
+#[derive(Clone, uniffi::Enum)]
+pub enum OutputStatus {
+    Unconfirmed,
+    Confirmed,
+    Spent,
+    Immature,
+}
+
+impl OutputStatus {
+    fn from_i32(value: i32) -> Self {
+        match value {
+            0 => OutputStatus::Unconfirmed,
+            1 => OutputStatus::Confirmed,
+            2 => OutputStatus::Spent,
+            3 => OutputStatus::Immature,
+            _ => OutputStatus::Unconfirmed, // Default fallback
+        }
+    }
+}
+
+#[allow(unused)]
+#[derive(Clone, uniffi::Record)]
+pub struct FundChannel {
+    peer_id: Vec<u8>,
+    our_amount_msat: u64,
+    amount_msat: u64,
+    funding_txid: Vec<u8>,
+    funding_output: u32,
+    connected: bool,
+    state: ChannelState,
+    short_channel_id: Option<String>,
+    channel_id: Option<Vec<u8>>,
+}
+
+impl From<clnpb::ListfundsResponse> for ListFundsResponse {
+    fn from(other: clnpb::ListfundsResponse) -> Self {
+        Self {
+            outputs: other.outputs.into_iter().map(|o| o.into()).collect(),
+            channels: other.channels.into_iter().map(|c| c.into()).collect(),
+        }
+    }
+}
+
+impl From<clnpb::ListfundsOutputs> for FundOutput {
+    fn from(other: clnpb::ListfundsOutputs) -> Self {
+        let status = OutputStatus::from_i32(other.status);
+        Self {
+            txid: other.txid,
+            output: other.output,
+            amount_msat: other.amount_msat.map(|a| a.msat).unwrap_or(0),
+            status,
+            address: other.address,
+            blockheight: other.blockheight,
+        }
+    }
+}
+
+impl From<clnpb::ListfundsChannels> for FundChannel {
+    fn from(other: clnpb::ListfundsChannels) -> Self {
+        let state = ChannelState::from_i32(other.state);
+        Self {
+            peer_id: other.peer_id,
+            our_amount_msat: other.our_amount_msat.map(|a| a.msat).unwrap_or(0),
+            amount_msat: other.amount_msat.map(|a| a.msat).unwrap_or(0),
+            funding_txid: other.funding_txid,
+            funding_output: other.funding_output,
+            connected: other.connected,
+            state,
+            short_channel_id: other.short_channel_id,
+            channel_id: other.channel_id,
+        }
+    }
+}
+
+
