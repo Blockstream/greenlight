@@ -25,6 +25,7 @@ dev = [
     "gl-testing",
     "pdoc>=15.0.4",
     "pytest>=7.0",
+    "pytest-cov>=7.0.0",
     "pytest-watcher>=0.4.3",
     "rich>=10.0",
 ]
@@ -37,3 +38,12 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+filterwarnings = [
+    # Suppress X.509 CN length warning from gl-testing cert generation.
+    # The CN field includes the full node_id (66 hex chars), exceeding the
+    # 64-character limit specified in RFC 5280. This is safe to ignore because:
+    # - We control both client (gl-client) and server sides of the connection
+    # - gl-client's TLS implementation doesn't enforce strict X.509 CN length
+    # - This only affects test infrastructure, not production certificates
+    "ignore:Attribute's length must be >= 1 and <= 64:UserWarning",
+]
