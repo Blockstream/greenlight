@@ -472,13 +472,13 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_peers() != 29567:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 21676:
+    if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 57530:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 51884:
+    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 44346:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_receive() != 24722:
+    if lib.uniffi_glsdk_checksum_method_node_receive() != 39761:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_send() != 30141:
+    if lib.uniffi_glsdk_checksum_method_node_send() != 4348:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_stop() != 20186:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -680,14 +680,14 @@ _UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_receive.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
@@ -695,49 +695,19 @@ _UniffiLib.uniffi_glsdk_fn_method_node_receive.argtypes = (
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_method_node_receive.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_receive.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_send.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_method_node_send.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_send.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_stop.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_stop.restype = None
-_UniffiLib.uniffi_glsdk_fn_clone_onchainreceiveresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_clone_onchainreceiveresponse.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_free_onchainreceiveresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_free_onchainreceiveresponse.restype = None
-_UniffiLib.uniffi_glsdk_fn_clone_onchainsendresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_clone_onchainsendresponse.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_free_onchainsendresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_free_onchainsendresponse.restype = None
-_UniffiLib.uniffi_glsdk_fn_clone_receiveresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_clone_receiveresponse.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_free_receiveresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_free_receiveresponse.restype = None
 _UniffiLib.uniffi_glsdk_fn_clone_scheduler.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -766,16 +736,6 @@ _UniffiLib.uniffi_glsdk_fn_method_scheduler_register.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_scheduler_register.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_clone_sendresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_clone_sendresponse.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_free_sendresponse.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_free_sendresponse.restype = None
 _UniffiLib.uniffi_glsdk_fn_clone_signer.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1255,14 +1215,6 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
 
 
 
-
-
-
-
-
-
-
-
 class FundChannel:
     peer_id: "bytes"
     our_amount_msat: "int"
@@ -1612,6 +1564,85 @@ class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
         _UniffiConverterSequenceTypePeer.write(value.peers, buf)
 
 
+class OnchainReceiveResponse:
+    bech32: "str"
+    p2tr: "str"
+    def __init__(self, *, bech32: "str", p2tr: "str"):
+        self.bech32 = bech32
+        self.p2tr = p2tr
+
+    def __str__(self):
+        return "OnchainReceiveResponse(bech32={}, p2tr={})".format(self.bech32, self.p2tr)
+
+    def __eq__(self, other):
+        if self.bech32 != other.bech32:
+            return False
+        if self.p2tr != other.p2tr:
+            return False
+        return True
+
+class _UniffiConverterTypeOnchainReceiveResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return OnchainReceiveResponse(
+            bech32=_UniffiConverterString.read(buf),
+            p2tr=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.bech32)
+        _UniffiConverterString.check_lower(value.p2tr)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.bech32, buf)
+        _UniffiConverterString.write(value.p2tr, buf)
+
+
+class OnchainSendResponse:
+    tx: "bytes"
+    txid: "bytes"
+    psbt: "str"
+    def __init__(self, *, tx: "bytes", txid: "bytes", psbt: "str"):
+        self.tx = tx
+        self.txid = txid
+        self.psbt = psbt
+
+    def __str__(self):
+        return "OnchainSendResponse(tx={}, txid={}, psbt={})".format(self.tx, self.txid, self.psbt)
+
+    def __eq__(self, other):
+        if self.tx != other.tx:
+            return False
+        if self.txid != other.txid:
+            return False
+        if self.psbt != other.psbt:
+            return False
+        return True
+
+class _UniffiConverterTypeOnchainSendResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return OnchainSendResponse(
+            tx=_UniffiConverterBytes.read(buf),
+            txid=_UniffiConverterBytes.read(buf),
+            psbt=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.tx)
+        _UniffiConverterBytes.check_lower(value.txid)
+        _UniffiConverterString.check_lower(value.psbt)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.tx, buf)
+        _UniffiConverterBytes.write(value.txid, buf)
+        _UniffiConverterString.write(value.psbt, buf)
+
+
 class Peer:
     id: "bytes"
     connected: "bool"
@@ -1773,6 +1804,92 @@ class _UniffiConverterTypePeerChannel(_UniffiConverterRustBuffer):
         _UniffiConverterOptionalUInt64.write(value.total_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.spendable_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.receivable_msat, buf)
+
+
+class ReceiveResponse:
+    bolt11: "str"
+    def __init__(self, *, bolt11: "str"):
+        self.bolt11 = bolt11
+
+    def __str__(self):
+        return "ReceiveResponse(bolt11={})".format(self.bolt11)
+
+    def __eq__(self, other):
+        if self.bolt11 != other.bolt11:
+            return False
+        return True
+
+class _UniffiConverterTypeReceiveResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ReceiveResponse(
+            bolt11=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.bolt11)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.bolt11, buf)
+
+
+class SendResponse:
+    status: "PayStatus"
+    preimage: "bytes"
+    amount_msat: "int"
+    amount_sent_msat: "int"
+    parts: "int"
+    def __init__(self, *, status: "PayStatus", preimage: "bytes", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
+        self.status = status
+        self.preimage = preimage
+        self.amount_msat = amount_msat
+        self.amount_sent_msat = amount_sent_msat
+        self.parts = parts
+
+    def __str__(self):
+        return "SendResponse(status={}, preimage={}, amount_msat={}, amount_sent_msat={}, parts={})".format(self.status, self.preimage, self.amount_msat, self.amount_sent_msat, self.parts)
+
+    def __eq__(self, other):
+        if self.status != other.status:
+            return False
+        if self.preimage != other.preimage:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.amount_sent_msat != other.amount_sent_msat:
+            return False
+        if self.parts != other.parts:
+            return False
+        return True
+
+class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return SendResponse(
+            status=_UniffiConverterTypePayStatus.read(buf),
+            preimage=_UniffiConverterBytes.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+            amount_sent_msat=_UniffiConverterUInt64.read(buf),
+            parts=_UniffiConverterUInt32.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypePayStatus.check_lower(value.status)
+        _UniffiConverterBytes.check_lower(value.preimage)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+        _UniffiConverterUInt64.check_lower(value.amount_sent_msat)
+        _UniffiConverterUInt32.check_lower(value.parts)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypePayStatus.write(value.status, buf)
+        _UniffiConverterBytes.write(value.preimage, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
+        _UniffiConverterUInt64.write(value.amount_sent_msat, buf)
+        _UniffiConverterUInt32.write(value.parts, buf)
 
 
 
@@ -2904,174 +3021,6 @@ class _UniffiConverterTypeNode:
     @classmethod
     def write(cls, value: NodeProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
-class OnchainReceiveResponseProtocol(typing.Protocol):
-    pass
-# OnchainReceiveResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
-class OnchainReceiveResponse():
-    _pointer: ctypes.c_void_p
-    
-    def __init__(self, *args, **kwargs):
-        raise ValueError("This class has no default constructor")
-
-    def __del__(self):
-        # In case of partial initialization of instances.
-        pointer = getattr(self, "_pointer", None)
-        if pointer is not None:
-            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_onchainreceiveresponse, pointer)
-
-    def _uniffi_clone_pointer(self):
-        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_onchainreceiveresponse, self._pointer)
-
-    # Used by alternative constructors or any methods which return this type.
-    @classmethod
-    def _make_instance_(cls, pointer):
-        # Lightly yucky way to bypass the usual __init__ logic
-        # and just create a new instance with the required pointer.
-        inst = cls.__new__(cls)
-        inst._pointer = pointer
-        return inst
-
-
-
-class _UniffiConverterTypeOnchainReceiveResponse:
-
-    @staticmethod
-    def lift(value: int):
-        return OnchainReceiveResponse._make_instance_(value)
-
-    @staticmethod
-    def check_lower(value: OnchainReceiveResponse):
-        if not isinstance(value, OnchainReceiveResponse):
-            raise TypeError("Expected OnchainReceiveResponse instance, {} found".format(type(value).__name__))
-
-    @staticmethod
-    def lower(value: OnchainReceiveResponseProtocol):
-        if not isinstance(value, OnchainReceiveResponse):
-            raise TypeError("Expected OnchainReceiveResponse instance, {} found".format(type(value).__name__))
-        return value._uniffi_clone_pointer()
-
-    @classmethod
-    def read(cls, buf: _UniffiRustBuffer):
-        ptr = buf.read_u64()
-        if ptr == 0:
-            raise InternalError("Raw pointer value was null")
-        return cls.lift(ptr)
-
-    @classmethod
-    def write(cls, value: OnchainReceiveResponseProtocol, buf: _UniffiRustBuffer):
-        buf.write_u64(cls.lower(value))
-class OnchainSendResponseProtocol(typing.Protocol):
-    pass
-# OnchainSendResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
-class OnchainSendResponse():
-    _pointer: ctypes.c_void_p
-    
-    def __init__(self, *args, **kwargs):
-        raise ValueError("This class has no default constructor")
-
-    def __del__(self):
-        # In case of partial initialization of instances.
-        pointer = getattr(self, "_pointer", None)
-        if pointer is not None:
-            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_onchainsendresponse, pointer)
-
-    def _uniffi_clone_pointer(self):
-        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_onchainsendresponse, self._pointer)
-
-    # Used by alternative constructors or any methods which return this type.
-    @classmethod
-    def _make_instance_(cls, pointer):
-        # Lightly yucky way to bypass the usual __init__ logic
-        # and just create a new instance with the required pointer.
-        inst = cls.__new__(cls)
-        inst._pointer = pointer
-        return inst
-
-
-
-class _UniffiConverterTypeOnchainSendResponse:
-
-    @staticmethod
-    def lift(value: int):
-        return OnchainSendResponse._make_instance_(value)
-
-    @staticmethod
-    def check_lower(value: OnchainSendResponse):
-        if not isinstance(value, OnchainSendResponse):
-            raise TypeError("Expected OnchainSendResponse instance, {} found".format(type(value).__name__))
-
-    @staticmethod
-    def lower(value: OnchainSendResponseProtocol):
-        if not isinstance(value, OnchainSendResponse):
-            raise TypeError("Expected OnchainSendResponse instance, {} found".format(type(value).__name__))
-        return value._uniffi_clone_pointer()
-
-    @classmethod
-    def read(cls, buf: _UniffiRustBuffer):
-        ptr = buf.read_u64()
-        if ptr == 0:
-            raise InternalError("Raw pointer value was null")
-        return cls.lift(ptr)
-
-    @classmethod
-    def write(cls, value: OnchainSendResponseProtocol, buf: _UniffiRustBuffer):
-        buf.write_u64(cls.lower(value))
-class ReceiveResponseProtocol(typing.Protocol):
-    pass
-# ReceiveResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
-class ReceiveResponse():
-    _pointer: ctypes.c_void_p
-    
-    def __init__(self, *args, **kwargs):
-        raise ValueError("This class has no default constructor")
-
-    def __del__(self):
-        # In case of partial initialization of instances.
-        pointer = getattr(self, "_pointer", None)
-        if pointer is not None:
-            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_receiveresponse, pointer)
-
-    def _uniffi_clone_pointer(self):
-        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_receiveresponse, self._pointer)
-
-    # Used by alternative constructors or any methods which return this type.
-    @classmethod
-    def _make_instance_(cls, pointer):
-        # Lightly yucky way to bypass the usual __init__ logic
-        # and just create a new instance with the required pointer.
-        inst = cls.__new__(cls)
-        inst._pointer = pointer
-        return inst
-
-
-
-class _UniffiConverterTypeReceiveResponse:
-
-    @staticmethod
-    def lift(value: int):
-        return ReceiveResponse._make_instance_(value)
-
-    @staticmethod
-    def check_lower(value: ReceiveResponse):
-        if not isinstance(value, ReceiveResponse):
-            raise TypeError("Expected ReceiveResponse instance, {} found".format(type(value).__name__))
-
-    @staticmethod
-    def lower(value: ReceiveResponseProtocol):
-        if not isinstance(value, ReceiveResponse):
-            raise TypeError("Expected ReceiveResponse instance, {} found".format(type(value).__name__))
-        return value._uniffi_clone_pointer()
-
-    @classmethod
-    def read(cls, buf: _UniffiRustBuffer):
-        ptr = buf.read_u64()
-        if ptr == 0:
-            raise InternalError("Raw pointer value was null")
-        return cls.lift(ptr)
-
-    @classmethod
-    def write(cls, value: ReceiveResponseProtocol, buf: _UniffiRustBuffer):
-        buf.write_u64(cls.lower(value))
 class SchedulerProtocol(typing.Protocol):
     def recover(self, signer: "Signer"):
         raise NotImplementedError
@@ -3164,62 +3113,6 @@ class _UniffiConverterTypeScheduler:
 
     @classmethod
     def write(cls, value: SchedulerProtocol, buf: _UniffiRustBuffer):
-        buf.write_u64(cls.lower(value))
-class SendResponseProtocol(typing.Protocol):
-    pass
-# SendResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
-class SendResponse():
-    _pointer: ctypes.c_void_p
-    
-    def __init__(self, *args, **kwargs):
-        raise ValueError("This class has no default constructor")
-
-    def __del__(self):
-        # In case of partial initialization of instances.
-        pointer = getattr(self, "_pointer", None)
-        if pointer is not None:
-            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_sendresponse, pointer)
-
-    def _uniffi_clone_pointer(self):
-        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_sendresponse, self._pointer)
-
-    # Used by alternative constructors or any methods which return this type.
-    @classmethod
-    def _make_instance_(cls, pointer):
-        # Lightly yucky way to bypass the usual __init__ logic
-        # and just create a new instance with the required pointer.
-        inst = cls.__new__(cls)
-        inst._pointer = pointer
-        return inst
-
-
-
-class _UniffiConverterTypeSendResponse:
-
-    @staticmethod
-    def lift(value: int):
-        return SendResponse._make_instance_(value)
-
-    @staticmethod
-    def check_lower(value: SendResponse):
-        if not isinstance(value, SendResponse):
-            raise TypeError("Expected SendResponse instance, {} found".format(type(value).__name__))
-
-    @staticmethod
-    def lower(value: SendResponseProtocol):
-        if not isinstance(value, SendResponse):
-            raise TypeError("Expected SendResponse instance, {} found".format(type(value).__name__))
-        return value._uniffi_clone_pointer()
-
-    @classmethod
-    def read(cls, buf: _UniffiRustBuffer):
-        ptr = buf.read_u64()
-        if ptr == 0:
-            raise InternalError("Raw pointer value was null")
-        return cls.lift(ptr)
-
-    @classmethod
-    def write(cls, value: SendResponseProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class SignerProtocol(typing.Protocol):
     def authenticate(self, creds: "Credentials"):
@@ -3330,16 +3223,16 @@ __all__ = [
     "ListFundsResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
+    "OnchainReceiveResponse",
+    "OnchainSendResponse",
     "Peer",
     "PeerChannel",
+    "ReceiveResponse",
+    "SendResponse",
     "Credentials",
     "Handle",
     "Node",
-    "OnchainReceiveResponse",
-    "OnchainSendResponse",
-    "ReceiveResponse",
     "Scheduler",
-    "SendResponse",
     "Signer",
 ]
 
