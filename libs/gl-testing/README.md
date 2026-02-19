@@ -145,6 +145,40 @@ TBD
    scheduled on the first `Scheduler.schedule` call and will run until
    the test completes.
 
+## Known Warnings
+
+### X.509 CN Length Warning
+
+When running tests, you may see warnings like:
+
+```
+UserWarning: Attribute's length must be >= 1 and <= 64, but it was 81
+```
+
+This warning comes from the `cryptography` library when generating
+test certificates. The Common Name (CN) field in test certificates
+includes the full node_id (a 66-character hex string), which exceeds
+the 64-character limit specified in RFC 5280.
+
+**This warning is safe to ignore** because:
+
+- We control both the client (`gl-client`) and server sides of all
+  connections in the test environment
+- `gl-client`'s TLS implementation does not enforce strict X.509 CN
+  length validation
+- This only affects test infrastructure certificates, not production
+  certificates issued by Greenlight
+
+To suppress this warning in your test suite, add the following to your
+`pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Attribute's length must be >= 1 and <= 64:UserWarning",
+]
+```
+
 ## Local Setup
 
 ### Dependencies

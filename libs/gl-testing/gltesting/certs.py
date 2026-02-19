@@ -232,7 +232,12 @@ def gencert(idpath):
 def gencert_from_csr(csr: bytes, recover=False, pairing=False):
     """Generate a leaf certificate to be used for actual communication from
     certificate signing request."""
-    # Get idpath from CN value in certificate signing request
+    # Get idpath from CN value in certificate signing request.
+    # Note: This may trigger a UserWarning about CN length exceeding 64 chars
+    # (RFC 5280 limit) because the CN includes the full node_id (66 hex chars).
+    # This is safe to ignore since we control both client (gl-client) and server
+    # sides, and gl-client doesn't enforce strict X.509 CN length validation.
+    # See README.md "Known Warnings" section for details.
     mycsr = x509.load_pem_x509_csr(csr, default_backend)
     idpath = mycsr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
