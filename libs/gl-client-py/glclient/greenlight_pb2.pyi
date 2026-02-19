@@ -3,61 +3,62 @@
 isort:skip_file
 """
 
-import builtins
-import collections.abc
-import google.protobuf.descriptor
-import google.protobuf.internal.containers
-import google.protobuf.internal.enum_type_wrapper
-import google.protobuf.message
+from collections import abc as _abc
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+import builtins as _builtins
 import sys
-import typing
+import typing as _typing
 
 if sys.version_info >= (3, 10):
-    import typing as typing_extensions
+    from typing import TypeAlias as _TypeAlias
 else:
-    import typing_extensions
+    from typing_extensions import TypeAlias as _TypeAlias
 
-DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
+DESCRIPTOR: _descriptor.FileDescriptor
 
-@typing.final
-class HsmRequestContext(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class HsmRequestContext(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    DBID_FIELD_NUMBER: builtins.int
-    CAPABILITIES_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
-    dbid: builtins.int
-    capabilities: builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    DBID_FIELD_NUMBER: _builtins.int
+    CAPABILITIES_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    dbid: _builtins.int
+    capabilities: _builtins.int
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        dbid: builtins.int = ...,
-        capabilities: builtins.int = ...,
+        node_id: _builtins.bytes = ...,
+        dbid: _builtins.int = ...,
+        capabilities: _builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["capabilities", b"capabilities", "dbid", b"dbid", "node_id", b"node_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["capabilities", b"capabilities", "dbid", b"dbid", "node_id", b"node_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___HsmRequestContext = HsmRequestContext
+Global___HsmRequestContext: _TypeAlias = HsmRequestContext  # noqa: Y015
 
-@typing.final
-class HsmResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class HsmResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_ID_FIELD_NUMBER: builtins.int
-    RAW_FIELD_NUMBER: builtins.int
-    SIGNER_STATE_FIELD_NUMBER: builtins.int
-    ERROR_FIELD_NUMBER: builtins.int
-    request_id: builtins.int
-    raw: builtins.bytes
-    error: builtins.str
+    REQUEST_ID_FIELD_NUMBER: _builtins.int
+    RAW_FIELD_NUMBER: _builtins.int
+    SIGNER_STATE_FIELD_NUMBER: _builtins.int
+    ERROR_FIELD_NUMBER: _builtins.int
+    request_id: _builtins.int
+    raw: _builtins.bytes
+    error: _builtins.str
     """If the signer reported an error, and did therefore not include
     `raw`, this is the stringified error, so we can print it in the
     logs. This should help us collate policy errors with the changes
     proposed by CLN
     """
-    @property
-    def signer_state(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SignerStateEntry]:
+    @_builtins.property
+    def signer_state(self) -> _containers.RepeatedCompositeFieldContainer[Global___SignerStateEntry]:
         """A list of updated key-value-version tuples that is to be
         merged into the state tracked by the plugin.
         """
@@ -65,36 +66,37 @@ class HsmResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        request_id: builtins.int = ...,
-        raw: builtins.bytes = ...,
-        signer_state: collections.abc.Iterable[global___SignerStateEntry] | None = ...,
-        error: builtins.str = ...,
+        request_id: _builtins.int = ...,
+        raw: _builtins.bytes = ...,
+        signer_state: _abc.Iterable[Global___SignerStateEntry] | None = ...,
+        error: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["error", b"error", "raw", b"raw", "request_id", b"request_id", "signer_state", b"signer_state"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["error", b"error", "raw", b"raw", "request_id", b"request_id", "signer_state", b"signer_state"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___HsmResponse = HsmResponse
+Global___HsmResponse: _TypeAlias = HsmResponse  # noqa: Y015
 
-@typing.final
-class HsmRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class HsmRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_ID_FIELD_NUMBER: builtins.int
-    CONTEXT_FIELD_NUMBER: builtins.int
-    RAW_FIELD_NUMBER: builtins.int
-    SIGNER_STATE_FIELD_NUMBER: builtins.int
-    REQUESTS_FIELD_NUMBER: builtins.int
-    request_id: builtins.int
-    raw: builtins.bytes
-    @property
-    def context(self) -> global___HsmRequestContext: ...
-    @property
-    def signer_state(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SignerStateEntry]:
+    REQUEST_ID_FIELD_NUMBER: _builtins.int
+    CONTEXT_FIELD_NUMBER: _builtins.int
+    RAW_FIELD_NUMBER: _builtins.int
+    SIGNER_STATE_FIELD_NUMBER: _builtins.int
+    REQUESTS_FIELD_NUMBER: _builtins.int
+    request_id: _builtins.int
+    raw: _builtins.bytes
+    @_builtins.property
+    def context(self) -> Global___HsmRequestContext: ...
+    @_builtins.property
+    def signer_state(self) -> _containers.RepeatedCompositeFieldContainer[Global___SignerStateEntry]:
         """A list of key-value-version tuples that the signer should
         use to update its internal state.
         """
 
-    @property
-    def requests(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PendingRequest]:
+    @_builtins.property
+    def requests(self) -> _containers.RepeatedCompositeFieldContainer[Global___PendingRequest]:
         """Currently active requests that are used to justify changes
         in state.
         """
@@ -102,188 +104,203 @@ class HsmRequest(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        request_id: builtins.int = ...,
-        context: global___HsmRequestContext | None = ...,
-        raw: builtins.bytes = ...,
-        signer_state: collections.abc.Iterable[global___SignerStateEntry] | None = ...,
-        requests: collections.abc.Iterable[global___PendingRequest] | None = ...,
+        request_id: _builtins.int = ...,
+        context: Global___HsmRequestContext | None = ...,
+        raw: _builtins.bytes = ...,
+        signer_state: _abc.Iterable[Global___SignerStateEntry] | None = ...,
+        requests: _abc.Iterable[Global___PendingRequest] | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["context", b"context"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["context", b"context", "raw", b"raw", "request_id", b"request_id", "requests", b"requests", "signer_state", b"signer_state"]) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["context", b"context"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["context", b"context", "raw", b"raw", "request_id", b"request_id", "requests", b"requests", "signer_state", b"signer_state"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___HsmRequest = HsmRequest
+Global___HsmRequest: _TypeAlias = HsmRequest  # noqa: Y015
 
-@typing.final
-class Empty(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class Empty(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___Empty = Empty
+Global___Empty: _TypeAlias = Empty  # noqa: Y015
 
-@typing.final
-class Amount(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class Amount(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    MILLISATOSHI_FIELD_NUMBER: builtins.int
-    SATOSHI_FIELD_NUMBER: builtins.int
-    BITCOIN_FIELD_NUMBER: builtins.int
-    ALL_FIELD_NUMBER: builtins.int
-    ANY_FIELD_NUMBER: builtins.int
-    millisatoshi: builtins.int
-    satoshi: builtins.int
-    bitcoin: builtins.int
-    all: builtins.bool
-    any: builtins.bool
+    MILLISATOSHI_FIELD_NUMBER: _builtins.int
+    SATOSHI_FIELD_NUMBER: _builtins.int
+    BITCOIN_FIELD_NUMBER: _builtins.int
+    ALL_FIELD_NUMBER: _builtins.int
+    ANY_FIELD_NUMBER: _builtins.int
+    millisatoshi: _builtins.int
+    satoshi: _builtins.int
+    bitcoin: _builtins.int
+    all: _builtins.bool
+    any: _builtins.bool
     def __init__(
         self,
         *,
-        millisatoshi: builtins.int = ...,
-        satoshi: builtins.int = ...,
-        bitcoin: builtins.int = ...,
-        all: builtins.bool = ...,
-        any: builtins.bool = ...,
+        millisatoshi: _builtins.int = ...,
+        satoshi: _builtins.int = ...,
+        bitcoin: _builtins.int = ...,
+        all: _builtins.bool = ...,
+        any: _builtins.bool = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["all", b"all", "any", b"any", "bitcoin", b"bitcoin", "millisatoshi", b"millisatoshi", "satoshi", b"satoshi", "unit", b"unit"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["all", b"all", "any", b"any", "bitcoin", b"bitcoin", "millisatoshi", b"millisatoshi", "satoshi", b"satoshi", "unit", b"unit"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["unit", b"unit"]) -> typing.Literal["millisatoshi", "satoshi", "bitcoin", "all", "any"] | None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["all", b"all", "any", b"any", "bitcoin", b"bitcoin", "millisatoshi", b"millisatoshi", "satoshi", b"satoshi", "unit", b"unit"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["all", b"all", "any", b"any", "bitcoin", b"bitcoin", "millisatoshi", b"millisatoshi", "satoshi", b"satoshi", "unit", b"unit"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType_unit: _TypeAlias = _typing.Literal["millisatoshi", "satoshi", "bitcoin", "all", "any"]  # noqa: Y015
+    _WhichOneofArgType_unit: _TypeAlias = _typing.Literal["unit", b"unit"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType_unit) -> _WhichOneofReturnType_unit | None: ...
 
-global___Amount = Amount
+Global___Amount: _TypeAlias = Amount  # noqa: Y015
 
-@typing.final
-class StreamIncomingFilter(google.protobuf.message.Message):
+@_typing.final
+class StreamIncomingFilter(_message.Message):
     """Options to stream_incoming to specify what to stream."""
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___StreamIncomingFilter = StreamIncomingFilter
+Global___StreamIncomingFilter: _TypeAlias = StreamIncomingFilter  # noqa: Y015
 
-@typing.final
-class TlvField(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class TlvField(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    TYPE_FIELD_NUMBER: builtins.int
-    VALUE_FIELD_NUMBER: builtins.int
-    type: builtins.int
-    value: builtins.bytes
+    TYPE_FIELD_NUMBER: _builtins.int
+    VALUE_FIELD_NUMBER: _builtins.int
+    type: _builtins.int
+    value: _builtins.bytes
     """length is implied since the value field carries its own
     length here.
     """
     def __init__(
         self,
         *,
-        type: builtins.int = ...,
-        value: builtins.bytes = ...,
+        type: _builtins.int = ...,
+        value: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["type", b"type", "value", b"value"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["type", b"type", "value", b"value"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___TlvField = TlvField
+Global___TlvField: _TypeAlias = TlvField  # noqa: Y015
 
-@typing.final
-class OffChainPayment(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class OffChainPayment(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    LABEL_FIELD_NUMBER: builtins.int
-    PREIMAGE_FIELD_NUMBER: builtins.int
-    AMOUNT_FIELD_NUMBER: builtins.int
-    EXTRATLVS_FIELD_NUMBER: builtins.int
-    PAYMENT_HASH_FIELD_NUMBER: builtins.int
-    BOLT11_FIELD_NUMBER: builtins.int
-    label: builtins.str
-    preimage: builtins.bytes
-    payment_hash: builtins.bytes
-    bolt11: builtins.str
-    @property
-    def amount(self) -> global___Amount: ...
-    @property
-    def extratlvs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___TlvField]: ...
+    LABEL_FIELD_NUMBER: _builtins.int
+    PREIMAGE_FIELD_NUMBER: _builtins.int
+    AMOUNT_FIELD_NUMBER: _builtins.int
+    EXTRATLVS_FIELD_NUMBER: _builtins.int
+    PAYMENT_HASH_FIELD_NUMBER: _builtins.int
+    BOLT11_FIELD_NUMBER: _builtins.int
+    label: _builtins.str
+    preimage: _builtins.bytes
+    payment_hash: _builtins.bytes
+    bolt11: _builtins.str
+    @_builtins.property
+    def amount(self) -> Global___Amount: ...
+    @_builtins.property
+    def extratlvs(self) -> _containers.RepeatedCompositeFieldContainer[Global___TlvField]: ...
     def __init__(
         self,
         *,
-        label: builtins.str = ...,
-        preimage: builtins.bytes = ...,
-        amount: global___Amount | None = ...,
-        extratlvs: collections.abc.Iterable[global___TlvField] | None = ...,
-        payment_hash: builtins.bytes = ...,
-        bolt11: builtins.str = ...,
+        label: _builtins.str = ...,
+        preimage: _builtins.bytes = ...,
+        amount: Global___Amount | None = ...,
+        extratlvs: _abc.Iterable[Global___TlvField] | None = ...,
+        payment_hash: _builtins.bytes = ...,
+        bolt11: _builtins.str = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["amount", b"amount"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["amount", b"amount", "bolt11", b"bolt11", "extratlvs", b"extratlvs", "label", b"label", "payment_hash", b"payment_hash", "preimage", b"preimage"]) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["amount", b"amount"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["amount", b"amount", "bolt11", b"bolt11", "extratlvs", b"extratlvs", "label", b"label", "payment_hash", b"payment_hash", "preimage", b"preimage"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___OffChainPayment = OffChainPayment
+Global___OffChainPayment: _TypeAlias = OffChainPayment  # noqa: Y015
 
-@typing.final
-class IncomingPayment(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class IncomingPayment(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    OFFCHAIN_FIELD_NUMBER: builtins.int
-    @property
-    def offchain(self) -> global___OffChainPayment: ...
+    OFFCHAIN_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def offchain(self) -> Global___OffChainPayment: ...
     def __init__(
         self,
         *,
-        offchain: global___OffChainPayment | None = ...,
+        offchain: Global___OffChainPayment | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["details", b"details", "offchain", b"offchain"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["details", b"details", "offchain", b"offchain"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["details", b"details"]) -> typing.Literal["offchain"] | None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["details", b"details", "offchain", b"offchain"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["details", b"details", "offchain", b"offchain"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType_details: _TypeAlias = _typing.Literal["offchain"]  # noqa: Y015
+    _WhichOneofArgType_details: _TypeAlias = _typing.Literal["details", b"details"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType_details) -> _WhichOneofReturnType_details | None: ...
 
-global___IncomingPayment = IncomingPayment
+Global___IncomingPayment: _TypeAlias = IncomingPayment  # noqa: Y015
 
-@typing.final
-class StreamLogRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class StreamLogRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___StreamLogRequest = StreamLogRequest
+Global___StreamLogRequest: _TypeAlias = StreamLogRequest  # noqa: Y015
 
-@typing.final
-class LogEntry(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class LogEntry(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    LINE_FIELD_NUMBER: builtins.int
-    line: builtins.str
-    def __init__(
-        self,
-        *,
-        line: builtins.str = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["line", b"line"]) -> None: ...
-
-global___LogEntry = LogEntry
-
-@typing.final
-class SignerStateEntry(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    VERSION_FIELD_NUMBER: builtins.int
-    KEY_FIELD_NUMBER: builtins.int
-    VALUE_FIELD_NUMBER: builtins.int
-    version: builtins.int
-    key: builtins.str
-    value: builtins.bytes
+    LINE_FIELD_NUMBER: _builtins.int
+    line: _builtins.str
     def __init__(
         self,
         *,
-        version: builtins.int = ...,
-        key: builtins.str = ...,
-        value: builtins.bytes = ...,
+        line: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["key", b"key", "value", b"value", "version", b"version"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["line", b"line"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___SignerStateEntry = SignerStateEntry
+Global___LogEntry: _TypeAlias = LogEntry  # noqa: Y015
 
-@typing.final
-class PendingRequest(google.protobuf.message.Message):
+@_typing.final
+class SignerStateEntry(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    VERSION_FIELD_NUMBER: _builtins.int
+    KEY_FIELD_NUMBER: _builtins.int
+    VALUE_FIELD_NUMBER: _builtins.int
+    version: _builtins.int
+    key: _builtins.str
+    value: _builtins.bytes
+    def __init__(
+        self,
+        *,
+        version: _builtins.int = ...,
+        key: _builtins.str = ...,
+        value: _builtins.bytes = ...,
+    ) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["key", b"key", "value", b"value", "version", b"version"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+
+Global___SignerStateEntry: _TypeAlias = SignerStateEntry  # noqa: Y015
+
+@_typing.final
+class PendingRequest(_message.Message):
     """This represents a grpc request that is currently pending, along
     with the pubkey of the client issuing the request and a matching
     signature. This allows the signer to verify that the state changes
@@ -291,47 +308,48 @@ class PendingRequest(google.protobuf.message.Message):
     commands, and were not injected somewhere along the way.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_FIELD_NUMBER: builtins.int
-    URI_FIELD_NUMBER: builtins.int
-    SIGNATURE_FIELD_NUMBER: builtins.int
-    PUBKEY_FIELD_NUMBER: builtins.int
-    TIMESTAMP_FIELD_NUMBER: builtins.int
-    RUNE_FIELD_NUMBER: builtins.int
-    request: builtins.bytes
-    uri: builtins.str
-    signature: builtins.bytes
-    pubkey: builtins.bytes
-    timestamp: builtins.int
-    rune: builtins.bytes
+    REQUEST_FIELD_NUMBER: _builtins.int
+    URI_FIELD_NUMBER: _builtins.int
+    SIGNATURE_FIELD_NUMBER: _builtins.int
+    PUBKEY_FIELD_NUMBER: _builtins.int
+    TIMESTAMP_FIELD_NUMBER: _builtins.int
+    RUNE_FIELD_NUMBER: _builtins.int
+    request: _builtins.bytes
+    uri: _builtins.str
+    signature: _builtins.bytes
+    pubkey: _builtins.bytes
+    timestamp: _builtins.int
+    rune: _builtins.bytes
     def __init__(
         self,
         *,
-        request: builtins.bytes = ...,
-        uri: builtins.str = ...,
-        signature: builtins.bytes = ...,
-        pubkey: builtins.bytes = ...,
-        timestamp: builtins.int = ...,
-        rune: builtins.bytes = ...,
+        request: _builtins.bytes = ...,
+        uri: _builtins.str = ...,
+        signature: _builtins.bytes = ...,
+        pubkey: _builtins.bytes = ...,
+        timestamp: _builtins.int = ...,
+        rune: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["pubkey", b"pubkey", "request", b"request", "rune", b"rune", "signature", b"signature", "timestamp", b"timestamp", "uri", b"uri"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["pubkey", b"pubkey", "request", b"request", "rune", b"rune", "signature", b"signature", "timestamp", b"timestamp", "uri", b"uri"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___PendingRequest = PendingRequest
+Global___PendingRequest: _TypeAlias = PendingRequest  # noqa: Y015
 
-@typing.final
-class NodeConfig(google.protobuf.message.Message):
+@_typing.final
+class NodeConfig(_message.Message):
     """The `NodeConfig` is used to pass startup parameters to the
     node. The `gl-plugin` will look for a file in its directory to load
     these values from. Please refer to the individual fields to learn
     what they do.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    STARTUPMSGS_FIELD_NUMBER: builtins.int
-    @property
-    def startupmsgs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___StartupMessage]:
+    STARTUPMSGS_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def startupmsgs(self) -> _containers.RepeatedCompositeFieldContainer[Global___StartupMessage]:
         """In order to start without a signer attached we need to
         stash a couple of canned messages that we'd otherwise ask
         from the signer. These are just request-response tuples
@@ -341,35 +359,37 @@ class NodeConfig(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        startupmsgs: collections.abc.Iterable[global___StartupMessage] | None = ...,
+        startupmsgs: _abc.Iterable[Global___StartupMessage] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["startupmsgs", b"startupmsgs"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["startupmsgs", b"startupmsgs"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___NodeConfig = NodeConfig
+Global___NodeConfig: _TypeAlias = NodeConfig  # noqa: Y015
 
-@typing.final
-class GlConfig(google.protobuf.message.Message):
+@_typing.final
+class GlConfig(_message.Message):
     """The `GlConfig` is used to pass greenlight-specific startup parameters
     to the node. The `gl-plugin` will look for a serialized config object in 
     the node's datastore to load these values from. Please refer to the 
     individual fields to learn what they do.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    CLOSE_TO_ADDR_FIELD_NUMBER: builtins.int
-    close_to_addr: builtins.str
+    CLOSE_TO_ADDR_FIELD_NUMBER: _builtins.int
+    close_to_addr: _builtins.str
     def __init__(
         self,
         *,
-        close_to_addr: builtins.str = ...,
+        close_to_addr: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["close_to_addr", b"close_to_addr"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["close_to_addr", b"close_to_addr"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___GlConfig = GlConfig
+Global___GlConfig: _TypeAlias = GlConfig  # noqa: Y015
 
-@typing.final
-class StartupMessage(google.protobuf.message.Message):
+@_typing.final
+class StartupMessage(_message.Message):
     """A message that we know will be requested by `lightningd` at
     startup, and that we stash a response to on the scheduler. This
     allows the scheduler to start a node without requiring the signer
@@ -377,93 +397,96 @@ class StartupMessage(google.protobuf.message.Message):
     prefix, but without the length prefix.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_FIELD_NUMBER: builtins.int
-    RESPONSE_FIELD_NUMBER: builtins.int
-    request: builtins.bytes
-    response: builtins.bytes
+    REQUEST_FIELD_NUMBER: _builtins.int
+    RESPONSE_FIELD_NUMBER: _builtins.int
+    request: _builtins.bytes
+    response: _builtins.bytes
     def __init__(
         self,
         *,
-        request: builtins.bytes = ...,
-        response: builtins.bytes = ...,
+        request: _builtins.bytes = ...,
+        response: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["request", b"request", "response", b"response"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["request", b"request", "response", b"response"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___StartupMessage = StartupMessage
+Global___StartupMessage: _TypeAlias = StartupMessage  # noqa: Y015
 
-@typing.final
-class StreamCustommsgRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class StreamCustommsgRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___StreamCustommsgRequest = StreamCustommsgRequest
+Global___StreamCustommsgRequest: _TypeAlias = StreamCustommsgRequest  # noqa: Y015
 
-@typing.final
-class Custommsg(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class Custommsg(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    PEER_ID_FIELD_NUMBER: builtins.int
-    PAYLOAD_FIELD_NUMBER: builtins.int
-    peer_id: builtins.bytes
-    payload: builtins.bytes
-    def __init__(
-        self,
-        *,
-        peer_id: builtins.bytes = ...,
-        payload: builtins.bytes = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["payload", b"payload", "peer_id", b"peer_id"]) -> None: ...
-
-global___Custommsg = Custommsg
-
-@typing.final
-class TrampolinePayRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    BOLT11_FIELD_NUMBER: builtins.int
-    TRAMPOLINE_NODE_ID_FIELD_NUMBER: builtins.int
-    AMOUNT_MSAT_FIELD_NUMBER: builtins.int
-    LABEL_FIELD_NUMBER: builtins.int
-    MAXFEEPERCENT_FIELD_NUMBER: builtins.int
-    MAXDELAY_FIELD_NUMBER: builtins.int
-    DESCRIPTION_FIELD_NUMBER: builtins.int
-    bolt11: builtins.str
-    trampoline_node_id: builtins.bytes
-    amount_msat: builtins.int
-    label: builtins.str
-    maxfeepercent: builtins.float
-    maxdelay: builtins.int
-    description: builtins.str
+    PEER_ID_FIELD_NUMBER: _builtins.int
+    PAYLOAD_FIELD_NUMBER: _builtins.int
+    peer_id: _builtins.bytes
+    payload: _builtins.bytes
     def __init__(
         self,
         *,
-        bolt11: builtins.str = ...,
-        trampoline_node_id: builtins.bytes = ...,
-        amount_msat: builtins.int = ...,
-        label: builtins.str = ...,
-        maxfeepercent: builtins.float = ...,
-        maxdelay: builtins.int = ...,
-        description: builtins.str = ...,
+        peer_id: _builtins.bytes = ...,
+        payload: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "bolt11", b"bolt11", "description", b"description", "label", b"label", "maxdelay", b"maxdelay", "maxfeepercent", b"maxfeepercent", "trampoline_node_id", b"trampoline_node_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["payload", b"payload", "peer_id", b"peer_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___TrampolinePayRequest = TrampolinePayRequest
+Global___Custommsg: _TypeAlias = Custommsg  # noqa: Y015
 
-@typing.final
-class TrampolinePayResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class TrampolinePayRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BOLT11_FIELD_NUMBER: _builtins.int
+    TRAMPOLINE_NODE_ID_FIELD_NUMBER: _builtins.int
+    AMOUNT_MSAT_FIELD_NUMBER: _builtins.int
+    LABEL_FIELD_NUMBER: _builtins.int
+    MAXFEEPERCENT_FIELD_NUMBER: _builtins.int
+    MAXDELAY_FIELD_NUMBER: _builtins.int
+    DESCRIPTION_FIELD_NUMBER: _builtins.int
+    bolt11: _builtins.str
+    trampoline_node_id: _builtins.bytes
+    amount_msat: _builtins.int
+    label: _builtins.str
+    maxfeepercent: _builtins.float
+    maxdelay: _builtins.int
+    description: _builtins.str
+    def __init__(
+        self,
+        *,
+        bolt11: _builtins.str = ...,
+        trampoline_node_id: _builtins.bytes = ...,
+        amount_msat: _builtins.int = ...,
+        label: _builtins.str = ...,
+        maxfeepercent: _builtins.float = ...,
+        maxdelay: _builtins.int = ...,
+        description: _builtins.str = ...,
+    ) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["amount_msat", b"amount_msat", "bolt11", b"bolt11", "description", b"description", "label", b"label", "maxdelay", b"maxdelay", "maxfeepercent", b"maxfeepercent", "trampoline_node_id", b"trampoline_node_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+
+Global___TrampolinePayRequest: _TypeAlias = TrampolinePayRequest  # noqa: Y015
+
+@_typing.final
+class TrampolinePayResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
     class _PayStatus:
-        ValueType = typing.NewType("ValueType", builtins.int)
-        V: typing_extensions.TypeAlias = ValueType
+        ValueType = _typing.NewType("ValueType", _builtins.int)
+        V: _TypeAlias = ValueType  # noqa: Y015
 
-    class _PayStatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[TrampolinePayResponse._PayStatus.ValueType], builtins.type):
-        DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
+    class _PayStatusEnumTypeWrapper(_enum_type_wrapper._EnumTypeWrapper[TrampolinePayResponse._PayStatus.ValueType], _builtins.type):
+        DESCRIPTOR: _descriptor.EnumDescriptor
         COMPLETE: TrampolinePayResponse._PayStatus.ValueType  # 0
         FAILED: TrampolinePayResponse._PayStatus.ValueType  # 2
 
@@ -471,92 +494,184 @@ class TrampolinePayResponse(google.protobuf.message.Message):
     COMPLETE: TrampolinePayResponse.PayStatus.ValueType  # 0
     FAILED: TrampolinePayResponse.PayStatus.ValueType  # 2
 
-    PAYMENT_PREIMAGE_FIELD_NUMBER: builtins.int
-    PAYMENT_HASH_FIELD_NUMBER: builtins.int
-    CREATED_AT_FIELD_NUMBER: builtins.int
-    PARTS_FIELD_NUMBER: builtins.int
-    AMOUNT_MSAT_FIELD_NUMBER: builtins.int
-    AMOUNT_SENT_MSAT_FIELD_NUMBER: builtins.int
-    DESTINATION_FIELD_NUMBER: builtins.int
-    payment_preimage: builtins.bytes
-    payment_hash: builtins.bytes
-    created_at: builtins.float
-    parts: builtins.int
-    amount_msat: builtins.int
-    amount_sent_msat: builtins.int
-    destination: builtins.bytes
+    PAYMENT_PREIMAGE_FIELD_NUMBER: _builtins.int
+    PAYMENT_HASH_FIELD_NUMBER: _builtins.int
+    CREATED_AT_FIELD_NUMBER: _builtins.int
+    PARTS_FIELD_NUMBER: _builtins.int
+    AMOUNT_MSAT_FIELD_NUMBER: _builtins.int
+    AMOUNT_SENT_MSAT_FIELD_NUMBER: _builtins.int
+    DESTINATION_FIELD_NUMBER: _builtins.int
+    payment_preimage: _builtins.bytes
+    payment_hash: _builtins.bytes
+    created_at: _builtins.float
+    parts: _builtins.int
+    amount_msat: _builtins.int
+    amount_sent_msat: _builtins.int
+    destination: _builtins.bytes
     def __init__(
         self,
         *,
-        payment_preimage: builtins.bytes = ...,
-        payment_hash: builtins.bytes = ...,
-        created_at: builtins.float = ...,
-        parts: builtins.int = ...,
-        amount_msat: builtins.int = ...,
-        amount_sent_msat: builtins.int = ...,
-        destination: builtins.bytes = ...,
+        payment_preimage: _builtins.bytes = ...,
+        payment_hash: _builtins.bytes = ...,
+        created_at: _builtins.float = ...,
+        parts: _builtins.int = ...,
+        amount_msat: _builtins.int = ...,
+        amount_sent_msat: _builtins.int = ...,
+        destination: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "amount_sent_msat", b"amount_sent_msat", "created_at", b"created_at", "destination", b"destination", "parts", b"parts", "payment_hash", b"payment_hash", "payment_preimage", b"payment_preimage"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["amount_msat", b"amount_msat", "amount_sent_msat", b"amount_sent_msat", "created_at", b"created_at", "destination", b"destination", "parts", b"parts", "payment_hash", b"payment_hash", "payment_preimage", b"payment_preimage"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___TrampolinePayResponse = TrampolinePayResponse
+Global___TrampolinePayResponse: _TypeAlias = TrampolinePayResponse  # noqa: Y015
 
-@typing.final
-class LspInvoiceRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class LspInvoiceRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    LSP_ID_FIELD_NUMBER: builtins.int
-    TOKEN_FIELD_NUMBER: builtins.int
-    AMOUNT_MSAT_FIELD_NUMBER: builtins.int
-    DESCRIPTION_FIELD_NUMBER: builtins.int
-    LABEL_FIELD_NUMBER: builtins.int
-    lsp_id: builtins.str
+    LSP_ID_FIELD_NUMBER: _builtins.int
+    TOKEN_FIELD_NUMBER: _builtins.int
+    AMOUNT_MSAT_FIELD_NUMBER: _builtins.int
+    DESCRIPTION_FIELD_NUMBER: _builtins.int
+    LABEL_FIELD_NUMBER: _builtins.int
+    lsp_id: _builtins.str
     """len=0 => None, let the server decide."""
-    token: builtins.str
+    token: _builtins.str
     """Optional: for discounts/API keys
     len=0 => None
     """
-    amount_msat: builtins.int
+    amount_msat: _builtins.int
     """Pass-through of cln invoice rpc params
     0 => Any
     """
-    description: builtins.str
-    label: builtins.str
+    description: _builtins.str
+    label: _builtins.str
     def __init__(
         self,
         *,
-        lsp_id: builtins.str = ...,
-        token: builtins.str = ...,
-        amount_msat: builtins.int = ...,
-        description: builtins.str = ...,
-        label: builtins.str = ...,
+        lsp_id: _builtins.str = ...,
+        token: _builtins.str = ...,
+        amount_msat: _builtins.int = ...,
+        description: _builtins.str = ...,
+        label: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["amount_msat", b"amount_msat", "description", b"description", "label", b"label", "lsp_id", b"lsp_id", "token", b"token"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["amount_msat", b"amount_msat", "description", b"description", "label", b"label", "lsp_id", b"lsp_id", "token", b"token"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___LspInvoiceRequest = LspInvoiceRequest
+Global___LspInvoiceRequest: _TypeAlias = LspInvoiceRequest  # noqa: Y015
 
-@typing.final
-class LspInvoiceResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class LspInvoiceResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    BOLT11_FIELD_NUMBER: builtins.int
-    CREATED_INDEX_FIELD_NUMBER: builtins.int
-    EXPIRES_AT_FIELD_NUMBER: builtins.int
-    PAYMENT_HASH_FIELD_NUMBER: builtins.int
-    PAYMENT_SECRET_FIELD_NUMBER: builtins.int
-    bolt11: builtins.str
-    created_index: builtins.int
-    expires_at: builtins.int
-    payment_hash: builtins.bytes
-    payment_secret: builtins.bytes
+    BOLT11_FIELD_NUMBER: _builtins.int
+    CREATED_INDEX_FIELD_NUMBER: _builtins.int
+    EXPIRES_AT_FIELD_NUMBER: _builtins.int
+    PAYMENT_HASH_FIELD_NUMBER: _builtins.int
+    PAYMENT_SECRET_FIELD_NUMBER: _builtins.int
+    bolt11: _builtins.str
+    created_index: _builtins.int
+    expires_at: _builtins.int
+    payment_hash: _builtins.bytes
+    payment_secret: _builtins.bytes
     def __init__(
         self,
         *,
-        bolt11: builtins.str = ...,
-        created_index: builtins.int = ...,
-        expires_at: builtins.int = ...,
-        payment_hash: builtins.bytes = ...,
-        payment_secret: builtins.bytes = ...,
+        bolt11: _builtins.str = ...,
+        created_index: _builtins.int = ...,
+        expires_at: _builtins.int = ...,
+        payment_hash: _builtins.bytes = ...,
+        payment_secret: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["bolt11", b"bolt11", "created_index", b"created_index", "expires_at", b"expires_at", "payment_hash", b"payment_hash", "payment_secret", b"payment_secret"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["bolt11", b"bolt11", "created_index", b"created_index", "expires_at", b"expires_at", "payment_hash", b"payment_hash", "payment_secret", b"payment_secret"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___LspInvoiceResponse = LspInvoiceResponse
+Global___LspInvoiceResponse: _TypeAlias = LspInvoiceResponse  # noqa: Y015
+
+@_typing.final
+class NodeEventsRequest(_message.Message):
+    """Request for streaming node events. Currently empty but defined as
+    its own message type to allow adding filters in the future (e.g.,
+    filter by event type, invoice label, etc.)
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    def __init__(
+        self,
+    ) -> None: ...
+
+Global___NodeEventsRequest: _TypeAlias = NodeEventsRequest  # noqa: Y015
+
+@_typing.final
+class NodeEvent(_message.Message):
+    """A real-time event from the node. Uses oneof to discriminate between
+    different event types.
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    INVOICE_PAID_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def invoice_paid(self) -> Global___InvoicePaid:
+        """Future event types:
+        PeerConnected peer_connected = 2;
+        PeerDisconnected peer_disconnected = 3;
+        ChannelStateChanged channel_state_changed = 4;
+        BalanceChanged balance_changed = 5;
+        """
+
+    def __init__(
+        self,
+        *,
+        invoice_paid: Global___InvoicePaid | None = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["event", b"event", "invoice_paid", b"invoice_paid"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["event", b"event", "invoice_paid", b"invoice_paid"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType_event: _TypeAlias = _typing.Literal["invoice_paid"]  # noqa: Y015
+    _WhichOneofArgType_event: _TypeAlias = _typing.Literal["event", b"event"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType_event) -> _WhichOneofReturnType_event | None: ...
+
+Global___NodeEvent: _TypeAlias = NodeEvent  # noqa: Y015
+
+@_typing.final
+class InvoicePaid(_message.Message):
+    """Event emitted when an invoice is paid."""
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    PAYMENT_HASH_FIELD_NUMBER: _builtins.int
+    BOLT11_FIELD_NUMBER: _builtins.int
+    PREIMAGE_FIELD_NUMBER: _builtins.int
+    LABEL_FIELD_NUMBER: _builtins.int
+    AMOUNT_MSAT_FIELD_NUMBER: _builtins.int
+    EXTRATLVS_FIELD_NUMBER: _builtins.int
+    payment_hash: _builtins.bytes
+    """The payment hash of the paid invoice."""
+    bolt11: _builtins.str
+    """The bolt11 invoice string."""
+    preimage: _builtins.bytes
+    """The preimage that proves payment."""
+    label: _builtins.str
+    """The label assigned to the invoice."""
+    amount_msat: _builtins.int
+    """Amount received in millisatoshis."""
+    @_builtins.property
+    def extratlvs(self) -> _containers.RepeatedCompositeFieldContainer[Global___TlvField]:
+        """Extra TLV fields included in the payment."""
+
+    def __init__(
+        self,
+        *,
+        payment_hash: _builtins.bytes = ...,
+        bolt11: _builtins.str = ...,
+        preimage: _builtins.bytes = ...,
+        label: _builtins.str = ...,
+        amount_msat: _builtins.int = ...,
+        extratlvs: _abc.Iterable[Global___TlvField] | None = ...,
+    ) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["amount_msat", b"amount_msat", "bolt11", b"bolt11", "extratlvs", b"extratlvs", "label", b"label", "payment_hash", b"payment_hash", "preimage", b"preimage"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+
+Global___InvoicePaid: _TypeAlias = InvoicePaid  # noqa: Y015
