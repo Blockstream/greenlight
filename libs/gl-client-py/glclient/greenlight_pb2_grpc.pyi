@@ -3,19 +3,28 @@
 isort:skip_file
 """
 
-import abc
-import collections.abc
-import glclient.greenlight_pb2
-import grpc
-import grpc.aio
-import typing
+from collections import abc as _abc
+from glclient import greenlight_pb2 as _greenlight_pb2
+from grpc import aio as _aio
+import abc as _abc_1
+import grpc as _grpc
+import sys
+import typing as _typing
 
-_T = typing.TypeVar("_T")
+if sys.version_info >= (3, 11):
+    from typing import Self as _Self
+else:
+    from typing_extensions import Self as _Self
 
-class _MaybeAsyncIterator(collections.abc.AsyncIterator[_T], collections.abc.Iterator[_T], metaclass=abc.ABCMeta): ...
+_T = _typing.TypeVar("_T")
 
-class _ServicerContext(grpc.ServicerContext, grpc.aio.ServicerContext):  # type: ignore[misc, type-arg]
+class _MaybeAsyncIterator(_abc.AsyncIterator[_T], _abc.Iterator[_T], metaclass=_abc_1.ABCMeta): ...
+
+class _ServicerContext(_grpc.ServicerContext, _aio.ServicerContext):  # type: ignore[misc, type-arg]
     ...
+
+GRPC_GENERATED_VERSION: str
+GRPC_VERSION: str
 
 class NodeStub:
     """The node service represents your node running on greenlight's
@@ -35,29 +44,21 @@ class NodeStub:
     Greenlight-specific, and backported functionality.
     """
 
-    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
-    LspInvoice: grpc.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.LspInvoiceRequest,
-        glclient.greenlight_pb2.LspInvoiceResponse,
-    ]
+    @_typing.overload
+    def __new__(cls, channel: _grpc.Channel) -> _Self: ...
+    @_typing.overload
+    def __new__(cls, channel: _aio.Channel) -> NodeAsyncStub: ...
+    LspInvoice: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.LspInvoiceRequest, _greenlight_pb2.LspInvoiceResponse]
     """Create an invoice to request an incoming payment. Includes LSP
     negotiation to open a channel on-demand when needed.
     """
-
-    StreamIncoming: grpc.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.StreamIncomingFilter,
-        glclient.greenlight_pb2.IncomingPayment,
-    ]
+    StreamIncoming: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.StreamIncomingFilter, _greenlight_pb2.IncomingPayment]
     """Stream incoming payments
 
     Currently includes off-chain payments received matching an
     invoice or spontaneus paymens through keysend.
     """
-
-    StreamLog: grpc.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.StreamLogRequest,
-        glclient.greenlight_pb2.LogEntry,
-    ]
+    StreamLog: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.StreamLogRequest, _greenlight_pb2.LogEntry]
     """Stream the logs as they are produced by the node
 
     Mainly intended for debugging clients by tailing the log as
@@ -67,21 +68,21 @@ class NodeStub:
     be rather large, and should not be streamed onto
     resource-constrained devices.
     """
-
-    StreamCustommsg: grpc.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.StreamCustommsgRequest,
-        glclient.greenlight_pb2.Custommsg,
-    ]
+    StreamCustommsg: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.StreamCustommsgRequest, _greenlight_pb2.Custommsg]
     """Listen for incoming `custommsg` messages from peers.
 
     The messages are forwarded as they come in, and will not be
     replayed if the stream is interrupted.
     """
+    StreamNodeEvents: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.NodeEventsRequest, _greenlight_pb2.NodeEvent]
+    """Stream node events in real-time.
 
-    StreamHsmRequests: grpc.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.Empty,
-        glclient.greenlight_pb2.HsmRequest,
-    ]
+    This is a unified event stream that delivers various node events
+    as they occur, including invoice updates, peer changes, channel
+    state changes, and balance updates. Events are not persisted and
+    will not be replayed if the stream is interrupted.
+    """
+    StreamHsmRequests: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.Empty, _greenlight_pb2.HsmRequest]
     """////////////////////////////// HSM Messages ////////////////////////
 
     The following messages are related to communicating HSM
@@ -93,23 +94,12 @@ class NodeStub:
     Stream requests from the node to any key device that can
     respond to them.
     """
+    RespondHsmRequest: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.HsmResponse, _greenlight_pb2.Empty]
+    Configure: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.GlConfig, _greenlight_pb2.Empty]
+    TrampolinePay: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.TrampolinePayRequest, _greenlight_pb2.TrampolinePayResponse]
 
-    RespondHsmRequest: grpc.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.HsmResponse,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-    Configure: grpc.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.GlConfig,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-    TrampolinePay: grpc.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.TrampolinePayRequest,
-        glclient.greenlight_pb2.TrampolinePayResponse,
-    ]
-
-class NodeAsyncStub:
+@_typing.type_check_only
+class NodeAsyncStub(NodeStub):
     """The node service represents your node running on greenlight's
     infrastructure. You can use the exposed RPC methods to interact
     with your node. The URI used to connect to the node depends on
@@ -127,28 +117,18 @@ class NodeAsyncStub:
     Greenlight-specific, and backported functionality.
     """
 
-    LspInvoice: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.LspInvoiceRequest,
-        glclient.greenlight_pb2.LspInvoiceResponse,
-    ]
+    def __init__(self, channel: _aio.Channel) -> None: ...
+    LspInvoice: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.LspInvoiceRequest, _greenlight_pb2.LspInvoiceResponse]  # type: ignore[assignment]
     """Create an invoice to request an incoming payment. Includes LSP
     negotiation to open a channel on-demand when needed.
     """
-
-    StreamIncoming: grpc.aio.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.StreamIncomingFilter,
-        glclient.greenlight_pb2.IncomingPayment,
-    ]
+    StreamIncoming: _aio.UnaryStreamMultiCallable[_greenlight_pb2.StreamIncomingFilter, _greenlight_pb2.IncomingPayment]  # type: ignore[assignment]
     """Stream incoming payments
 
     Currently includes off-chain payments received matching an
     invoice or spontaneus paymens through keysend.
     """
-
-    StreamLog: grpc.aio.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.StreamLogRequest,
-        glclient.greenlight_pb2.LogEntry,
-    ]
+    StreamLog: _aio.UnaryStreamMultiCallable[_greenlight_pb2.StreamLogRequest, _greenlight_pb2.LogEntry]  # type: ignore[assignment]
     """Stream the logs as they are produced by the node
 
     Mainly intended for debugging clients by tailing the log as
@@ -158,21 +138,21 @@ class NodeAsyncStub:
     be rather large, and should not be streamed onto
     resource-constrained devices.
     """
-
-    StreamCustommsg: grpc.aio.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.StreamCustommsgRequest,
-        glclient.greenlight_pb2.Custommsg,
-    ]
+    StreamCustommsg: _aio.UnaryStreamMultiCallable[_greenlight_pb2.StreamCustommsgRequest, _greenlight_pb2.Custommsg]  # type: ignore[assignment]
     """Listen for incoming `custommsg` messages from peers.
 
     The messages are forwarded as they come in, and will not be
     replayed if the stream is interrupted.
     """
+    StreamNodeEvents: _aio.UnaryStreamMultiCallable[_greenlight_pb2.NodeEventsRequest, _greenlight_pb2.NodeEvent]  # type: ignore[assignment]
+    """Stream node events in real-time.
 
-    StreamHsmRequests: grpc.aio.UnaryStreamMultiCallable[
-        glclient.greenlight_pb2.Empty,
-        glclient.greenlight_pb2.HsmRequest,
-    ]
+    This is a unified event stream that delivers various node events
+    as they occur, including invoice updates, peer changes, channel
+    state changes, and balance updates. Events are not persisted and
+    will not be replayed if the stream is interrupted.
+    """
+    StreamHsmRequests: _aio.UnaryStreamMultiCallable[_greenlight_pb2.Empty, _greenlight_pb2.HsmRequest]  # type: ignore[assignment]
     """////////////////////////////// HSM Messages ////////////////////////
 
     The following messages are related to communicating HSM
@@ -184,23 +164,11 @@ class NodeAsyncStub:
     Stream requests from the node to any key device that can
     respond to them.
     """
+    RespondHsmRequest: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.HsmResponse, _greenlight_pb2.Empty]  # type: ignore[assignment]
+    Configure: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.GlConfig, _greenlight_pb2.Empty]  # type: ignore[assignment]
+    TrampolinePay: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.TrampolinePayRequest, _greenlight_pb2.TrampolinePayResponse]  # type: ignore[assignment]
 
-    RespondHsmRequest: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.HsmResponse,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-    Configure: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.GlConfig,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-    TrampolinePay: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.TrampolinePayRequest,
-        glclient.greenlight_pb2.TrampolinePayResponse,
-    ]
-
-class NodeServicer(metaclass=abc.ABCMeta):
+class NodeServicer(metaclass=_abc_1.ABCMeta):
     """The node service represents your node running on greenlight's
     infrastructure. You can use the exposed RPC methods to interact
     with your node. The URI used to connect to the node depends on
@@ -218,34 +186,34 @@ class NodeServicer(metaclass=abc.ABCMeta):
     Greenlight-specific, and backported functionality.
     """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def LspInvoice(
         self,
-        request: glclient.greenlight_pb2.LspInvoiceRequest,
+        request: _greenlight_pb2.LspInvoiceRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.LspInvoiceResponse, collections.abc.Awaitable[glclient.greenlight_pb2.LspInvoiceResponse]]:
+    ) -> _typing.Union[_greenlight_pb2.LspInvoiceResponse, _abc.Awaitable[_greenlight_pb2.LspInvoiceResponse]]:
         """Create an invoice to request an incoming payment. Includes LSP
         negotiation to open a channel on-demand when needed.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def StreamIncoming(
         self,
-        request: glclient.greenlight_pb2.StreamIncomingFilter,
+        request: _greenlight_pb2.StreamIncomingFilter,
         context: _ServicerContext,
-    ) -> typing.Union[collections.abc.Iterator[glclient.greenlight_pb2.IncomingPayment], collections.abc.AsyncIterator[glclient.greenlight_pb2.IncomingPayment]]:
+    ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.IncomingPayment], _abc.AsyncIterator[_greenlight_pb2.IncomingPayment]]:
         """Stream incoming payments
 
         Currently includes off-chain payments received matching an
         invoice or spontaneus paymens through keysend.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def StreamLog(
         self,
-        request: glclient.greenlight_pb2.StreamLogRequest,
+        request: _greenlight_pb2.StreamLogRequest,
         context: _ServicerContext,
-    ) -> typing.Union[collections.abc.Iterator[glclient.greenlight_pb2.LogEntry], collections.abc.AsyncIterator[glclient.greenlight_pb2.LogEntry]]:
+    ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.LogEntry], _abc.AsyncIterator[_greenlight_pb2.LogEntry]]:
         """Stream the logs as they are produced by the node
 
         Mainly intended for debugging clients by tailing the log as
@@ -256,24 +224,38 @@ class NodeServicer(metaclass=abc.ABCMeta):
         resource-constrained devices.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def StreamCustommsg(
         self,
-        request: glclient.greenlight_pb2.StreamCustommsgRequest,
+        request: _greenlight_pb2.StreamCustommsgRequest,
         context: _ServicerContext,
-    ) -> typing.Union[collections.abc.Iterator[glclient.greenlight_pb2.Custommsg], collections.abc.AsyncIterator[glclient.greenlight_pb2.Custommsg]]:
+    ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.Custommsg], _abc.AsyncIterator[_greenlight_pb2.Custommsg]]:
         """Listen for incoming `custommsg` messages from peers.
 
         The messages are forwarded as they come in, and will not be
         replayed if the stream is interrupted.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
+    def StreamNodeEvents(
+        self,
+        request: _greenlight_pb2.NodeEventsRequest,
+        context: _ServicerContext,
+    ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.NodeEvent], _abc.AsyncIterator[_greenlight_pb2.NodeEvent]]:
+        """Stream node events in real-time.
+
+        This is a unified event stream that delivers various node events
+        as they occur, including invoice updates, peer changes, channel
+        state changes, and balance updates. Events are not persisted and
+        will not be replayed if the stream is interrupted.
+        """
+
+    @_abc_1.abstractmethod
     def StreamHsmRequests(
         self,
-        request: glclient.greenlight_pb2.Empty,
+        request: _greenlight_pb2.Empty,
         context: _ServicerContext,
-    ) -> typing.Union[collections.abc.Iterator[glclient.greenlight_pb2.HsmRequest], collections.abc.AsyncIterator[glclient.greenlight_pb2.HsmRequest]]:
+    ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.HsmRequest], _abc.AsyncIterator[_greenlight_pb2.HsmRequest]]:
         """////////////////////////////// HSM Messages ////////////////////////
 
         The following messages are related to communicating HSM
@@ -286,65 +268,56 @@ class NodeServicer(metaclass=abc.ABCMeta):
         respond to them.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def RespondHsmRequest(
         self,
-        request: glclient.greenlight_pb2.HsmResponse,
+        request: _greenlight_pb2.HsmResponse,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]: ...
+    ) -> _typing.Union[_greenlight_pb2.Empty, _abc.Awaitable[_greenlight_pb2.Empty]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def Configure(
         self,
-        request: glclient.greenlight_pb2.GlConfig,
+        request: _greenlight_pb2.GlConfig,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]: ...
+    ) -> _typing.Union[_greenlight_pb2.Empty, _abc.Awaitable[_greenlight_pb2.Empty]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def TrampolinePay(
         self,
-        request: glclient.greenlight_pb2.TrampolinePayRequest,
+        request: _greenlight_pb2.TrampolinePayRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.TrampolinePayResponse, collections.abc.Awaitable[glclient.greenlight_pb2.TrampolinePayResponse]]: ...
+    ) -> _typing.Union[_greenlight_pb2.TrampolinePayResponse, _abc.Awaitable[_greenlight_pb2.TrampolinePayResponse]]: ...
 
-def add_NodeServicer_to_server(servicer: NodeServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+def add_NodeServicer_to_server(servicer: NodeServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...
 
 class HsmStub:
-    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
-    Request: grpc.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.HsmRequest,
-        glclient.greenlight_pb2.HsmResponse,
-    ]
+    @_typing.overload
+    def __new__(cls, channel: _grpc.Channel) -> _Self: ...
+    @_typing.overload
+    def __new__(cls, channel: _aio.Channel) -> HsmAsyncStub: ...
+    Request: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.HsmRequest, _greenlight_pb2.HsmResponse]
+    Ping: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.Empty, _greenlight_pb2.Empty]
 
-    Ping: grpc.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.Empty,
-        glclient.greenlight_pb2.Empty,
-    ]
+@_typing.type_check_only
+class HsmAsyncStub(HsmStub):
+    def __init__(self, channel: _aio.Channel) -> None: ...
+    Request: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.HsmRequest, _greenlight_pb2.HsmResponse]  # type: ignore[assignment]
+    Ping: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.Empty, _greenlight_pb2.Empty]  # type: ignore[assignment]
 
-class HsmAsyncStub:
-    Request: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.HsmRequest,
-        glclient.greenlight_pb2.HsmResponse,
-    ]
-
-    Ping: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.greenlight_pb2.Empty,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-class HsmServicer(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
+class HsmServicer(metaclass=_abc_1.ABCMeta):
+    @_abc_1.abstractmethod
     def Request(
         self,
-        request: glclient.greenlight_pb2.HsmRequest,
+        request: _greenlight_pb2.HsmRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.HsmResponse, collections.abc.Awaitable[glclient.greenlight_pb2.HsmResponse]]: ...
+    ) -> _typing.Union[_greenlight_pb2.HsmResponse, _abc.Awaitable[_greenlight_pb2.HsmResponse]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def Ping(
         self,
-        request: glclient.greenlight_pb2.Empty,
+        request: _greenlight_pb2.Empty,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]: ...
+    ) -> _typing.Union[_greenlight_pb2.Empty, _abc.Awaitable[_greenlight_pb2.Empty]]: ...
 
-def add_HsmServicer_to_server(servicer: HsmServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+def add_HsmServicer_to_server(servicer: HsmServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...

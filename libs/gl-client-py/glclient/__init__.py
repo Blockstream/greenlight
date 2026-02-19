@@ -464,6 +464,15 @@ class Node(object):
                 break
             yield nodepb.Custommsg.FromString(bytes(n))
 
+    def stream_node_events(self):
+        """Stream node events (invoice payments, peer changes, etc.) as they occur."""
+        stream = self.inner.stream_node_events(b"")
+        while True:
+            n = stream.next()
+            if n is None:
+                break
+            yield nodepb.NodeEvent.FromString(bytes(n))
+
     def send_custommsg(self, node_id: str, msg: bytes) -> clnpb.SendcustommsgResponse:
         uri = "/cln.Node/SendCustomMsg"
         res = clnpb.SendcustommsgResponse
