@@ -3,6 +3,194 @@
 //! This module provides a generic `Event<I>` enum that can be extended
 //! by downstream crates (like gl-plugin-internal) with custom internal
 //! event types, while keeping the core events defined here.
+//!
+//! # Architecture
+//!
+//! The event system has two layers:
+//!
+//! - **Internal events** (`Event::Internal(I)`) - Type-erased events for
+//!   communication within the plugin process. Not exposed to clients.
+//! - **Public events** (`Event::IncomingPayment`, etc.) - Automatically
+//!   converted to `NodeEvent` protobufs and streamed to gl-sdk clients
+//!   via `StreamNodeEvents`.
+//!
+//! The [`EventBus`] uses `tokio::sync::broadcast` so multiple subscribers
+//! can receive the same events. Events are not persisted - if a client
+//! disconnects, it won't receive missed events.
+//!
+//! # Examples
+//!
+//! In these examples, we define a type alias for the event type to avoid
+//! repeating the generic parameter. This is the recommended pattern:
+//!
+//! ```ignore
+//! use gl_plugin::events::Event;
+//!
+//! // In gl-plugin (no internal events):
+//! type PluginEvent = Event<()>;
+//!
+//! // In gl-plugin-internal (with internal events):
+//! #[derive(Clone, Debug)]
+//! pub enum InternalPayload {
+//!     NodeMeta { node_id: Vec<u8>, version: String },
+//!     Shutdown { reason: String },
+//! }
+//! type PluginEvent = Event<InternalPayload>;
+//! ```
+//!
+//! ## Publishing an Internal Event
+//!
+//! Internal events are for communication within the plugin system and
+//! are NOT exposed to clients. Use the `Internal` variant with your payload:
+//!
+//! ```ignore
+//! use gl_plugin::events::{Event, EventBus};
+//!
+//! // Define your internal payload type
+//! #[derive(Clone, Debug)]
+//! pub enum InternalPayload {
+//!     NodeMeta { node_id: Vec<u8>, version: String },
+//!     Shutdown { reason: String },
+//! }
+//!
+//! // Define a type alias for convenience
+//! type PluginEvent = Event<InternalPayload>;
+//!
+//! fn publish_internal_event(bus: &EventBus) {
+//!     let payload = InternalPayload::NodeMeta {
+//!         node_id: vec![0x02; 33],
+//!         version: "v25.12".to_string(),
+//!     };
+//!     bus.publish(PluginEvent::Internal(payload));
+//! }
+//! ```
+//!
+//! ## Subscribing to Internal Events
+//!
+//! Use the [`ErasedEventExt`] trait to downcast internal payloads:
+//!
+//! ```ignore
+//! use gl_plugin::events::{EventBus, ErasedEventExt};
+//!
+//! async fn subscribe_to_internal_events(bus: &EventBus) {
+//!     let mut rx = bus.subscribe();
+//!
+//!     while let Ok(event) = rx.recv().await {
+//!         if let Some(payload) = event.downcast_internal::<InternalPayload>() {
+//!             match payload {
+//!                 InternalPayload::NodeMeta { node_id, version } => {
+//!                     println!("Node {} running {}", hex::encode(node_id), version);
+//!                 }
+//!                 InternalPayload::Shutdown { reason } => {
+//!                     println!("Shutting down: {}", reason);
+//!                     break;
+//!                 }
+//!             }
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! ## Publishing a Public Event
+//!
+//! Public events like `IncomingPayment` are automatically converted to
+//! `NodeEvent` protobufs and streamed to clients via `StreamNodeEvents`.
+//! Using the type alias, the same code works regardless of whether you
+//! have internal events or not:
+//!
+//! ```ignore
+//! use gl_plugin::events::{Event, EventBus};
+//! use gl_plugin::pb;
+//!
+//! // Use () if you don't need internal events, or your InternalPayload type
+//! type PluginEvent = Event<()>;
+//!
+//! fn on_invoice_payment(bus: &EventBus, payment_hash: Vec<u8>,
+//!                       bolt11: String, preimage: Vec<u8>, amount_msat: u64) {
+//!     let payment = pb::IncomingPayment {
+//!         details: Some(pb::incoming_payment::Details::Offchain(pb::OffChain {
+//!             payment_hash,
+//!             bolt11,
+//!             preimage,
+//!             label: "my-invoice".to_string(),
+//!             amount: Some(pb::Amount {
+//!                 unit: Some(pb::amount::Unit::Millisatoshi(amount_msat)),
+//!             }),
+//!             extratlvs: vec![],
+//!         })),
+//!     };
+//!
+//!     // This event will be streamed to gl-sdk clients as NodeEvent::InvoicePaid
+//!     bus.publish(PluginEvent::IncomingPayment(payment));
+//! }
+//! ```
+//!
+//! ## Subscribing to Public Events (Server-side)
+//!
+//! When subscribing, you receive `ErasedEvent` which works with any
+//! internal type. Pattern match on the public variants directly:
+//!
+//! ```ignore
+//! use gl_plugin::events::{Event, EventBus, ErasedEvent};
+//!
+//! async fn monitor_payments(bus: &EventBus) {
+//!     let mut rx = bus.subscribe();
+//!
+//!     while let Ok(event) = rx.recv().await {
+//!         // ErasedEvent can be matched on public variants directly
+//!         match &event {
+//!             Event::IncomingPayment(p) => {
+//!                 println!("Payment received!");
+//!             }
+//!             Event::CustomMsg(msg) => {
+//!                 println!("Custom message from peer");
+//!             }
+//!             Event::Stop(_) => {
+//!                 println!("Plugin stopping");
+//!                 break;
+//!             }
+//!             Event::Internal(_) => {
+//!                 // Use downcast_internal::<T>() to access typed payload
+//!             }
+//!             _ => {}
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! ## Client-side: Consuming Events via gl-sdk (Python)
+//!
+//! ```python
+//! # Stream events from a Greenlight node
+//! for event in node.stream_node_events():
+//!     if event.HasField("invoice_paid"):
+//!         paid = event.invoice_paid
+//!         print(f"Invoice paid: {paid.amount_msat} msat")
+//!         print(f"  hash: {paid.payment_hash.hex()}")
+//! ```
+//!
+//! ## Client-side: Consuming Events via gl-sdk (Rust)
+//!
+//! ```ignore
+//! use gl_client::pb::{NodeEventsRequest, node_event::Event};
+//!
+//! async fn stream_events(mut client: NodeClient) -> Result<()> {
+//!     let stream = client
+//!         .stream_node_events(NodeEventsRequest {})
+//!         .await?
+//!         .into_inner();
+//!
+//!     while let Some(event) = stream.message().await? {
+//!         match event.event {
+//!             Some(Event::InvoicePaid(paid)) => {
+//!                 println!("Invoice paid: {} msat", paid.amount_msat);
+//!             }
+//!             _ => {}
+//!         }
+//!     }
+//!     Ok(())
+//! }
+//! ```
 
 use crate::pb;
 use crate::stager;
