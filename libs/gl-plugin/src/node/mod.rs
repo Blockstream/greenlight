@@ -7,7 +7,10 @@ use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
 use cln_rpc::Notification;
-use gl_client::persist::State;
+use gl_client::persist::{State, StateSketch};
+use gl_client::metrics::{
+    signer_state_request_wire_bytes, savings_percent,
+};
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -393,6 +396,7 @@ impl Node for PluginNodeServer {
 
         tokio::spawn(async move {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
+            let mut last_sent_sketch = StateSketch::new();
 
             {
                 // We start by immediately injecting a
@@ -404,9 +408,12 @@ impl Node for PluginNodeServer {
                 // presumably time-critical messages, do not have to carry
                 // the large state with them.
 
-                let state = signer_state.lock().await.clone();
-                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
-                let state: Vec<pb::SignerStateEntry> = state
+                let state_snapshot = signer_state.lock().await.clone();
+                let state_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
+                    .omit_tombstones()
+                    .into();
+                let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
+                let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
                     .map(|s| pb::SignerStateEntry {
                         key: s.key,
@@ -414,14 +421,19 @@ impl Node for PluginNodeServer {
                         value: s.value,
                     })
                     .collect();
-
+                trace!(
+                    "Signer state heartbeat to hsm_id={} entries={}, wire_bytes={}",
+                    hsm_id,
+                    state_entries.len(),
+                    state_wire_bytes
+                );
                 let msg = vls_protocol::msgs::GetHeartbeat {};
                 use vls_protocol::msgs::SerBolt;
                 let req = crate::pb::HsmRequest {
                     // Notice that the request_counter starts at 1000, to
                     // avoid collisions.
                     request_id: 0,
-                    signer_state: state,
+                    signer_state: state_entries,
                     raw: msg.as_vec(),
                     requests: vec![], // No pending requests yet, nothing to authorize.
                     context: None,
@@ -429,6 +441,8 @@ impl Node for PluginNodeServer {
 
                 if let Err(e) = tx.send(Ok(req)).await {
                     log::warn!("Failed to send heartbeat message to signer: {}", e);
+                } else {
+                    last_sent_sketch = state_snapshot.sketch();
                 }
             }
 
@@ -449,11 +463,23 @@ impl Node for PluginNodeServer {
                     hsm_id
                 );
 
-                let state = signer_state.lock().await.clone();
-                let state: Vec<gl_client::pb::SignerStateEntry> = state.into();
+
+                let state_snapshot = signer_state.lock().await.clone();
+                // Estimate the size of the full state to calculate the bandwidth savings of sending diffs
+                let full_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    state_snapshot.omit_tombstones().into();
+                let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
+
+                // Send only the changes since the last time we sent state to this signer.
+                let diff_state = last_sent_sketch.diff_state(&state_snapshot);
+                let outgoing_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    diff_state.clone().into();
+                let outgoing_wire_bytes = signer_state_request_wire_bytes(&outgoing_entries);
+                let outgoing_entry_count = outgoing_entries.len();
+                last_sent_sketch.apply_state(&diff_state);
 
                 // TODO Consolidate protos in `gl-client` and `gl-plugin`, then remove this map.
-                let state: Vec<pb::SignerStateEntry> = state
+                let outgoing_entries: Vec<pb::SignerStateEntry> = outgoing_entries
                     .into_iter()
                     .map(|s| pb::SignerStateEntry {
                         key: s.key,
@@ -462,7 +488,18 @@ impl Node for PluginNodeServer {
                     })
                     .collect();
 
-                req.request.signer_state = state.into();
+                let saved_percent = savings_percent(full_wire_bytes, outgoing_wire_bytes);
+                trace!(
+                    "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
+                    hsm_id,
+                    req.request.request_id,
+                    outgoing_entry_count,
+                    outgoing_wire_bytes,
+                    full_wire_bytes,
+                    saved_percent
+                );
+
+                req.request.signer_state = outgoing_entries;
                 req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
 
                 let serialized_configure_request = SERIALIZED_CONFIGURE_REQUEST.lock().await;
@@ -511,6 +548,8 @@ impl Node for PluginNodeServer {
         }
         eprintln!("WIRE: signer -> plugin: {:?}", req);
 
+        // Merge diff entries returned by signer.
+
         // Create a state from the key-value-version tuples. Need to
         // convert here, since `pb` is duplicated in the two different
         // crates.
@@ -527,12 +566,18 @@ impl Node for PluginNodeServer {
 
         // Apply state changes to the in-memory state
         let mut state = self.signer_state.lock().await;
-        state.merge(&new_state).map_err(|e| {
+        let merge_res = state.merge(&new_state).map_err(|e| {
             Status::new(
                 Code::Internal,
                 format!("Error updating internal state: {e}"),
             )
         })?;
+        if merge_res.has_conflicts() {
+            debug!(
+                "State merge ignored stale versions (count={})",
+                merge_res.conflict_count
+            );
+        }
 
         // Send changes to the signer_state_store for persistence
         let store = self.signer_state_store.lock().await;

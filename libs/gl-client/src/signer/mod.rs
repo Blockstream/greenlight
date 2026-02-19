@@ -10,6 +10,9 @@ use crate::pb::PendingRequest;
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::runes;
 use crate::signer::resolve::Resolver;
+use crate::metrics::{
+    signer_state_response_wire_bytes, savings_percent,
+};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Result};
@@ -487,16 +490,27 @@ impl Signer {
         debug!("Processing request {:?}", req);
         let diff: crate::persist::State = req.signer_state.clone().into();
 
-        let prestate = {
+        let (prestate_sketch, prestate_log) = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
             })?;
-            state.merge(&diff).map_err(|e| {
+            let merge_res = state.merge(&diff).map_err(|e| {
                 Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
             })?;
+            if merge_res.has_conflicts() {
+                debug!(
+                    "State merge ignored stale versions (count={})",
+                    merge_res.conflict_count
+                );
+            }
             trace!("Processing request {}", hex::encode(&req.raw));
-            state.clone()
+            let log_state = serde_json::to_string(&*state).map_err(|e| {
+                Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
+            })?;
+
+
+            (state.sketch(), log_state)
         };
 
         // The first two bytes represent the message type. Check that
@@ -527,10 +541,7 @@ impl Signer {
 
         let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
-        log::trace!(
-            "Signer state {}",
-            serde_json::to_string(&prestate).unwrap_or_else(|_| "<failed to serialize>".to_string())
-        );
+        log::trace!("Signer state {}", prestate_log);
 
         if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
             report::Reporter::report(crate::pb::scheduler::SignerRejection {
@@ -628,7 +639,22 @@ impl Signer {
             let state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock for serialization: {:?}", e))
             })?;
-            state.clone().into()
+            let full_wire_bytes = {
+                let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
+                signer_state_response_wire_bytes(&full_entries)
+            };
+            let diff_state = prestate_sketch.diff_state(&state);
+            let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
+            let diff_wire_bytes = signer_state_response_wire_bytes(&diff_entries);
+            let saved_percent = savings_percent(full_wire_bytes, diff_wire_bytes);
+            trace!(
+                "Signer state diff entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
+                diff_entries.len(),
+                diff_wire_bytes,
+                full_wire_bytes,
+                saved_percent
+            );
+            diff_entries
         };
         Ok(HsmResponse {
             raw: response.as_vec(),

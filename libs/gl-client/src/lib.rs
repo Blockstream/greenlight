@@ -29,6 +29,7 @@ pub mod scheduler;
 pub mod signer;
 
 pub mod persist;
+pub mod metrics;
 
 pub mod lnurl;
 
