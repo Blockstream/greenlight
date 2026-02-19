@@ -19,7 +19,7 @@ use log::{debug, error, info, trace, warn};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::{
-    atomic::{AtomicU64, AtomicUsize, Ordering},
+    atomic::{AtomicUsize, Ordering},
     Arc,
 };
 use std::time::Duration;
@@ -88,7 +88,6 @@ pub struct PluginNodeServer {
     rpc_path: PathBuf,
     events: tokio::sync::broadcast::Sender<super::Event>,
     signer_state: Arc<Mutex<State>>,
-    state_sync_epoch: Arc<AtomicU64>,
     grpc_binding: String,
     signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
     pub ctx: crate::context::Context,
@@ -133,7 +132,6 @@ impl PluginNodeServer {
             events,
             rpc_path: rpc_path.clone(),
             signer_state: Arc::new(Mutex::new(signer_state)),
-            state_sync_epoch: Arc::new(AtomicU64::new(0)),
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
             notifications,
@@ -390,17 +388,11 @@ impl Node for PluginNodeServer {
         let (tx, rx) = mpsc::channel(10);
         let mut stream = self.stage.mystream().await;
         let signer_state = self.signer_state.clone();
-        let state_sync_epoch = self.state_sync_epoch.clone();
         let ctx = self.ctx.clone();
 
         tokio::spawn(async move {
             trace!("hsmd hsm_id={} request processor started", hsm_id);
             let mut last_sent_sketch = StateSketch::new();
-            let mut last_seen_sync_epoch = state_sync_epoch.load(Ordering::SeqCst);
-            enum SyncMode {
-                Full,
-                Diff { full_wire_bytes: usize },
-            }
 
             {
                 // We start by immediately injecting a
@@ -447,7 +439,6 @@ impl Node for PluginNodeServer {
                     log::warn!("Failed to send heartbeat message to signer: {}", e);
                 } else {
                     last_sent_sketch = state_snapshot.sketch();
-                    last_seen_sync_epoch = state_sync_epoch.load(Ordering::SeqCst);
                 }
             }
 
@@ -470,38 +461,14 @@ impl Node for PluginNodeServer {
 
 
                 let state_snapshot = signer_state.lock().await.clone();
-                let current_sync_epoch = state_sync_epoch.load(Ordering::SeqCst);
-                let force_full_sync = current_sync_epoch != last_seen_sync_epoch;
-                if force_full_sync {
-                    last_seen_sync_epoch = current_sync_epoch;
-                }
-
-                let (outgoing_entries, sync_mode): (
-                    Vec<gl_client::pb::SignerStateEntry>,
-                    SyncMode,
-                ) = if force_full_sync {
-                    trace!(
-                        "Forcing full signer state sync to hsm_id={} request_id={}",
-                        hsm_id,
-                        req.request.request_id
-                    );
-                    last_sent_sketch = state_snapshot.sketch();
-                    (
-                        state_snapshot.omit_tombstones().into(),
-                        SyncMode::Full,
-                    )
-                } else {
-                    // Send only the changes since the last time we sent state to this signer.
-                    let full_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
-                        .omit_tombstones()
-                        .into();
-                    let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
-                    let diff_state = last_sent_sketch.diff_state(&state_snapshot);
-                    let diff_entries: Vec<gl_client::pb::SignerStateEntry> =
-                        diff_state.clone().into();
-                    last_sent_sketch.apply_state(&diff_state);
-                    (diff_entries, SyncMode::Diff { full_wire_bytes })
-                };
+                // Send only the changes since the last time we sent state to this signer.
+                let full_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    state_snapshot.omit_tombstones().into();
+                let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
+                let diff_state = last_sent_sketch.diff_state(&state_snapshot);
+                let outgoing_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    diff_state.clone().into();
+                last_sent_sketch.apply_state(&diff_state);
 
                 let outgoing_wire_bytes = signer_state_request_wire_bytes(&outgoing_entries);
                 let outgoing_entry_count = outgoing_entries.len();
@@ -516,29 +483,16 @@ impl Node for PluginNodeServer {
                     })
                     .collect();
 
-                match sync_mode {
-                    SyncMode::Full => {
-                        trace!(
-                            "Signer state full sync to hsm_id={} request_id={} entries={}, wire_bytes={}",
-                            hsm_id,
-                            req.request.request_id,
-                            outgoing_entry_count,
-                            outgoing_wire_bytes
-                        );
-                    }
-                    SyncMode::Diff { full_wire_bytes } => {
-                        let saved_percent = savings_percent(full_wire_bytes, outgoing_wire_bytes);
-                        trace!(
-                            "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
-                            hsm_id,
-                            req.request.request_id,
-                            outgoing_entry_count,
-                            outgoing_wire_bytes,
-                            full_wire_bytes,
-                            saved_percent
-                        );
-                    }
-                }
+                let saved_percent = savings_percent(full_wire_bytes, outgoing_wire_bytes);
+                trace!(
+                    "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
+                    hsm_id,
+                    req.request.request_id,
+                    outgoing_entry_count,
+                    outgoing_wire_bytes,
+                    full_wire_bytes,
+                    saved_percent
+                );
 
                 req.request.signer_state = outgoing_entries;
                 req.request.requests = ctx.snapshot().await.into_iter().map(|r| r.into()).collect();
@@ -607,18 +561,17 @@ impl Node for PluginNodeServer {
 
         // Apply state changes to the in-memory state
         let mut state = self.signer_state.lock().await;
-        let merge_res = state.safe_merge(&new_state).map_err(|e| {
+        let merge_res = state.merge(&new_state).map_err(|e| {
             Status::new(
                 Code::Internal,
                 format!("Error updating internal state: {e}"),
             )
         })?;
         if merge_res.has_conflicts() {
-            warn!(
-                "State merge conflict detected (count={}), forcing next full sync",
+            debug!(
+                "State merge ignored stale versions (count={})",
                 merge_res.conflict_count
             );
-            self.state_sync_epoch.fetch_add(1, Ordering::SeqCst);
         }
 
         // Send changes to the signer_state_store for persistence
