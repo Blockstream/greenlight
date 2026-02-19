@@ -43,6 +43,14 @@ service Node {
 	// replayed if the stream is interrupted.
 	rpc StreamCustommsg(StreamCustommsgRequest) returns (stream Custommsg) {}
 
+	// Stream node events in real-time.
+	//
+	// This is a unified event stream that delivers various node events
+	// as they occur, including invoice updates, peer changes, channel
+	// state changes, and balance updates. Events are not persisted and
+	// will not be replayed if the stream is interrupted.
+	rpc StreamNodeEvents(NodeEventsRequest) returns (stream NodeEvent) {}
+
 	//////////////////////////////// HSM Messages ////////////////////////
 	//
 	// The following messages are related to communicating HSM
@@ -242,4 +250,39 @@ message LspInvoiceResponse {
   uint32 expires_at = 3;
   bytes payment_hash = 4;
   bytes payment_secret = 5;
+}
+
+// Request for streaming node events. Currently empty but defined as
+// its own message type to allow adding filters in the future (e.g.,
+// filter by event type, invoice label, etc.)
+message NodeEventsRequest {
+}
+
+// A real-time event from the node. Uses oneof to discriminate between
+// different event types.
+message NodeEvent {
+  oneof event {
+    InvoicePaid invoice_paid = 1;
+    // Future event types:
+    // PeerConnected peer_connected = 2;
+    // PeerDisconnected peer_disconnected = 3;
+    // ChannelStateChanged channel_state_changed = 4;
+    // BalanceChanged balance_changed = 5;
+  }
+}
+
+// Event emitted when an invoice is paid.
+message InvoicePaid {
+  // The payment hash of the paid invoice.
+  bytes payment_hash = 1;
+  // The bolt11 invoice string.
+  string bolt11 = 2;
+  // The preimage that proves payment.
+  bytes preimage = 3;
+  // The label assigned to the invoice.
+  string label = 4;
+  // Amount received in millisatoshis.
+  uint64 amount_msat = 5;
+  // Extra TLV fields included in the payment.
+  repeated TlvField extratlvs = 6;
 }

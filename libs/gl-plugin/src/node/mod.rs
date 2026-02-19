@@ -574,6 +574,63 @@ impl Node for PluginNodeServer {
         return Ok(Response::new(ReceiverStream::new(rx)));
     }
 
+    type StreamNodeEventsStream = ReceiverStream<Result<pb::NodeEvent, Status>>;
+
+    async fn stream_node_events(
+        &self,
+        _req: tonic::Request<pb::NodeEventsRequest>,
+    ) -> Result<Response<Self::StreamNodeEventsStream>, Status> {
+        let (tx, rx) = mpsc::channel(1);
+        let mut bcast = self.events.subscribe();
+        tokio::spawn(async move {
+            while let Ok(event) = bcast.recv().await {
+                // Convert Event to NodeEvent protobuf, if applicable
+                let node_event = match &event {
+                    super::Event::IncomingPayment(p) => {
+                        // Extract the offchain payment details
+                        if let Some(crate::pb::incoming_payment::Details::Offchain(offchain)) =
+                            &p.details
+                        {
+                            Some(pb::NodeEvent {
+                                event: Some(pb::node_event::Event::InvoicePaid(pb::InvoicePaid {
+                                    payment_hash: offchain.payment_hash.clone(),
+                                    bolt11: offchain.bolt11.clone(),
+                                    preimage: offchain.preimage.clone(),
+                                    label: offchain.label.clone(),
+                                    amount_msat: offchain
+                                        .amount
+                                        .as_ref()
+                                        .and_then(|a| a.unit.as_ref())
+                                        .map(|u| match u {
+                                            pb::amount::Unit::Millisatoshi(m) => *m,
+                                            pb::amount::Unit::Satoshi(s) => s * 1000,
+                                            pb::amount::Unit::Bitcoin(b) => b * 100_000_000_000,
+                                            _ => 0,
+                                        })
+                                        .unwrap_or(0),
+                                    extratlvs: offchain.extratlvs.clone(),
+                                })),
+                            })
+                        } else {
+                            None
+                        }
+                    }
+                    // Other event types are not exposed to clients
+                    _ => None,
+                };
+
+                if let Some(event) = node_event {
+                    if tx.send(Ok(event)).await.is_err() {
+                        // Client disconnected
+                        break;
+                    }
+                }
+            }
+        });
+
+        Ok(Response::new(ReceiverStream::new(rx)))
+    }
+
     async fn configure(
         &self,
         req: tonic::Request<pb::GlConfig>,
