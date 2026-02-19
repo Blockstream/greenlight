@@ -490,17 +490,17 @@ impl Signer {
         debug!("Processing request {:?}", req);
         let diff: crate::persist::State = req.signer_state.clone().into();
 
-        let (prestate_sketch, prestate_log, force_full_sync) = {
+        let (prestate_sketch, prestate_log) = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
             })?;
-            let merge_res = state.safe_merge(&diff).map_err(|e| {
+            let merge_res = state.merge(&diff).map_err(|e| {
                 Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
             })?;
             if merge_res.has_conflicts() {
-                warn!(
-                    "State merge conflict detected (count={}), forcing full signer state sync",
+                debug!(
+                    "State merge ignored stale versions (count={})",
                     merge_res.conflict_count
                 );
             }
@@ -510,7 +510,7 @@ impl Signer {
             })?;
 
 
-            (state.sketch(), log_state, merge_res.has_conflicts())
+            (state.sketch(), log_state)
         };
 
         // The first two bytes represent the message type. Check that
@@ -639,33 +639,22 @@ impl Signer {
             let state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock for serialization: {:?}", e))
             })?;
-            if force_full_sync {
+            let full_wire_bytes = {
                 let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
-                let full_wire_bytes = signer_state_response_wire_bytes(&full_entries);
-                trace!(
-                    "Signer state full sync entries={}, wire_bytes={}",
-                    full_entries.len(),
-                    full_wire_bytes
-                );
-                full_entries
-            } else {
-                let full_wire_bytes = {
-                    let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
-                    signer_state_response_wire_bytes(&full_entries)
-                };
-                let diff_state = prestate_sketch.diff_state(&state);
-                let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
-                let diff_wire_bytes = signer_state_response_wire_bytes(&diff_entries);
-                let saved_percent = savings_percent(full_wire_bytes, diff_wire_bytes);
-                trace!(
-                    "Signer state diff entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
-                    diff_entries.len(),
-                    diff_wire_bytes,
-                    full_wire_bytes,
-                    saved_percent
-                );
-                diff_entries
-            }
+                signer_state_response_wire_bytes(&full_entries)
+            };
+            let diff_state = prestate_sketch.diff_state(&state);
+            let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
+            let diff_wire_bytes = signer_state_response_wire_bytes(&diff_entries);
+            let saved_percent = savings_percent(full_wire_bytes, diff_wire_bytes);
+            trace!(
+                "Signer state diff entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
+                diff_entries.len(),
+                diff_wire_bytes,
+                full_wire_bytes,
+                saved_percent
+            );
+            diff_entries
         };
         Ok(HsmResponse {
             raw: response.as_vec(),

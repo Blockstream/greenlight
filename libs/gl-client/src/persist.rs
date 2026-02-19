@@ -229,12 +229,12 @@ pub struct StateChange {
 }
 
 #[derive(Debug, Default)]
-pub struct SafeMergeResult {
+pub struct MergeResult {
     pub changes: Vec<(String, Option<u64>, u64)>,
     pub conflict_count: usize,
 }
 
-impl SafeMergeResult {
+impl MergeResult {
     pub fn has_conflicts(&self) -> bool {
         self.conflict_count > 0
     }
@@ -278,8 +278,8 @@ impl State {
     ///
     /// A conflict means the incoming state is stale or incompatible with local
     /// tombstone knowledge. Callers may use this signal to trigger a full sync.
-    pub fn safe_merge(&mut self, other: &State) -> anyhow::Result<SafeMergeResult> {
-        let mut res = SafeMergeResult::default();
+    pub fn merge(&mut self, other: &State) -> anyhow::Result<MergeResult> {
+        let mut res = MergeResult::default();
         for (key, (newver, newval)) in other.values.iter() {
             let incoming_is_tombstone = *newver == TOMBSTONE_VERSION;
             match self.values.get_mut(key) {
@@ -333,11 +333,6 @@ impl State {
             }
         }
         Ok(res)
-    }
-
-    /// Backward-compatible merge API.
-    pub fn merge(&mut self, other: &State) -> anyhow::Result<Vec<(String, Option<u64>, u64)>> {
-        Ok(self.safe_merge(other)?.changes)
     }
 
     pub fn diff(&self, other: &State) -> anyhow::Result<Vec<StateChange>> {
@@ -925,7 +920,7 @@ mod tests {
         let mut state = mk_state(vec![(live_key.as_str(), 2, json!({"v": 1}))]);
         let incoming = mk_state(vec![(live_key.as_str(), u64::MAX, serde_json::Value::Null)]);
 
-        let res = state.safe_merge(&incoming).unwrap();
+        let res = state.merge(&incoming).unwrap();
 
         assert_tombstone(&state, &live_key);
         assert_eq!(res.conflict_count, 0);
@@ -937,7 +932,7 @@ mod tests {
         let mut state = mk_state(vec![(live_key.as_str(), u64::MAX, serde_json::Value::Null)]);
         let incoming = mk_state(vec![(live_key.as_str(), 4, json!({"v": 1}))]);
 
-        let res = state.safe_merge(&incoming).unwrap();
+        let res = state.merge(&incoming).unwrap();
 
         assert_tombstone(&state, &live_key);
         assert_eq!(res.conflict_count, 1);
@@ -949,7 +944,7 @@ mod tests {
         let mut state = mk_state(vec![(live_key.as_str(), u64::MAX, serde_json::Value::Null)]);
         let incoming = mk_state(vec![(live_key.as_str(), 6, json!({"v": 2}))]);
 
-        let res = state.safe_merge(&incoming).unwrap();
+        let res = state.merge(&incoming).unwrap();
 
         assert_tombstone(&state, &live_key);
         assert_eq!(res.conflict_count, 1);
@@ -960,7 +955,7 @@ mod tests {
         let mut state = mk_state(vec![("k1", 5, json!({"v": 5}))]);
         let incoming = mk_state(vec![("k1", 4, json!({"v": 4}))]);
 
-        let res = state.safe_merge(&incoming).unwrap();
+        let res = state.merge(&incoming).unwrap();
 
         assert_eq!(res.conflict_count, 1);
         assert_entry(&state, "k1", 5, json!({"v": 5}));
