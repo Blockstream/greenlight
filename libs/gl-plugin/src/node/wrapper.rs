@@ -1192,8 +1192,8 @@ impl WrappedNodeServer {
 
 use crate::pb::{
     node_server::Node as GlNode, Custommsg, Empty, HsmRequest, HsmResponse, IncomingPayment,
-    LogEntry, LspInvoiceRequest, LspInvoiceResponse, StreamCustommsgRequest, StreamIncomingFilter,
-    StreamLogRequest,
+    LogEntry, LspInvoiceRequest, LspInvoiceResponse, NodeEvent, NodeEventsRequest,
+    StreamCustommsgRequest, StreamIncomingFilter, StreamLogRequest,
 };
 
 #[tonic::async_trait]
@@ -1202,6 +1202,7 @@ impl GlNode for WrappedNodeServer {
     type StreamHsmRequestsStream = ReceiverStream<Result<HsmRequest, Status>>;
     type StreamLogStream = ReceiverStream<Result<LogEntry, Status>>;
     type StreamIncomingStream = ReceiverStream<Result<IncomingPayment, Status>>;
+    type StreamNodeEventsStream = ReceiverStream<Result<NodeEvent, Status>>;
 
     async fn lsp_invoice(
         &self,
@@ -1265,5 +1266,12 @@ impl GlNode for WrappedNodeServer {
         request: tonic::Request<crate::pb::TrampolinePayRequest>,
     ) -> Result<tonic::Response<crate::pb::TrampolinePayResponse>, Status> {
         self.node_server.trampoline_pay(request).await
+    }
+
+    async fn stream_node_events(
+        &self,
+        req: tonic::Request<NodeEventsRequest>,
+    ) -> Result<Response<Self::StreamNodeEventsStream>, Status> {
+        self.node_server.stream_node_events(req).await
     }
 }
