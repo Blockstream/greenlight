@@ -5,7 +5,7 @@ import warnings
 
 from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 
-GRPC_GENERATED_VERSION = '1.76.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -68,6 +68,11 @@ class NodeStub(object):
                 '/greenlight.Node/StreamCustommsg',
                 request_serializer=glclient_dot_greenlight__pb2.StreamCustommsgRequest.SerializeToString,
                 response_deserializer=glclient_dot_greenlight__pb2.Custommsg.FromString,
+                _registered_method=True)
+        self.StreamNodeEvents = channel.unary_stream(
+                '/greenlight.Node/StreamNodeEvents',
+                request_serializer=glclient_dot_greenlight__pb2.NodeEventsRequest.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.NodeEvent.FromString,
                 _registered_method=True)
         self.StreamHsmRequests = channel.unary_stream(
                 '/greenlight.Node/StreamHsmRequests',
@@ -151,6 +156,18 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StreamNodeEvents(self, request, context):
+        """Stream node events in real-time.
+
+        This is a unified event stream that delivers various node events
+        as they occur, including invoice updates, peer changes, channel
+        state changes, and balance updates. Events are not persisted and
+        will not be replayed if the stream is interrupted.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def StreamHsmRequests(self, request, context):
         """////////////////////////////// HSM Messages ////////////////////////
 
@@ -207,6 +224,11 @@ def add_NodeServicer_to_server(servicer, server):
                     servicer.StreamCustommsg,
                     request_deserializer=glclient_dot_greenlight__pb2.StreamCustommsgRequest.FromString,
                     response_serializer=glclient_dot_greenlight__pb2.Custommsg.SerializeToString,
+            ),
+            'StreamNodeEvents': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamNodeEvents,
+                    request_deserializer=glclient_dot_greenlight__pb2.NodeEventsRequest.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.NodeEvent.SerializeToString,
             ),
             'StreamHsmRequests': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamHsmRequests,
@@ -352,6 +374,33 @@ class Node(object):
             '/greenlight.Node/StreamCustommsg',
             glclient_dot_greenlight__pb2.StreamCustommsgRequest.SerializeToString,
             glclient_dot_greenlight__pb2.Custommsg.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamNodeEvents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/greenlight.Node/StreamNodeEvents',
+            glclient_dot_greenlight__pb2.NodeEventsRequest.SerializeToString,
+            glclient_dot_greenlight__pb2.NodeEvent.FromString,
             options,
             channel_credentials,
             insecure,

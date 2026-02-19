@@ -57,6 +57,14 @@ impl Node {
         Ok(CustommsgStream { inner: stream })
     }
 
+    fn stream_node_events(&self, args: &[u8]) -> PyResult<NodeEventStream> {
+        let req = pb::NodeEventsRequest::decode(args).map_err(error_decoding_request)?;
+        let stream = exec(self.client.clone().stream_node_events(req))
+            .map(|x| x.into_inner())
+            .map_err(error_starting_stream)?;
+        Ok(NodeEventStream { inner: stream })
+    }
+
     fn trampoline_pay(
         &self,
         bolt11: String,
@@ -157,6 +165,18 @@ struct CustommsgStream {
 
 #[pymethods]
 impl CustommsgStream {
+    fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
+        convert_stream_entry(exec(async { self.inner.message().await }))
+    }
+}
+
+#[pyclass]
+struct NodeEventStream {
+    inner: tonic::codec::Streaming<pb::NodeEvent>,
+}
+
+#[pymethods]
+impl NodeEventStream {
     fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
         convert_stream_entry(exec(async { self.inner.message().await }))
     }
