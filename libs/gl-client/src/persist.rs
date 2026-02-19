@@ -825,6 +825,18 @@ mod tests {
         State { values }
     }
 
+    fn assert_entry(state: &State, key: &str, expected_version: u64, expected_value: serde_json::Value) {
+        let (actual_version, actual_value) = state.values.get(key).unwrap_or_else(|| {
+            panic!("expected state to include key: {key}")
+        });
+        assert_eq!(*actual_version, expected_version);
+        assert_eq!(actual_value, &expected_value);
+    }
+
+    fn assert_entry_absent(state: &State, key: &str) {
+        assert!(state.values.get(key).is_none(), "expected state to omit key {key}");
+    }
+
     #[test]
     fn diff_state_only_includes_new_or_newer_entries() {
         let old = mk_state(vec![
@@ -846,10 +858,10 @@ mod tests {
         let diff = old.diff_state(&new);
 
         assert_eq!(diff.values.len(), 2);
-        assert_eq!(diff.values.get("k2").unwrap().0, 3);
-        assert_eq!(diff.values.get("k4").unwrap().0, 0);
-        assert!(diff.values.get("k1").is_none());
-        assert!(diff.values.get("k3").is_none());
+        assert_entry(&diff, "k2", 3, json!({"v": 22}));
+        assert_entry(&diff, "k4", 0, json!({"v": 4}));
+        assert_entry_absent(&diff, "k1");
+        assert_entry_absent(&diff, "k3");
     }
 
     #[test]
@@ -863,8 +875,8 @@ mod tests {
         let diff = old.diff_state(&new);
 
         assert_eq!(diff.values.len(), 2);
-        assert_eq!(diff.values.get("k1").unwrap().0, 1);
-        assert_eq!(diff.values.get("k2").unwrap().0, 2);
+        assert_entry(&diff, "k1", 1, json!({"v": 1}));
+        assert_entry(&diff, "k2", 2, json!({"v": 2}));
     }
 
     #[test]
@@ -898,8 +910,8 @@ mod tests {
         let diff = sketch.diff_state(&state);
 
         assert_eq!(diff.values.len(), 2);
-        assert_eq!(diff.values.get("a").unwrap().0, 1);
-        assert_eq!(diff.values.get("b").unwrap().0, 2);
+        assert_entry(&diff, "a", 1, json!(1));
+        assert_entry(&diff, "b", 2, json!(2));
     }
 
     #[test]
@@ -911,8 +923,9 @@ mod tests {
         let next = mk_state(vec![("a", 2, json!(10)), ("b", 2, json!(20)), ("c", 0, json!(30))]);
         let first_diff = sketch.diff_state(&next);
         assert_eq!(first_diff.values.len(), 2);
-        assert!(first_diff.values.get("a").is_some());
-        assert!(first_diff.values.get("c").is_some());
+        assert_entry(&first_diff, "a", 2, json!(10));
+        assert_entry(&first_diff, "c", 0, json!(30));
+        assert_entry_absent(&first_diff, "b");
 
         sketch.apply_state(&first_diff);
         let second_diff = sketch.diff_state(&next);
@@ -928,8 +941,8 @@ mod tests {
 
         let res = state.safe_merge(&incoming).unwrap();
 
-        assert!(state.values.get(&live_key).is_none());
-        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 3);
+        assert_entry_absent(&state, &live_key);
+        assert_entry(&state, &tombstone_key, 3, serde_json::Value::Null);
         assert_eq!(res.conflict_count, 0);
     }
 
@@ -942,8 +955,8 @@ mod tests {
 
         let res = state.safe_merge(&incoming).unwrap();
 
-        assert!(state.values.get(&live_key).is_none());
-        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 5);
+        assert_entry_absent(&state, &live_key);
+        assert_entry(&state, &tombstone_key, 5, serde_json::Value::Null);
         assert_eq!(res.conflict_count, 1);
     }
 
@@ -956,8 +969,8 @@ mod tests {
 
         let res = state.safe_merge(&incoming).unwrap();
 
-        assert_eq!(state.values.get(&live_key).unwrap().0, 6);
-        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 5);
+        assert_entry(&state, &live_key, 6, json!({"v": 2}));
+        assert_entry(&state, &tombstone_key, 5, serde_json::Value::Null);
         assert_eq!(res.conflict_count, 0);
     }
 
@@ -969,7 +982,7 @@ mod tests {
         let res = state.safe_merge(&incoming).unwrap();
 
         assert_eq!(res.conflict_count, 1);
-        assert_eq!(state.values.get("k1").unwrap().0, 5);
+        assert_entry(&state, "k1", 5, json!({"v": 5}));
     }
 
     #[test]
@@ -980,8 +993,8 @@ mod tests {
 
         state.delete_channel("abc");
 
-        assert!(state.values.get(&live_key).is_none());
-        assert_eq!(state.values.get(&tombstone_key).unwrap().0, 8);
+        assert_entry_absent(&state, &live_key);
+        assert_entry(&state, &tombstone_key, 8, serde_json::Value::Null);
     }
 
     #[test]
@@ -1010,9 +1023,9 @@ mod tests {
             (tracker_key, 4u64),
             (channel_key, 5u64),
         ] {
-            assert!(state.values.get(&live_key).is_none());
+            assert_entry_absent(&state, &live_key);
             let tombstone_key = format!("{TOMBSTONE_PREFIX}/{live_key}");
-            assert_eq!(state.values.get(&tombstone_key).unwrap().0, old_version + 1);
+            assert_entry(&state, &tombstone_key, old_version + 1, serde_json::Value::Null);
         }
     }
 }
