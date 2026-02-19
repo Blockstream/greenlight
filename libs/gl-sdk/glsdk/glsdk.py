@@ -460,7 +460,27 @@ def _uniffi_check_contract_api_version(lib):
         raise InternalError("UniFFI contract version mismatch: try cleaning and rebuilding your project")
 
 def _uniffi_check_api_checksums(lib):
+    if lib.uniffi_glsdk_checksum_method_credentials_save() != 26677:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_handle_stop() != 36432:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_get_info() != 39460:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_list_funds() != 21692:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_list_peer_channels() != 35210:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_list_peers() != 29567:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 21676:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 51884:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_receive() != 24722:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_send() != 30141:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_stop() != 20186:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -601,6 +621,11 @@ _UniffiLib.uniffi_glsdk_fn_constructor_credentials_load.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_credentials_load.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_credentials_save.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_credentials_save.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_clone_handle.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -631,6 +656,88 @@ _UniffiLib.uniffi_glsdk_fn_constructor_node_new.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_node_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_get_info.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_get_info.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_list_funds.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_list_funds.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_list_peer_channels.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_list_peer_channels.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_list_peers.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_list_peers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_receive.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_receive.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_send.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_send.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_stop.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_stop.restype = None
+_UniffiLib.uniffi_glsdk_fn_clone_onchainreceiveresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_onchainreceiveresponse.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_onchainreceiveresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_onchainreceiveresponse.restype = None
+_UniffiLib.uniffi_glsdk_fn_clone_onchainsendresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_onchainsendresponse.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_onchainsendresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_onchainsendresponse.restype = None
+_UniffiLib.uniffi_glsdk_fn_clone_receiveresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_receiveresponse.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_receiveresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_receiveresponse.restype = None
 _UniffiLib.uniffi_glsdk_fn_clone_scheduler.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -659,6 +766,16 @@ _UniffiLib.uniffi_glsdk_fn_method_scheduler_register.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_scheduler_register.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_clone_sendresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_sendresponse.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_sendresponse.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_sendresponse.restype = None
 _UniffiLib.uniffi_glsdk_fn_clone_signer.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -958,9 +1075,39 @@ _UniffiLib.ffi_glsdk_rust_future_complete_void.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.ffi_glsdk_rust_future_complete_void.restype = None
+_UniffiLib.uniffi_glsdk_checksum_method_credentials_save.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_credentials_save.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_handle_stop.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_handle_stop.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_get_info.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_get_info.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_funds.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_funds.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_send.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_send.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_receive.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_receive.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_send.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_send.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_stop.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_stop.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.restype = ctypes.c_uint16
@@ -997,6 +1144,53 @@ _uniffi_check_contract_api_version(_UniffiLib)
 
 # Public interface members begin here.
 
+
+class _UniffiConverterUInt32(_UniffiConverterPrimitiveInt):
+    CLASS_NAME = "u32"
+    VALUE_MIN = 0
+    VALUE_MAX = 2**32
+
+    @staticmethod
+    def read(buf):
+        return buf.read_u32()
+
+    @staticmethod
+    def write(value, buf):
+        buf.write_u32(value)
+
+class _UniffiConverterUInt64(_UniffiConverterPrimitiveInt):
+    CLASS_NAME = "u64"
+    VALUE_MIN = 0
+    VALUE_MAX = 2**64
+
+    @staticmethod
+    def read(buf):
+        return buf.read_u64()
+
+    @staticmethod
+    def write(value, buf):
+        buf.write_u64(value)
+
+class _UniffiConverterBool:
+    @classmethod
+    def check_lower(cls, value):
+        return not not value
+
+    @classmethod
+    def lower(cls, value):
+        return 1 if value else 0
+
+    @staticmethod
+    def lift(value):
+        return value != 0
+
+    @classmethod
+    def read(cls, buf):
+        return cls.lift(buf.read_u8())
+
+    @classmethod
+    def write(cls, value, buf):
+        buf.write_u8(value)
 
 class _UniffiConverterString:
     @staticmethod
@@ -1061,6 +1255,652 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
 
 
 
+
+
+
+
+
+
+
+
+class FundChannel:
+    peer_id: "bytes"
+    our_amount_msat: "int"
+    amount_msat: "int"
+    funding_txid: "bytes"
+    funding_output: "int"
+    connected: "bool"
+    state: "ChannelState"
+    short_channel_id: "typing.Optional[str]"
+    channel_id: "typing.Optional[bytes]"
+    def __init__(self, *, peer_id: "bytes", our_amount_msat: "int", amount_msat: "int", funding_txid: "bytes", funding_output: "int", connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[bytes]"):
+        self.peer_id = peer_id
+        self.our_amount_msat = our_amount_msat
+        self.amount_msat = amount_msat
+        self.funding_txid = funding_txid
+        self.funding_output = funding_output
+        self.connected = connected
+        self.state = state
+        self.short_channel_id = short_channel_id
+        self.channel_id = channel_id
+
+    def __str__(self):
+        return "FundChannel(peer_id={}, our_amount_msat={}, amount_msat={}, funding_txid={}, funding_output={}, connected={}, state={}, short_channel_id={}, channel_id={})".format(self.peer_id, self.our_amount_msat, self.amount_msat, self.funding_txid, self.funding_output, self.connected, self.state, self.short_channel_id, self.channel_id)
+
+    def __eq__(self, other):
+        if self.peer_id != other.peer_id:
+            return False
+        if self.our_amount_msat != other.our_amount_msat:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.funding_txid != other.funding_txid:
+            return False
+        if self.funding_output != other.funding_output:
+            return False
+        if self.connected != other.connected:
+            return False
+        if self.state != other.state:
+            return False
+        if self.short_channel_id != other.short_channel_id:
+            return False
+        if self.channel_id != other.channel_id:
+            return False
+        return True
+
+class _UniffiConverterTypeFundChannel(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return FundChannel(
+            peer_id=_UniffiConverterBytes.read(buf),
+            our_amount_msat=_UniffiConverterUInt64.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+            funding_txid=_UniffiConverterBytes.read(buf),
+            funding_output=_UniffiConverterUInt32.read(buf),
+            connected=_UniffiConverterBool.read(buf),
+            state=_UniffiConverterTypeChannelState.read(buf),
+            short_channel_id=_UniffiConverterOptionalString.read(buf),
+            channel_id=_UniffiConverterOptionalBytes.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.peer_id)
+        _UniffiConverterUInt64.check_lower(value.our_amount_msat)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+        _UniffiConverterBytes.check_lower(value.funding_txid)
+        _UniffiConverterUInt32.check_lower(value.funding_output)
+        _UniffiConverterBool.check_lower(value.connected)
+        _UniffiConverterTypeChannelState.check_lower(value.state)
+        _UniffiConverterOptionalString.check_lower(value.short_channel_id)
+        _UniffiConverterOptionalBytes.check_lower(value.channel_id)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.peer_id, buf)
+        _UniffiConverterUInt64.write(value.our_amount_msat, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
+        _UniffiConverterBytes.write(value.funding_txid, buf)
+        _UniffiConverterUInt32.write(value.funding_output, buf)
+        _UniffiConverterBool.write(value.connected, buf)
+        _UniffiConverterTypeChannelState.write(value.state, buf)
+        _UniffiConverterOptionalString.write(value.short_channel_id, buf)
+        _UniffiConverterOptionalBytes.write(value.channel_id, buf)
+
+
+class FundOutput:
+    txid: "bytes"
+    output: "int"
+    amount_msat: "int"
+    status: "OutputStatus"
+    address: "typing.Optional[str]"
+    blockheight: "typing.Optional[int]"
+    def __init__(self, *, txid: "bytes", output: "int", amount_msat: "int", status: "OutputStatus", address: "typing.Optional[str]", blockheight: "typing.Optional[int]"):
+        self.txid = txid
+        self.output = output
+        self.amount_msat = amount_msat
+        self.status = status
+        self.address = address
+        self.blockheight = blockheight
+
+    def __str__(self):
+        return "FundOutput(txid={}, output={}, amount_msat={}, status={}, address={}, blockheight={})".format(self.txid, self.output, self.amount_msat, self.status, self.address, self.blockheight)
+
+    def __eq__(self, other):
+        if self.txid != other.txid:
+            return False
+        if self.output != other.output:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.status != other.status:
+            return False
+        if self.address != other.address:
+            return False
+        if self.blockheight != other.blockheight:
+            return False
+        return True
+
+class _UniffiConverterTypeFundOutput(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return FundOutput(
+            txid=_UniffiConverterBytes.read(buf),
+            output=_UniffiConverterUInt32.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+            status=_UniffiConverterTypeOutputStatus.read(buf),
+            address=_UniffiConverterOptionalString.read(buf),
+            blockheight=_UniffiConverterOptionalUInt32.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.txid)
+        _UniffiConverterUInt32.check_lower(value.output)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+        _UniffiConverterTypeOutputStatus.check_lower(value.status)
+        _UniffiConverterOptionalString.check_lower(value.address)
+        _UniffiConverterOptionalUInt32.check_lower(value.blockheight)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.txid, buf)
+        _UniffiConverterUInt32.write(value.output, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
+        _UniffiConverterTypeOutputStatus.write(value.status, buf)
+        _UniffiConverterOptionalString.write(value.address, buf)
+        _UniffiConverterOptionalUInt32.write(value.blockheight, buf)
+
+
+class GetInfoResponse:
+    id: "bytes"
+    alias: "typing.Optional[str]"
+    color: "bytes"
+    num_peers: "int"
+    num_pending_channels: "int"
+    num_active_channels: "int"
+    num_inactive_channels: "int"
+    version: "str"
+    lightning_dir: "str"
+    blockheight: "int"
+    network: "str"
+    fees_collected_msat: "int"
+    def __init__(self, *, id: "bytes", alias: "typing.Optional[str]", color: "bytes", num_peers: "int", num_pending_channels: "int", num_active_channels: "int", num_inactive_channels: "int", version: "str", lightning_dir: "str", blockheight: "int", network: "str", fees_collected_msat: "int"):
+        self.id = id
+        self.alias = alias
+        self.color = color
+        self.num_peers = num_peers
+        self.num_pending_channels = num_pending_channels
+        self.num_active_channels = num_active_channels
+        self.num_inactive_channels = num_inactive_channels
+        self.version = version
+        self.lightning_dir = lightning_dir
+        self.blockheight = blockheight
+        self.network = network
+        self.fees_collected_msat = fees_collected_msat
+
+    def __str__(self):
+        return "GetInfoResponse(id={}, alias={}, color={}, num_peers={}, num_pending_channels={}, num_active_channels={}, num_inactive_channels={}, version={}, lightning_dir={}, blockheight={}, network={}, fees_collected_msat={})".format(self.id, self.alias, self.color, self.num_peers, self.num_pending_channels, self.num_active_channels, self.num_inactive_channels, self.version, self.lightning_dir, self.blockheight, self.network, self.fees_collected_msat)
+
+    def __eq__(self, other):
+        if self.id != other.id:
+            return False
+        if self.alias != other.alias:
+            return False
+        if self.color != other.color:
+            return False
+        if self.num_peers != other.num_peers:
+            return False
+        if self.num_pending_channels != other.num_pending_channels:
+            return False
+        if self.num_active_channels != other.num_active_channels:
+            return False
+        if self.num_inactive_channels != other.num_inactive_channels:
+            return False
+        if self.version != other.version:
+            return False
+        if self.lightning_dir != other.lightning_dir:
+            return False
+        if self.blockheight != other.blockheight:
+            return False
+        if self.network != other.network:
+            return False
+        if self.fees_collected_msat != other.fees_collected_msat:
+            return False
+        return True
+
+class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return GetInfoResponse(
+            id=_UniffiConverterBytes.read(buf),
+            alias=_UniffiConverterOptionalString.read(buf),
+            color=_UniffiConverterBytes.read(buf),
+            num_peers=_UniffiConverterUInt32.read(buf),
+            num_pending_channels=_UniffiConverterUInt32.read(buf),
+            num_active_channels=_UniffiConverterUInt32.read(buf),
+            num_inactive_channels=_UniffiConverterUInt32.read(buf),
+            version=_UniffiConverterString.read(buf),
+            lightning_dir=_UniffiConverterString.read(buf),
+            blockheight=_UniffiConverterUInt32.read(buf),
+            network=_UniffiConverterString.read(buf),
+            fees_collected_msat=_UniffiConverterUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.id)
+        _UniffiConverterOptionalString.check_lower(value.alias)
+        _UniffiConverterBytes.check_lower(value.color)
+        _UniffiConverterUInt32.check_lower(value.num_peers)
+        _UniffiConverterUInt32.check_lower(value.num_pending_channels)
+        _UniffiConverterUInt32.check_lower(value.num_active_channels)
+        _UniffiConverterUInt32.check_lower(value.num_inactive_channels)
+        _UniffiConverterString.check_lower(value.version)
+        _UniffiConverterString.check_lower(value.lightning_dir)
+        _UniffiConverterUInt32.check_lower(value.blockheight)
+        _UniffiConverterString.check_lower(value.network)
+        _UniffiConverterUInt64.check_lower(value.fees_collected_msat)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.id, buf)
+        _UniffiConverterOptionalString.write(value.alias, buf)
+        _UniffiConverterBytes.write(value.color, buf)
+        _UniffiConverterUInt32.write(value.num_peers, buf)
+        _UniffiConverterUInt32.write(value.num_pending_channels, buf)
+        _UniffiConverterUInt32.write(value.num_active_channels, buf)
+        _UniffiConverterUInt32.write(value.num_inactive_channels, buf)
+        _UniffiConverterString.write(value.version, buf)
+        _UniffiConverterString.write(value.lightning_dir, buf)
+        _UniffiConverterUInt32.write(value.blockheight, buf)
+        _UniffiConverterString.write(value.network, buf)
+        _UniffiConverterUInt64.write(value.fees_collected_msat, buf)
+
+
+class ListFundsResponse:
+    outputs: "typing.List[FundOutput]"
+    channels: "typing.List[FundChannel]"
+    def __init__(self, *, outputs: "typing.List[FundOutput]", channels: "typing.List[FundChannel]"):
+        self.outputs = outputs
+        self.channels = channels
+
+    def __str__(self):
+        return "ListFundsResponse(outputs={}, channels={})".format(self.outputs, self.channels)
+
+    def __eq__(self, other):
+        if self.outputs != other.outputs:
+            return False
+        if self.channels != other.channels:
+            return False
+        return True
+
+class _UniffiConverterTypeListFundsResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListFundsResponse(
+            outputs=_UniffiConverterSequenceTypeFundOutput.read(buf),
+            channels=_UniffiConverterSequenceTypeFundChannel.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypeFundOutput.check_lower(value.outputs)
+        _UniffiConverterSequenceTypeFundChannel.check_lower(value.channels)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypeFundOutput.write(value.outputs, buf)
+        _UniffiConverterSequenceTypeFundChannel.write(value.channels, buf)
+
+
+class ListPeerChannelsResponse:
+    channels: "typing.List[PeerChannel]"
+    def __init__(self, *, channels: "typing.List[PeerChannel]"):
+        self.channels = channels
+
+    def __str__(self):
+        return "ListPeerChannelsResponse(channels={})".format(self.channels)
+
+    def __eq__(self, other):
+        if self.channels != other.channels:
+            return False
+        return True
+
+class _UniffiConverterTypeListPeerChannelsResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListPeerChannelsResponse(
+            channels=_UniffiConverterSequenceTypePeerChannel.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypePeerChannel.check_lower(value.channels)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypePeerChannel.write(value.channels, buf)
+
+
+class ListPeersResponse:
+    peers: "typing.List[Peer]"
+    def __init__(self, *, peers: "typing.List[Peer]"):
+        self.peers = peers
+
+    def __str__(self):
+        return "ListPeersResponse(peers={})".format(self.peers)
+
+    def __eq__(self, other):
+        if self.peers != other.peers:
+            return False
+        return True
+
+class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListPeersResponse(
+            peers=_UniffiConverterSequenceTypePeer.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypePeer.check_lower(value.peers)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypePeer.write(value.peers, buf)
+
+
+class Peer:
+    id: "bytes"
+    connected: "bool"
+    num_channels: "typing.Optional[int]"
+    netaddr: "typing.List[str]"
+    remote_addr: "typing.Optional[str]"
+    features: "typing.Optional[bytes]"
+    def __init__(self, *, id: "bytes", connected: "bool", num_channels: "typing.Optional[int]", netaddr: "typing.List[str]", remote_addr: "typing.Optional[str]", features: "typing.Optional[bytes]"):
+        self.id = id
+        self.connected = connected
+        self.num_channels = num_channels
+        self.netaddr = netaddr
+        self.remote_addr = remote_addr
+        self.features = features
+
+    def __str__(self):
+        return "Peer(id={}, connected={}, num_channels={}, netaddr={}, remote_addr={}, features={})".format(self.id, self.connected, self.num_channels, self.netaddr, self.remote_addr, self.features)
+
+    def __eq__(self, other):
+        if self.id != other.id:
+            return False
+        if self.connected != other.connected:
+            return False
+        if self.num_channels != other.num_channels:
+            return False
+        if self.netaddr != other.netaddr:
+            return False
+        if self.remote_addr != other.remote_addr:
+            return False
+        if self.features != other.features:
+            return False
+        return True
+
+class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return Peer(
+            id=_UniffiConverterBytes.read(buf),
+            connected=_UniffiConverterBool.read(buf),
+            num_channels=_UniffiConverterOptionalUInt32.read(buf),
+            netaddr=_UniffiConverterSequenceString.read(buf),
+            remote_addr=_UniffiConverterOptionalString.read(buf),
+            features=_UniffiConverterOptionalBytes.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.id)
+        _UniffiConverterBool.check_lower(value.connected)
+        _UniffiConverterOptionalUInt32.check_lower(value.num_channels)
+        _UniffiConverterSequenceString.check_lower(value.netaddr)
+        _UniffiConverterOptionalString.check_lower(value.remote_addr)
+        _UniffiConverterOptionalBytes.check_lower(value.features)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.id, buf)
+        _UniffiConverterBool.write(value.connected, buf)
+        _UniffiConverterOptionalUInt32.write(value.num_channels, buf)
+        _UniffiConverterSequenceString.write(value.netaddr, buf)
+        _UniffiConverterOptionalString.write(value.remote_addr, buf)
+        _UniffiConverterOptionalBytes.write(value.features, buf)
+
+
+class PeerChannel:
+    peer_id: "bytes"
+    peer_connected: "bool"
+    state: "ChannelState"
+    short_channel_id: "typing.Optional[str]"
+    channel_id: "typing.Optional[bytes]"
+    funding_txid: "typing.Optional[bytes]"
+    funding_outnum: "typing.Optional[int]"
+    to_us_msat: "typing.Optional[int]"
+    total_msat: "typing.Optional[int]"
+    spendable_msat: "typing.Optional[int]"
+    receivable_msat: "typing.Optional[int]"
+    def __init__(self, *, peer_id: "bytes", peer_connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[bytes]", funding_txid: "typing.Optional[bytes]", funding_outnum: "typing.Optional[int]", to_us_msat: "typing.Optional[int]", total_msat: "typing.Optional[int]", spendable_msat: "typing.Optional[int]", receivable_msat: "typing.Optional[int]"):
+        self.peer_id = peer_id
+        self.peer_connected = peer_connected
+        self.state = state
+        self.short_channel_id = short_channel_id
+        self.channel_id = channel_id
+        self.funding_txid = funding_txid
+        self.funding_outnum = funding_outnum
+        self.to_us_msat = to_us_msat
+        self.total_msat = total_msat
+        self.spendable_msat = spendable_msat
+        self.receivable_msat = receivable_msat
+
+    def __str__(self):
+        return "PeerChannel(peer_id={}, peer_connected={}, state={}, short_channel_id={}, channel_id={}, funding_txid={}, funding_outnum={}, to_us_msat={}, total_msat={}, spendable_msat={}, receivable_msat={})".format(self.peer_id, self.peer_connected, self.state, self.short_channel_id, self.channel_id, self.funding_txid, self.funding_outnum, self.to_us_msat, self.total_msat, self.spendable_msat, self.receivable_msat)
+
+    def __eq__(self, other):
+        if self.peer_id != other.peer_id:
+            return False
+        if self.peer_connected != other.peer_connected:
+            return False
+        if self.state != other.state:
+            return False
+        if self.short_channel_id != other.short_channel_id:
+            return False
+        if self.channel_id != other.channel_id:
+            return False
+        if self.funding_txid != other.funding_txid:
+            return False
+        if self.funding_outnum != other.funding_outnum:
+            return False
+        if self.to_us_msat != other.to_us_msat:
+            return False
+        if self.total_msat != other.total_msat:
+            return False
+        if self.spendable_msat != other.spendable_msat:
+            return False
+        if self.receivable_msat != other.receivable_msat:
+            return False
+        return True
+
+class _UniffiConverterTypePeerChannel(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return PeerChannel(
+            peer_id=_UniffiConverterBytes.read(buf),
+            peer_connected=_UniffiConverterBool.read(buf),
+            state=_UniffiConverterTypeChannelState.read(buf),
+            short_channel_id=_UniffiConverterOptionalString.read(buf),
+            channel_id=_UniffiConverterOptionalBytes.read(buf),
+            funding_txid=_UniffiConverterOptionalBytes.read(buf),
+            funding_outnum=_UniffiConverterOptionalUInt32.read(buf),
+            to_us_msat=_UniffiConverterOptionalUInt64.read(buf),
+            total_msat=_UniffiConverterOptionalUInt64.read(buf),
+            spendable_msat=_UniffiConverterOptionalUInt64.read(buf),
+            receivable_msat=_UniffiConverterOptionalUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.peer_id)
+        _UniffiConverterBool.check_lower(value.peer_connected)
+        _UniffiConverterTypeChannelState.check_lower(value.state)
+        _UniffiConverterOptionalString.check_lower(value.short_channel_id)
+        _UniffiConverterOptionalBytes.check_lower(value.channel_id)
+        _UniffiConverterOptionalBytes.check_lower(value.funding_txid)
+        _UniffiConverterOptionalUInt32.check_lower(value.funding_outnum)
+        _UniffiConverterOptionalUInt64.check_lower(value.to_us_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.total_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.spendable_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.receivable_msat)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.peer_id, buf)
+        _UniffiConverterBool.write(value.peer_connected, buf)
+        _UniffiConverterTypeChannelState.write(value.state, buf)
+        _UniffiConverterOptionalString.write(value.short_channel_id, buf)
+        _UniffiConverterOptionalBytes.write(value.channel_id, buf)
+        _UniffiConverterOptionalBytes.write(value.funding_txid, buf)
+        _UniffiConverterOptionalUInt32.write(value.funding_outnum, buf)
+        _UniffiConverterOptionalUInt64.write(value.to_us_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.total_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.spendable_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.receivable_msat, buf)
+
+
+
+
+
+class ChannelState(enum.Enum):
+    OPENINGD = 0
+    
+    CHANNELD_AWAITING_LOCKIN = 1
+    
+    CHANNELD_NORMAL = 2
+    
+    CHANNELD_SHUTTING_DOWN = 3
+    
+    CLOSINGD_SIGEXCHANGE = 4
+    
+    CLOSINGD_COMPLETE = 5
+    
+    AWAITING_UNILATERAL = 6
+    
+    FUNDING_SPEND_SEEN = 7
+    
+    ONCHAIN = 8
+    
+    DUALOPEND_OPEN_INIT = 9
+    
+    DUALOPEND_AWAITING_LOCKIN = 10
+    
+    DUALOPEND_OPEN_COMMITTED = 11
+    
+    DUALOPEND_OPEN_COMMIT_READY = 12
+    
+
+
+class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return ChannelState.OPENINGD
+        if variant == 2:
+            return ChannelState.CHANNELD_AWAITING_LOCKIN
+        if variant == 3:
+            return ChannelState.CHANNELD_NORMAL
+        if variant == 4:
+            return ChannelState.CHANNELD_SHUTTING_DOWN
+        if variant == 5:
+            return ChannelState.CLOSINGD_SIGEXCHANGE
+        if variant == 6:
+            return ChannelState.CLOSINGD_COMPLETE
+        if variant == 7:
+            return ChannelState.AWAITING_UNILATERAL
+        if variant == 8:
+            return ChannelState.FUNDING_SPEND_SEEN
+        if variant == 9:
+            return ChannelState.ONCHAIN
+        if variant == 10:
+            return ChannelState.DUALOPEND_OPEN_INIT
+        if variant == 11:
+            return ChannelState.DUALOPEND_AWAITING_LOCKIN
+        if variant == 12:
+            return ChannelState.DUALOPEND_OPEN_COMMITTED
+        if variant == 13:
+            return ChannelState.DUALOPEND_OPEN_COMMIT_READY
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == ChannelState.OPENINGD:
+            return
+        if value == ChannelState.CHANNELD_AWAITING_LOCKIN:
+            return
+        if value == ChannelState.CHANNELD_NORMAL:
+            return
+        if value == ChannelState.CHANNELD_SHUTTING_DOWN:
+            return
+        if value == ChannelState.CLOSINGD_SIGEXCHANGE:
+            return
+        if value == ChannelState.CLOSINGD_COMPLETE:
+            return
+        if value == ChannelState.AWAITING_UNILATERAL:
+            return
+        if value == ChannelState.FUNDING_SPEND_SEEN:
+            return
+        if value == ChannelState.ONCHAIN:
+            return
+        if value == ChannelState.DUALOPEND_OPEN_INIT:
+            return
+        if value == ChannelState.DUALOPEND_AWAITING_LOCKIN:
+            return
+        if value == ChannelState.DUALOPEND_OPEN_COMMITTED:
+            return
+        if value == ChannelState.DUALOPEND_OPEN_COMMIT_READY:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == ChannelState.OPENINGD:
+            buf.write_i32(1)
+        if value == ChannelState.CHANNELD_AWAITING_LOCKIN:
+            buf.write_i32(2)
+        if value == ChannelState.CHANNELD_NORMAL:
+            buf.write_i32(3)
+        if value == ChannelState.CHANNELD_SHUTTING_DOWN:
+            buf.write_i32(4)
+        if value == ChannelState.CLOSINGD_SIGEXCHANGE:
+            buf.write_i32(5)
+        if value == ChannelState.CLOSINGD_COMPLETE:
+            buf.write_i32(6)
+        if value == ChannelState.AWAITING_UNILATERAL:
+            buf.write_i32(7)
+        if value == ChannelState.FUNDING_SPEND_SEEN:
+            buf.write_i32(8)
+        if value == ChannelState.ONCHAIN:
+            buf.write_i32(9)
+        if value == ChannelState.DUALOPEND_OPEN_INIT:
+            buf.write_i32(10)
+        if value == ChannelState.DUALOPEND_AWAITING_LOCKIN:
+            buf.write_i32(11)
+        if value == ChannelState.DUALOPEND_OPEN_COMMITTED:
+            buf.write_i32(12)
+        if value == ChannelState.DUALOPEND_OPEN_COMMIT_READY:
+            buf.write_i32(13)
+
+
+
+
 # Error
 # We want to define each variant as a nested class that's also a subclass,
 # which is tricky in Python.  To accomplish this we're going to create each
@@ -1117,6 +1957,38 @@ class Error:  # type: ignore
         def __repr__(self):
             return "Error.PhraseCorrupted({})".format(str(self))
     _UniffiTempError.PhraseCorrupted = PhraseCorrupted # type: ignore
+    class Rpc(_UniffiTempError):
+        def __init__(self, *values):
+            if len(values) != 1:
+                raise TypeError(f"Expected 1 arguments, found {len(values)}")
+            if not isinstance(values[0], str):
+                raise TypeError(f"unexpected type for tuple element 0 - expected 'str', got '{type(values[0])}'")
+            super().__init__(", ".join(map(repr, values)))
+            self._values = values
+
+        def __getitem__(self, index):
+            return self._values[index]
+
+        def __repr__(self):
+            return "Error.Rpc({})".format(str(self))
+    _UniffiTempError.Rpc = Rpc # type: ignore
+    class Argument(_UniffiTempError):
+        def __init__(self, *values):
+            if len(values) != 2:
+                raise TypeError(f"Expected 2 arguments, found {len(values)}")
+            if not isinstance(values[0], str):
+                raise TypeError(f"unexpected type for tuple element 0 - expected 'str', got '{type(values[0])}'")
+            if not isinstance(values[1], str):
+                raise TypeError(f"unexpected type for tuple element 1 - expected 'str', got '{type(values[1])}'")
+            super().__init__(", ".join(map(repr, values)))
+            self._values = values
+
+        def __getitem__(self, index):
+            return self._values[index]
+
+        def __repr__(self):
+            return "Error.Argument({})".format(str(self))
+    _UniffiTempError.Argument = Argument # type: ignore
     class Other(_UniffiTempError):
         def __init__(self, *values):
             if len(values) != 1:
@@ -1156,6 +2028,15 @@ class _UniffiConverterTypeError(_UniffiConverterRustBuffer):
             return Error.PhraseCorrupted(
             )
         if variant == 5:
+            return Error.Rpc(
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 6:
+            return Error.Argument(
+                _UniffiConverterString.read(buf),
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 7:
             return Error.Other(
                 _UniffiConverterString.read(buf),
             )
@@ -1173,6 +2054,13 @@ class _UniffiConverterTypeError(_UniffiConverterRustBuffer):
             return
         if isinstance(value, Error.PhraseCorrupted):
             return
+        if isinstance(value, Error.Rpc):
+            _UniffiConverterString.check_lower(value._values[0])
+            return
+        if isinstance(value, Error.Argument):
+            _UniffiConverterString.check_lower(value._values[0])
+            _UniffiConverterString.check_lower(value._values[1])
+            return
         if isinstance(value, Error.Other):
             _UniffiConverterString.check_lower(value._values[0])
             return
@@ -1189,8 +2077,15 @@ class _UniffiConverterTypeError(_UniffiConverterRustBuffer):
             buf.write_i32(3)
         if isinstance(value, Error.PhraseCorrupted):
             buf.write_i32(4)
-        if isinstance(value, Error.Other):
+        if isinstance(value, Error.Rpc):
             buf.write_i32(5)
+            _UniffiConverterString.write(value._values[0], buf)
+        if isinstance(value, Error.Argument):
+            buf.write_i32(6)
+            _UniffiConverterString.write(value._values[0], buf)
+            _UniffiConverterString.write(value._values[1], buf)
+        if isinstance(value, Error.Other):
+            buf.write_i32(7)
             _UniffiConverterString.write(value._values[0], buf)
 
 
@@ -1233,6 +2128,160 @@ class _UniffiConverterTypeNetwork(_UniffiConverterRustBuffer):
 
 
 
+
+
+class OutputStatus(enum.Enum):
+    UNCONFIRMED = 0
+    
+    CONFIRMED = 1
+    
+    SPENT = 2
+    
+    IMMATURE = 3
+    
+
+
+class _UniffiConverterTypeOutputStatus(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return OutputStatus.UNCONFIRMED
+        if variant == 2:
+            return OutputStatus.CONFIRMED
+        if variant == 3:
+            return OutputStatus.SPENT
+        if variant == 4:
+            return OutputStatus.IMMATURE
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == OutputStatus.UNCONFIRMED:
+            return
+        if value == OutputStatus.CONFIRMED:
+            return
+        if value == OutputStatus.SPENT:
+            return
+        if value == OutputStatus.IMMATURE:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == OutputStatus.UNCONFIRMED:
+            buf.write_i32(1)
+        if value == OutputStatus.CONFIRMED:
+            buf.write_i32(2)
+        if value == OutputStatus.SPENT:
+            buf.write_i32(3)
+        if value == OutputStatus.IMMATURE:
+            buf.write_i32(4)
+
+
+
+
+
+
+
+class PayStatus(enum.Enum):
+    COMPLETE = 0
+    
+    PENDING = 1
+    
+    FAILED = 2
+    
+
+
+class _UniffiConverterTypePayStatus(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return PayStatus.COMPLETE
+        if variant == 2:
+            return PayStatus.PENDING
+        if variant == 3:
+            return PayStatus.FAILED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == PayStatus.COMPLETE:
+            return
+        if value == PayStatus.PENDING:
+            return
+        if value == PayStatus.FAILED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == PayStatus.COMPLETE:
+            buf.write_i32(1)
+        if value == PayStatus.PENDING:
+            buf.write_i32(2)
+        if value == PayStatus.FAILED:
+            buf.write_i32(3)
+
+
+
+
+
+class _UniffiConverterOptionalUInt32(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterUInt32.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterUInt32.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterUInt32.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalUInt64(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterUInt64.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterUInt64.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterUInt64.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalString(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -1258,6 +2307,158 @@ class _UniffiConverterOptionalString(_UniffiConverterRustBuffer):
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
+
+
+class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterBytes.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterBytes.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterBytes.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterSequenceString(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterString.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterString.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterString.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypeFundChannel(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeFundChannel.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeFundChannel.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeFundChannel.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypeFundOutput(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeFundOutput.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeFundOutput.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeFundOutput.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypePeer(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypePeer.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypePeer.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypePeer.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypePeerChannel(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypePeerChannel.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypePeerChannel.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypePeerChannel.read(buf) for i in range(count)
+        ]
+
 # objects.
 class CredentialsProtocol(typing.Protocol):
     """
@@ -1268,7 +2469,8 @@ class CredentialsProtocol(typing.Protocol):
     background.
     """
 
-    pass
+    def save(self, ):
+        raise NotImplementedError
 # Credentials is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Credentials():
     """
@@ -1309,6 +2511,15 @@ class Credentials():
         pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_credentials_load,
         _UniffiConverterBytes.lower(raw))
         return cls._make_instance_(pointer)
+
+
+
+    def save(self, ) -> "bytes":
+        return _UniffiConverterBytes.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_credentials_save,self._uniffi_clone_pointer(),)
+        )
+
+
 
 
 
@@ -1423,7 +2634,69 @@ class NodeProtocol(typing.Protocol):
     cloud. It is the main entrypoint to interact with the node.
     """
 
-    pass
+    def get_info(self, ):
+        """
+        Get information about the node.
+
+        Returns basic information about the node including its ID,
+        alias, network, and channel counts.
+        """
+
+        raise NotImplementedError
+    def list_funds(self, ):
+        """
+        List all funds available to the node.
+
+        Returns information about on-chain outputs and channel funds
+        that are available or pending.
+        """
+
+        raise NotImplementedError
+    def list_peer_channels(self, ):
+        """
+        List all channels with peers.
+
+        Returns detailed information about all channels including their
+        state, capacity, and balances.
+        """
+
+        raise NotImplementedError
+    def list_peers(self, ):
+        """
+        List all peers connected to this node.
+
+        Returns information about all peers including their connection
+        status.
+        """
+
+        raise NotImplementedError
+    def onchain_receive(self, ):
+        raise NotImplementedError
+    def onchain_send(self, destination: "str",amount_or_all: "str"):
+        raise NotImplementedError
+    def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]"):
+        """
+        Receive an off-chain payment.
+
+        This method generates a request for a payment, also called an
+        invoice, that encodes all the information, including amount
+        and destination, for a prospective sender to send a lightning
+        payment. The invoice includes negotiation of an LSPS2 / JIT
+        channel, meaning that if there is no channel sufficient to
+        receive the requested funds, the node will negotiate an
+        opening, and when/if executed the payment will cause a channel
+        to be created, and the incoming payment to be forwarded.
+        """
+
+        raise NotImplementedError
+    def send(self, invoice: "str",amount_msat: "typing.Optional[int]"):
+        raise NotImplementedError
+    def stop(self, ):
+        """
+        Stop the node if it is currently running.
+        """
+
+        raise NotImplementedError
 # Node is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Node():
     """
@@ -1457,6 +2730,152 @@ class Node():
         return inst
 
 
+    def get_info(self, ) -> "GetInfoResponse":
+        """
+        Get information about the node.
+
+        Returns basic information about the node including its ID,
+        alias, network, and channel counts.
+        """
+
+        return _UniffiConverterTypeGetInfoResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_get_info,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def list_funds(self, ) -> "ListFundsResponse":
+        """
+        List all funds available to the node.
+
+        Returns information about on-chain outputs and channel funds
+        that are available or pending.
+        """
+
+        return _UniffiConverterTypeListFundsResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_funds,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def list_peer_channels(self, ) -> "ListPeerChannelsResponse":
+        """
+        List all channels with peers.
+
+        Returns detailed information about all channels including their
+        state, capacity, and balances.
+        """
+
+        return _UniffiConverterTypeListPeerChannelsResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_peer_channels,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def list_peers(self, ) -> "ListPeersResponse":
+        """
+        List all peers connected to this node.
+
+        Returns information about all peers including their connection
+        status.
+        """
+
+        return _UniffiConverterTypeListPeersResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_peers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def onchain_receive(self, ) -> "OnchainReceiveResponse":
+        return _UniffiConverterTypeOnchainReceiveResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def onchain_send(self, destination: "str",amount_or_all: "str") -> "OnchainSendResponse":
+        _UniffiConverterString.check_lower(destination)
+        
+        _UniffiConverterString.check_lower(amount_or_all)
+        
+        return _UniffiConverterTypeOnchainSendResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_onchain_send,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(destination),
+        _UniffiConverterString.lower(amount_or_all))
+        )
+
+
+
+
+
+    def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]") -> "ReceiveResponse":
+        """
+        Receive an off-chain payment.
+
+        This method generates a request for a payment, also called an
+        invoice, that encodes all the information, including amount
+        and destination, for a prospective sender to send a lightning
+        payment. The invoice includes negotiation of an LSPS2 / JIT
+        channel, meaning that if there is no channel sufficient to
+        receive the requested funds, the node will negotiate an
+        opening, and when/if executed the payment will cause a channel
+        to be created, and the incoming payment to be forwarded.
+        """
+
+        _UniffiConverterString.check_lower(label)
+        
+        _UniffiConverterString.check_lower(description)
+        
+        _UniffiConverterOptionalUInt64.check_lower(amount_msat)
+        
+        return _UniffiConverterTypeReceiveResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_receive,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(label),
+        _UniffiConverterString.lower(description),
+        _UniffiConverterOptionalUInt64.lower(amount_msat))
+        )
+
+
+
+
+
+    def send(self, invoice: "str",amount_msat: "typing.Optional[int]") -> "SendResponse":
+        _UniffiConverterString.check_lower(invoice)
+        
+        _UniffiConverterOptionalUInt64.check_lower(amount_msat)
+        
+        return _UniffiConverterTypeSendResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_send,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(invoice),
+        _UniffiConverterOptionalUInt64.lower(amount_msat))
+        )
+
+
+
+
+
+    def stop(self, ) -> None:
+        """
+        Stop the node if it is currently running.
+        """
+
+        _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_stop,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
 
 class _UniffiConverterTypeNode:
 
@@ -1484,6 +2903,174 @@ class _UniffiConverterTypeNode:
 
     @classmethod
     def write(cls, value: NodeProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class OnchainReceiveResponseProtocol(typing.Protocol):
+    pass
+# OnchainReceiveResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
+class OnchainReceiveResponse():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_onchainreceiveresponse, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_onchainreceiveresponse, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeOnchainReceiveResponse:
+
+    @staticmethod
+    def lift(value: int):
+        return OnchainReceiveResponse._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: OnchainReceiveResponse):
+        if not isinstance(value, OnchainReceiveResponse):
+            raise TypeError("Expected OnchainReceiveResponse instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: OnchainReceiveResponseProtocol):
+        if not isinstance(value, OnchainReceiveResponse):
+            raise TypeError("Expected OnchainReceiveResponse instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: OnchainReceiveResponseProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class OnchainSendResponseProtocol(typing.Protocol):
+    pass
+# OnchainSendResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
+class OnchainSendResponse():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_onchainsendresponse, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_onchainsendresponse, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeOnchainSendResponse:
+
+    @staticmethod
+    def lift(value: int):
+        return OnchainSendResponse._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: OnchainSendResponse):
+        if not isinstance(value, OnchainSendResponse):
+            raise TypeError("Expected OnchainSendResponse instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: OnchainSendResponseProtocol):
+        if not isinstance(value, OnchainSendResponse):
+            raise TypeError("Expected OnchainSendResponse instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: OnchainSendResponseProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class ReceiveResponseProtocol(typing.Protocol):
+    pass
+# ReceiveResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
+class ReceiveResponse():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_receiveresponse, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_receiveresponse, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeReceiveResponse:
+
+    @staticmethod
+    def lift(value: int):
+        return ReceiveResponse._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: ReceiveResponse):
+        if not isinstance(value, ReceiveResponse):
+            raise TypeError("Expected ReceiveResponse instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: ReceiveResponseProtocol):
+        if not isinstance(value, ReceiveResponse):
+            raise TypeError("Expected ReceiveResponse instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: ReceiveResponseProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class SchedulerProtocol(typing.Protocol):
     def recover(self, signer: "Signer"):
@@ -1577,6 +3164,62 @@ class _UniffiConverterTypeScheduler:
 
     @classmethod
     def write(cls, value: SchedulerProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class SendResponseProtocol(typing.Protocol):
+    pass
+# SendResponse is a Rust-only trait - it's a wrapper around a Rust implementation.
+class SendResponse():
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_sendresponse, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_sendresponse, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeSendResponse:
+
+    @staticmethod
+    def lift(value: int):
+        return SendResponse._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: SendResponse):
+        if not isinstance(value, SendResponse):
+            raise TypeError("Expected SendResponse instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: SendResponseProtocol):
+        if not isinstance(value, SendResponse):
+            raise TypeError("Expected SendResponse instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: SendResponseProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class SignerProtocol(typing.Protocol):
     def authenticate(self, creds: "Credentials"):
@@ -1676,12 +3319,27 @@ class _UniffiConverterTypeSigner:
 
 __all__ = [
     "InternalError",
+    "ChannelState",
     "Error",
     "Network",
+    "OutputStatus",
+    "PayStatus",
+    "FundChannel",
+    "FundOutput",
+    "GetInfoResponse",
+    "ListFundsResponse",
+    "ListPeerChannelsResponse",
+    "ListPeersResponse",
+    "Peer",
+    "PeerChannel",
     "Credentials",
     "Handle",
     "Node",
+    "OnchainReceiveResponse",
+    "OnchainSendResponse",
+    "ReceiveResponse",
     "Scheduler",
+    "SendResponse",
     "Signer",
 ]
 
