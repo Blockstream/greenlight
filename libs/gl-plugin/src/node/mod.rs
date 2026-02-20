@@ -550,30 +550,6 @@ impl Node for PluginNodeServer {
         Ok(Response::new(pb::Empty::default()))
     }
 
-    type StreamIncomingStream = ReceiverStream<Result<pb::IncomingPayment, Status>>;
-
-    async fn stream_incoming(
-        &self,
-        _req: tonic::Request<pb::StreamIncomingFilter>,
-    ) -> Result<Response<Self::StreamIncomingStream>, Status> {
-        // TODO See if we can just return the broadcast::Receiver
-        // instead of pulling off broadcast and into an mpsc.
-        let (tx, rx) = mpsc::channel(1);
-        let mut bcast = self.events.subscribe();
-        tokio::spawn(async move {
-            while let Ok(p) = bcast.recv().await {
-                match p {
-                    super::Event::IncomingPayment(p) => {
-                        let _ = tx.send(Ok(p)).await;
-                    }
-                    _ => {}
-                }
-            }
-        });
-
-        return Ok(Response::new(ReceiverStream::new(rx)));
-    }
-
     type StreamNodeEventsStream = ReceiverStream<Result<pb::NodeEvent, Status>>;
 
     async fn stream_node_events(

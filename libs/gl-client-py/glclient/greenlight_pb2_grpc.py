@@ -54,11 +54,6 @@ class NodeStub(object):
                 request_serializer=glclient_dot_greenlight__pb2.LspInvoiceRequest.SerializeToString,
                 response_deserializer=glclient_dot_greenlight__pb2.LspInvoiceResponse.FromString,
                 _registered_method=True)
-        self.StreamIncoming = channel.unary_stream(
-                '/greenlight.Node/StreamIncoming',
-                request_serializer=glclient_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
-                response_deserializer=glclient_dot_greenlight__pb2.IncomingPayment.FromString,
-                _registered_method=True)
         self.StreamLog = channel.unary_stream(
                 '/greenlight.Node/StreamLog',
                 request_serializer=glclient_dot_greenlight__pb2.StreamLogRequest.SerializeToString,
@@ -122,18 +117,13 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def StreamIncoming(self, request, context):
+    def StreamLog(self, request, context):
         """Stream incoming payments
 
         Currently includes off-chain payments received matching an
         invoice or spontaneus paymens through keysend.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
 
-    def StreamLog(self, request, context):
-        """Stream the logs as they are produced by the node
+        Stream the logs as they are produced by the node
 
         Mainly intended for debugging clients by tailing the log as
         they are written on the node. The logs start streaming from
@@ -209,11 +199,6 @@ def add_NodeServicer_to_server(servicer, server):
                     servicer.LspInvoice,
                     request_deserializer=glclient_dot_greenlight__pb2.LspInvoiceRequest.FromString,
                     response_serializer=glclient_dot_greenlight__pb2.LspInvoiceResponse.SerializeToString,
-            ),
-            'StreamIncoming': grpc.unary_stream_rpc_method_handler(
-                    servicer.StreamIncoming,
-                    request_deserializer=glclient_dot_greenlight__pb2.StreamIncomingFilter.FromString,
-                    response_serializer=glclient_dot_greenlight__pb2.IncomingPayment.SerializeToString,
             ),
             'StreamLog': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamLog,
@@ -293,33 +278,6 @@ class Node(object):
             '/greenlight.Node/LspInvoice',
             glclient_dot_greenlight__pb2.LspInvoiceRequest.SerializeToString,
             glclient_dot_greenlight__pb2.LspInvoiceResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def StreamIncoming(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/greenlight.Node/StreamIncoming',
-            glclient_dot_greenlight__pb2.StreamIncomingFilter.SerializeToString,
-            glclient_dot_greenlight__pb2.IncomingPayment.FromString,
             options,
             channel_credentials,
             insecure,

@@ -40,15 +40,6 @@ impl Node {
         Ok(LogStream { inner: stream })
     }
 
-    fn stream_incoming(&self, args: &[u8]) -> PyResult<IncomingStream> {
-        let req = pb::StreamIncomingFilter::decode(args).map_err(error_decoding_request)?;
-
-        let stream = exec(self.client.clone().stream_incoming(req))
-            .map(|x| x.into_inner())
-            .map_err(error_starting_stream)?;
-        Ok(IncomingStream { inner: stream })
-    }
-
     fn stream_custommsg(&self, args: &[u8]) -> PyResult<CustommsgStream> {
         let req = pb::StreamCustommsgRequest::decode(args).map_err(error_decoding_request)?;
         let stream = exec(self.client.clone().stream_custommsg(req))
@@ -141,18 +132,6 @@ struct LogStream {
 
 #[pymethods]
 impl LogStream {
-    fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
-        convert_stream_entry(exec(async { self.inner.message().await }))
-    }
-}
-
-#[pyclass]
-struct IncomingStream {
-    inner: tonic::codec::Streaming<pb::IncomingPayment>,
-}
-
-#[pymethods]
-impl IncomingStream {
     fn next(&mut self) -> PyResult<Option<Vec<u8>>> {
         convert_stream_entry(exec(async { self.inner.message().await }))
     }

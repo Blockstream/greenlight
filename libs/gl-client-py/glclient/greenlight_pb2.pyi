@@ -161,18 +161,6 @@ class Amount(_message.Message):
 Global___Amount: _TypeAlias = Amount  # noqa: Y015
 
 @_typing.final
-class StreamIncomingFilter(_message.Message):
-    """Options to stream_incoming to specify what to stream."""
-
-    DESCRIPTOR: _descriptor.Descriptor
-
-    def __init__(
-        self,
-    ) -> None: ...
-
-Global___StreamIncomingFilter: _TypeAlias = StreamIncomingFilter  # noqa: Y015
-
-@_typing.final
 class TlvField(_message.Message):
     DESCRIPTOR: _descriptor.Descriptor
 
