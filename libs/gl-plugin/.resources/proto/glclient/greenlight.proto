@@ -21,12 +21,6 @@ service Node {
   // negotiation to open a channel on-demand when needed.
   rpc LspInvoice(LspInvoiceRequest) returns (LspInvoiceResponse) {}
 
-        // Stream incoming payments
-	//
-	// Currently includes off-chain payments received matching an
-	// invoice or spontaneus paymens through keysend.
-	rpc StreamIncoming(StreamIncomingFilter) returns (stream IncomingPayment) {}
-
 	// Stream the logs as they are produced by the node
 	//
 	// Mainly intended for debugging clients by tailing the log as
@@ -119,10 +113,6 @@ message Amount {
 		bool all = 4;
 		bool any = 5;
 	}
-}
-
-// Options to stream_incoming to specify what to stream.
-message StreamIncomingFilter {
 }
 
 message TlvField {

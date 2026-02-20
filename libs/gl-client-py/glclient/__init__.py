@@ -448,14 +448,6 @@ class Node(object):
                 break
             yield nodepb.LogEntry.FromString(bytes(n))
 
-    def stream_incoming(self):
-        stream = self.inner.stream_incoming(b"")
-        while True:
-            n = stream.next()
-            if n is None:
-                break
-            yield nodepb.IncomingPayment.FromString(bytes(n))
-
     def stream_custommsg(self):
         stream = self.inner.stream_custommsg(b"")
         while True:
