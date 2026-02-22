@@ -98,6 +98,29 @@ pub enum Command {
         )]
         status: Option<String>,
     },
+    /// Generates a new bitcoin address to receive funds
+    Newaddr,
+    /// List available funds, both on-chain and payment channels
+    Listfunds,
+    /// Send on-chain funds to external wallet
+    Withdraw {
+        #[arg(long, help = "Bitcoin address for the destination")]
+        destination: String,
+        #[arg(long, help = "Amount is sats or the string \"all\"")]
+        amount_sat: model::AmountSatOrAll,
+    },
+    /// Open a channel with peer
+    Fundchannel {
+        #[arg(long, help = "Peer id")]
+        id: Vec<u8>,
+        #[arg(long, help = "Amount in sats or the string \"all\"")]
+        amount_sat: model::AmountSatOrAll,
+    },
+    /// Close a channel with peer
+    Close {
+        #[arg(long, help = "Peer id, channel id or short channel id")]
+        id: String,
+    },
     /// Stop the node
     Stop,
 }
@@ -194,9 +217,37 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
 
             listpays_handler(config, bolt11, payment_hash, status).await
         }
+        Command::Newaddr => newaddr_handler(config).await,
+        Command::Listfunds => listfunds_handler(config).await,
+        Command::Withdraw {
+            destination,
+            amount_sat,
+        } => withdraw_handler(config, destination, amount_sat).await,
+        Command::Fundchannel { id, amount_sat } => {
+            fundchannel_handler(config, id, amount_sat).await
+        }
+        Command::Close { id } => close_handler(config, id).await,
         Command::Stop => stop(config).await,
     }
 }
+
+async fn get_node<P: AsRef<Path>>(config: Config<P>) -> Result<gl_client::node::ClnClient> {
+    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
+    let creds = match util::read_credentials(&creds_path) {
+        Some(c) => c,
+        None => {
+            return Err(Error::CredentialsNotFoundError(format!(
+                "could not read from {}",
+                creds_path.display()
+            )))
+        }
+    };
+
+    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
+        .await
+        .map_err(Error::custom)?;
+
+    scheduler.node().await.map_err(Error::custom)
 
 async fn init_handler<P: AsRef<Path>>(config: Config<P>, mnemonic: Option<String>) -> Result<()> {
     // Check if seed already exists in the configuration path
@@ -271,23 +322,99 @@ async fn log<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
     Ok(())
 }
 
-async fn stop<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
+async fn newaddr_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .new_addr(cln::NewaddrRequest { addresstype: None })
         .await
-        .map_err(Error::custom)?;
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
 
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+async fn listfunds_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .list_funds(cln::ListfundsRequest { spent: None })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn withdraw_handler<P: AsRef<Path>>(
+    config: Config<P>,
+    destination: String,
+    amount_sat: model::AmountSatOrAll,
+) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .withdraw(cln::WithdrawRequest {
+            destination: destination,
+            satoshi: Some(amount_sat.into()),
+            feerate: None,
+            minconf: Some(0),
+            utxos: vec![],
+        })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn fundchannel_handler<P: AsRef<Path>>(
+    config: Config<P>,
+    id: Vec<u8>,
+    amount_sat: model::AmountSatOrAll,
+) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .fund_channel(cln::FundchannelRequest {
+            id: id,
+            amount: Some(amount_sat.into()),
+            feerate: None,
+            announce: None,
+            minconf: None,
+            push_msat: None,
+            close_to: None,
+            request_amt: None,
+            compact_lease: None,
+            utxos: vec![],
+            mindepth: None,
+            reserve: None,
+            channel_type: vec![],
+        })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn close_handler<P: AsRef<Path>>(config: Config<P>, id: String) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
+    let res = node
+        .close(cln::CloseRequest {
+            id: id,
+            unilateraltimeout: None,
+            destination: None,
+            fee_negotiation_step: None,
+            wrong_funding: None,
+            force_lease_closed: None,
+            feerange: vec![],
+        })
+        .await
+        .map_err(|e| Error::custom(e.message()))?
+        .into_inner();
+    println!("{:?}", res);
+    Ok(())
+}
+
+async fn stop<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .stop(cln::StopRequest {})
         .await
@@ -298,22 +425,7 @@ async fn stop<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 }
 
 async fn getinfo_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .getinfo(cln::GetinfoRequest {})
         .await
@@ -334,22 +446,7 @@ async fn invoice_handler<P: AsRef<Path>>(
     cltv: Option<u32>,
     deschashonly: Option<bool>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .invoice(cln::InvoiceRequest {
             exposeprivatechannels: vec![],
@@ -375,22 +472,7 @@ async fn connect_handler<P: AsRef<Path>>(
     host: Option<String>,
     port: Option<u32>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .connect_peer(cln::ConnectRequest { id, host, port })
         .await
@@ -406,22 +488,7 @@ async fn listpays_handler<P: AsRef<Path>>(
     payment_hash: Option<Vec<u8>>,
     status: Option<i32>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .list_pays(cln::ListpaysRequest {
             index: None,
@@ -453,22 +520,7 @@ async fn pay_handler<P: AsRef<Path>>(
     maxfee: Option<u64>,
     description: Option<String>,
 ) -> Result<()> {
-    let creds_path = config.data_dir.as_ref().join(CREDENTIALS_FILE_NAME);
-    let creds = match util::read_credentials(&creds_path) {
-        Some(c) => c,
-        None => {
-            return Err(Error::CredentialsNotFoundError(format!(
-                "could not read from {}",
-                creds_path.display()
-            )))
-        }
-    };
-
-    let scheduler = gl_client::scheduler::Scheduler::new(config.network, creds)
-        .await
-        .map_err(Error::custom)?;
-
-    let mut node: gl_client::node::ClnClient = scheduler.node().await.map_err(Error::custom)?;
+    let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .pay(cln::PayRequest {
             bolt11,
