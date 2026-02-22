@@ -13,7 +13,7 @@ pub struct Signer {
 #[uniffi::export]
 impl Signer {
     #[uniffi::constructor()]
-    fn new(phrase: String) -> Result<Signer, Error> {
+    pub fn new(phrase: String) -> Result<Signer, Error> {
         let phrase = Mnemonic::from_str(phrase.as_str()).map_err(|_e| Error::PhraseCorrupted())?;
         let seed = phrase.to_seed_normalized(&"").to_vec();
 
@@ -35,7 +35,7 @@ impl Signer {
         })
     }
 
-    fn authenticate(&self, creds: &Credentials) -> Result<Signer, Error> {
+    pub fn authenticate(&self, creds: &Credentials) -> Result<Signer, Error> {
         let credentials = Some(creds.clone());
 
         let inner = gl_client::signer::Signer::new(
@@ -52,7 +52,7 @@ impl Signer {
         })
     }
 
-    fn start(&self) -> Result<Handle, Error> {
+    pub fn start(&self) -> Result<Handle, Error> {
         let (tx, rx) = tokio::sync::mpsc::channel(1);
         let inner = self.inner.clone();
         std::thread::spawn(move || {
@@ -70,7 +70,7 @@ impl Signer {
         Ok(Handle { chan: tx })
     }
 
-    fn node_id(&self) -> Vec<u8> {
+    pub fn node_id(&self) -> Vec<u8> {
         self.inner.node_id()
     }
 }

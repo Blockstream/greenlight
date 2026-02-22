@@ -58,7 +58,7 @@ impl Node {
     /// receive the requested funds, the node will negotiate an
     /// opening, and when/if executed the payment will cause a channel
     /// to be created, and the incoming payment to be forwarded.
-    fn receive(
+    pub fn receive(
         &self,
         label: String,
         description: String,
@@ -79,7 +79,7 @@ impl Node {
         Ok(ReceiveResponse { bolt11: res.bolt11 })
     }
 
-    fn send(&self, invoice: String, amount_msat: Option<u64>) -> Result<SendResponse, Error> {
+    pub fn send(&self, invoice: String, amount_msat: Option<u64>) -> Result<SendResponse, Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
         let req = clnpb::PayRequest {
             amount_msat: match amount_msat {
@@ -105,7 +105,7 @@ impl Node {
             .map(|r| r.into_inner().into())
     }
 
-    fn onchain_send(
+    pub fn onchain_send(
         &self,
         destination: String,
         amount_or_all: String,
@@ -157,7 +157,7 @@ impl Node {
             .map(|r| r.into_inner().into())
     }
 
-    fn onchain_receive(&self) -> Result<OnchainReceiveResponse, Error> {
+    pub fn onchain_receive(&self) -> Result<OnchainReceiveResponse, Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::NewaddrRequest {
@@ -191,12 +191,11 @@ impl Node {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
-struct OnchainSendResponse {
-    tx: Vec<u8>,
-    txid: Vec<u8>,
-    psbt: String,
+#[derive(uniffi::Record)]
+pub struct OnchainSendResponse {
+    pub tx: Vec<u8>,
+    pub txid: Vec<u8>,
+    pub psbt: String,
 }
 
 impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
@@ -209,11 +208,10 @@ impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
-struct OnchainReceiveResponse {
-    bech32: String,
-    p2tr: String,
+#[derive(uniffi::Record)]
+pub struct OnchainReceiveResponse {
+    pub bech32: String,
+    pub p2tr: String,
 }
 
 impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
@@ -225,14 +223,13 @@ impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
-struct SendResponse {
-    status: PayStatus,
-    preimage: Vec<u8>,
-    amount_msat: u64,
-    amount_sent_msat: u64,
-    parts: u32,
+#[derive(uniffi::Record)]
+pub struct SendResponse {
+    pub status: PayStatus,
+    pub preimage: Vec<u8>,
+    pub amount_msat: u64,
+    pub amount_sent_msat: u64,
+    pub parts: u32,
 }
 
 impl From<clnpb::PayResponse> for SendResponse {
@@ -247,14 +244,13 @@ impl From<clnpb::PayResponse> for SendResponse {
     }
 }
 
-#[allow(unused)]
-#[derive(uniffi::Object)]
-struct ReceiveResponse {
-    bolt11: String,
+#[derive(uniffi::Record)]
+pub struct ReceiveResponse {
+    pub bolt11: String,
 }
 
-#[derive(uniffi::Enum)]
-enum PayStatus {
+#[derive(uniffi::Enum, Clone)]
+pub enum PayStatus {
     COMPLETE = 0,
     PENDING = 1,
     FAILED = 2,

@@ -68,15 +68,32 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Unconnected, C
 
 impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> {
     pub async fn get_pairing_data(&self, device_id: &str) -> Result<GetPairingDataResponse> {
-        Ok(self
-            .inner
-            .0
-            .clone()
-            .get_pairing_data(GetPairingDataRequest {
-                device_id: device_id.to_string(),
-            })
-            .await?
-            .into_inner())
+        use tokio::time::{sleep, Duration, Instant};
+
+        // Retry for up to 10 seconds to handle the race condition where the
+        // attestation device receives the QR code before the new device's
+        // PairDevice request has been processed by the server.
+        let deadline = Instant::now() + Duration::from_secs(10);
+
+        loop {
+            let result = self
+                .inner
+                .0
+                .clone()
+                .get_pairing_data(GetPairingDataRequest {
+                    device_id: device_id.to_string(),
+                })
+                .await;
+
+            match result {
+                Ok(response) => return Ok(response.into_inner()),
+                Err(_) if Instant::now() < deadline => {
+                    sleep(Duration::from_millis(100)).await;
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
     }
 
     pub async fn approve_pairing(

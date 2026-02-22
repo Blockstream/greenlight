@@ -31,7 +31,7 @@ mod util;
 
 pub use crate::{
     credentials::Credentials,
-    node::Node,
+    node::{Node, OnchainReceiveResponse, OnchainSendResponse, PayStatus, ReceiveResponse, SendResponse},
     scheduler::Scheduler,
     signer::{Handle, Signer},
 };

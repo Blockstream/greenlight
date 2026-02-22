@@ -193,6 +193,71 @@ impl Node for PluginNodeServer {
 
         let mut rpc = rpc_arc.lock().await;
 
+        // Check if we have sufficient incoming capacity to skip JIT channel negotiation.
+        // We require capacity + 5% buffer to account for fees and routing.
+        // Only check for specific amounts (not "any" amount invoices).
+        if req.amount_msat > 0 {
+            let receivable = self
+                .get_receivable_capacity(&mut rpc)
+                .await
+                .unwrap_or(0);
+
+            // Add 5% buffer: capacity >= amount * 1.05
+            // Equivalent to: capacity * 100 >= amount * 105
+            let has_sufficient_capacity = req.amount_msat
+                .saturating_mul(105)
+                .checked_div(100)
+                .map(|required| receivable >= required)
+                .unwrap_or(false);
+
+            if has_sufficient_capacity {
+                log::info!(
+                    "Sufficient incoming capacity ({} msat) for invoice amount ({} msat), creating regular invoice",
+                    receivable,
+                    req.amount_msat
+                );
+
+                // Create a regular invoice without JIT channel negotiation
+                let invreq = crate::requests::Invoice {
+                    amount_msat: cln_rpc::primitives::AmountOrAny::Amount(
+                        cln_rpc::primitives::Amount::from_msat(req.amount_msat),
+                    ),
+                    description: req.description.clone(),
+                    label: req.label.clone(),
+                    expiry: None,
+                    fallbacks: None,
+                    preimage: None,
+                    cltv: Some(144),
+                    deschashonly: None,
+                    exposeprivatechannels: None,
+                    dev_routes: None,
+                };
+
+                let res: crate::responses::Invoice = rpc
+                    .call_raw("invoice", &invreq)
+                    .await
+                    .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+
+                return Ok(Response::new(pb::LspInvoiceResponse {
+                    bolt11: res.bolt11,
+                    created_index: 0, // Not available in our Invoice response
+                    expires_at: res.expiry_time,
+                    payment_hash: hex::decode(&res.payment_hash)
+                        .map_err(|e| Status::new(Code::Internal, format!("Invalid payment_hash: {}", e)))?,
+                    payment_secret: res
+                        .payment_secret
+                        .map(|s| hex::decode(&s).unwrap_or_default())
+                        .unwrap_or_default(),
+                }));
+            }
+
+            log::info!(
+                "Insufficient incoming capacity ({} msat) for invoice amount ({} msat), negotiating JIT channel",
+                receivable,
+                req.amount_msat
+            );
+        }
+
         // Get the CLN version to determine which RPC method to use
         let version = rpc
             .call_typed(&cln_rpc::model::requests::GetinfoRequest {})
@@ -781,6 +846,29 @@ impl PluginNodeServer {
         log::trace!("LSP menus: {:?}", &res);
 
         Ok(res)
+    }
+
+    /// Get the total receivable capacity across all active channels.
+    ///
+    /// Returns the sum of `receivable_msat` for all channels in
+    /// `CHANNELD_NORMAL` state with a connected peer.
+    async fn get_receivable_capacity(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<u64, Error> {
+        use cln_rpc::primitives::ChannelState;
+
+        let res = rpc
+            .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: None })
+            .await?;
+
+        let total: u64 = res
+            .channels
+            .into_iter()
+            .filter(|c| c.peer_connected && c.state == ChannelState::CHANNELD_NORMAL)
+            .filter_map(|c| c.receivable_msat)
+            .map(|a| a.msat())
+            .sum();
+
+        log::debug!("Total receivable capacity: {} msat", total);
+        Ok(total)
     }
 
     async fn get_reconnect_peers(

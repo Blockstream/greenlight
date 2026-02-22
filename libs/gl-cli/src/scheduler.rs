@@ -90,12 +90,13 @@ async fn register_handler<P: AsRef<Path>>(
     let seed_path = config.data_dir.as_ref().join(SEED_FILE_NAME);
     let seed = match util::read_seed(&seed_path) {
         Some(seed) => {
-            println!("Seed already exists at {}, usign it", seed_path.display());
+            println!("Seed already exists at {}, using it", seed_path.display());
             seed
         }
         None => {
             // Generate a new seed and save it.
-            let seed = util::generate_seed();
+            let (seed, mnemonic) = util::generate_seed(None)?;
+            println!("New seed generated from mnemonic: {mnemonic}");
             util::write_seed(&seed_path, &seed)?;
             println!("Seed saved to {}", seed_path.display());
             seed.to_vec()
