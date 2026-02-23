@@ -3,11 +3,7 @@ import {
   Credentials,
   Scheduler,
   Signer,
-  Node,
-  ReceiveResponse,
-  SendResponse,
-  OnchainReceiveResponse,
-  OnchainSendResponse,
+  Node
 } from '../index.js';
 
 const MNEMONIC = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -117,7 +113,73 @@ describe('Node', () => {
     expect(node).toBeTruthy();
   });
 
-  describe('onchainReceive', () => {
+  describe('calls getInfo', () => {
+    it('returns node information with expected fields', async () => {
+      const info = await node.getInfo();
+
+      // Verify response structure
+      expect(info).toBeTruthy();
+      expect(Buffer.isBuffer(info.id)).toBe(true);
+      expect(info.id.length).toBeGreaterThan(0);
+      expect(Buffer.isBuffer(info.color)).toBe(true);
+      expect(typeof info.numPeers).toBe('number');
+      expect(typeof info.numPendingChannels).toBe('number');
+      expect(typeof info.numActiveChannels).toBe('number');
+      expect(typeof info.numInactiveChannels).toBe('number');
+      expect(typeof info.version).toBe('string');
+      expect(typeof info.lightningDir).toBe('string');
+      expect(typeof info.blockheight).toBe('number');
+      expect(typeof info.network).toBe('string');
+      expect(typeof info.feesCollectedMsat).toBe('number');
+
+      // Verify response values
+      expect(info.id).toEqual(Buffer.from('03653e90c1ce4660fd8505dd6d643356e93cfe202af109d382787639dd5890e87d', 'hex'));
+      expect(info.color).toEqual(Buffer.from('03653e', 'hex'));
+      expect(info.numPeers).toBe(0);
+      expect(info.numPendingChannels).toBe(0);
+      expect(info.numActiveChannels).toBe(0);
+      expect(info.numInactiveChannels).toBe(0);
+      expect(info.lightningDir).toBe('/tmp/bitcoin');
+      expect(info.network).toBe('bitcoin');
+      expect(info.feesCollectedMsat).toBe(0);
+
+      // Alias is optional
+      if (info.alias !== null && info.alias !== undefined) {
+        expect(typeof info.alias).toBe('string');
+        expect(info.alias).toContain('PEEVEDGENESIS');
+      }
+    });
+  });
+
+  describe('calls listPeers', () => {
+    it('returns peer information with expected structure', async () => {
+      const response = await node.listPeers();
+
+      expect(response).toBeTruthy();
+      expect(Array.isArray(response.peers)).toBe(true);
+    });
+  });
+
+  describe('calls listPeerChannels', () => {
+    it('returns channel information with expected structure', async () => {
+      const response = await node.listPeerChannels();
+
+      expect(response).toBeTruthy();
+      expect(Array.isArray(response.channels)).toBe(true);
+    });
+  });
+
+  describe('calls listFunds', () => {
+    it('returns fund information with expected structure', async () => {
+      const response = await node.listFunds();
+
+      expect(response).toBeTruthy();
+      expect(Array.isArray(response.outputs)).toBe(true);
+      expect(Array.isArray(response.channels)).toBe(true);
+    });
+  });
+
+  describe('calls onchainReceive', () => {
     it('returns valid on-chain addresses', async () => {
       const res = await node.onchainReceive();
 
