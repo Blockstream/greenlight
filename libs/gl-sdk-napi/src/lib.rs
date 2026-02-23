@@ -11,6 +11,9 @@ use glsdk::{
     Signer as GlSigner,
     Handle as GlHandle,
     Network as GlNetwork,
+    // Enum types for conversion
+    ChannelState as GlChannelState,
+    OutputStatus as GlOutputStatus,
 };
 
 // ============================================================================
@@ -44,6 +47,113 @@ pub struct OnchainSendResponse {
 pub struct OnchainReceiveResponse {
     pub bech32: String,
     pub p2tr: String,
+}
+
+// ============================================================================
+// GetInfo Response Types
+// ============================================================================
+
+#[napi(object)]
+pub struct GetInfoResponse {
+    pub id: Buffer,
+    pub alias: Option<String>,
+    pub color: Buffer,
+    pub num_peers: u32,
+    pub num_pending_channels: u32,
+    pub num_active_channels: u32,
+    pub num_inactive_channels: u32,
+    pub version: String,
+    pub lightning_dir: String,
+    pub blockheight: u32,
+    pub network: String,
+    /// Fees collected in millisatoshis (as i64 for JS compatibility)
+    pub fees_collected_msat: i64,
+}
+
+// ============================================================================
+// ListPeers Response Types
+// ============================================================================
+
+#[napi(object)]
+pub struct ListPeersResponse {
+    pub peers: Vec<Peer>,
+}
+
+#[napi(object)]
+pub struct Peer {
+    pub id: Buffer,
+    pub connected: bool,
+    pub num_channels: Option<u32>,
+    pub netaddr: Vec<String>,
+    pub remote_addr: Option<String>,
+    pub features: Option<Buffer>,
+}
+
+// ============================================================================
+// ListPeerChannels Response Types
+// ============================================================================
+
+#[napi(object)]
+pub struct ListPeerChannelsResponse {
+    pub channels: Vec<PeerChannel>,
+}
+
+#[napi(object)]
+pub struct PeerChannel {
+    pub peer_id: Buffer,
+    pub peer_connected: bool,
+    /// Channel state as string (e.g., "CHANNELD_NORMAL", "OPENINGD")
+    pub state: String,
+    pub short_channel_id: Option<String>,
+    pub channel_id: Option<Buffer>,
+    pub funding_txid: Option<Buffer>,
+    pub funding_outnum: Option<u32>,
+    /// Balance to us in millisatoshis (as i64 for JS compatibility)
+    pub to_us_msat: Option<i64>,
+    /// Total channel capacity in millisatoshis (as i64 for JS compatibility)
+    pub total_msat: Option<i64>,
+    /// Spendable balance in millisatoshis (as i64 for JS compatibility)
+    pub spendable_msat: Option<i64>,
+    /// Receivable balance in millisatoshis (as i64 for JS compatibility)
+    pub receivable_msat: Option<i64>,
+}
+
+// ============================================================================
+// ListFunds Response Types
+// ============================================================================
+
+#[napi(object)]
+pub struct ListFundsResponse {
+    pub outputs: Vec<FundOutput>,
+    pub channels: Vec<FundChannel>,
+}
+
+#[napi(object)]
+pub struct FundOutput {
+    pub txid: Buffer,
+    pub output: u32,
+    /// Amount in millisatoshis (as i64 for JS compatibility)
+    pub amount_msat: i64,
+    /// Output status (e.g., "unconfirmed", "confirmed", "spent", "immature")
+    pub status: String,
+    pub address: Option<String>,
+    pub blockheight: Option<u32>,
+}
+
+#[napi(object)]
+pub struct FundChannel {
+    pub peer_id: Buffer,
+    /// Our amount in millisatoshis (as i64 for JS compatibility)
+    pub our_amount_msat: i64,
+    /// Total amount in millisatoshis (as i64 for JS compatibility)
+    pub amount_msat: i64,
+    pub funding_txid: Buffer,
+    pub funding_output: u32,
+    pub connected: bool,
+    /// Channel state as string (e.g., "CHANNELD_NORMAL", "OPENINGD")
+    pub state: String,
+    pub short_channel_id: Option<String>,
+    pub channel_id: Option<Buffer>,
 }
 
 // ============================================================================
@@ -366,5 +476,163 @@ impl Node {
             bech32: response.bech32,
             p2tr: response.p2tr,
         })
+    }
+
+    /// Get information about the node
+    ///
+    /// Returns basic information about the node including its ID,
+    /// alias, network, and channel counts.
+    #[napi]
+    pub async fn get_info(&self) -> Result<GetInfoResponse> {
+        let inner = self.inner.clone();
+        let response = tokio::task::spawn_blocking(move || {
+            inner
+                .get_info()
+                .map_err(|e| Error::from_reason(e.to_string()))            
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+       
+        Ok(GetInfoResponse {
+            id: Buffer::from(response.id),
+            alias: response.alias,
+            color: Buffer::from(response.color),
+            num_peers: response.num_peers,
+            num_pending_channels: response.num_pending_channels,
+            num_active_channels: response.num_active_channels,
+            num_inactive_channels: response.num_inactive_channels,
+            version: response.version,
+            lightning_dir: response.lightning_dir,
+            blockheight: response.blockheight,
+            network: response.network,
+            fees_collected_msat: response.fees_collected_msat as i64,
+        })
+    }
+
+    /// List all peers connected to this node
+    ///
+    /// Returns information about all peers including their connection status.
+    #[napi]
+    pub async fn list_peers(&self) -> Result<ListPeersResponse> {
+        let inner = self.inner.clone();
+        let response = tokio::task::spawn_blocking(move || {
+            inner
+                .list_peers()
+                .map_err(|e| Error::from_reason(e.to_string()))            
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+        
+        Ok(ListPeersResponse {
+            peers: response.peers.into_iter().map(|p| Peer {
+                id: Buffer::from(p.id),
+                connected: p.connected,
+                num_channels: p.num_channels,
+                netaddr: p.netaddr,
+                remote_addr: p.remote_addr,
+                features: p.features.map(Buffer::from),
+            }).collect(),
+        })
+    }
+
+    /// List all channels with peers
+    ///
+    /// Returns detailed information about all channels including their
+    /// state, capacity, and balances.
+    #[napi]
+    pub async fn list_peer_channels(&self) -> Result<ListPeerChannelsResponse> {
+        let inner = self.inner.clone();
+        let response = tokio::task::spawn_blocking(move || {
+            inner
+                .list_peer_channels()
+                .map_err(|e| Error::from_reason(e.to_string()))            
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+        
+        Ok(ListPeerChannelsResponse {
+            channels: response.channels.into_iter().map(|c| PeerChannel {
+                peer_id: Buffer::from(c.peer_id),
+                peer_connected: c.peer_connected,
+                state: channel_state_to_string(&c.state),
+                short_channel_id: c.short_channel_id,
+                channel_id: c.channel_id.map(Buffer::from),
+                funding_txid: c.funding_txid.map(Buffer::from),
+                funding_outnum: c.funding_outnum,
+                to_us_msat: c.to_us_msat.map(|v| v as i64),
+                total_msat: c.total_msat.map(|v| v as i64),
+                spendable_msat: c.spendable_msat.map(|v| v as i64),
+                receivable_msat: c.receivable_msat.map(|v| v as i64),
+            }).collect(),
+        })
+    }
+
+    /// List all funds available to the node
+    ///
+    /// Returns information about on-chain outputs and channel funds
+    /// that are available or pending.
+    #[napi]
+    pub async fn list_funds(&self) -> Result<ListFundsResponse> {
+        let inner = self.inner.clone();
+        let response = tokio::task::spawn_blocking(move || {
+            inner
+                .list_funds()
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+        
+        Ok(ListFundsResponse {
+            outputs: response.outputs.into_iter().map(|o| FundOutput {
+                txid: Buffer::from(o.txid),
+                output: o.output,
+                amount_msat: o.amount_msat as i64,
+                status: output_status_to_string(&o.status),
+                address: o.address,
+                blockheight: o.blockheight,
+            }).collect(),
+            channels: response.channels.into_iter().map(|c| FundChannel {
+                peer_id: Buffer::from(c.peer_id),
+                our_amount_msat: c.our_amount_msat as i64,
+                amount_msat: c.amount_msat as i64,
+                funding_txid: Buffer::from(c.funding_txid),
+                funding_output: c.funding_output,
+                connected: c.connected,
+                state: channel_state_to_string(&c.state),
+                short_channel_id: c.short_channel_id,
+                channel_id: c.channel_id.map(Buffer::from),
+            }).collect(),
+        })
+    }
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+fn channel_state_to_string(state: &GlChannelState) -> String {
+    match state {
+        GlChannelState::Openingd => "OPENINGD".to_string(),
+        GlChannelState::ChanneldAwaitingLockin => "CHANNELD_AWAITING_LOCKIN".to_string(),
+        GlChannelState::ChanneldNormal => "CHANNELD_NORMAL".to_string(),
+        GlChannelState::ChanneldShuttingDown => "CHANNELD_SHUTTING_DOWN".to_string(),
+        GlChannelState::ClosingdSigexchange => "CLOSINGD_SIGEXCHANGE".to_string(),
+        GlChannelState::ClosingdComplete => "CLOSINGD_COMPLETE".to_string(),
+        GlChannelState::AwaitingUnilateral => "AWAITING_UNILATERAL".to_string(),
+        GlChannelState::FundingSpendSeen => "FUNDING_SPEND_SEEN".to_string(),
+        GlChannelState::Onchain => "ONCHAIN".to_string(),
+        GlChannelState::DualopendOpenInit => "DUALOPEND_OPEN_INIT".to_string(),
+        GlChannelState::DualopendAwaitingLockin => "DUALOPEND_AWAITING_LOCKIN".to_string(),
+        GlChannelState::DualopendOpenCommitted => "DUALOPEND_OPEN_COMMITTED".to_string(),
+        GlChannelState::DualopendOpenCommitReady => "DUALOPEND_OPEN_COMMIT_READY".to_string(),
+    }
+}
+
+fn output_status_to_string(status: &GlOutputStatus) -> String {
+    match status {
+        GlOutputStatus::Unconfirmed => "unconfirmed".to_string(),
+        GlOutputStatus::Confirmed => "confirmed".to_string(),
+        GlOutputStatus::Spent => "spent".to_string(),
+        GlOutputStatus::Immature => "immature".to_string(),
     }
 }
