@@ -429,6 +429,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43d193de1f7487df1914d3a568b772458861d33f9c54249612cc2893d6915054"
 dependencies = [
  "bitcoin_hashes 0.13.0",
+ "rand",
  "rand_core",
  "serde",
  "unicode-normalization",
@@ -1434,6 +1435,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 name = "gl-cli"
 version = "0.1.3"
 dependencies = [
+ "bip39",
  "clap",
  "dirs",
  "env_logger 0.11.8",
@@ -1576,6 +1578,7 @@ dependencies = [
  "once_cell",
  "thiserror 2.0.17",
  "tokio",
+ "tonic 0.11.0",
  "tracing",
  "uniffi",
 ]
