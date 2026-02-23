@@ -482,6 +482,10 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_stop() != 20186:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_stream_node_events() != 5933:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_register() != 20821:
@@ -708,6 +712,26 @@ _UniffiLib.uniffi_glsdk_fn_method_node_stop.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_stop.restype = None
+_UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_clone_nodeeventstream.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_nodeeventstream.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_nodeeventstream.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_nodeeventstream.restype = None
+_UniffiLib.uniffi_glsdk_fn_method_nodeeventstream_next.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodeeventstream_next.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_clone_scheduler.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1068,6 +1092,12 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_send.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_stop.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_stop.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.restype = ctypes.c_uint16
@@ -1203,6 +1233,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -1468,6 +1500,87 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
         _UniffiConverterUInt32.write(value.blockheight, buf)
         _UniffiConverterString.write(value.network, buf)
         _UniffiConverterUInt64.write(value.fees_collected_msat, buf)
+
+
+class InvoicePaidEvent:
+    """
+    Details of a paid invoice.
+    """
+
+    payment_hash: "bytes"
+    """
+    The payment hash of the paid invoice.
+    """
+
+    bolt11: "str"
+    """
+    The bolt11 invoice string.
+    """
+
+    preimage: "bytes"
+    """
+    The preimage that proves payment.
+    """
+
+    label: "str"
+    """
+    The label assigned to the invoice.
+    """
+
+    amount_msat: "int"
+    """
+    Amount received in millisatoshis.
+    """
+
+    def __init__(self, *, payment_hash: "bytes", bolt11: "str", preimage: "bytes", label: "str", amount_msat: "int"):
+        self.payment_hash = payment_hash
+        self.bolt11 = bolt11
+        self.preimage = preimage
+        self.label = label
+        self.amount_msat = amount_msat
+
+    def __str__(self):
+        return "InvoicePaidEvent(payment_hash={}, bolt11={}, preimage={}, label={}, amount_msat={})".format(self.payment_hash, self.bolt11, self.preimage, self.label, self.amount_msat)
+
+    def __eq__(self, other):
+        if self.payment_hash != other.payment_hash:
+            return False
+        if self.bolt11 != other.bolt11:
+            return False
+        if self.preimage != other.preimage:
+            return False
+        if self.label != other.label:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        return True
+
+class _UniffiConverterTypeInvoicePaidEvent(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return InvoicePaidEvent(
+            payment_hash=_UniffiConverterBytes.read(buf),
+            bolt11=_UniffiConverterString.read(buf),
+            preimage=_UniffiConverterBytes.read(buf),
+            label=_UniffiConverterString.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterString.check_lower(value.bolt11)
+        _UniffiConverterBytes.check_lower(value.preimage)
+        _UniffiConverterString.check_lower(value.label)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterString.write(value.bolt11, buf)
+        _UniffiConverterBytes.write(value.preimage, buf)
+        _UniffiConverterString.write(value.label, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
 
 
 class ListFundsResponse:
@@ -2247,6 +2360,112 @@ class _UniffiConverterTypeNetwork(_UniffiConverterRustBuffer):
 
 
 
+class NodeEvent:
+    """
+    A real-time event from the node.
+    """
+
+    def __init__(self):
+        raise RuntimeError("NodeEvent cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class INVOICE_PAID:
+        """
+        An invoice was paid.
+        """
+
+        details: "InvoicePaidEvent"
+
+        def __init__(self,details: "InvoicePaidEvent"):
+            self.details = details
+
+        def __str__(self):
+            return "NodeEvent.INVOICE_PAID(details={})".format(self.details)
+
+        def __eq__(self, other):
+            if not other.is_INVOICE_PAID():
+                return False
+            if self.details != other.details:
+                return False
+            return True
+    
+    class UNKNOWN:
+        """
+        An unknown event type was received. This can happen if the
+        server sends a new event type that this client doesn't know about.
+        """
+
+
+        def __init__(self,):
+            pass
+
+        def __str__(self):
+            return "NodeEvent.UNKNOWN()".format()
+
+        def __eq__(self, other):
+            if not other.is_UNKNOWN():
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_INVOICE_PAID(self) -> bool:
+        return isinstance(self, NodeEvent.INVOICE_PAID)
+    def is_invoice_paid(self) -> bool:
+        return isinstance(self, NodeEvent.INVOICE_PAID)
+    def is_UNKNOWN(self) -> bool:
+        return isinstance(self, NodeEvent.UNKNOWN)
+    def is_unknown(self) -> bool:
+        return isinstance(self, NodeEvent.UNKNOWN)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+NodeEvent.INVOICE_PAID = type("NodeEvent.INVOICE_PAID", (NodeEvent.INVOICE_PAID, NodeEvent,), {})  # type: ignore
+NodeEvent.UNKNOWN = type("NodeEvent.UNKNOWN", (NodeEvent.UNKNOWN, NodeEvent,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return NodeEvent.INVOICE_PAID(
+                _UniffiConverterTypeInvoicePaidEvent.read(buf),
+            )
+        if variant == 2:
+            return NodeEvent.UNKNOWN(
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value.is_INVOICE_PAID():
+            _UniffiConverterTypeInvoicePaidEvent.check_lower(value.details)
+            return
+        if value.is_UNKNOWN():
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value.is_INVOICE_PAID():
+            buf.write_i32(1)
+            _UniffiConverterTypeInvoicePaidEvent.write(value.details, buf)
+        if value.is_UNKNOWN():
+            buf.write_i32(2)
+
+
+
+
+
+
+
 class OutputStatus(enum.Enum):
     UNCONFIRMED = 0
     
@@ -2448,6 +2667,33 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
             return None
         elif flag == 1:
             return _UniffiConverterBytes.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypeNodeEvent(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeNodeEvent.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeNodeEvent.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeNodeEvent.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -2814,6 +3060,20 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
+    def stream_node_events(self, ):
+        """
+        Stream real-time events from the node.
+
+        Returns a `NodeEventStream` iterator. Call `next()` repeatedly
+        to receive events as they occur (e.g., invoice payments).
+
+        The `next()` method blocks the calling thread until an event
+        is available, but does not block the underlying async runtime,
+        so other node methods can be called concurrently from other
+        threads.
+        """
+
+        raise NotImplementedError
 # Node is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Node():
     """
@@ -2993,6 +3253,27 @@ class Node():
 
 
 
+    def stream_node_events(self, ) -> "NodeEventStream":
+        """
+        Stream real-time events from the node.
+
+        Returns a `NodeEventStream` iterator. Call `next()` repeatedly
+        to receive events as they occur (e.g., invoice payments).
+
+        The `next()` method blocks the calling thread until an event
+        is available, but does not block the underlying async runtime,
+        so other node methods can be called concurrently from other
+        threads.
+        """
+
+        return _UniffiConverterTypeNodeEventStream.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
 
 class _UniffiConverterTypeNode:
 
@@ -3020,6 +3301,106 @@ class _UniffiConverterTypeNode:
 
     @classmethod
     def write(cls, value: NodeProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class NodeEventStreamProtocol(typing.Protocol):
+    """
+    A stream of node events. Call `next()` to receive the next event.
+
+    The stream is backed by a gRPC streaming connection to the node.
+    Each call to `next()` blocks the calling thread until an event is
+    available, but does not block the tokio runtime - other node
+    operations can proceed concurrently from other threads.
+    """
+
+    def next(self, ):
+        """
+        Get the next event from the stream.
+
+        Blocks the calling thread until an event is available or the
+        stream ends. Returns `None` when the stream is exhausted or
+        the connection is lost.
+        """
+
+        raise NotImplementedError
+# NodeEventStream is a Rust-only trait - it's a wrapper around a Rust implementation.
+class NodeEventStream():
+    """
+    A stream of node events. Call `next()` to receive the next event.
+
+    The stream is backed by a gRPC streaming connection to the node.
+    Each call to `next()` blocks the calling thread until an event is
+    available, but does not block the tokio runtime - other node
+    operations can proceed concurrently from other threads.
+    """
+
+    _pointer: ctypes.c_void_p
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_nodeeventstream, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_nodeeventstream, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+    def next(self, ) -> "typing.Optional[NodeEvent]":
+        """
+        Get the next event from the stream.
+
+        Blocks the calling thread until an event is available or the
+        stream ends. Returns `None` when the stream is exhausted or
+        the connection is lost.
+        """
+
+        return _UniffiConverterOptionalTypeNodeEvent.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodeeventstream_next,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+
+class _UniffiConverterTypeNodeEventStream:
+
+    @staticmethod
+    def lift(value: int):
+        return NodeEventStream._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: NodeEventStream):
+        if not isinstance(value, NodeEventStream):
+            raise TypeError("Expected NodeEventStream instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: NodeEventStreamProtocol):
+        if not isinstance(value, NodeEventStream):
+            raise TypeError("Expected NodeEventStream instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: NodeEventStreamProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class SchedulerProtocol(typing.Protocol):
     def recover(self, signer: "Signer"):
@@ -3215,11 +3596,13 @@ __all__ = [
     "ChannelState",
     "Error",
     "Network",
+    "NodeEvent",
     "OutputStatus",
     "PayStatus",
     "FundChannel",
     "FundOutput",
     "GetInfoResponse",
+    "InvoicePaidEvent",
     "ListFundsResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
@@ -3232,6 +3615,7 @@ __all__ = [
     "Credentials",
     "Handle",
     "Node",
+    "NodeEventStream",
     "Scheduler",
     "Signer",
 ]
