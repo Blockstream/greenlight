@@ -32,10 +32,10 @@ mod util;
 pub use crate::{
     credentials::Credentials,
     node::{
-        ChannelState, FundChannel, FundOutput, GetInfoResponse, ListFundsResponse,
-        ListPeerChannelsResponse, ListPeersResponse, Node, OnchainReceiveResponse,
-        OnchainSendResponse, OutputStatus, PayStatus, Peer, PeerChannel, ReceiveResponse,
-        SendResponse,
+        ChannelState, FundChannel, FundOutput, GetInfoResponse, InvoicePaidEvent,
+        ListFundsResponse, ListPeerChannelsResponse, ListPeersResponse, Node, NodeEvent,
+        NodeEventStream, OnchainReceiveResponse, OnchainSendResponse, OutputStatus, PayStatus,
+        Peer, PeerChannel, ReceiveResponse, SendResponse,
     },
     scheduler::Scheduler,
     signer::{Handle, Signer},

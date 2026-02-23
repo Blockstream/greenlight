@@ -1,8 +1,8 @@
 use crate::{credentials::Credentials, util::exec, Error};
 use gl_client::credentials::NodeIdProvider;
 use gl_client::node::{Client as GlClient, ClnClient, Node as ClientNode};
-
-use gl_client::pb::cln as clnpb;
+use gl_client::pb::{self as glpb, cln as clnpb};
+use std::sync::{Arc, Mutex};
 use tokio::sync::OnceCell;
 
 /// The `Node` is an RPC stub representing the node running in the
@@ -231,6 +231,26 @@ impl Node {
             .map_err(|e| Error::Rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
+    }
+
+    /// Stream real-time events from the node.
+    ///
+    /// Returns a `NodeEventStream` iterator. Call `next()` repeatedly
+    /// to receive events as they occur (e.g., invoice payments).
+    ///
+    /// The `next()` method blocks the calling thread until an event
+    /// is available, but does not block the underlying async runtime,
+    /// so other node methods can be called concurrently from other
+    /// threads.
+    pub fn stream_node_events(&self) -> Result<Arc<NodeEventStream>, Error> {
+        let mut gl_client = exec(self.get_gl_client())?.clone();
+        let req = glpb::NodeEventsRequest {};
+        let stream = exec(gl_client.stream_node_events(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(Arc::new(NodeEventStream {
+            inner: Mutex::new(stream),
+        }))
     }
 }
 
@@ -611,6 +631,83 @@ impl From<clnpb::ListfundsChannels> for FundChannel {
             state,
             short_channel_id: other.short_channel_id,
             channel_id: other.channel_id,
+        }
+    }
+}
+
+
+
+// ============================================================
+// NodeEvent streaming types
+// ============================================================
+
+/// A stream of node events. Call `next()` to receive the next event.
+///
+/// The stream is backed by a gRPC streaming connection to the node.
+/// Each call to `next()` blocks the calling thread until an event is
+/// available, but does not block the tokio runtime - other node
+/// operations can proceed concurrently from other threads.
+#[derive(uniffi::Object)]
+pub struct NodeEventStream {
+    inner: Mutex<tonic::codec::Streaming<glpb::NodeEvent>>,
+}
+
+#[uniffi::export]
+impl NodeEventStream {
+    /// Get the next event from the stream.
+    ///
+    /// Blocks the calling thread until an event is available or the
+    /// stream ends. Returns `None` when the stream is exhausted or
+    /// the connection is lost.
+    pub fn next(&self) -> Result<Option<NodeEvent>, Error> {
+        let mut stream = self.inner.lock().map_err(|e| Error::Other(e.to_string()))?;
+        match exec(stream.message()) {
+            Ok(Some(event)) => Ok(Some(event.into())),
+            Ok(None) => Ok(None),
+            Err(e) if e.code() == tonic::Code::Unknown => Ok(None),
+            Err(e) => Err(Error::Rpc(e.to_string())),
+        }
+    }
+}
+
+/// A real-time event from the node.
+#[derive(Clone, uniffi::Enum)]
+pub enum NodeEvent {
+    /// An invoice was paid.
+    InvoicePaid { details: InvoicePaidEvent },
+    /// An unknown event type was received. This can happen if the
+    /// server sends a new event type that this client doesn't know about.
+    Unknown,
+}
+
+/// Details of a paid invoice.
+#[derive(Clone, uniffi::Record)]
+pub struct InvoicePaidEvent {
+    /// The payment hash of the paid invoice.
+    pub payment_hash: Vec<u8>,
+    /// The bolt11 invoice string.
+    pub bolt11: String,
+    /// The preimage that proves payment.
+    pub preimage: Vec<u8>,
+    /// The label assigned to the invoice.
+    pub label: String,
+    /// Amount received in millisatoshis.
+    pub amount_msat: u64,
+}
+
+impl From<glpb::NodeEvent> for NodeEvent {
+    fn from(other: glpb::NodeEvent) -> Self {
+        match other.event {
+            Some(glpb::node_event::Event::InvoicePaid(paid)) => NodeEvent::InvoicePaid {
+                details: InvoicePaidEvent {
+                    payment_hash: paid.payment_hash,
+                    bolt11: paid.bolt11,
+                    preimage: paid.preimage,
+                    label: paid.label,
+                    amount_msat: paid.amount_msat,
+                },
+            },
+            None => NodeEvent::Unknown,
         }
     }
 }
