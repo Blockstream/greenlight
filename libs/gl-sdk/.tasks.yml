@@ -43,7 +43,7 @@ tasks:
         cargo run --bin uniffi-bindgen -- generate \
           --library ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} \
           --language python \
-          --out-dir ./libs/gl-sdk/bindings
+          --out-dir ./libs/gl-sdk/glsdk
 
   bindings-kotlin:
     desc: "Generate Kotlin bindings"
