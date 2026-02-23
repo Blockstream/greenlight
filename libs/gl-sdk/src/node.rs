@@ -174,7 +174,7 @@ impl Node {
     ///
     /// Returns basic information about the node including its ID,
     /// alias, network, and channel counts.
-    fn get_info(&self) -> Result<GetInfoResponse, Error> {
+    pub fn get_info(&self) -> Result<GetInfoResponse, Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::GetinfoRequest {};
@@ -189,7 +189,7 @@ impl Node {
     ///
     /// Returns information about all peers including their connection
     /// status.
-    fn list_peers(&self) -> Result<ListPeersResponse, Error> {
+    pub fn list_peers(&self) -> Result<ListPeersResponse, Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::ListpeersRequest {
@@ -207,7 +207,7 @@ impl Node {
     ///
     /// Returns detailed information about all channels including their
     /// state, capacity, and balances.
-    fn list_peer_channels(&self) -> Result<ListPeerChannelsResponse, Error> {
+    pub fn list_peer_channels(&self) -> Result<ListPeerChannelsResponse, Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::ListpeerchannelsRequest { id: None };
@@ -222,7 +222,7 @@ impl Node {
     ///
     /// Returns information about on-chain outputs and channel funds
     /// that are available or pending.
-    fn list_funds(&self) -> Result<ListFundsResponse, Error> {
+    pub fn list_funds(&self) -> Result<ListFundsResponse, Error> {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::ListfundsRequest { spent: None };
@@ -415,12 +415,12 @@ pub struct ListPeersResponse {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct Peer {
-    id: Vec<u8>,
-    connected: bool,
-    num_channels: Option<u32>,
-    netaddr: Vec<String>,
-    remote_addr: Option<String>,
-    features: Option<Vec<u8>>,
+    pub id: Vec<u8>,
+    pub connected: bool,
+    pub num_channels: Option<u32>,
+    pub netaddr: Vec<String>,
+    pub remote_addr: Option<String>,
+    pub features: Option<Vec<u8>>,
 }
 
 impl From<clnpb::ListpeersResponse> for ListPeersResponse {
@@ -459,17 +459,17 @@ pub struct ListPeerChannelsResponse {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct PeerChannel {
-    peer_id: Vec<u8>,
-    peer_connected: bool,
-    state: ChannelState,
-    short_channel_id: Option<String>,
-    channel_id: Option<Vec<u8>>,
-    funding_txid: Option<Vec<u8>>,
-    funding_outnum: Option<u32>,
-    to_us_msat: Option<u64>,
-    total_msat: Option<u64>,
-    spendable_msat: Option<u64>,
-    receivable_msat: Option<u64>,
+    pub peer_id: Vec<u8>,
+    pub peer_connected: bool,
+    pub state: ChannelState,
+    pub short_channel_id: Option<String>,
+    pub channel_id: Option<Vec<u8>>,
+    pub funding_txid: Option<Vec<u8>>,
+    pub funding_outnum: Option<u32>,
+    pub to_us_msat: Option<u64>,
+    pub total_msat: Option<u64>,
+    pub spendable_msat: Option<u64>,
+    pub receivable_msat: Option<u64>,
 }
 
 #[derive(Clone, uniffi::Enum)]
@@ -553,12 +553,12 @@ pub struct ListFundsResponse {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct FundOutput {
-    txid: Vec<u8>,
-    output: u32,
-    amount_msat: u64,
-    status: OutputStatus,
-    address: Option<String>,
-    blockheight: Option<u32>,
+    pub txid: Vec<u8>,
+    pub output: u32,
+    pub amount_msat: u64,
+    pub status: OutputStatus,
+    pub address: Option<String>,
+    pub blockheight: Option<u32>,
 }
 
 #[derive(Clone, uniffi::Enum)]
@@ -584,15 +584,15 @@ impl OutputStatus {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct FundChannel {
-    peer_id: Vec<u8>,
-    our_amount_msat: u64,
-    amount_msat: u64,
-    funding_txid: Vec<u8>,
-    funding_output: u32,
-    connected: bool,
-    state: ChannelState,
-    short_channel_id: Option<String>,
-    channel_id: Option<Vec<u8>>,
+    pub peer_id: Vec<u8>,
+    pub our_amount_msat: u64,
+    pub amount_msat: u64,
+    pub funding_txid: Vec<u8>,
+    pub funding_output: u32,
+    pub connected: bool,
+    pub state: ChannelState,
+    pub short_channel_id: Option<String>,
+    pub channel_id: Option<Vec<u8>>,
 }
 
 impl From<clnpb::ListfundsResponse> for ListFundsResponse {
