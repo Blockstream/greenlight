@@ -7,6 +7,8 @@ use napi_derive::napi;
 use glsdk::{
     Credentials as GlCredentials,
     Node as GlNode,
+    NodeEventStream as GlNodeEventStream,
+    NodeEvent as GlNodeEvent,
     Scheduler as GlScheduler,
     Signer as GlSigner,
     Handle as GlHandle,
@@ -47,6 +49,28 @@ pub struct OnchainSendResponse {
 pub struct OnchainReceiveResponse {
     pub bech32: String,
     pub p2tr: String,
+}
+
+// ============================================================================
+// Event Streaming Response Types
+// ============================================================================
+
+#[napi(object)]
+pub struct InvoicePaidEvent {
+    pub payment_hash: Buffer,
+    pub bolt11: String,
+    pub preimage: Buffer,
+    pub label: String,
+    /// Amount in millisatoshis (as i64 for JS compatibility)
+    pub amount_msat: i64,
+}
+
+#[napi(object)]
+pub struct NodeEvent {
+    /// Discriminant: "invoice_paid" | "unknown"
+    pub event_type: String,
+    /// Present when event_type == "invoice_paid"
+    pub invoice_paid: Option<InvoicePaidEvent>,
 }
 
 // ============================================================================
@@ -183,6 +207,11 @@ pub struct Handle {
 #[napi]
 pub struct Node {
     inner: GlNode,
+}
+
+#[napi]
+pub struct NodeEventStream {
+    inner: std::sync::Arc<GlNodeEventStream>,
 }
 
 // ============================================================================
@@ -353,6 +382,27 @@ impl Handle {
 }
 
 #[napi]
+impl NodeEventStream {
+    /// Get the next event from the stream.
+    ///
+    /// Blocks the calling thread (but not the JS event loop) until an
+    /// event is available. Returns `null` when the stream ends or the
+    /// connection is lost.
+    #[napi]
+    pub async fn next(&self) -> Result<Option<NodeEvent>> {
+        let stream = std::sync::Arc::clone(&self.inner);
+        tokio::task::spawn_blocking(move || {
+            stream
+                .next()
+                .map_err(|e| Error::from_reason(e.to_string()))
+                .map(|opt| opt.map(napi_node_event_from_gl))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))?
+    }
+}
+
+#[napi]
 impl Node {
     /// Create a new node connection
     ///
@@ -478,6 +528,29 @@ impl Node {
         })
     }
 
+    /// Stream real-time events from the node.
+    ///
+    /// Returns a `NodeEventStream`. Call `.next()` on it repeatedly to
+    /// receive events (e.g., invoice payments) as they occur.
+    ///
+    /// Returns `Unimplemented` if the connected node build does not yet
+    /// support `StreamNodeEvents`.
+    #[napi]
+    pub async fn stream_node_events(&self) -> Result<NodeEventStream> {
+        let inner = self.inner.clone();
+        let gl_stream = tokio::task::spawn_blocking(move || {
+            inner
+                .stream_node_events()
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+
+        // gl-sdk returns Arc<GlNodeEventStream> — store it directly since
+        // GlNodeEventStream wraps a Mutex<Streaming<...>> and is not Clone.
+        Ok(NodeEventStream { inner: gl_stream })
+    }
+
     /// Get information about the node
     ///
     /// Returns basic information about the node including its ID,
@@ -488,11 +561,11 @@ impl Node {
         let response = tokio::task::spawn_blocking(move || {
             inner
                 .get_info()
-                .map_err(|e| Error::from_reason(e.to_string()))            
+                .map_err(|e| Error::from_reason(e.to_string()))
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))??;
-       
+
         Ok(GetInfoResponse {
             id: Buffer::from(response.id),
             alias: response.alias,
@@ -518,11 +591,11 @@ impl Node {
         let response = tokio::task::spawn_blocking(move || {
             inner
                 .list_peers()
-                .map_err(|e| Error::from_reason(e.to_string()))            
+                .map_err(|e| Error::from_reason(e.to_string()))
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))??;
-        
+
         Ok(ListPeersResponse {
             peers: response.peers.into_iter().map(|p| Peer {
                 id: Buffer::from(p.id),
@@ -545,11 +618,11 @@ impl Node {
         let response = tokio::task::spawn_blocking(move || {
             inner
                 .list_peer_channels()
-                .map_err(|e| Error::from_reason(e.to_string()))            
+                .map_err(|e| Error::from_reason(e.to_string()))
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))??;
-        
+
         Ok(ListPeerChannelsResponse {
             channels: response.channels.into_iter().map(|c| PeerChannel {
                 peer_id: Buffer::from(c.peer_id),
@@ -581,7 +654,7 @@ impl Node {
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))??;
-        
+
         Ok(ListFundsResponse {
             outputs: response.outputs.into_iter().map(|o| FundOutput {
                 txid: Buffer::from(o.txid),
@@ -609,6 +682,26 @@ impl Node {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/// Convert a gl-sdk `NodeEvent` to the NAPI flat discriminated-union object.
+fn napi_node_event_from_gl(event: GlNodeEvent) -> NodeEvent {
+    match event {
+        GlNodeEvent::InvoicePaid { details } => NodeEvent {
+            event_type: "invoice_paid".to_string(),
+            invoice_paid: Some(InvoicePaidEvent {
+                payment_hash: Buffer::from(details.payment_hash),
+                bolt11: details.bolt11,
+                preimage: Buffer::from(details.preimage),
+                label: details.label,
+                amount_msat: details.amount_msat as i64,
+            }),
+        },
+        GlNodeEvent::Unknown => NodeEvent {
+            event_type: "unknown".to_string(),
+            invoice_paid: None,
+        },
+    }
+}
 
 fn channel_state_to_string(state: &GlChannelState) -> String {
     match state {
