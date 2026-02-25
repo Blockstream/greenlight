@@ -83,9 +83,10 @@ gl-sdk-napi/
 
 **Async/Await**: All network operations are asynchronous. Always use await or handle returned promises properly to avoid unhandled rejections or unexpected behavior.
 
+**Streaming**: streamNodeEvents() runs as a background task — call startEventStream(node) without await so it listens for events concurrently while your app continues calling other node methods. When you call node.stop(), next() returns null and the loop exits cleanly.
 
 ```typescript
-import { Scheduler, Signer, Node, Credentials, OnchainReceiveResponse } from '@greenlightcln/glsdk';
+import { Scheduler, Signer, Node, Credentials, OnchainReceiveResponse, NodeEvent, NodeEventStream } from '@greenlightcln/glsdk';
 
 type Network = 'bitcoin' | 'regtest';
 
@@ -98,8 +99,7 @@ class GreenlightApp {
   constructor(phrase: string, network: Network) {
     this.scheduler = new Scheduler(network);
     this.signer = new Signer(phrase);
-    const nodeId = this.signer.nodeId();
-    console.log(`✓ Signer created. Node ID: ${nodeId.toString('hex')}`);
+    console.log(`✓ Signer created. Node ID: ${this.signer.nodeId().toString('hex')}`);
   }
 
   async registerOrRecover(inviteCode?: string): Promise<void> {
@@ -129,6 +129,53 @@ class GreenlightApp {
     return this.node;
   }
 
+  // Starts the event stream as a background task — returns immediately.
+  // The loop runs concurrently while other node methods are called.
+  startEventStream(): void {
+    if (!this.node) { throw new Error('Must create node before starting event stream'); }
+    const node = this.node;
+
+    (async () => {
+      let stream: NodeEventStream;
+      try {
+        stream = await node.streamNodeEvents();
+        console.log('✓ Event stream started');
+      } catch (e: any) {
+        if (e?.message?.includes('Unimplemented')) {
+          console.warn('StreamNodeEvents not supported by this node build — skipping');
+          return;
+        }
+        throw e;
+      }
+
+      while (true) {
+        const event: NodeEvent | null = await stream.next();
+
+        // null means the stream closed (node stopped or connection lost)
+        if (event === null) {
+          console.log('Event stream closed');
+          break;
+        }
+
+        switch (event.eventType) {
+          case 'invoice_paid': {
+            const p = event.invoicePaid!;
+            console.log('✓ invoice_paid:');
+            console.log(`  payment_hash: ${p.paymentHash.toString('hex')}`);
+            console.log(`  preimage: ${p.preimage.toString('hex')}`);
+            console.log(`  bolt11: ${p.bolt11}`);
+            console.log(`  label: ${p.label}`);
+            console.log(`  amount_msat: ${p.amountMsat}`);
+            break;
+          }
+          default:
+            console.log(`Received unrecognised event type: "${event.eventType}" — skipping`);
+            break;
+        }
+      }
+    })().catch(e => console.error('Event stream error:', e));
+  }
+
   async getOnchainAddress(): Promise<OnchainReceiveResponse> {
     if (!this.node) { this.createNode(); }
     console.log('Generating on-chain address...');
@@ -137,6 +184,8 @@ class GreenlightApp {
 
   async cleanup(): Promise<void> {
     if (this.node) {
+      // Stopping the node causes stream.next() to return null,
+      // which exits the startEventStream() loop cleanly.
       await this.node.stop();
       console.log('✓ Node stopped');
     }
@@ -146,23 +195,48 @@ class GreenlightApp {
 async function quickStart(): Promise<void> {
   const phrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
   const network: Network = 'regtest';
+
   console.log('=== Greenlight SDK Demo ===');
   const app = new GreenlightApp(phrase, network);
+
   try {
     await app.registerOrRecover();
     app.createNode();
+
+    // Start listening for events in the background — does not block.
+    app.startEventStream();
+
+    // Continue using the node normally while the stream listens concurrently.
     const address = await app.getOnchainAddress();
     console.log(`✓ Bech32 Address: ${address.bech32}`);
     console.log(`✓ P2TR Address: ${address.p2Tr}`);
   } catch (e) {
     console.error('✗ Error:', e);
   } finally {
+    // Stops the node and closes the event stream.
     await app.cleanup();
   }
 }
 
 quickStart();
 ```
+
+### Event Types
+
+| `eventType`     | Payload field  | Description                        |
+|-----------------|----------------|------------------------------------|
+| `invoice_paid`  | `invoicePaid`  | An invoice was paid to this node   |
+| `unknown`       | —              | An unrecognised server-side event  |
+
+#### `InvoicePaidEvent` fields
+
+| Field         | Type     | Description                            |
+|---------------|----------|----------------------------------------|
+| `paymentHash` | `Buffer` | Payment hash of the settled invoice    |
+| `preimage`    | `Buffer` | Preimage that proves payment           |
+| `bolt11`      | `string` | The BOLT11 invoice string              |
+| `label`       | `string` | Label assigned to the invoice          |
+| `amountMsat`  | `number` | Amount received in millisatoshis       |
 
 ## Development
 
