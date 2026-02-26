@@ -31,7 +31,7 @@ includes:
 
   sdk:
     taskfile: "libs/gl-sdk/.tasks.yml"
-    dir: "."
+    dir: "libs/gl-sdk/"
 
 tasks:
   ci-check:
