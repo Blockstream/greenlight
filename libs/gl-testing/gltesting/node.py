@@ -190,12 +190,13 @@ class NodeProcess(TailableProc):
         while True:
             if p.poll(1):
                 line = f.stdout.readline()
+                if line == b'':
+                    break
                 self.logger.debug(f"stdout {line}")
             elif p2.poll(1):
                 line = f2.stdout.readline()
+                if line == b'':
+                    break
                 self.logger.debug(f"stderr {line}")
             else:
                 time.sleep(1)
-
-            if line == '':
-                break
