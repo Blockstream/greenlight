@@ -16,9 +16,11 @@ impl Signer {
     pub fn new(phrase: String) -> Result<Signer, Error> {
         let phrase = Mnemonic::from_str(phrase.as_str()).map_err(|_e| Error::PhraseCorrupted())?;
         let seed = phrase.to_seed_normalized(&"").to_vec();
+        Self::new_from_seed(seed)
+    }
 
-        // FIXME: We may need to give the signer real credentials to
-        // talk to the node too.
+    #[uniffi::constructor()]
+    pub fn new_from_seed(seed: Vec<u8>) -> Result<Signer, Error> {
         let credentials = gl_client::credentials::Nobody::new();
 
         let inner = gl_client::signer::Signer::new(

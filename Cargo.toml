@@ -22,6 +22,7 @@ members = [
     "libs/gl-sdk",
     "libs/uniffi-bindgen",
     "libs/gl-sdk-napi",
+    "libs/gl-sdk-cli",
 ]
 
 [workspace.dependencies]
