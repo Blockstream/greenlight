@@ -12,6 +12,7 @@ site
 .DS_Store
 target
 *.egg-info
+*.dylib
 
 # These files are auto generated and may contain sensible data that
 # we do not want to check-in!
@@ -30,7 +31,7 @@ libs/cln-version-manager/poetry.lock
 uv.lock
 metadata.json
 
-# JS Examples 
+# JS Examples
 examples/javascript/node_modules
 examples/javascript/response.bin
 examples/javascript/package-lock.json
