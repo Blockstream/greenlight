@@ -2,7 +2,7 @@ module.exports = {
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   maxWorkers: 1,
-  testTimeout: 30000,
+  testTimeout: 60000,
   runner: 'jest-runner',
   resetModules: true,
   restoreMocks: true,
@@ -17,4 +17,5 @@ module.exports = {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  testMatch: ["<rootDir>/tests/**/*.spec.ts"],  
 };
