@@ -6,7 +6,7 @@ import warnings
 from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 from glclient import scheduler_pb2 as glclient_dot_scheduler__pb2
 
-GRPC_GENERATED_VERSION = '1.76.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 

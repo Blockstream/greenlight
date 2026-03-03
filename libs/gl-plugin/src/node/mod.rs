@@ -427,6 +427,7 @@ impl Node for PluginNodeServer {
                         key: s.key,
                         version: s.version,
                         value: s.value,
+                        signature: s.signature,
                     })
                     .collect();
                 trace!(
@@ -493,6 +494,7 @@ impl Node for PluginNodeServer {
                         key: s.key,
                         version: s.version,
                         value: s.value,
+                        signature: s.signature,
                     })
                     .collect();
 
@@ -568,6 +570,7 @@ impl Node for PluginNodeServer {
                 key: i.key.to_owned(),
                 value: i.value.to_owned(),
                 version: i.version,
+                signature: i.signature.to_owned(),
             })
             .collect();
         let new_state: gl_client::persist::State = signer_state.into();

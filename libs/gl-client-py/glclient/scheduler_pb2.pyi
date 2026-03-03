@@ -3,29 +3,34 @@
 isort:skip_file
 """
 
-import builtins
-import collections.abc
-import glclient.greenlight_pb2
-import google.protobuf.descriptor
-import google.protobuf.internal.containers
-import google.protobuf.internal.enum_type_wrapper
-import google.protobuf.message
+from collections import abc as _abc
+from glclient import greenlight_pb2 as _greenlight_pb2
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+import builtins as _builtins
 import sys
-import typing
+import typing as _typing
 
 if sys.version_info >= (3, 10):
-    import typing as typing_extensions
+    from typing import TypeAlias as _TypeAlias
 else:
-    import typing_extensions
+    from typing_extensions import TypeAlias as _TypeAlias
 
-DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
+if sys.version_info >= (3, 13):
+    from warnings import deprecated as _deprecated
+else:
+    from typing_extensions import deprecated as _deprecated
+
+DESCRIPTOR: _descriptor.FileDescriptor
 
 class _ChallengeScope:
-    ValueType = typing.NewType("ValueType", builtins.int)
-    V: typing_extensions.TypeAlias = ValueType
+    ValueType = _typing.NewType("ValueType", _builtins.int)
+    V: _TypeAlias = ValueType  # noqa: Y015
 
-class _ChallengeScopeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_ChallengeScope.ValueType], builtins.type):
-    DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
+class _ChallengeScopeEnumTypeWrapper(_enum_type_wrapper._EnumTypeWrapper[_ChallengeScope.ValueType], _builtins.type):
+    DESCRIPTOR: _descriptor.EnumDescriptor
     REGISTER: _ChallengeScope.ValueType  # 0
     RECOVER: _ChallengeScope.ValueType  # 1
 
@@ -34,236 +39,246 @@ class ChallengeScope(_ChallengeScope, metaclass=_ChallengeScopeEnumTypeWrapper):
 
 REGISTER: ChallengeScope.ValueType  # 0
 RECOVER: ChallengeScope.ValueType  # 1
-global___ChallengeScope = ChallengeScope
+Global___ChallengeScope: _TypeAlias = ChallengeScope  # noqa: Y015
 
-@typing.final
-class AddOutgoingWebhookRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class AddOutgoingWebhookRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    URI_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
-    uri: builtins.str
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    URI_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    uri: _builtins.str
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        uri: builtins.str = ...,
+        node_id: _builtins.bytes = ...,
+        uri: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["node_id", b"node_id", "uri", b"uri"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id", "uri", b"uri"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___AddOutgoingWebhookRequest = AddOutgoingWebhookRequest
+Global___AddOutgoingWebhookRequest: _TypeAlias = AddOutgoingWebhookRequest  # noqa: Y015
 
-@typing.final
-class AddOutgoingWebhookResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class AddOutgoingWebhookResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    ID_FIELD_NUMBER: builtins.int
-    SECRET_FIELD_NUMBER: builtins.int
-    id: builtins.int
-    secret: builtins.str
+    ID_FIELD_NUMBER: _builtins.int
+    SECRET_FIELD_NUMBER: _builtins.int
+    id: _builtins.int
+    secret: _builtins.str
     def __init__(
         self,
         *,
-        id: builtins.int = ...,
-        secret: builtins.str = ...,
+        id: _builtins.int = ...,
+        secret: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["id", b"id", "secret", b"secret"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["id", b"id", "secret", b"secret"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___AddOutgoingWebhookResponse = AddOutgoingWebhookResponse
+Global___AddOutgoingWebhookResponse: _TypeAlias = AddOutgoingWebhookResponse  # noqa: Y015
 
-@typing.final
-class ListOutgoingWebhooksRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ListOutgoingWebhooksRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
+        node_id: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["node_id", b"node_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ListOutgoingWebhooksRequest = ListOutgoingWebhooksRequest
+Global___ListOutgoingWebhooksRequest: _TypeAlias = ListOutgoingWebhooksRequest  # noqa: Y015
 
-@typing.final
-class Webhook(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class Webhook(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    ID_FIELD_NUMBER: builtins.int
-    URI_FIELD_NUMBER: builtins.int
-    id: builtins.int
-    uri: builtins.str
+    ID_FIELD_NUMBER: _builtins.int
+    URI_FIELD_NUMBER: _builtins.int
+    id: _builtins.int
+    uri: _builtins.str
     def __init__(
         self,
         *,
-        id: builtins.int = ...,
-        uri: builtins.str = ...,
+        id: _builtins.int = ...,
+        uri: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["id", b"id", "uri", b"uri"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["id", b"id", "uri", b"uri"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___Webhook = Webhook
+Global___Webhook: _TypeAlias = Webhook  # noqa: Y015
 
-@typing.final
-class ListOutgoingWebhooksResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ListOutgoingWebhooksResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    OUTGOING_WEBHOOKS_FIELD_NUMBER: builtins.int
-    @property
-    def outgoing_webhooks(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___Webhook]: ...
+    OUTGOING_WEBHOOKS_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def outgoing_webhooks(self) -> _containers.RepeatedCompositeFieldContainer[Global___Webhook]: ...
     def __init__(
         self,
         *,
-        outgoing_webhooks: collections.abc.Iterable[global___Webhook] | None = ...,
+        outgoing_webhooks: _abc.Iterable[Global___Webhook] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["outgoing_webhooks", b"outgoing_webhooks"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["outgoing_webhooks", b"outgoing_webhooks"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ListOutgoingWebhooksResponse = ListOutgoingWebhooksResponse
+Global___ListOutgoingWebhooksResponse: _TypeAlias = ListOutgoingWebhooksResponse  # noqa: Y015
 
-@typing.final
-class DeleteOutgoingWebhooksRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class DeleteOutgoingWebhooksRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    IDS_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
-    @property
-    def ids(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    IDS_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    @_builtins.property
+    def ids(self) -> _containers.RepeatedScalarFieldContainer[_builtins.int]: ...
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        ids: collections.abc.Iterable[builtins.int] | None = ...,
+        node_id: _builtins.bytes = ...,
+        ids: _abc.Iterable[_builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["ids", b"ids", "node_id", b"node_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["ids", b"ids", "node_id", b"node_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___DeleteOutgoingWebhooksRequest = DeleteOutgoingWebhooksRequest
+Global___DeleteOutgoingWebhooksRequest: _TypeAlias = DeleteOutgoingWebhooksRequest  # noqa: Y015
 
-@typing.final
-class RotateOutgoingWebhookSecretRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class RotateOutgoingWebhookSecretRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    WEBHOOK_ID_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
-    webhook_id: builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    WEBHOOK_ID_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    webhook_id: _builtins.int
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        webhook_id: builtins.int = ...,
+        node_id: _builtins.bytes = ...,
+        webhook_id: _builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["node_id", b"node_id", "webhook_id", b"webhook_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id", "webhook_id", b"webhook_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___RotateOutgoingWebhookSecretRequest = RotateOutgoingWebhookSecretRequest
+Global___RotateOutgoingWebhookSecretRequest: _TypeAlias = RotateOutgoingWebhookSecretRequest  # noqa: Y015
 
-@typing.final
-class WebhookSecretResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class WebhookSecretResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    SECRET_FIELD_NUMBER: builtins.int
-    secret: builtins.str
+    SECRET_FIELD_NUMBER: _builtins.int
+    secret: _builtins.str
     def __init__(
         self,
         *,
-        secret: builtins.str = ...,
+        secret: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["secret", b"secret"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["secret", b"secret"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___WebhookSecretResponse = WebhookSecretResponse
+Global___WebhookSecretResponse: _TypeAlias = WebhookSecretResponse  # noqa: Y015
 
-@typing.final
-class ChallengeRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ChallengeRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    SCOPE_FIELD_NUMBER: builtins.int
-    NODE_ID_FIELD_NUMBER: builtins.int
-    scope: global___ChallengeScope.ValueType
-    node_id: builtins.bytes
+    SCOPE_FIELD_NUMBER: _builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    scope: Global___ChallengeScope.ValueType
+    node_id: _builtins.bytes
     def __init__(
         self,
         *,
-        scope: global___ChallengeScope.ValueType = ...,
-        node_id: builtins.bytes = ...,
+        scope: Global___ChallengeScope.ValueType = ...,
+        node_id: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["node_id", b"node_id", "scope", b"scope"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id", "scope", b"scope"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ChallengeRequest = ChallengeRequest
+Global___ChallengeRequest: _TypeAlias = ChallengeRequest  # noqa: Y015
 
-@typing.final
-class ChallengeResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ChallengeResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    CHALLENGE_FIELD_NUMBER: builtins.int
-    challenge: builtins.bytes
+    CHALLENGE_FIELD_NUMBER: _builtins.int
+    challenge: _builtins.bytes
     def __init__(
         self,
         *,
-        challenge: builtins.bytes = ...,
+        challenge: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["challenge", b"challenge"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["challenge", b"challenge"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ChallengeResponse = ChallengeResponse
+Global___ChallengeResponse: _TypeAlias = ChallengeResponse  # noqa: Y015
 
-@typing.final
-class RegistrationRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class RegistrationRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    BIP32_KEY_FIELD_NUMBER: builtins.int
-    NETWORK_FIELD_NUMBER: builtins.int
-    CHALLENGE_FIELD_NUMBER: builtins.int
-    SIGNATURE_FIELD_NUMBER: builtins.int
-    SIGNER_PROTO_FIELD_NUMBER: builtins.int
-    INIT_MSG_FIELD_NUMBER: builtins.int
-    CSR_FIELD_NUMBER: builtins.int
-    INVITE_CODE_FIELD_NUMBER: builtins.int
-    STARTUPMSGS_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    BIP32_KEY_FIELD_NUMBER: _builtins.int
+    NETWORK_FIELD_NUMBER: _builtins.int
+    CHALLENGE_FIELD_NUMBER: _builtins.int
+    SIGNATURE_FIELD_NUMBER: _builtins.int
+    SIGNER_PROTO_FIELD_NUMBER: _builtins.int
+    INIT_MSG_FIELD_NUMBER: _builtins.int
+    CSR_FIELD_NUMBER: _builtins.int
+    INVITE_CODE_FIELD_NUMBER: _builtins.int
+    STARTUPMSGS_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
     """33 bytes node public key."""
-    bip32_key: builtins.bytes
+    bip32_key: _builtins.bytes
     """DEPRECATED: The `init_msg` subsumes this field"""
-    network: builtins.str
+    network: _builtins.str
     """Which network is this node going to run on? Options are
     bitcoin, testnet, and regtest.
     """
-    challenge: builtins.bytes
+    challenge: _builtins.bytes
     """An previously unused challenge as retrieved from
     `Scheduler.GetChallenge() with `scope=REGISTER`. In
     combination with the `signature` below this is used to
     authenticate the caller and ensure the caller has access to
     the secret keys corresponding to the `node_id`.
     """
-    signature: builtins.bytes
+    signature: _builtins.bytes
     """A signature for the `challenge` signed by the secret key
     corresponding to the `node_id`. Please refer to the
     documentation of `Scheduler.GetChallenge()` for details on
     how to create this signature.
     """
-    signer_proto: builtins.str
+    signer_proto: _builtins.str
     """The signer_proto is required in order to determine which
     version the node should run. If these don't match the
     signer may not be able to sign incoming requests.
     """
-    init_msg: builtins.bytes
+    init_msg: _builtins.bytes
     """The fuil init message returned by the `libhsmd`, this
     supersedes the bip32_key field which was a misnomer. Notice
     that this includes the prefix 0x006F which is the message
     type.
     """
-    csr: builtins.bytes
+    csr: _builtins.bytes
     """The certificate signing request that will be signed by the
     greenlight backend. Notice that this must have the valid
     CN corresponding to the node_id e.g. /users/{node_id} set.
     """
-    invite_code: builtins.str
+    invite_code: _builtins.str
     """An optional invite code. We may want to throttle the
     registration rate. Therefore we might check that a registration
     request has a valid invite code.
     """
-    @property
-    def startupmsgs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___StartupMessage]:
+    @_builtins.property
+    def startupmsgs(self) -> _containers.RepeatedCompositeFieldContainer[Global___StartupMessage]:
         """Messages stashed at the scheduler to allow signerless
         startups.
         """
@@ -271,44 +286,45 @@ class RegistrationRequest(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        bip32_key: builtins.bytes = ...,
-        network: builtins.str = ...,
-        challenge: builtins.bytes = ...,
-        signature: builtins.bytes = ...,
-        signer_proto: builtins.str = ...,
-        init_msg: builtins.bytes = ...,
-        csr: builtins.bytes = ...,
-        invite_code: builtins.str = ...,
-        startupmsgs: collections.abc.Iterable[global___StartupMessage] | None = ...,
+        node_id: _builtins.bytes = ...,
+        bip32_key: _builtins.bytes = ...,
+        network: _builtins.str = ...,
+        challenge: _builtins.bytes = ...,
+        signature: _builtins.bytes = ...,
+        signer_proto: _builtins.str = ...,
+        init_msg: _builtins.bytes = ...,
+        csr: _builtins.bytes = ...,
+        invite_code: _builtins.str = ...,
+        startupmsgs: _abc.Iterable[Global___StartupMessage] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["bip32_key", b"bip32_key", "challenge", b"challenge", "csr", b"csr", "init_msg", b"init_msg", "invite_code", b"invite_code", "network", b"network", "node_id", b"node_id", "signature", b"signature", "signer_proto", b"signer_proto", "startupmsgs", b"startupmsgs"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["bip32_key", b"bip32_key", "challenge", b"challenge", "csr", b"csr", "init_msg", b"init_msg", "invite_code", b"invite_code", "network", b"network", "node_id", b"node_id", "signature", b"signature", "signer_proto", b"signer_proto", "startupmsgs", b"startupmsgs"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___RegistrationRequest = RegistrationRequest
+Global___RegistrationRequest: _TypeAlias = RegistrationRequest  # noqa: Y015
 
-@typing.final
-class RegistrationResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class RegistrationResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_CERT_FIELD_NUMBER: builtins.int
-    DEVICE_KEY_FIELD_NUMBER: builtins.int
-    RUNE_FIELD_NUMBER: builtins.int
-    CREDS_FIELD_NUMBER: builtins.int
-    device_cert: builtins.str
+    DEVICE_CERT_FIELD_NUMBER: _builtins.int
+    DEVICE_KEY_FIELD_NUMBER: _builtins.int
+    RUNE_FIELD_NUMBER: _builtins.int
+    CREDS_FIELD_NUMBER: _builtins.int
+    device_cert: _builtins.str
     """Upon registering the user receives back the signed certificate that
     belongs to the certificate signing request the that was sent in the
     registration request, so they can authenticate themselves in the future.
     """
-    device_key: builtins.str
+    device_key: _builtins.str
     """The private key that was used to create the certificate with. This key
     is used to sign the requests to the node.
     """
-    rune: builtins.str
+    rune: _builtins.str
     """A master rune that is returned if the device that is registered has its
     own signer. The signer is necessary as the response is intercepted on the
     client side and appends the rune to the registratrion response.
     """
-    creds: builtins.bytes
+    creds: _builtins.bytes
     """Creds contains a serialized version of the device_cert, the device_key 
     and the rune that are used to authenticate a device at the backend, 
     and to authorize a request at the signer.
@@ -316,17 +332,18 @@ class RegistrationResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        device_cert: builtins.str = ...,
-        device_key: builtins.str = ...,
-        rune: builtins.str = ...,
-        creds: builtins.bytes = ...,
+        device_cert: _builtins.str = ...,
+        device_key: _builtins.str = ...,
+        rune: _builtins.str = ...,
+        creds: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___RegistrationResponse = RegistrationResponse
+Global___RegistrationResponse: _TypeAlias = RegistrationResponse  # noqa: Y015
 
-@typing.final
-class ScheduleRequest(google.protobuf.message.Message):
+@_typing.final
+class ScheduleRequest(_message.Message):
     """Ask the scheduler to schedule the node to be run on an available nodelet.
 
     This will always cause the scheduler to kick into action. If you'd
@@ -334,76 +351,79 @@ class ScheduleRequest(google.protobuf.message.Message):
     wait for one to start please use the
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
+        node_id: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["node_id", b"node_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ScheduleRequest = ScheduleRequest
+Global___ScheduleRequest: _TypeAlias = ScheduleRequest  # noqa: Y015
 
-@typing.final
-class NodeInfoRequest(google.protobuf.message.Message):
+@_typing.final
+class NodeInfoRequest(_message.Message):
     """Discovery request asking the scheduler if a nodelet is currently assigned
     the specified node_id, or wait for one to be assigned. If `wait` is set to
     `true` the scheduler will keep the request pending until a nodelet is
     assigned.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    WAIT_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
-    wait: builtins.bool
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    WAIT_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    wait: _builtins.bool
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        wait: builtins.bool = ...,
+        node_id: _builtins.bytes = ...,
+        wait: _builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["node_id", b"node_id", "wait", b"wait"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id", "wait", b"wait"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___NodeInfoRequest = NodeInfoRequest
+Global___NodeInfoRequest: _TypeAlias = NodeInfoRequest  # noqa: Y015
 
-@typing.final
-class NodeInfoResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class NodeInfoResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    NODE_ID_FIELD_NUMBER: builtins.int
-    GRPC_URI_FIELD_NUMBER: builtins.int
-    SESSION_ID_FIELD_NUMBER: builtins.int
-    node_id: builtins.bytes
-    grpc_uri: builtins.str
-    session_id: builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    GRPC_URI_FIELD_NUMBER: _builtins.int
+    SESSION_ID_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    grpc_uri: _builtins.str
+    session_id: _builtins.int
     def __init__(
         self,
         *,
-        node_id: builtins.bytes = ...,
-        grpc_uri: builtins.str = ...,
-        session_id: builtins.int = ...,
+        node_id: _builtins.bytes = ...,
+        grpc_uri: _builtins.str = ...,
+        session_id: _builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["grpc_uri", b"grpc_uri", "node_id", b"node_id", "session_id", b"session_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["grpc_uri", b"grpc_uri", "node_id", b"node_id", "session_id", b"session_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___NodeInfoResponse = NodeInfoResponse
+Global___NodeInfoResponse: _TypeAlias = NodeInfoResponse  # noqa: Y015
 
-@typing.final
-class RecoveryRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class RecoveryRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    CHALLENGE_FIELD_NUMBER: builtins.int
-    SIGNATURE_FIELD_NUMBER: builtins.int
-    NODE_ID_FIELD_NUMBER: builtins.int
-    CSR_FIELD_NUMBER: builtins.int
-    challenge: builtins.bytes
-    signature: builtins.bytes
-    node_id: builtins.bytes
-    csr: builtins.bytes
+    CHALLENGE_FIELD_NUMBER: _builtins.int
+    SIGNATURE_FIELD_NUMBER: _builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    CSR_FIELD_NUMBER: _builtins.int
+    challenge: _builtins.bytes
+    signature: _builtins.bytes
+    node_id: _builtins.bytes
+    csr: _builtins.bytes
     """The certificate signing request that will be signed by the
     greenlight backend. Notice that this must have the valid
     CN corresponding to the node_id e.g. /users/{node_id} set.
@@ -411,31 +431,32 @@ class RecoveryRequest(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        challenge: builtins.bytes = ...,
-        signature: builtins.bytes = ...,
-        node_id: builtins.bytes = ...,
-        csr: builtins.bytes = ...,
+        challenge: _builtins.bytes = ...,
+        signature: _builtins.bytes = ...,
+        node_id: _builtins.bytes = ...,
+        csr: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["challenge", b"challenge", "csr", b"csr", "node_id", b"node_id", "signature", b"signature"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["challenge", b"challenge", "csr", b"csr", "node_id", b"node_id", "signature", b"signature"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___RecoveryRequest = RecoveryRequest
+Global___RecoveryRequest: _TypeAlias = RecoveryRequest  # noqa: Y015
 
-@typing.final
-class RecoveryResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class RecoveryResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_CERT_FIELD_NUMBER: builtins.int
-    DEVICE_KEY_FIELD_NUMBER: builtins.int
-    RUNE_FIELD_NUMBER: builtins.int
-    CREDS_FIELD_NUMBER: builtins.int
-    device_cert: builtins.str
-    device_key: builtins.str
-    rune: builtins.str
+    DEVICE_CERT_FIELD_NUMBER: _builtins.int
+    DEVICE_KEY_FIELD_NUMBER: _builtins.int
+    RUNE_FIELD_NUMBER: _builtins.int
+    CREDS_FIELD_NUMBER: _builtins.int
+    device_cert: _builtins.str
+    device_key: _builtins.str
+    rune: _builtins.str
     """A master rune that is returned if the device that is registered has its
     own signer. The signer is necessary as the response is intercepted on the
     client side and appends the rune to the registratrion response.
     """
-    creds: builtins.bytes
+    creds: _builtins.bytes
     """Creds contains a serialized version of the device_cert, the device_key 
     and the rune that are used to authenticate a device at the backend, 
     and to authorize a request at the signer.
@@ -443,66 +464,80 @@ class RecoveryResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        device_cert: builtins.str = ...,
-        device_key: builtins.str = ...,
-        rune: builtins.str = ...,
-        creds: builtins.bytes = ...,
+        device_cert: _builtins.str = ...,
+        device_key: _builtins.str = ...,
+        rune: _builtins.str = ...,
+        creds: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_key", b"device_key", "rune", b"rune"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___RecoveryResponse = RecoveryResponse
+Global___RecoveryResponse: _TypeAlias = RecoveryResponse  # noqa: Y015
 
-@typing.final
-class UpgradeRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class UpgradeRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    SIGNER_VERSION_FIELD_NUMBER: builtins.int
-    INITMSG_FIELD_NUMBER: builtins.int
-    STARTUPMSGS_FIELD_NUMBER: builtins.int
-    signer_version: builtins.str
+    SIGNER_VERSION_FIELD_NUMBER: _builtins.int
+    INITMSG_FIELD_NUMBER: _builtins.int
+    STARTUPMSGS_FIELD_NUMBER: _builtins.int
+    signer_version: _builtins.str
     """The version of the signer, i.e., the maximum version of the
     protocol that this signer can understand.
     """
-    initmsg: builtins.bytes
-    """The new initmsg matching the above version. Necessary to
-    schedule the node without a signer present.
-    Deprecated: Replaced by the more generic `startupmsgs`
-    """
-    @property
-    def startupmsgs(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___StartupMessage]:
+    @_builtins.property
+    @_deprecated("""This field has been marked as deprecated using proto field options.""")
+    def initmsg(self) -> _builtins.bytes:
+        """The new initmsg matching the above version. Necessary to
+        schedule the node without a signer present.
+        Deprecated: Replaced by the more generic `startupmsgs`
+        """
+
+    @initmsg.setter
+    @_deprecated("""This field has been marked as deprecated using proto field options.""")
+    def initmsg(self, value: _builtins.bytes) -> None:
+        """The new initmsg matching the above version. Necessary to
+        schedule the node without a signer present.
+        Deprecated: Replaced by the more generic `startupmsgs`
+        """
+
+    @_builtins.property
+    def startupmsgs(self) -> _containers.RepeatedCompositeFieldContainer[Global___StartupMessage]:
         """Messages stashed at the scheduler to allow signerless startups."""
 
     def __init__(
         self,
         *,
-        signer_version: builtins.str = ...,
-        initmsg: builtins.bytes = ...,
-        startupmsgs: collections.abc.Iterable[global___StartupMessage] | None = ...,
+        signer_version: _builtins.str = ...,
+        initmsg: _builtins.bytes = ...,
+        startupmsgs: _abc.Iterable[Global___StartupMessage] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["initmsg", b"initmsg", "signer_version", b"signer_version", "startupmsgs", b"startupmsgs"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["initmsg", b"initmsg", "signer_version", b"signer_version", "startupmsgs", b"startupmsgs"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___UpgradeRequest = UpgradeRequest
+Global___UpgradeRequest: _TypeAlias = UpgradeRequest  # noqa: Y015
 
-@typing.final
-class UpgradeResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class UpgradeResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    OLD_VERSION_FIELD_NUMBER: builtins.int
-    old_version: builtins.str
+    OLD_VERSION_FIELD_NUMBER: _builtins.int
+    old_version: _builtins.str
     """The version of the node before the upgrade request has been
     processed.
     """
     def __init__(
         self,
         *,
-        old_version: builtins.str = ...,
+        old_version: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["old_version", b"old_version"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["old_version", b"old_version"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___UpgradeResponse = UpgradeResponse
+Global___UpgradeResponse: _TypeAlias = UpgradeResponse  # noqa: Y015
 
-@typing.final
-class StartupMessage(google.protobuf.message.Message):
+@_typing.final
+class StartupMessage(_message.Message):
     """A message that we know will be requested by `lightningd` at
     startup, and that we stash a response to on the scheduler. This
     allows the scheduler to start a node without requiring the signer
@@ -510,192 +545,199 @@ class StartupMessage(google.protobuf.message.Message):
     prefix, but without the length prefix.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_FIELD_NUMBER: builtins.int
-    RESPONSE_FIELD_NUMBER: builtins.int
-    request: builtins.bytes
-    response: builtins.bytes
+    REQUEST_FIELD_NUMBER: _builtins.int
+    RESPONSE_FIELD_NUMBER: _builtins.int
+    request: _builtins.bytes
+    response: _builtins.bytes
     def __init__(
         self,
         *,
-        request: builtins.bytes = ...,
-        response: builtins.bytes = ...,
+        request: _builtins.bytes = ...,
+        response: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["request", b"request", "response", b"response"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["request", b"request", "response", b"response"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___StartupMessage = StartupMessage
+Global___StartupMessage: _TypeAlias = StartupMessage  # noqa: Y015
 
-@typing.final
-class ListInviteCodesRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ListInviteCodesRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___ListInviteCodesRequest = ListInviteCodesRequest
+Global___ListInviteCodesRequest: _TypeAlias = ListInviteCodesRequest  # noqa: Y015
 
-@typing.final
-class ListInviteCodesResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ListInviteCodesResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    INVITE_CODE_LIST_FIELD_NUMBER: builtins.int
-    @property
-    def invite_code_list(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___InviteCode]: ...
-    def __init__(
-        self,
-        *,
-        invite_code_list: collections.abc.Iterable[global___InviteCode] | None = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["invite_code_list", b"invite_code_list"]) -> None: ...
-
-global___ListInviteCodesResponse = ListInviteCodesResponse
-
-@typing.final
-class InviteCode(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    CODE_FIELD_NUMBER: builtins.int
-    IS_REDEEMED_FIELD_NUMBER: builtins.int
-    code: builtins.str
-    is_redeemed: builtins.bool
+    INVITE_CODE_LIST_FIELD_NUMBER: _builtins.int
+    @_builtins.property
+    def invite_code_list(self) -> _containers.RepeatedCompositeFieldContainer[Global___InviteCode]: ...
     def __init__(
         self,
         *,
-        code: builtins.str = ...,
-        is_redeemed: builtins.bool = ...,
+        invite_code_list: _abc.Iterable[Global___InviteCode] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["code", b"code", "is_redeemed", b"is_redeemed"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["invite_code_list", b"invite_code_list"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___InviteCode = InviteCode
+Global___ListInviteCodesResponse: _TypeAlias = ListInviteCodesResponse  # noqa: Y015
 
-@typing.final
-class ExportNodeRequest(google.protobuf.message.Message):
+@_typing.final
+class InviteCode(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    CODE_FIELD_NUMBER: _builtins.int
+    IS_REDEEMED_FIELD_NUMBER: _builtins.int
+    code: _builtins.str
+    is_redeemed: _builtins.bool
+    def __init__(
+        self,
+        *,
+        code: _builtins.str = ...,
+        is_redeemed: _builtins.bool = ...,
+    ) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["code", b"code", "is_redeemed", b"is_redeemed"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+
+Global___InviteCode: _TypeAlias = InviteCode  # noqa: Y015
+
+@_typing.final
+class ExportNodeRequest(_message.Message):
     """Empty message for now, node identity is extracted from the mTLS
     certificate used to authenticate against the Scheduler.
     """
 
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    DESCRIPTOR: _descriptor.Descriptor
 
     def __init__(
         self,
     ) -> None: ...
 
-global___ExportNodeRequest = ExportNodeRequest
+Global___ExportNodeRequest: _TypeAlias = ExportNodeRequest  # noqa: Y015
 
-@typing.final
-class ExportNodeResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ExportNodeResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    URL_FIELD_NUMBER: builtins.int
-    url: builtins.str
+    URL_FIELD_NUMBER: _builtins.int
+    url: _builtins.str
     """URL where the encrypted backup can be retrieved from."""
     def __init__(
         self,
         *,
-        url: builtins.str = ...,
+        url: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["url", b"url"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["url", b"url"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ExportNodeResponse = ExportNodeResponse
+Global___ExportNodeResponse: _TypeAlias = ExportNodeResponse  # noqa: Y015
 
-@typing.final
-class SignerRejection(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class SignerRejection(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    MSG_FIELD_NUMBER: builtins.int
-    REQUEST_FIELD_NUMBER: builtins.int
-    GIT_VERSION_FIELD_NUMBER: builtins.int
-    NODE_ID_FIELD_NUMBER: builtins.int
-    msg: builtins.str
+    MSG_FIELD_NUMBER: _builtins.int
+    REQUEST_FIELD_NUMBER: _builtins.int
+    GIT_VERSION_FIELD_NUMBER: _builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    msg: _builtins.str
     """A human-readable description of what went wrong"""
-    git_version: builtins.str
-    node_id: builtins.bytes
-    @property
-    def request(self) -> glclient.greenlight_pb2.HsmRequest: ...
+    git_version: _builtins.str
+    node_id: _builtins.bytes
+    @_builtins.property
+    def request(self) -> _greenlight_pb2.HsmRequest: ...
     def __init__(
         self,
         *,
-        msg: builtins.str = ...,
-        request: glclient.greenlight_pb2.HsmRequest | None = ...,
-        git_version: builtins.str = ...,
-        node_id: builtins.bytes = ...,
+        msg: _builtins.str = ...,
+        request: _greenlight_pb2.HsmRequest | None = ...,
+        git_version: _builtins.str = ...,
+        node_id: _builtins.bytes = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["request", b"request"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["git_version", b"git_version", "msg", b"msg", "node_id", b"node_id", "request", b"request"]) -> None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["request", b"request"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["git_version", b"git_version", "msg", b"msg", "node_id", b"node_id", "request", b"request"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___SignerRejection = SignerRejection
+Global___SignerRejection: _TypeAlias = SignerRejection  # noqa: Y015
 
-@typing.final
-class PairDeviceRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class PairDeviceRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_ID_FIELD_NUMBER: builtins.int
-    CSR_FIELD_NUMBER: builtins.int
-    DEVICE_NAME_FIELD_NUMBER: builtins.int
-    DESCRIPTION_FIELD_NUMBER: builtins.int
-    RESTRICTIONS_FIELD_NUMBER: builtins.int
-    device_id: builtins.str
+    DEVICE_ID_FIELD_NUMBER: _builtins.int
+    CSR_FIELD_NUMBER: _builtins.int
+    DEVICE_NAME_FIELD_NUMBER: _builtins.int
+    DESCRIPTION_FIELD_NUMBER: _builtins.int
+    RESTRICTIONS_FIELD_NUMBER: _builtins.int
+    device_id: _builtins.str
     """The tls public key of the new device."""
-    csr: builtins.bytes
+    csr: _builtins.bytes
     """The certificate signing request that will be signed by the
     greenlight backend if the pairing succeeds. Notice that the CN
     here is irrelevant.
     """
-    device_name: builtins.str
+    device_name: _builtins.str
     """The name of the device that will be part of the tls certificate
     subjects CN field: CN=/users/<node_id>/<device_name>.
     """
-    description: builtins.str
+    description: _builtins.str
     """A human readable description of the device, this can be a 
     purpose or something similar. Can be used to display to the 
     user on the old device.
     """
-    restrictions: builtins.str
+    restrictions: _builtins.str
     """A set of restrictions that the new devices requests for the 
     rune. This might in the future get upgraded for easier naming.
     """
     def __init__(
         self,
         *,
-        device_id: builtins.str = ...,
-        csr: builtins.bytes = ...,
-        device_name: builtins.str = ...,
-        description: builtins.str = ...,
-        restrictions: builtins.str = ...,
+        device_id: _builtins.str = ...,
+        csr: _builtins.bytes = ...,
+        device_name: _builtins.str = ...,
+        description: _builtins.str = ...,
+        restrictions: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["csr", b"csr", "description", b"description", "device_id", b"device_id", "device_name", b"device_name", "restrictions", b"restrictions"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["csr", b"csr", "description", b"description", "device_id", b"device_id", "device_name", b"device_name", "restrictions", b"restrictions"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___PairDeviceRequest = PairDeviceRequest
+Global___PairDeviceRequest: _TypeAlias = PairDeviceRequest  # noqa: Y015
 
-@typing.final
-class PairDeviceResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class PairDeviceResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_ID_FIELD_NUMBER: builtins.int
-    DEVICE_CERT_FIELD_NUMBER: builtins.int
-    DEVICE_KEY_FIELD_NUMBER: builtins.int
-    RUNE_FIELD_NUMBER: builtins.int
-    CREDS_FIELD_NUMBER: builtins.int
-    device_id: builtins.str
+    DEVICE_ID_FIELD_NUMBER: _builtins.int
+    DEVICE_CERT_FIELD_NUMBER: _builtins.int
+    DEVICE_KEY_FIELD_NUMBER: _builtins.int
+    RUNE_FIELD_NUMBER: _builtins.int
+    CREDS_FIELD_NUMBER: _builtins.int
+    device_id: _builtins.str
     """device_id is the public key of the new device used for the
     tls cert.
     """
-    device_cert: builtins.str
+    device_cert: _builtins.str
     """Upon a pairing request, the device receives back the signed certificate
     that belongs to the certificate signing request the that was sent with
     the pairing request, so they can authenticate themselves in the future.
     """
-    device_key: builtins.str
+    device_key: _builtins.str
     """The private key that was used to create the certificate with. This key
     is used to sign the requests to the node.
     """
-    rune: builtins.str
+    rune: _builtins.str
     """A rune that is returned if the device that is created by the signer that
     the device pairs to.
     """
-    creds: builtins.bytes
+    creds: _builtins.bytes
     """Creds contains a serialized version of the device certificate, the device 
     key and the rune that are used to authenticate a device at the backend, 
     and to authorize a request at the signer.
@@ -703,184 +745,197 @@ class PairDeviceResponse(google.protobuf.message.Message):
     def __init__(
         self,
         *,
-        device_id: builtins.str = ...,
-        device_cert: builtins.str = ...,
-        device_key: builtins.str = ...,
-        rune: builtins.str = ...,
-        creds: builtins.bytes = ...,
+        device_id: _builtins.str = ...,
+        device_cert: _builtins.str = ...,
+        device_key: _builtins.str = ...,
+        rune: _builtins.str = ...,
+        creds: _builtins.bytes = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_id", b"device_id", "device_key", b"device_key", "rune", b"rune"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["creds", b"creds", "device_cert", b"device_cert", "device_id", b"device_id", "device_key", b"device_key", "rune", b"rune"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___PairDeviceResponse = PairDeviceResponse
+Global___PairDeviceResponse: _TypeAlias = PairDeviceResponse  # noqa: Y015
 
-@typing.final
-class GetPairingDataRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class GetPairingDataRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_ID_FIELD_NUMBER: builtins.int
-    device_id: builtins.str
+    DEVICE_ID_FIELD_NUMBER: _builtins.int
+    device_id: _builtins.str
     """The device_id that the client got from the qr-code."""
     def __init__(
         self,
         *,
-        device_id: builtins.str = ...,
+        device_id: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["device_id", b"device_id"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["device_id", b"device_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___GetPairingDataRequest = GetPairingDataRequest
+Global___GetPairingDataRequest: _TypeAlias = GetPairingDataRequest  # noqa: Y015
 
-@typing.final
-class GetPairingDataResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class GetPairingDataResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_ID_FIELD_NUMBER: builtins.int
-    CSR_FIELD_NUMBER: builtins.int
-    DEVICE_NAME_FIELD_NUMBER: builtins.int
-    DESCRIPTION_FIELD_NUMBER: builtins.int
-    RESTRICTIONS_FIELD_NUMBER: builtins.int
-    device_id: builtins.str
-    csr: builtins.bytes
+    DEVICE_ID_FIELD_NUMBER: _builtins.int
+    CSR_FIELD_NUMBER: _builtins.int
+    DEVICE_NAME_FIELD_NUMBER: _builtins.int
+    DESCRIPTION_FIELD_NUMBER: _builtins.int
+    RESTRICTIONS_FIELD_NUMBER: _builtins.int
+    device_id: _builtins.str
+    csr: _builtins.bytes
     """The certificate signing request that will be signed by the
     greenlight backend if the pairing succeeds. Notice that the CN
     here is irrelevant.
     """
-    device_name: builtins.str
+    device_name: _builtins.str
     """The name of the device that will be part of the tls certificate
     subjects CN field: CN=/users/<node_id>/<device_name>.
     """
-    description: builtins.str
+    description: _builtins.str
     """A human readable description of the device, this can be a 
     purpose or something similar. Can be used to display to the 
     user on the old device.
     """
-    restrictions: builtins.str
+    restrictions: _builtins.str
     """A set of restrictions that the new devices requests for the 
     rune. This might in the future get upgraded for easier naming.
     """
     def __init__(
         self,
         *,
-        device_id: builtins.str = ...,
-        csr: builtins.bytes = ...,
-        device_name: builtins.str = ...,
-        description: builtins.str = ...,
-        restrictions: builtins.str = ...,
+        device_id: _builtins.str = ...,
+        csr: _builtins.bytes = ...,
+        device_name: _builtins.str = ...,
+        description: _builtins.str = ...,
+        restrictions: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["csr", b"csr", "description", b"description", "device_id", b"device_id", "device_name", b"device_name", "restrictions", b"restrictions"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["csr", b"csr", "description", b"description", "device_id", b"device_id", "device_name", b"device_name", "restrictions", b"restrictions"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___GetPairingDataResponse = GetPairingDataResponse
+Global___GetPairingDataResponse: _TypeAlias = GetPairingDataResponse  # noqa: Y015
 
-@typing.final
-class ApprovePairingRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ApprovePairingRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_ID_FIELD_NUMBER: builtins.int
-    TIMESTAMP_FIELD_NUMBER: builtins.int
-    DEVICE_NAME_FIELD_NUMBER: builtins.int
-    RESTRICTIONS_FIELD_NUMBER: builtins.int
-    SIG_FIELD_NUMBER: builtins.int
-    PUBKEY_FIELD_NUMBER: builtins.int
-    RUNE_FIELD_NUMBER: builtins.int
-    device_id: builtins.str
-    timestamp: builtins.int
+    DEVICE_ID_FIELD_NUMBER: _builtins.int
+    TIMESTAMP_FIELD_NUMBER: _builtins.int
+    DEVICE_NAME_FIELD_NUMBER: _builtins.int
+    RESTRICTIONS_FIELD_NUMBER: _builtins.int
+    SIG_FIELD_NUMBER: _builtins.int
+    PUBKEY_FIELD_NUMBER: _builtins.int
+    RUNE_FIELD_NUMBER: _builtins.int
+    device_id: _builtins.str
+    timestamp: _builtins.int
     """The time that the old device approved the pairing request. This
     is used by the signer to restrict the duration an approval
     request is valid.
     """
-    device_name: builtins.str
+    device_name: _builtins.str
     """The name of the device that will be part of the tls certificate
     subjects CN field: CN=/users/<node_id>/<device_name>.
     """
-    restrictions: builtins.str
+    restrictions: _builtins.str
     """The restrictions need a pubkey set."""
-    sig: builtins.bytes
+    sig: _builtins.bytes
     """The signature of the above to ensure data integrity."""
-    pubkey: builtins.bytes
+    pubkey: _builtins.bytes
     """The public key corresponding to the private key that was used 
     to sign the request and that is part of the rune;
     """
-    rune: builtins.str
+    rune: _builtins.str
     """The rune of the old device with a pubkey field corresponding to
     the signature above. Used to authorize the approval request.
     """
     def __init__(
         self,
         *,
-        device_id: builtins.str = ...,
-        timestamp: builtins.int = ...,
-        device_name: builtins.str = ...,
-        restrictions: builtins.str = ...,
-        sig: builtins.bytes = ...,
-        pubkey: builtins.bytes = ...,
-        rune: builtins.str = ...,
+        device_id: _builtins.str = ...,
+        timestamp: _builtins.int = ...,
+        device_name: _builtins.str = ...,
+        restrictions: _builtins.str = ...,
+        sig: _builtins.bytes = ...,
+        pubkey: _builtins.bytes = ...,
+        rune: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["device_id", b"device_id", "device_name", b"device_name", "pubkey", b"pubkey", "restrictions", b"restrictions", "rune", b"rune", "sig", b"sig", "timestamp", b"timestamp"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["device_id", b"device_id", "device_name", b"device_name", "pubkey", b"pubkey", "restrictions", b"restrictions", "rune", b"rune", "sig", b"sig", "timestamp", b"timestamp"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ApprovePairingRequest = ApprovePairingRequest
+Global___ApprovePairingRequest: _TypeAlias = ApprovePairingRequest  # noqa: Y015
 
-@typing.final
-class ApprovePairingResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class ApprovePairingResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    DEVICE_ID_FIELD_NUMBER: builtins.int
-    NODE_ID_FIELD_NUMBER: builtins.int
-    RUNE_FIELD_NUMBER: builtins.int
-    device_id: builtins.str
-    node_id: builtins.bytes
-    rune: builtins.str
+    DEVICE_ID_FIELD_NUMBER: _builtins.int
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    RUNE_FIELD_NUMBER: _builtins.int
+    device_id: _builtins.str
+    node_id: _builtins.bytes
+    rune: _builtins.str
     def __init__(
         self,
         *,
-        device_id: builtins.str = ...,
-        node_id: builtins.bytes = ...,
-        rune: builtins.str = ...,
+        device_id: _builtins.str = ...,
+        node_id: _builtins.bytes = ...,
+        rune: _builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["device_id", b"device_id", "node_id", b"node_id", "rune", b"rune"]) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["device_id", b"device_id", "node_id", b"node_id", "rune", b"rune"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
-global___ApprovePairingResponse = ApprovePairingResponse
+Global___ApprovePairingResponse: _TypeAlias = ApprovePairingResponse  # noqa: Y015
 
-@typing.final
-class SignerRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class SignerRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_ID_FIELD_NUMBER: builtins.int
-    APPROVE_PAIRING_FIELD_NUMBER: builtins.int
-    request_id: builtins.int
-    @property
-    def approve_pairing(self) -> global___ApprovePairingRequest: ...
+    REQUEST_ID_FIELD_NUMBER: _builtins.int
+    APPROVE_PAIRING_FIELD_NUMBER: _builtins.int
+    request_id: _builtins.int
+    @_builtins.property
+    def approve_pairing(self) -> Global___ApprovePairingRequest: ...
     def __init__(
         self,
         *,
-        request_id: builtins.int = ...,
-        approve_pairing: global___ApprovePairingRequest | None = ...,
+        request_id: _builtins.int = ...,
+        approve_pairing: Global___ApprovePairingRequest | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "request", b"request"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "request", b"request", "request_id", b"request_id"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["request", b"request"]) -> typing.Literal["approve_pairing"] | None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["approve_pairing", b"approve_pairing", "request", b"request"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["approve_pairing", b"approve_pairing", "request", b"request", "request_id", b"request_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType_request: _TypeAlias = _typing.Literal["approve_pairing"]  # noqa: Y015
+    _WhichOneofArgType_request: _TypeAlias = _typing.Literal["request", b"request"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType_request) -> _WhichOneofReturnType_request | None: ...
 
-global___SignerRequest = SignerRequest
+Global___SignerRequest: _TypeAlias = SignerRequest  # noqa: Y015
 
-@typing.final
-class SignerResponse(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+@_typing.final
+class SignerResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
 
-    REQUEST_ID_FIELD_NUMBER: builtins.int
-    EMPTY_FIELD_NUMBER: builtins.int
-    APPROVE_PAIRING_FIELD_NUMBER: builtins.int
-    request_id: builtins.int
-    @property
-    def empty(self) -> glclient.greenlight_pb2.Empty: ...
-    @property
-    def approve_pairing(self) -> global___ApprovePairingResponse: ...
+    REQUEST_ID_FIELD_NUMBER: _builtins.int
+    EMPTY_FIELD_NUMBER: _builtins.int
+    APPROVE_PAIRING_FIELD_NUMBER: _builtins.int
+    request_id: _builtins.int
+    @_builtins.property
+    def empty(self) -> _greenlight_pb2.Empty: ...
+    @_builtins.property
+    def approve_pairing(self) -> Global___ApprovePairingResponse: ...
     def __init__(
         self,
         *,
-        request_id: builtins.int = ...,
-        empty: glclient.greenlight_pb2.Empty | None = ...,
-        approve_pairing: global___ApprovePairingResponse | None = ...,
+        request_id: _builtins.int = ...,
+        empty: _greenlight_pb2.Empty | None = ...,
+        approve_pairing: Global___ApprovePairingResponse | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "empty", b"empty", "response", b"response"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["approve_pairing", b"approve_pairing", "empty", b"empty", "request_id", b"request_id", "response", b"response"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["response", b"response"]) -> typing.Literal["empty", "approve_pairing"] | None: ...
+    _HasFieldArgType: _TypeAlias = _typing.Literal["approve_pairing", b"approve_pairing", "empty", b"empty", "response", b"response"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["approve_pairing", b"approve_pairing", "empty", b"empty", "request_id", b"request_id", "response", b"response"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType_response: _TypeAlias = _typing.Literal["empty", "approve_pairing"]  # noqa: Y015
+    _WhichOneofArgType_response: _TypeAlias = _typing.Literal["response", b"response"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType_response) -> _WhichOneofReturnType_response | None: ...
 
-global___SignerResponse = SignerResponse
+Global___SignerResponse: _TypeAlias = SignerResponse  # noqa: Y015

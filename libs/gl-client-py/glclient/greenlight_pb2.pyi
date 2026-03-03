@@ -284,17 +284,20 @@ class SignerStateEntry(_message.Message):
     VERSION_FIELD_NUMBER: _builtins.int
     KEY_FIELD_NUMBER: _builtins.int
     VALUE_FIELD_NUMBER: _builtins.int
+    SIGNATURE_FIELD_NUMBER: _builtins.int
     version: _builtins.int
     key: _builtins.str
     value: _builtins.bytes
+    signature: _builtins.bytes
     def __init__(
         self,
         *,
         version: _builtins.int = ...,
         key: _builtins.str = ...,
         value: _builtins.bytes = ...,
+        signature: _builtins.bytes = ...,
     ) -> None: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["key", b"key", "value", b"value", "version", b"version"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["key", b"key", "signature", b"signature", "value", b"value", "version", b"version"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
 Global___SignerStateEntry: _TypeAlias = SignerStateEntry  # noqa: Y015

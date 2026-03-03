@@ -435,6 +435,7 @@ impl Into<Vec<crate::pb::SignerStateEntry>> for State {
                 key: k.to_owned(),
                 value: serde_json::to_vec(&v.1).unwrap(),
                 version: v.0,
+                signature: vec![],
             })
             .collect()
     }

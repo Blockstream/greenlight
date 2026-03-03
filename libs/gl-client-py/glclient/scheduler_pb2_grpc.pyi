@@ -3,20 +3,29 @@
 isort:skip_file
 """
 
-import abc
-import collections.abc
-import glclient.greenlight_pb2
-import glclient.scheduler_pb2
-import grpc
-import grpc.aio
-import typing
+from collections import abc as _abc
+from glclient import greenlight_pb2 as _greenlight_pb2
+from glclient import scheduler_pb2 as _scheduler_pb2
+from grpc import aio as _aio
+import abc as _abc_1
+import grpc as _grpc
+import sys
+import typing as _typing
 
-_T = typing.TypeVar("_T")
+if sys.version_info >= (3, 11):
+    from typing import Self as _Self
+else:
+    from typing_extensions import Self as _Self
 
-class _MaybeAsyncIterator(collections.abc.AsyncIterator[_T], collections.abc.Iterator[_T], metaclass=abc.ABCMeta): ...
+_T = _typing.TypeVar("_T")
 
-class _ServicerContext(grpc.ServicerContext, grpc.aio.ServicerContext):  # type: ignore[misc, type-arg]
+class _MaybeAsyncIterator(_abc.AsyncIterator[_T], _abc.Iterator[_T], metaclass=_abc_1.ABCMeta): ...
+
+class _ServicerContext(_grpc.ServicerContext, _aio.ServicerContext):  # type: ignore[misc, type-arg]
     ...
+
+GRPC_GENERATED_VERSION: str
+GRPC_VERSION: str
 
 class SchedulerStub:
     """The scheduler service is the endpoint which allows users to
@@ -53,11 +62,11 @@ class SchedulerStub:
     to use the node-specific mTLS keypair.
     """
 
-    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
-    Register: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.RegistrationRequest,
-        glclient.scheduler_pb2.RegistrationResponse,
-    ]
+    @_typing.overload
+    def __new__(cls, channel: _grpc.Channel) -> _Self: ...
+    @_typing.overload
+    def __new__(cls, channel: _aio.Channel) -> SchedulerAsyncStub: ...
+    Register: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.RegistrationRequest, _scheduler_pb2.RegistrationResponse]
     """A user may register a new node with greenlight by providing
     some basic metadata and proving that they have access to
     the corresponding private key (see challenge-response
@@ -77,11 +86,7 @@ class SchedulerStub:
     recover the credentials. Notice that this also means that
     the same node_id cannot be reused for different networks.
     """
-
-    Recover: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.RecoveryRequest,
-        glclient.scheduler_pb2.RecoveryResponse,
-    ]
+    Recover: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.RecoveryRequest, _scheduler_pb2.RecoveryResponse]
     """Should a user have lost its credentials (mTLS keypair) for
     any reason, they may regain access to their node using the
     Recover RPC method. Similar to the initial registration the
@@ -94,11 +99,7 @@ class SchedulerStub:
     forward. Existing keypairs are not revoked, in order to
     avoid locking out other authenticated applications.
     """
-
-    GetChallenge: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ChallengeRequest,
-        glclient.scheduler_pb2.ChallengeResponse,
-    ]
+    GetChallenge: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ChallengeRequest, _scheduler_pb2.ChallengeResponse]
     """Challenges are one-time values issued by the server, used
     to authenticate a user/device against the server. A user or
     device can authenticate to the server by signing the
@@ -110,11 +111,7 @@ class SchedulerStub:
     or use a challenge with a different scope will result in an
     error being returned.
     """
-
-    Schedule: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ScheduleRequest,
-        glclient.scheduler_pb2.NodeInfoResponse,
-    ]
+    Schedule: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ScheduleRequest, _scheduler_pb2.NodeInfoResponse]
     """Scheduling takes a previously registered node, locates a
     free slot in greenlight's infrastructure and allocates it
     to run the node. The node then goes through the startup
@@ -129,11 +126,7 @@ class SchedulerStub:
     application must use the grpc details and its node-specific
     mTLS keypair to interact with the node directly.
     """
-
-    GetNodeInfo: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.NodeInfoRequest,
-        glclient.scheduler_pb2.NodeInfoResponse,
-    ]
+    GetNodeInfo: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.NodeInfoRequest, _scheduler_pb2.NodeInfoResponse]
     """Much like `Schedule` this call is used to retrieve the
     metadata and grpc details of a node. Unlike the other call
     however it is passive, and will not result in the node
@@ -143,11 +136,7 @@ class SchedulerStub:
     that signs off on changes, but doesn't want to keep the
     node itself scheduled).
     """
-
-    MaybeUpgrade: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.UpgradeRequest,
-        glclient.scheduler_pb2.UpgradeResponse,
-    ]
+    MaybeUpgrade: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.UpgradeRequest, _scheduler_pb2.UpgradeResponse]
     """The signer may want to trigger an upgrade of the node
     before waiting for the node to be scheduled. This ensures
     that the signer version is in sync with the node
@@ -158,20 +147,12 @@ class SchedulerStub:
     non-functional UpgradeRequest may result in unschedulable
     nodes.
     """
-
-    ListInviteCodes: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ListInviteCodesRequest,
-        glclient.scheduler_pb2.ListInviteCodesResponse,
-    ]
+    ListInviteCodes: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ListInviteCodesRequest, _scheduler_pb2.ListInviteCodesResponse]
     """This call is used to fetch a list of invite codes associated
     with the node id of the client. These invite codes can be used
     for further registration of new nodes.
     """
-
-    ExportNode: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ExportNodeRequest,
-        glclient.scheduler_pb2.ExportNodeResponse,
-    ]
+    ExportNode: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ExportNodeRequest, _scheduler_pb2.ExportNodeResponse]
     """Exporting a node allows users to take control of their node
 
     This method initiates the node export on Greenlight,
@@ -197,31 +178,11 @@ class SchedulerStub:
     being replayed) and loss of funds (see CLN Backups
     documentation for more information)
     """
-
-    AddOutgoingWebhook: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.AddOutgoingWebhookRequest,
-        glclient.scheduler_pb2.AddOutgoingWebhookResponse,
-    ]
-
-    ListOutgoingWebhooks: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ListOutgoingWebhooksRequest,
-        glclient.scheduler_pb2.ListOutgoingWebhooksResponse,
-    ]
-
-    DeleteWebhooks: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.DeleteOutgoingWebhooksRequest,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-    RotateOutgoingWebhookSecret: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.RotateOutgoingWebhookSecretRequest,
-        glclient.scheduler_pb2.WebhookSecretResponse,
-    ]
-
-    SignerRequestsStream: grpc.StreamStreamMultiCallable[
-        glclient.scheduler_pb2.SignerResponse,
-        glclient.scheduler_pb2.SignerRequest,
-    ]
+    AddOutgoingWebhook: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.AddOutgoingWebhookRequest, _scheduler_pb2.AddOutgoingWebhookResponse]
+    ListOutgoingWebhooks: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ListOutgoingWebhooksRequest, _scheduler_pb2.ListOutgoingWebhooksResponse]
+    DeleteWebhooks: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.DeleteOutgoingWebhooksRequest, _greenlight_pb2.Empty]
+    RotateOutgoingWebhookSecret: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.RotateOutgoingWebhookSecretRequest, _scheduler_pb2.WebhookSecretResponse]
+    SignerRequestsStream: _grpc.StreamStreamMultiCallable[_scheduler_pb2.SignerResponse, _scheduler_pb2.SignerRequest]
     """Attaches a Signer  via a bidirectional stream to the scheduler. 
     This is a communication channel between greenlight and the signing
     device that is used for requests that are not part of the node api.
@@ -230,7 +191,8 @@ class SchedulerStub:
     the signer answers with a ApprovePairingResponse.
     """
 
-class SchedulerAsyncStub:
+@_typing.type_check_only
+class SchedulerAsyncStub(SchedulerStub):
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -265,10 +227,8 @@ class SchedulerAsyncStub:
     to use the node-specific mTLS keypair.
     """
 
-    Register: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.RegistrationRequest,
-        glclient.scheduler_pb2.RegistrationResponse,
-    ]
+    def __init__(self, channel: _aio.Channel) -> None: ...
+    Register: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.RegistrationRequest, _scheduler_pb2.RegistrationResponse]  # type: ignore[assignment]
     """A user may register a new node with greenlight by providing
     some basic metadata and proving that they have access to
     the corresponding private key (see challenge-response
@@ -288,11 +248,7 @@ class SchedulerAsyncStub:
     recover the credentials. Notice that this also means that
     the same node_id cannot be reused for different networks.
     """
-
-    Recover: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.RecoveryRequest,
-        glclient.scheduler_pb2.RecoveryResponse,
-    ]
+    Recover: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.RecoveryRequest, _scheduler_pb2.RecoveryResponse]  # type: ignore[assignment]
     """Should a user have lost its credentials (mTLS keypair) for
     any reason, they may regain access to their node using the
     Recover RPC method. Similar to the initial registration the
@@ -305,11 +261,7 @@ class SchedulerAsyncStub:
     forward. Existing keypairs are not revoked, in order to
     avoid locking out other authenticated applications.
     """
-
-    GetChallenge: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ChallengeRequest,
-        glclient.scheduler_pb2.ChallengeResponse,
-    ]
+    GetChallenge: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ChallengeRequest, _scheduler_pb2.ChallengeResponse]  # type: ignore[assignment]
     """Challenges are one-time values issued by the server, used
     to authenticate a user/device against the server. A user or
     device can authenticate to the server by signing the
@@ -321,11 +273,7 @@ class SchedulerAsyncStub:
     or use a challenge with a different scope will result in an
     error being returned.
     """
-
-    Schedule: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ScheduleRequest,
-        glclient.scheduler_pb2.NodeInfoResponse,
-    ]
+    Schedule: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ScheduleRequest, _scheduler_pb2.NodeInfoResponse]  # type: ignore[assignment]
     """Scheduling takes a previously registered node, locates a
     free slot in greenlight's infrastructure and allocates it
     to run the node. The node then goes through the startup
@@ -340,11 +288,7 @@ class SchedulerAsyncStub:
     application must use the grpc details and its node-specific
     mTLS keypair to interact with the node directly.
     """
-
-    GetNodeInfo: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.NodeInfoRequest,
-        glclient.scheduler_pb2.NodeInfoResponse,
-    ]
+    GetNodeInfo: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.NodeInfoRequest, _scheduler_pb2.NodeInfoResponse]  # type: ignore[assignment]
     """Much like `Schedule` this call is used to retrieve the
     metadata and grpc details of a node. Unlike the other call
     however it is passive, and will not result in the node
@@ -354,11 +298,7 @@ class SchedulerAsyncStub:
     that signs off on changes, but doesn't want to keep the
     node itself scheduled).
     """
-
-    MaybeUpgrade: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.UpgradeRequest,
-        glclient.scheduler_pb2.UpgradeResponse,
-    ]
+    MaybeUpgrade: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.UpgradeRequest, _scheduler_pb2.UpgradeResponse]  # type: ignore[assignment]
     """The signer may want to trigger an upgrade of the node
     before waiting for the node to be scheduled. This ensures
     that the signer version is in sync with the node
@@ -369,20 +309,12 @@ class SchedulerAsyncStub:
     non-functional UpgradeRequest may result in unschedulable
     nodes.
     """
-
-    ListInviteCodes: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ListInviteCodesRequest,
-        glclient.scheduler_pb2.ListInviteCodesResponse,
-    ]
+    ListInviteCodes: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ListInviteCodesRequest, _scheduler_pb2.ListInviteCodesResponse]  # type: ignore[assignment]
     """This call is used to fetch a list of invite codes associated
     with the node id of the client. These invite codes can be used
     for further registration of new nodes.
     """
-
-    ExportNode: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ExportNodeRequest,
-        glclient.scheduler_pb2.ExportNodeResponse,
-    ]
+    ExportNode: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ExportNodeRequest, _scheduler_pb2.ExportNodeResponse]  # type: ignore[assignment]
     """Exporting a node allows users to take control of their node
 
     This method initiates the node export on Greenlight,
@@ -408,31 +340,11 @@ class SchedulerAsyncStub:
     being replayed) and loss of funds (see CLN Backups
     documentation for more information)
     """
-
-    AddOutgoingWebhook: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.AddOutgoingWebhookRequest,
-        glclient.scheduler_pb2.AddOutgoingWebhookResponse,
-    ]
-
-    ListOutgoingWebhooks: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ListOutgoingWebhooksRequest,
-        glclient.scheduler_pb2.ListOutgoingWebhooksResponse,
-    ]
-
-    DeleteWebhooks: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.DeleteOutgoingWebhooksRequest,
-        glclient.greenlight_pb2.Empty,
-    ]
-
-    RotateOutgoingWebhookSecret: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.RotateOutgoingWebhookSecretRequest,
-        glclient.scheduler_pb2.WebhookSecretResponse,
-    ]
-
-    SignerRequestsStream: grpc.aio.StreamStreamMultiCallable[
-        glclient.scheduler_pb2.SignerResponse,
-        glclient.scheduler_pb2.SignerRequest,
-    ]
+    AddOutgoingWebhook: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.AddOutgoingWebhookRequest, _scheduler_pb2.AddOutgoingWebhookResponse]  # type: ignore[assignment]
+    ListOutgoingWebhooks: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ListOutgoingWebhooksRequest, _scheduler_pb2.ListOutgoingWebhooksResponse]  # type: ignore[assignment]
+    DeleteWebhooks: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.DeleteOutgoingWebhooksRequest, _greenlight_pb2.Empty]  # type: ignore[assignment]
+    RotateOutgoingWebhookSecret: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.RotateOutgoingWebhookSecretRequest, _scheduler_pb2.WebhookSecretResponse]  # type: ignore[assignment]
+    SignerRequestsStream: _aio.StreamStreamMultiCallable[_scheduler_pb2.SignerResponse, _scheduler_pb2.SignerRequest]  # type: ignore[assignment]
     """Attaches a Signer  via a bidirectional stream to the scheduler. 
     This is a communication channel between greenlight and the signing
     device that is used for requests that are not part of the node api.
@@ -441,7 +353,7 @@ class SchedulerAsyncStub:
     the signer answers with a ApprovePairingResponse.
     """
 
-class SchedulerServicer(metaclass=abc.ABCMeta):
+class SchedulerServicer(metaclass=_abc_1.ABCMeta):
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -476,12 +388,12 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
     to use the node-specific mTLS keypair.
     """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def Register(
         self,
-        request: glclient.scheduler_pb2.RegistrationRequest,
+        request: _scheduler_pb2.RegistrationRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.RegistrationResponse, collections.abc.Awaitable[glclient.scheduler_pb2.RegistrationResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.RegistrationResponse, _abc.Awaitable[_scheduler_pb2.RegistrationResponse]]:
         """A user may register a new node with greenlight by providing
         some basic metadata and proving that they have access to
         the corresponding private key (see challenge-response
@@ -502,12 +414,12 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         the same node_id cannot be reused for different networks.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def Recover(
         self,
-        request: glclient.scheduler_pb2.RecoveryRequest,
+        request: _scheduler_pb2.RecoveryRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.RecoveryResponse, collections.abc.Awaitable[glclient.scheduler_pb2.RecoveryResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.RecoveryResponse, _abc.Awaitable[_scheduler_pb2.RecoveryResponse]]:
         """Should a user have lost its credentials (mTLS keypair) for
         any reason, they may regain access to their node using the
         Recover RPC method. Similar to the initial registration the
@@ -521,12 +433,12 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         avoid locking out other authenticated applications.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def GetChallenge(
         self,
-        request: glclient.scheduler_pb2.ChallengeRequest,
+        request: _scheduler_pb2.ChallengeRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.ChallengeResponse, collections.abc.Awaitable[glclient.scheduler_pb2.ChallengeResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.ChallengeResponse, _abc.Awaitable[_scheduler_pb2.ChallengeResponse]]:
         """Challenges are one-time values issued by the server, used
         to authenticate a user/device against the server. A user or
         device can authenticate to the server by signing the
@@ -539,12 +451,12 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         error being returned.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def Schedule(
         self,
-        request: glclient.scheduler_pb2.ScheduleRequest,
+        request: _scheduler_pb2.ScheduleRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.NodeInfoResponse, collections.abc.Awaitable[glclient.scheduler_pb2.NodeInfoResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.NodeInfoResponse, _abc.Awaitable[_scheduler_pb2.NodeInfoResponse]]:
         """Scheduling takes a previously registered node, locates a
         free slot in greenlight's infrastructure and allocates it
         to run the node. The node then goes through the startup
@@ -560,12 +472,12 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         mTLS keypair to interact with the node directly.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def GetNodeInfo(
         self,
-        request: glclient.scheduler_pb2.NodeInfoRequest,
+        request: _scheduler_pb2.NodeInfoRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.NodeInfoResponse, collections.abc.Awaitable[glclient.scheduler_pb2.NodeInfoResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.NodeInfoResponse, _abc.Awaitable[_scheduler_pb2.NodeInfoResponse]]:
         """Much like `Schedule` this call is used to retrieve the
         metadata and grpc details of a node. Unlike the other call
         however it is passive, and will not result in the node
@@ -576,12 +488,12 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         node itself scheduled).
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def MaybeUpgrade(
         self,
-        request: glclient.scheduler_pb2.UpgradeRequest,
+        request: _scheduler_pb2.UpgradeRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.UpgradeResponse, collections.abc.Awaitable[glclient.scheduler_pb2.UpgradeResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.UpgradeResponse, _abc.Awaitable[_scheduler_pb2.UpgradeResponse]]:
         """The signer may want to trigger an upgrade of the node
         before waiting for the node to be scheduled. This ensures
         that the signer version is in sync with the node
@@ -593,23 +505,23 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         nodes.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def ListInviteCodes(
         self,
-        request: glclient.scheduler_pb2.ListInviteCodesRequest,
+        request: _scheduler_pb2.ListInviteCodesRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.ListInviteCodesResponse, collections.abc.Awaitable[glclient.scheduler_pb2.ListInviteCodesResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.ListInviteCodesResponse, _abc.Awaitable[_scheduler_pb2.ListInviteCodesResponse]]:
         """This call is used to fetch a list of invite codes associated
         with the node id of the client. These invite codes can be used
         for further registration of new nodes.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def ExportNode(
         self,
-        request: glclient.scheduler_pb2.ExportNodeRequest,
+        request: _scheduler_pb2.ExportNodeRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.ExportNodeResponse, collections.abc.Awaitable[glclient.scheduler_pb2.ExportNodeResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.ExportNodeResponse, _abc.Awaitable[_scheduler_pb2.ExportNodeResponse]]:
         """Exporting a node allows users to take control of their node
 
         This method initiates the node export on Greenlight,
@@ -636,40 +548,40 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         documentation for more information)
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def AddOutgoingWebhook(
         self,
-        request: glclient.scheduler_pb2.AddOutgoingWebhookRequest,
+        request: _scheduler_pb2.AddOutgoingWebhookRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.AddOutgoingWebhookResponse, collections.abc.Awaitable[glclient.scheduler_pb2.AddOutgoingWebhookResponse]]: ...
+    ) -> _typing.Union[_scheduler_pb2.AddOutgoingWebhookResponse, _abc.Awaitable[_scheduler_pb2.AddOutgoingWebhookResponse]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def ListOutgoingWebhooks(
         self,
-        request: glclient.scheduler_pb2.ListOutgoingWebhooksRequest,
+        request: _scheduler_pb2.ListOutgoingWebhooksRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.ListOutgoingWebhooksResponse, collections.abc.Awaitable[glclient.scheduler_pb2.ListOutgoingWebhooksResponse]]: ...
+    ) -> _typing.Union[_scheduler_pb2.ListOutgoingWebhooksResponse, _abc.Awaitable[_scheduler_pb2.ListOutgoingWebhooksResponse]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def DeleteWebhooks(
         self,
-        request: glclient.scheduler_pb2.DeleteOutgoingWebhooksRequest,
+        request: _scheduler_pb2.DeleteOutgoingWebhooksRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]: ...
+    ) -> _typing.Union[_greenlight_pb2.Empty, _abc.Awaitable[_greenlight_pb2.Empty]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def RotateOutgoingWebhookSecret(
         self,
-        request: glclient.scheduler_pb2.RotateOutgoingWebhookSecretRequest,
+        request: _scheduler_pb2.RotateOutgoingWebhookSecretRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.WebhookSecretResponse, collections.abc.Awaitable[glclient.scheduler_pb2.WebhookSecretResponse]]: ...
+    ) -> _typing.Union[_scheduler_pb2.WebhookSecretResponse, _abc.Awaitable[_scheduler_pb2.WebhookSecretResponse]]: ...
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def SignerRequestsStream(
         self,
-        request_iterator: _MaybeAsyncIterator[glclient.scheduler_pb2.SignerResponse],
+        request_iterator: _MaybeAsyncIterator[_scheduler_pb2.SignerResponse],
         context: _ServicerContext,
-    ) -> typing.Union[collections.abc.Iterator[glclient.scheduler_pb2.SignerRequest], collections.abc.AsyncIterator[glclient.scheduler_pb2.SignerRequest]]:
+    ) -> _typing.Union[_abc.Iterator[_scheduler_pb2.SignerRequest], _abc.AsyncIterator[_scheduler_pb2.SignerRequest]]:
         """Attaches a Signer  via a bidirectional stream to the scheduler. 
         This is a communication channel between greenlight and the signing
         device that is used for requests that are not part of the node api.
@@ -678,16 +590,16 @@ class SchedulerServicer(metaclass=abc.ABCMeta):
         the signer answers with a ApprovePairingResponse.
         """
 
-def add_SchedulerServicer_to_server(servicer: SchedulerServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+def add_SchedulerServicer_to_server(servicer: SchedulerServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...
 
 class DebugStub:
     """A service to collect debugging information from clients."""
 
-    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
-    ReportSignerRejection: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.SignerRejection,
-        glclient.greenlight_pb2.Empty,
-    ]
+    @_typing.overload
+    def __new__(cls, channel: _grpc.Channel) -> _Self: ...
+    @_typing.overload
+    def __new__(cls, channel: _aio.Channel) -> DebugAsyncStub: ...
+    ReportSignerRejection: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.SignerRejection, _greenlight_pb2.Empty]
     """The signer is designed to fail closed, i.e., we reject requests
     that do not resolve or that go against one of its policies. This
     comes with some issues, such as false negatives, where we reject
@@ -697,13 +609,12 @@ class DebugStub:
     fine-tine the signer's ruleset.
     """
 
-class DebugAsyncStub:
+@_typing.type_check_only
+class DebugAsyncStub(DebugStub):
     """A service to collect debugging information from clients."""
 
-    ReportSignerRejection: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.SignerRejection,
-        glclient.greenlight_pb2.Empty,
-    ]
+    def __init__(self, channel: _aio.Channel) -> None: ...
+    ReportSignerRejection: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.SignerRejection, _greenlight_pb2.Empty]  # type: ignore[assignment]
     """The signer is designed to fail closed, i.e., we reject requests
     that do not resolve or that go against one of its policies. This
     comes with some issues, such as false negatives, where we reject
@@ -713,15 +624,15 @@ class DebugAsyncStub:
     fine-tine the signer's ruleset.
     """
 
-class DebugServicer(metaclass=abc.ABCMeta):
+class DebugServicer(metaclass=_abc_1.ABCMeta):
     """A service to collect debugging information from clients."""
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def ReportSignerRejection(
         self,
-        request: glclient.scheduler_pb2.SignerRejection,
+        request: _scheduler_pb2.SignerRejection,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]:
+    ) -> _typing.Union[_greenlight_pb2.Empty, _abc.Awaitable[_greenlight_pb2.Empty]]:
         """The signer is designed to fail closed, i.e., we reject requests
         that do not resolve or that go against one of its policies. This
         comes with some issues, such as false negatives, where we reject
@@ -731,103 +642,86 @@ class DebugServicer(metaclass=abc.ABCMeta):
         fine-tine the signer's ruleset.
         """
 
-def add_DebugServicer_to_server(servicer: DebugServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+def add_DebugServicer_to_server(servicer: DebugServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...
 
 class PairingStub:
     """A service to pair signer-less clients with an existing signer."""
 
-    def __init__(self, channel: typing.Union[grpc.Channel, grpc.aio.Channel]) -> None: ...
-    PairDevice: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.PairDeviceRequest,
-        glclient.scheduler_pb2.PairDeviceResponse,
-    ]
+    @_typing.overload
+    def __new__(cls, channel: _grpc.Channel) -> _Self: ...
+    @_typing.overload
+    def __new__(cls, channel: _aio.Channel) -> PairingAsyncStub: ...
+    PairDevice: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.PairDeviceRequest, _scheduler_pb2.PairDeviceResponse]
     """Initiates a new Pairing Sessions. This is called by the new
     device that wants to request a pairing from an existing device.
     The session lifetime is bound to the stream so closing the
     stream destroys the session.
     """
-
-    GetPairingData: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.GetPairingDataRequest,
-        glclient.scheduler_pb2.GetPairingDataResponse,
-    ]
+    GetPairingData: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.GetPairingDataRequest, _scheduler_pb2.GetPairingDataResponse]
     """Returns the pairing related data that belongs to a pairing
     session. This is meant to be called from a device that can
     approve a pairing request, we sometimes call it "old device".
     """
-
-    ApprovePairing: grpc.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ApprovePairingRequest,
-        glclient.greenlight_pb2.Empty,
-    ]
+    ApprovePairing: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ApprovePairingRequest, _greenlight_pb2.Empty]
     """Approves a pairing request. The ApprovePairingRequest is
     forwarded to a signer for further processing.
     """
 
-class PairingAsyncStub:
+@_typing.type_check_only
+class PairingAsyncStub(PairingStub):
     """A service to pair signer-less clients with an existing signer."""
 
-    PairDevice: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.PairDeviceRequest,
-        glclient.scheduler_pb2.PairDeviceResponse,
-    ]
+    def __init__(self, channel: _aio.Channel) -> None: ...
+    PairDevice: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.PairDeviceRequest, _scheduler_pb2.PairDeviceResponse]  # type: ignore[assignment]
     """Initiates a new Pairing Sessions. This is called by the new
     device that wants to request a pairing from an existing device.
     The session lifetime is bound to the stream so closing the
     stream destroys the session.
     """
-
-    GetPairingData: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.GetPairingDataRequest,
-        glclient.scheduler_pb2.GetPairingDataResponse,
-    ]
+    GetPairingData: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.GetPairingDataRequest, _scheduler_pb2.GetPairingDataResponse]  # type: ignore[assignment]
     """Returns the pairing related data that belongs to a pairing
     session. This is meant to be called from a device that can
     approve a pairing request, we sometimes call it "old device".
     """
-
-    ApprovePairing: grpc.aio.UnaryUnaryMultiCallable[
-        glclient.scheduler_pb2.ApprovePairingRequest,
-        glclient.greenlight_pb2.Empty,
-    ]
+    ApprovePairing: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ApprovePairingRequest, _greenlight_pb2.Empty]  # type: ignore[assignment]
     """Approves a pairing request. The ApprovePairingRequest is
     forwarded to a signer for further processing.
     """
 
-class PairingServicer(metaclass=abc.ABCMeta):
+class PairingServicer(metaclass=_abc_1.ABCMeta):
     """A service to pair signer-less clients with an existing signer."""
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def PairDevice(
         self,
-        request: glclient.scheduler_pb2.PairDeviceRequest,
+        request: _scheduler_pb2.PairDeviceRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.PairDeviceResponse, collections.abc.Awaitable[glclient.scheduler_pb2.PairDeviceResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.PairDeviceResponse, _abc.Awaitable[_scheduler_pb2.PairDeviceResponse]]:
         """Initiates a new Pairing Sessions. This is called by the new
         device that wants to request a pairing from an existing device.
         The session lifetime is bound to the stream so closing the
         stream destroys the session.
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def GetPairingData(
         self,
-        request: glclient.scheduler_pb2.GetPairingDataRequest,
+        request: _scheduler_pb2.GetPairingDataRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.scheduler_pb2.GetPairingDataResponse, collections.abc.Awaitable[glclient.scheduler_pb2.GetPairingDataResponse]]:
+    ) -> _typing.Union[_scheduler_pb2.GetPairingDataResponse, _abc.Awaitable[_scheduler_pb2.GetPairingDataResponse]]:
         """Returns the pairing related data that belongs to a pairing
         session. This is meant to be called from a device that can
         approve a pairing request, we sometimes call it "old device".
         """
 
-    @abc.abstractmethod
+    @_abc_1.abstractmethod
     def ApprovePairing(
         self,
-        request: glclient.scheduler_pb2.ApprovePairingRequest,
+        request: _scheduler_pb2.ApprovePairingRequest,
         context: _ServicerContext,
-    ) -> typing.Union[glclient.greenlight_pb2.Empty, collections.abc.Awaitable[glclient.greenlight_pb2.Empty]]:
+    ) -> _typing.Union[_greenlight_pb2.Empty, _abc.Awaitable[_greenlight_pb2.Empty]]:
         """Approves a pairing request. The ApprovePairingRequest is
         forwarded to a signer for further processing.
         """
 
-def add_PairingServicer_to_server(servicer: PairingServicer, server: typing.Union[grpc.Server, grpc.aio.Server]) -> None: ...
+def add_PairingServicer_to_server(servicer: PairingServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...

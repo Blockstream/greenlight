@@ -1921,14 +1921,23 @@ class _UniffiConverterTypePeerChannel(_UniffiConverterRustBuffer):
 
 class ReceiveResponse:
     bolt11: "str"
-    def __init__(self, *, bolt11: "str"):
+    opening_fee_msat: "int"
+    """
+    The fee charged by the LSP for opening a JIT channel, in
+    millisatoshi. This is 0 if no JIT channel was needed.
+    """
+
+    def __init__(self, *, bolt11: "str", opening_fee_msat: "int"):
         self.bolt11 = bolt11
+        self.opening_fee_msat = opening_fee_msat
 
     def __str__(self):
-        return "ReceiveResponse(bolt11={})".format(self.bolt11)
+        return "ReceiveResponse(bolt11={}, opening_fee_msat={})".format(self.bolt11, self.opening_fee_msat)
 
     def __eq__(self, other):
         if self.bolt11 != other.bolt11:
+            return False
+        if self.opening_fee_msat != other.opening_fee_msat:
             return False
         return True
 
@@ -1937,15 +1946,18 @@ class _UniffiConverterTypeReceiveResponse(_UniffiConverterRustBuffer):
     def read(buf):
         return ReceiveResponse(
             bolt11=_UniffiConverterString.read(buf),
+            opening_fee_msat=_UniffiConverterUInt64.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
         _UniffiConverterString.check_lower(value.bolt11)
+        _UniffiConverterUInt64.check_lower(value.opening_fee_msat)
 
     @staticmethod
     def write(value, buf):
         _UniffiConverterString.write(value.bolt11, buf)
+        _UniffiConverterUInt64.write(value.opening_fee_msat, buf)
 
 
 class SendResponse:
