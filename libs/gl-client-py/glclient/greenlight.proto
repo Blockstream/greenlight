@@ -156,6 +156,7 @@ message SignerStateEntry {
 	uint64 version = 1;
 	string key = 2;
 	bytes value = 3;
+	bytes signature = 4;
 }
 
 // This represents a grpc request that is currently pending, along
