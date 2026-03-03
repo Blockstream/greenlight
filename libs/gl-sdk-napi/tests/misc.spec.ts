@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeAll } from '@jest/globals';
-import { Credentials, Scheduler, Signer } from '../index.js';
-
-const MNEMONIC = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+import * as crypto from 'crypto';
+import * as bip39 from 'bip39';
+import { Credentials, Scheduler, Signer, Node } from '../index.js';
 
 describe('Credentials', () => {
   it('can save and load raw credentials', async () => {
@@ -19,11 +18,15 @@ describe('Credentials', () => {
 
 describe('Signer', () => {
   it('can be constructed from a mnemonic', async () => {
+    const rand: Buffer = crypto.randomBytes(16);
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
     const signer = new Signer(MNEMONIC);
     expect(signer).toBeTruthy();
   });
 
   it('can return a node id', async () => {
+    const rand: Buffer = crypto.randomBytes(16);
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
     const signer = new Signer(MNEMONIC);
     const nodeId = signer.nodeId();
 
@@ -32,6 +35,8 @@ describe('Signer', () => {
   });
 
   it('returns consistent node id for same mnemonic', async () => {
+    const rand: Buffer = crypto.randomBytes(16);
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
     const signer1 = new Signer(MNEMONIC);
     const signer2 = new Signer(MNEMONIC);
 
@@ -42,8 +47,9 @@ describe('Signer', () => {
   });
 
   it('can be constructed with different mnemonics', async () => {
-    const mnemonic2 = 'legal winner thank year wave sausage worth useful legal winner thank yellow';
-    const signer = new Signer(mnemonic2);
+    const rand2: Buffer = crypto.randomBytes(16);
+    const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
+    const signer = new Signer(MNEMONIC2);
     expect(signer).toBeTruthy();
 
     const nodeId = signer.nodeId();
@@ -66,13 +72,20 @@ describe('Scheduler', () => {
 describe('Integration: scheduler and signer', () => {
   let scheduler: Scheduler;
   let signer: Signer;
+  let credentials: Credentials;
+  let node: Node;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    const rand: Buffer = crypto.randomBytes(16);
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
     scheduler = new Scheduler('regtest');
     signer = new Signer(MNEMONIC);
+    credentials = await scheduler.register(signer);
+    node = new Node(credentials);
   });
 
   it('can recover credentials', async () => {
+    if (node) { await node.stop(); }
     const recovered = await scheduler.recover(signer);
     expect(recovered).toBeInstanceOf(Credentials);
     expect((await recovered.save()).length).toBeGreaterThan(0);
@@ -80,8 +93,10 @@ describe('Integration: scheduler and signer', () => {
 
   it('handles registration of existing node (falls back to recovery)', async () => {
     try {
-      const credentials = await scheduler.register(signer, '');
-      expect(credentials).toBeInstanceOf(Credentials);
+      if (node) { await node.stop(); }
+      // Trying to register the same signer again should throw an error, which we catch to then test recovery
+      const credentials2 = await scheduler.register(signer);
+      expect(credentials2).toBeInstanceOf(Credentials);
     } catch (e) {
       const recovered = await scheduler.recover(signer);
       expect(recovered).toBeInstanceOf(Credentials);
