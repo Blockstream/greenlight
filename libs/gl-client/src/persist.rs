@@ -9,8 +9,11 @@ use lightning_signer::persist::{Error, Persist, SignerId};
 use lightning_signer::policy::validator::ValidatorFactory;
 use lightning_signer::SendSync;
 use log::{trace, warn};
-use serde::{Deserialize, Serialize};
+use serde::de::{self, SeqAccess, Visitor};
+use serde::ser::SerializeSeq;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
+use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -22,9 +25,88 @@ const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
 const TOMBSTONE_VERSION: u64 = u64::MAX;
 
+#[derive(Clone, Debug, PartialEq)]
+struct StateEntry {
+    version: u64,
+    value: serde_json::Value,
+    signature: Vec<u8>,
+}
+
+impl StateEntry {
+    fn new(version: u64, value: serde_json::Value) -> Self {
+        Self {
+            version,
+            value,
+            signature: vec![],
+        }
+    }
+}
+
+impl Serialize for StateEntry {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = if self.signature.is_empty() {
+            serializer.serialize_seq(Some(2))?
+        } else {
+            serializer.serialize_seq(Some(3))?
+        };
+
+        seq.serialize_element(&self.version)?;
+        seq.serialize_element(&self.value)?;
+        if !self.signature.is_empty() {
+            seq.serialize_element(&self.signature)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for StateEntry {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct StateEntryVisitor;
+
+        impl<'de> Visitor<'de> for StateEntryVisitor {
+            type Value = StateEntry;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a tuple [version, value] or [version, value, signature]")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let version = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                let value = seq
+                    .next_element()?
+                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
+                let signature = seq.next_element()?.unwrap_or_default();
+
+                if seq.next_element::<de::IgnoredAny>()?.is_some() {
+                    return Err(de::Error::invalid_length(4, &self));
+                }
+
+                Ok(StateEntry {
+                    version,
+                    value,
+                    signature,
+                })
+            }
+        }
+
+        deserializer.deserialize_seq(StateEntryVisitor)
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
-    values: BTreeMap<String, (u64, serde_json::Value)>,
+    values: BTreeMap<String, StateEntry>,
 }
 
 impl State {
@@ -41,11 +123,16 @@ impl State {
         let node_version = self.next_version(&node_key);
         let state_version = self.next_version(&state_key);
 
-        self.values
-            .insert(node_key, (node_version, serde_json::to_value(node_entry).unwrap()));
+        self.values.insert(
+            node_key,
+            StateEntry::new(node_version, serde_json::to_value(node_entry).unwrap()),
+        );
         self.values.insert(
             state_key,
-            (state_version, serde_json::to_value(node_state_entry).unwrap()),
+            StateEntry::new(
+                state_version,
+                serde_json::to_value(node_state_entry).unwrap(),
+            ),
         );
         Ok(())
     }
@@ -65,7 +152,7 @@ impl State {
             .values
             .get_mut(&key)
             .expect("attempting to update non-existent node");
-        *v = (v.0 + 1, serde_json::to_value(node_state).unwrap());
+        *v = StateEntry::new(v.version + 1, serde_json::to_value(node_state).unwrap());
         Ok(())
     }
 
@@ -100,8 +187,10 @@ impl State {
         let key = format!("{CHANNEL_PREFIX}/{key}");
         self.ensure_not_tombstone(&key)?;
         let version = self.next_version(&key);
-        self.values
-            .insert(key, (version, serde_json::to_value(channel_entry).unwrap()));
+        self.values.insert(
+            key,
+            StateEntry::new(version, serde_json::to_value(channel_entry).unwrap()),
+        );
         Ok(())
     }
 
@@ -122,7 +211,7 @@ impl State {
             .values
             .get_mut(&key)
             .expect("attempting to update non-existent channel");
-        *v = (v.0 + 1, serde_json::to_value(channel_entry).unwrap());
+        *v = StateEntry::new(v.version + 1, serde_json::to_value(channel_entry).unwrap());
         Ok(())
     }
 
@@ -139,7 +228,7 @@ impl State {
             .get(&key)
             .ok_or_else(|| Error::Internal(format!("missing channel state for key {}", key)))?;
         let entry: vls_persist::model::ChannelEntry =
-            serde_json::from_value(value.1.clone()).unwrap();
+            serde_json::from_value(value.value.clone()).unwrap();
         Ok(entry.into())
     }
 
@@ -165,7 +254,7 @@ impl State {
                 let key = vls_persist::model::NodeChannelId(hex::decode(&key).unwrap());
 
                 let value: vls_persist::model::ChannelEntry =
-                    serde_json::from_value(v.1.clone()).unwrap();
+                    serde_json::from_value(v.value.clone()).unwrap();
                 (key.channel_id(), value.into())
             })
             .collect())
@@ -183,8 +272,10 @@ impl State {
 
         let tracker: vls_persist::model::ChainTrackerEntry = tracker.into();
 
-        self.values
-            .insert(key, (version, serde_json::to_value(tracker).unwrap()));
+        self.values.insert(
+            key,
+            StateEntry::new(version, serde_json::to_value(tracker).unwrap()),
+        );
         Ok(())
     }
 
@@ -194,21 +285,23 @@ impl State {
     }
 
     fn put_tombstone(&mut self, live_key: &str) {
-        self.values
-            .insert(live_key.to_owned(), (TOMBSTONE_VERSION, serde_json::Value::Null));
+        self.values.insert(
+            live_key.to_owned(),
+            StateEntry::new(TOMBSTONE_VERSION, serde_json::Value::Null),
+        );
     }
 
     fn next_version(&self, live_key: &str) -> u64 {
         self.values
             .get(live_key)
-            .map(|v| v.0.saturating_add(1))
+            .map(|v| v.version.saturating_add(1))
             .unwrap_or(0)
     }
 
     fn is_tombstone(&self, live_key: &str) -> bool {
         self.values
             .get(live_key)
-            .map(|v| v.0 == TOMBSTONE_VERSION)
+            .map(|v| v.version == TOMBSTONE_VERSION)
             .unwrap_or(false)
     }
 
@@ -218,14 +311,13 @@ impl State {
         }
         Ok(())
     }
-
 }
 
 #[derive(Debug)]
 pub struct StateChange {
     key: String,
-    old: Option<(u64, serde_json::Value)>,
-    new: (u64, serde_json::Value),
+    old: Option<StateEntry>,
+    new: StateEntry,
 }
 
 #[derive(Debug, Default)]
@@ -248,16 +340,16 @@ impl Display for StateChange {
             Some(o) => f.write_str(&format!(
                 "StateChange[{}]: old_version={}, new_version={}, old_value={}, new_value={}",
                 self.key,
-                o.0,
-                self.new.0,
-                serde_json::to_string(&o.1).unwrap(),
-                serde_json::to_string(&self.new.1).unwrap()
+                o.version,
+                self.new.version,
+                serde_json::to_string(&o.value).unwrap(),
+                serde_json::to_string(&self.new.value).unwrap()
             )),
             None => f.write_str(&format!(
                 "StateChange[{}]: old_version=null, new_version={}, old_value=null, new_value={}",
                 self.key,
-                self.new.0,
-                serde_json::to_string(&self.new.1).unwrap()
+                self.new.version,
+                serde_json::to_string(&self.new.value).unwrap()
             )),
         }
     }
@@ -280,54 +372,67 @@ impl State {
     /// tombstone knowledge. Callers may use this signal to trigger a full sync.
     pub fn merge(&mut self, other: &State) -> anyhow::Result<MergeResult> {
         let mut res = MergeResult::default();
-        for (key, (newver, newval)) in other.values.iter() {
-            let incoming_is_tombstone = *newver == TOMBSTONE_VERSION;
+        for (key, incoming) in other.values.iter() {
+            let newver = incoming.version;
+            let incoming_is_tombstone = newver == TOMBSTONE_VERSION;
             match self.values.get_mut(key) {
                 None => {
                     trace!("Insert new key {}: version={}", key, newver);
-                    res.changes.push((key.to_owned(), None, *newver));
-                    let value = if incoming_is_tombstone {
-                        serde_json::Value::Null
-                    } else {
-                        newval.clone()
-                    };
-                    self.values.insert(key.clone(), (*newver, value));
+                    res.changes.push((key.to_owned(), None, newver));
+                    let mut inserted = incoming.clone();
+                    if incoming_is_tombstone {
+                        inserted.value = serde_json::Value::Null;
+                        inserted.signature = vec![];
+                    }
+                    self.values.insert(key.clone(), inserted);
                 }
                 Some(v) => {
                     if incoming_is_tombstone {
-                        if v.0 == TOMBSTONE_VERSION {
+                        if v.version == TOMBSTONE_VERSION {
                             continue;
                         }
-                        trace!("Tombstoning key {}: version={} => version={}", key, v.0, newver);
-                        res.changes.push((key.to_owned(), Some(v.0), *newver));
-                        *v = (*newver, serde_json::Value::Null);
+                        trace!(
+                            "Tombstoning key {}: version={} => version={}",
+                            key,
+                            v.version,
+                            newver
+                        );
+                        res.changes.push((key.to_owned(), Some(v.version), newver));
+                        *v = StateEntry::new(newver, serde_json::Value::Null);
                         continue;
                     }
 
-                    if v.0 == TOMBSTONE_VERSION {
+                    if v.version == TOMBSTONE_VERSION {
                         trace!(
                             "Ignoring live key {} version={} because local key is tombstoned",
-                            key, newver
+                            key,
+                            newver
                         );
                         res.conflict_count += 1;
                         continue;
                     }
 
-                    if v.0 == *newver {
+                    if v.version == newver {
                         continue;
-                    } else if v.0 > *newver {
-                        warn!("Ignoring outdated state version newver={}, we have oldver={}: newval={:?} vs oldval={:?}", newver, v.0, serde_json::to_string(newval), serde_json::to_string(&v.1));
+                    } else if v.version > newver {
+                        warn!(
+                            "Ignoring outdated state version newver={}, we have oldver={}: newval={:?} vs oldval={:?}",
+                            newver,
+                            v.version,
+                            serde_json::to_string(&incoming.value),
+                            serde_json::to_string(&v.value)
+                        );
                         res.conflict_count += 1;
                         continue;
                     } else {
                         trace!(
                             "Updating key {}: version={} => version={}",
                             key,
-                            v.0,
-                            *newver
+                            v.version,
+                            newver
                         );
-                        res.changes.push((key.to_owned(), Some(v.0), *newver));
-                        *v = (*newver, newval.clone());
+                        res.changes.push((key.to_owned(), Some(v.version), newver));
+                        *v = incoming.clone();
                     }
                 }
             }
@@ -339,15 +444,15 @@ impl State {
         Ok(other
             .values
             .iter()
-            .map(|(key, (ver, val))| (key, self.values.get(key), (ver, val)))
+            .map(|(key, new)| (key, self.values.get(key), new))
             .map(|(key, old, new)| StateChange {
                 key: key.clone(),
                 old: old.map(|o| o.clone()),
-                new: (*new.0, new.1.clone()),
+                new: new.clone(),
             })
             .filter(|c| match (&c.old, &c.new) {
                 (None, _) => true,
-                (Some((oldver, _)), (newver, _)) => oldver < newver,
+                (Some(old), new) => old.version < new.version,
             })
             .collect())
     }
@@ -356,13 +461,13 @@ impl State {
     /// This is useful for sending compact state diffs.
     pub fn diff_state(&self, other: &State) -> State {
         let mut values = BTreeMap::new();
-        for (key, (newver, newval)) in other.values.iter() {
+        for (key, new_entry) in other.values.iter() {
             match self.values.get(key) {
                 None => {
-                    values.insert(key.clone(), (*newver, newval.clone()));
+                    values.insert(key.clone(), new_entry.clone());
                 }
-                Some((oldver, _)) if oldver < newver => {
-                    values.insert(key.clone(), (*newver, newval.clone()));
+                Some(old_entry) if old_entry.version < new_entry.version => {
+                    values.insert(key.clone(), new_entry.clone());
                 }
                 _ => {}
             }
@@ -379,7 +484,7 @@ impl State {
         let values = self
             .values
             .iter()
-            .filter(|(_, (version, _))| *version != TOMBSTONE_VERSION)
+            .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         State { values }
@@ -404,21 +509,21 @@ impl StateSketch {
 
     /// Apply versions from `state` without clearing existing entries.
     pub fn apply_state(&mut self, state: &State) {
-        for (key, (ver, _)) in state.values.iter() {
-            self.versions.insert(key.clone(), *ver);
+        for (key, value) in state.values.iter() {
+            self.versions.insert(key.clone(), value.version);
         }
     }
 
     /// Build a `State` containing entries newer than those recorded in the sketch.
     pub fn diff_state(&self, state: &State) -> State {
         let mut values = BTreeMap::new();
-        for (key, (newver, newval)) in state.values.iter() {
+        for (key, new_entry) in state.values.iter() {
             match self.versions.get(key) {
                 None => {
-                    values.insert(key.clone(), (*newver, newval.clone()));
+                    values.insert(key.clone(), new_entry.clone());
                 }
-                Some(oldver) if oldver < newver => {
-                    values.insert(key.clone(), (*newver, newval.clone()));
+                Some(oldver) if *oldver < new_entry.version => {
+                    values.insert(key.clone(), new_entry.clone());
                 }
                 _ => {}
             }
@@ -433,9 +538,9 @@ impl Into<Vec<crate::pb::SignerStateEntry>> for State {
             .iter()
             .map(|(k, v)| crate::pb::SignerStateEntry {
                 key: k.to_owned(),
-                value: serde_json::to_vec(&v.1).unwrap(),
-                version: v.0,
-                signature: vec![],
+                value: serde_json::to_vec(&v.value).unwrap(),
+                version: v.version,
+                signature: v.signature.clone(),
             })
             .collect()
     }
@@ -447,7 +552,11 @@ impl From<Vec<crate::pb::SignerStateEntry>> for State {
         let values = BTreeMap::from_iter(v.iter().map(|v| {
             (
                 v.key.to_owned(),
-                (v.version, serde_json::from_slice(&v.value).unwrap()),
+                StateEntry {
+                    version: v.version,
+                    value: serde_json::from_slice(&v.value).unwrap(),
+                    signature: v.signature.clone(),
+                },
             )
         }));
 
@@ -588,7 +697,7 @@ impl Persist for MemoryPersister {
         state.ensure_not_tombstone(&key)?;
         let v = state.values.get_mut(&key).unwrap();
         let tracker: vls_persist::model::ChainTrackerEntry = tracker.into();
-        *v = (v.0 + 1, serde_json::to_value(tracker).unwrap());
+        *v = StateEntry::new(v.version + 1, serde_json::to_value(tracker).unwrap());
         Ok(())
     }
 
@@ -610,16 +719,15 @@ impl Persist for MemoryPersister {
         if state.is_tombstone(&key) {
             return Err(Error::Internal(format!("tracker {} has been deleted", key)));
         }
-        let v: vls_persist::model::ChainTrackerEntry =
-            serde_json::from_value(
-                state
-                    .values
-                    .get(&key)
-                    .ok_or_else(|| Error::Internal(format!("missing tracker state {}", key)))?
-                    .1
-                    .clone(),
-            )
-            .unwrap();
+        let v: vls_persist::model::ChainTrackerEntry = serde_json::from_value(
+            state
+                .values
+                .get(&key)
+                .ok_or_else(|| Error::Internal(format!("missing tracker state {}", key)))?
+                .value
+                .clone(),
+        )
+        .unwrap();
 
         Ok(v.into_tracker(node_id, validator_factory))
     }
@@ -643,13 +751,14 @@ impl Persist for MemoryPersister {
         state.ensure_not_tombstone(&key)?;
         match state.values.get_mut(&key) {
             Some(v) => {
-                *v = (v.0 + 1, serde_json::to_value(allowlist).unwrap());
+                *v = StateEntry::new(v.version + 1, serde_json::to_value(allowlist).unwrap());
             }
             None => {
                 let version = state.next_version(&key);
-                state
-                    .values
-                    .insert(key, (version, serde_json::to_value(allowlist).unwrap()));
+                state.values.insert(
+                    key,
+                    StateEntry::new(version, serde_json::to_value(allowlist).unwrap()),
+                );
             }
         }
         Ok(())
@@ -665,7 +774,7 @@ impl Persist for MemoryPersister {
 
         // If allowlist doesn't exist (e.g., node created before VLS 0.14), default to empty
         let allowlist: Vec<String> = match state.values.get(&key) {
-            Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
+            Some(value) => serde_json::from_value(value.value.clone()).unwrap_or_default(),
             None => Vec::new(),
         };
 
@@ -697,11 +806,11 @@ impl Persist for MemoryPersister {
             }
 
             let node: vls_persist::model::NodeEntry = match state.values.get(&node_key) {
-                Some(value) => serde_json::from_value(value.1.clone()).unwrap(),
+                Some(value) => serde_json::from_value(value.value.clone()).unwrap(),
                 None => continue,
             };
             let state_e: vls_persist::model::NodeStateEntry = match state.values.get(&state_key) {
-                Some(value) => serde_json::from_value(value.1.clone()).unwrap(),
+                Some(value) => serde_json::from_value(value.value.clone()).unwrap(),
                 None => continue,
             };
 
@@ -710,7 +819,7 @@ impl Persist for MemoryPersister {
                 Vec::new()
             } else {
                 match state.values.get(&allowlist_key) {
-                    Some(value) => serde_json::from_value(value.1.clone()).unwrap_or_default(),
+                    Some(value) => serde_json::from_value(value.value.clone()).unwrap_or_default(),
                     None => Vec::new(),
                 }
             };
@@ -722,13 +831,11 @@ impl Persist for MemoryPersister {
 
             let allowlist: Vec<Allowable> = allowlist_strings
                 .into_iter()
-                .filter_map(|s| {
-                    match Allowable::from_str(&s, network) {
-                        Ok(a) => Some(a),
-                        Err(e) => {
-                            warn!("Failed to parse allowlist entry '{}': {}", s, e);
-                            None
-                        }
+                .filter_map(|s| match Allowable::from_str(&s, network) {
+                    Ok(a) => Some(a),
+                    Err(e) => {
+                        warn!("Failed to parse allowlist entry '{}': {}", s, e);
+                        None
                     }
                 })
                 .collect();
@@ -776,34 +883,141 @@ mod tests {
     use crate::persist::TOMBSTONE_VERSION;
 
     use super::{
-        State, StateSketch, ALLOWLIST_PREFIX, CHANNEL_PREFIX, NODE_PREFIX, NODE_STATE_PREFIX,
-        TRACKER_PREFIX,
+        State, StateEntry, StateSketch, ALLOWLIST_PREFIX, CHANNEL_PREFIX, NODE_PREFIX,
+        NODE_STATE_PREFIX, TRACKER_PREFIX,
     };
+    use crate::pb::SignerStateEntry;
     use serde_json::json;
     use std::collections::BTreeMap;
 
     fn mk_state(entries: Vec<(&str, u64, serde_json::Value)>) -> State {
         let mut values = BTreeMap::new();
         for (key, version, value) in entries {
-            values.insert(key.to_string(), (version, value));
+            values.insert(key.to_string(), StateEntry::new(version, value));
         }
         State { values }
     }
 
-    fn assert_entry(state: &State, key: &str, expected_version: u64, expected_value: serde_json::Value) {
-        let (actual_version, actual_value) = state.values.get(key).unwrap_or_else(|| {
-            panic!("expected state to include key: {key}")
-        });
-        assert_eq!(*actual_version, expected_version);
-        assert_eq!(actual_value, &expected_value);
+    fn assert_entry(
+        state: &State,
+        key: &str,
+        expected_version: u64,
+        expected_value: serde_json::Value,
+    ) {
+        let actual = state
+            .values
+            .get(key)
+            .unwrap_or_else(|| panic!("expected state to include key: {key}"));
+        assert_eq!(actual.version, expected_version);
+        assert_eq!(actual.value, expected_value);
     }
 
     fn assert_entry_absent(state: &State, key: &str) {
-        assert!(state.values.get(key).is_none(), "expected state to omit key {key}");
+        assert!(
+            state.values.get(key).is_none(),
+            "expected state to omit key {key}"
+        );
     }
 
     fn assert_tombstone(state: &State, key: &str) {
         assert_entry(state, key, TOMBSTONE_VERSION, serde_json::Value::Null);
+    }
+
+    #[test]
+    fn state_deserialize_legacy_tuple_defaults_empty_signature() {
+        let raw = r#"{"values":{"k":[1,{"v":1}]}}"#;
+        let state: State = serde_json::from_str(raw).unwrap();
+        let entry = state.values.get("k").unwrap();
+        assert_eq!(entry.version, 1);
+        assert_eq!(entry.value, json!({"v": 1}));
+        assert!(entry.signature.is_empty());
+    }
+
+    #[test]
+    fn state_deserialize_extended_tuple_preserves_signature() {
+        let raw = r#"{"values":{"k":[2,{"v":2},[1,2,3]]}}"#;
+        let state: State = serde_json::from_str(raw).unwrap();
+        let entry = state.values.get("k").unwrap();
+        assert_eq!(entry.version, 2);
+        assert_eq!(entry.value, json!({"v": 2}));
+        assert_eq!(entry.signature, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn state_serialize_empty_signature_emits_legacy_tuple() {
+        let state = mk_state(vec![("k", 3, json!({"v": 3}))]);
+        let v: serde_json::Value =
+            serde_json::from_slice(&serde_json::to_vec(&state).unwrap()).unwrap();
+        let values = v.get("values").unwrap().as_object().unwrap();
+        let tuple = values.get("k").unwrap().as_array().unwrap();
+        assert_eq!(tuple.len(), 2);
+        assert_eq!(tuple[0], json!(3));
+        assert_eq!(tuple[1], json!({"v": 3}));
+    }
+
+    #[test]
+    fn state_serialize_non_empty_signature_emits_extended_tuple() {
+        let mut values = BTreeMap::new();
+        values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 4,
+                value: json!({"v": 4}),
+                signature: vec![7, 8, 9],
+            },
+        );
+        let state = State { values };
+        let v: serde_json::Value =
+            serde_json::from_slice(&serde_json::to_vec(&state).unwrap()).unwrap();
+        let values = v.get("values").unwrap().as_object().unwrap();
+        let tuple = values.get("k").unwrap().as_array().unwrap();
+        assert_eq!(tuple.len(), 3);
+        assert_eq!(tuple[0], json!(4));
+        assert_eq!(tuple[1], json!({"v": 4}));
+        assert_eq!(tuple[2], json!([7, 8, 9]));
+    }
+
+    #[test]
+    fn signer_state_entry_conversions_preserve_signature() {
+        let entries = vec![SignerStateEntry {
+            version: 5,
+            key: "k".to_string(),
+            value: serde_json::to_vec(&json!({"v": 5})).unwrap(),
+            signature: vec![11, 12],
+        }];
+
+        let state: State = entries.clone().into();
+        let entry = state.values.get("k").unwrap();
+        assert_eq!(entry.version, 5);
+        assert_eq!(entry.value, json!({"v": 5}));
+        assert_eq!(entry.signature, vec![11, 12]);
+
+        let roundtrip: Vec<SignerStateEntry> = state.into();
+        assert_eq!(roundtrip, entries);
+    }
+
+    #[test]
+    fn merge_newer_entry_propagates_signature() {
+        let mut base = mk_state(vec![("k", 1, json!({"v": 1}))]);
+        let mut incoming_values = BTreeMap::new();
+        incoming_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 2,
+                value: json!({"v": 2}),
+                signature: vec![21, 22, 23],
+            },
+        );
+        let incoming = State {
+            values: incoming_values,
+        };
+
+        let res = base.merge(&incoming).unwrap();
+        assert_eq!(res.conflict_count, 0);
+        let merged = base.values.get("k").unwrap();
+        assert_eq!(merged.version, 2);
+        assert_eq!(merged.value, json!({"v": 2}));
+        assert_eq!(merged.signature, vec![21, 22, 23]);
     }
 
     #[test]
@@ -850,10 +1064,7 @@ mod tests {
     #[test]
     fn sate_diff_with_empty_old_state_includes_all_entries() {
         let old = State::new();
-        let new = mk_state(vec![
-            ("k1", 1, json!({"v": 1})),
-            ("k2", 2, json!({"v": 2})),
-        ]);
+        let new = mk_state(vec![("k1", 1, json!({"v": 1})), ("k2", 2, json!({"v": 2}))]);
 
         let diff = old.diff_state(&new);
 
@@ -884,10 +1095,7 @@ mod tests {
 
     #[test]
     fn sketch_diff_with_empty_sketch_includes_all_entries() {
-        let state = mk_state(vec![
-            ("a", 1, json!(1)),
-            ("b", 2, json!(2)),
-        ]);
+        let state = mk_state(vec![("a", 1, json!(1)), ("b", 2, json!(2))]);
         let sketch = StateSketch::new();
 
         let diff = sketch.diff_state(&state);
@@ -903,7 +1111,11 @@ mod tests {
         let mut sketch = StateSketch::new();
         sketch.apply_state(&base);
 
-        let next = mk_state(vec![("a", 2, json!(10)), ("b", 2, json!(20)), ("c", 0, json!(30))]);
+        let next = mk_state(vec![
+            ("a", 2, json!(10)),
+            ("b", 2, json!(20)),
+            ("c", 0, json!(30)),
+        ]);
         let first_diff = sketch.diff_state(&next);
         assert_eq!(first_diff.values.len(), 2);
         assert_entry(&first_diff, "a", 2, json!(10));
