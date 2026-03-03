@@ -240,11 +240,43 @@ quickStart();
 
 ## Development
 
-### Running Tests
+### Testing
 
+The test suite requires the `gltestserver` binary available on your PATH. The test setup starts and stops it automatically.
+
+#### 1. Run the Tests
 ```bash
+# Run all tests
 npm test
+
+# Run a specific test file
+npm test -- tests/node.spec.ts
 ```
+
+#### 2. Test Environment Setup
+
+2.1 The test setup (`jest.globalSetup.ts`) will automatically:
+- Start `gltestserver` in regtest mode
+- Wait for it to be ready
+- Inject the required environment variables (`GL_SCHEDULER_GRPC_URI`, `GL_CA_CRT`, `GL_NOBODY_CRT`, `GL_NOBODY_KEY`)
+- Shut it down after all tests complete
+
+2.2 The test helper functions provide the following capabilities:
+
+| Function | Description |
+|----------|-------------|
+| `startLspServer()` | Starts an LSPS2-compatible LSP server for testing Lightning Service Provider functionality (channel negotiations, invoices, etc.) |
+| `stopLspServer()` | Cleans up the LSP server after tests complete |
+| `fundNode()` | Funds a test node with on-chain Bitcoin in regtest mode, handling blockchain operations automatically |
+| `bitcoinCli()` | Provides direct access to Bitcoin Core CLI for advanced blockchain operations during tests |
+
+**Key features:**
+
+- **LSPS2 support**: Automatically configures and starts a Lightning Service Provider with the LSPS2 plugin for testing channel negotiations
+- **Blockchain automation**: Manages Bitcoin regtest blockchain, including block generation and transaction confirmation
+- **Node funding**: Handles the complete funding flow — generating addresses, sending funds, waiting for confirmations, and verifying receipt
+
+The test helpers abstract away the complexity of managing multiple Lightning nodes, Bitcoin Core, and LSP infrastructure, allowing you to focus on testing your application logic.
 
 ### Local npm Publishing
 This workflow only builds for local platform. For multi-platform builds, use the GitHub Actions workflow which cross-compiles for all supported targets.
