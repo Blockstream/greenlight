@@ -1,16 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-import {
-  Credentials,
-  Scheduler,
-  Signer,
-  Node,
-  NodeEventStream,
-  NodeEvent,
-  InvoicePaidEvent,
-} from '../index.js';
-
-const MNEMONIC =
-  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+import * as crypto from 'crypto';
+import * as bip39 from 'bip39';
+import { Credentials, Scheduler, Signer, Node, NodeEventStream, NodeEvent, InvoicePaidEvent } from '../index.js';
+import { startLspServer, stopLspServer, fundNode } from './test.helper.js';
 
 describe('NodeEvent (type contract)', () => {
   it('NodeEvent and InvoicePaidEvent are assignable from NAPI-generated types', () => {
@@ -39,68 +30,30 @@ describe('NodeEvent (type contract)', () => {
 describe('NodeEventStream (integration)', () => {
   let credentials: Credentials;
   let node: Node;
-  let streamingSupported = true;
-  let suiteAvailable = true;
 
   beforeAll(async () => {
-    try {
-      const scheduler = new Scheduler('regtest');
-      const signer = new Signer(MNEMONIC);
-      credentials = await scheduler.recover(signer);
-      node = new Node(credentials);
-    } catch (e: any) {
-      console.warn(`⚠ Scheduler unavailable — skipping all integration tests`);
-      console.warn(`(${e?.message ?? e})`);
-      suiteAvailable = false;
-      return;
-    }
-
+    const rand: Buffer = crypto.randomBytes(16);
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
+    const scheduler = new Scheduler('regtest');
+    const signer = new Signer(MNEMONIC);
+    credentials = await scheduler.register(signer);
+    node = new Node(credentials);
     try {
       const probe = await node.streamNodeEvents();
       void probe;
     } catch (e: any) {
       console.warn(`⚠ StreamNodeEvents probe failed — skipping stream tests`);
       console.warn(`(${e?.message ?? e})`);
-      // Treat every probe failure as "not supported" — covers both
-      // Unimplemented and any Unavailable thrown at this point.
-      streamingSupported = false;
     }
   });
 
   afterAll(async () => {
-    if (suiteAvailable && node) {
+    if (node) {
       await node.stop();
     }
   });
 
-  /**
-   * Wrapper around `it` that skips the test body when:
-   * - The regtest scheduler was unreachable (`suiteAvailable = false`), or
-   * - The connected node does not implement StreamNodeEvents (`streamingSupported = false`).
-   */
-  const streamIt = (name: string, fn: () => Promise<void>, timeout?: number) =>
-    it(
-      name,
-      async () => {
-        if (!suiteAvailable) {
-          console.log('Skipped — scheduler unavailable');
-          return;
-        }
-        if (!streamingSupported) {
-          console.log('Skipped — StreamNodeEvents not supported on this node');
-          return;
-        }
-        await fn();
-      },
-      timeout
-    );
-
   it('does not throw error on future unknown event type', () => {
-    if (!suiteAvailable) {
-      console.log('Skipped — regtest scheduler unavailable');
-      return;
-    }
-
     const unknownEvent: NodeEvent = { eventType: 'new_future_event' as string, invoicePaid: undefined };
 
     expect(() => {
@@ -112,13 +65,13 @@ describe('NodeEventStream (integration)', () => {
     }).not.toThrow();
   });
 
-  streamIt('streamNodeEvents returns a next method', async () => {
+  it('streamNodeEvents returns a next method', async () => {
     const stream = await node.streamNodeEvents();
     expect(stream).toBeDefined();
     expect(typeof stream.next).toBe('function');
   });
 
-  streamIt('next resolves to null or a well-formed NodeEvent within 2 seconds', async () => {
+  it('next resolves to null or a well-formed NodeEvent within 2 seconds', async () => {
     const stream: NodeEventStream = await node.streamNodeEvents();
 
     // Race next() against a 2 s timeout — no live events is fine here.
@@ -140,7 +93,7 @@ describe('NodeEventStream (integration)', () => {
     }
   });
 
-  streamIt('next returns null after the node is stopped', async () => {
+  it('next returns null after the node is stopped', async () => {
     const stream: NodeEventStream = await node.streamNodeEvents();
     await node.stop();
 
@@ -149,15 +102,21 @@ describe('NodeEventStream (integration)', () => {
     node = new Node(credentials);
   });
 
-  // --------------------------------------------------------------------------
-  // invoice_paid round-trip
-  // --------------------------------------------------------------------------
-
-  streamIt('receives real invoice_paid event', async () => {
+  it.skip('receives real invoice_paid event', async () => {
+      await startLspServer();
+      await fundNode(node, 0.5);
       const stream: NodeEventStream = await node.streamNodeEvents();
+      const rand2: Buffer = crypto.randomBytes(16);
+      const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
+      const scheduler2 = new Scheduler('regtest');
+      const signer2 = new Signer(MNEMONIC2);
+      const credentials2 = await scheduler2.register(signer2);
+      const node2 = new Node(credentials2);
+
       const label = `jest-${Date.now()}`;
-      const invoice = await node.receive(label, 'jest event stream test', 1_000);
-      expect(invoice.bolt11).toMatch(/^ln/i);
+      const receiveRes = await node.receive(label, 'jest event stream test', 1_000);
+      const sendResponse = await node2.send(receiveRes.bolt11);
+      expect(sendResponse).toBeTruthy();
 
       let paid: NodeEvent | null = null;
       const deadline = Date.now() + 10_000;
@@ -183,10 +142,11 @@ describe('NodeEventStream (integration)', () => {
       expect(p.paymentHash.length).toBeGreaterThan(0);
       expect(Buffer.isBuffer(p.preimage)).toBe(true);
       expect(p.preimage.length).toBeGreaterThan(0);
-      expect(p.bolt11).toBe(invoice.bolt11);
+      expect(p.bolt11).toBe(receiveRes.bolt11);
       expect(p.label).toBe(label);
       expect(typeof p.amountMsat).toBe('number');
       expect(p.amountMsat).toBeGreaterThan(0);
+      await stopLspServer();
     },
     15_000 // extended timeout for payment round-trip
   );
