@@ -52,13 +52,14 @@ class NodeStub:
     """Create an invoice to request an incoming payment. Includes LSP
     negotiation to open a channel on-demand when needed.
     """
-    StreamLog: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.StreamLogRequest, _greenlight_pb2.LogEntry]
+    StreamIncoming: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.StreamIncomingFilter, _greenlight_pb2.IncomingPayment]
     """Stream incoming payments
 
     Currently includes off-chain payments received matching an
     invoice or spontaneus paymens through keysend.
-
-    Stream the logs as they are produced by the node
+    """
+    StreamLog: _grpc.UnaryStreamMultiCallable[_greenlight_pb2.StreamLogRequest, _greenlight_pb2.LogEntry]
+    """Stream the logs as they are produced by the node
 
     Mainly intended for debugging clients by tailing the log as
     they are written on the node. The logs start streaming from
@@ -121,13 +122,14 @@ class NodeAsyncStub(NodeStub):
     """Create an invoice to request an incoming payment. Includes LSP
     negotiation to open a channel on-demand when needed.
     """
-    StreamLog: _aio.UnaryStreamMultiCallable[_greenlight_pb2.StreamLogRequest, _greenlight_pb2.LogEntry]  # type: ignore[assignment]
+    StreamIncoming: _aio.UnaryStreamMultiCallable[_greenlight_pb2.StreamIncomingFilter, _greenlight_pb2.IncomingPayment]  # type: ignore[assignment]
     """Stream incoming payments
 
     Currently includes off-chain payments received matching an
     invoice or spontaneus paymens through keysend.
-
-    Stream the logs as they are produced by the node
+    """
+    StreamLog: _aio.UnaryStreamMultiCallable[_greenlight_pb2.StreamLogRequest, _greenlight_pb2.LogEntry]  # type: ignore[assignment]
+    """Stream the logs as they are produced by the node
 
     Mainly intended for debugging clients by tailing the log as
     they are written on the node. The logs start streaming from
@@ -195,17 +197,24 @@ class NodeServicer(metaclass=_abc_1.ABCMeta):
         """
 
     @_abc_1.abstractmethod
+    def StreamIncoming(
+        self,
+        request: _greenlight_pb2.StreamIncomingFilter,
+        context: _ServicerContext,
+    ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.IncomingPayment], _abc.AsyncIterator[_greenlight_pb2.IncomingPayment]]:
+        """Stream incoming payments
+
+        Currently includes off-chain payments received matching an
+        invoice or spontaneus paymens through keysend.
+        """
+
+    @_abc_1.abstractmethod
     def StreamLog(
         self,
         request: _greenlight_pb2.StreamLogRequest,
         context: _ServicerContext,
     ) -> _typing.Union[_abc.Iterator[_greenlight_pb2.LogEntry], _abc.AsyncIterator[_greenlight_pb2.LogEntry]]:
-        """Stream incoming payments
-
-        Currently includes off-chain payments received matching an
-        invoice or spontaneus paymens through keysend.
-
-        Stream the logs as they are produced by the node
+        """Stream the logs as they are produced by the node
 
         Mainly intended for debugging clients by tailing the log as
         they are written on the node. The logs start streaming from
