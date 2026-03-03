@@ -36,9 +36,12 @@
     "test": "jest"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
     "@napi-rs/cli": "2.18.4",
-    "@types/jest": "30.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "20.19.33",
+    "bip39": "^3.1.0",
+    "dotenv": "^17.3.1",
     "jest": "29.7.0",
     "ts-jest": "29.4.6",
     "typescript": "5.9.3"
