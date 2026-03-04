@@ -1,18 +1,16 @@
 use crate::credentials::{RuneProvider, TlsConfigProvider};
+use crate::metrics::{savings_percent, signer_state_response_wire_bytes};
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 use crate::pb::scheduler::{
     signer_request, signer_response, ApprovePairingRequest, ApprovePairingResponse, SignerResponse,
 };
-use crate::pb::PendingRequest;
 /// The core signer system. It runs in a dedicated thread or using the
 /// caller thread, streaming incoming requests, verifying them,
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
+use crate::pb::{PendingRequest, SignerStateEntry};
 use crate::runes;
 use crate::signer::resolve::Resolver;
-use crate::metrics::{
-    signer_state_response_wire_bytes, savings_percent,
-};
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
 use anyhow::{anyhow, Result};
@@ -21,12 +19,15 @@ use base64::Engine;
 use bytes::BufMut;
 use http::uri::InvalidUri;
 use lightning_signer::bitcoin::hashes::Hash;
-use lightning_signer::bitcoin::secp256k1::PublicKey;
+use lightning_signer::bitcoin::secp256k1::{
+    ecdsa::Signature as SecpSignature, Message as SecpMessage, PublicKey, Secp256k1, SecretKey,
+};
 use lightning_signer::bitcoin::Network;
 use lightning_signer::node::NodeServices;
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, error, info, trace, warn};
+use ring::digest::{digest, SHA256};
 use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
 use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
@@ -55,10 +56,34 @@ const GITHASH: &str = env!("GIT_HASH");
 const RUNE_VERSION: &str = "gl0";
 // This is the same derivation key that is used by core lightning itself.
 const RUNE_DERIVATION_SECRET: &str = "gl-commando";
+const STATE_DERIVATION_SECRET: &str = "greenlight/state-signing/v1";
+const STATE_SIGNING_DOMAIN: &[u8] = b"greenlight/state-signing/v1\0";
+const COMPACT_SIGNATURE_LEN: usize = 64;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StateSignatureMode {
+    Off,
+    Soft,
+    Hard,
+}
+
+impl Default for StateSignatureMode {
+    fn default() -> Self {
+        Self::Soft
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SignerConfig {
+    pub state_signature_mode: StateSignatureMode,
+}
 
 #[derive(Clone)]
 pub struct Signer {
     secret: [u8; 32],
+    state_signing_secret: SecretKey,
+    state_signing_pubkey: PublicKey,
+    state_signature_mode: StateSignatureMode,
     master_rune: Rune,
     services: NodeServices,
     tls: TlsConfig,
@@ -109,6 +134,18 @@ pub enum Error {
 
 impl Signer {
     pub fn new<T>(secret: Vec<u8>, network: Network, creds: T) -> Result<Signer, anyhow::Error>
+    where
+        T: TlsConfigProvider,
+    {
+        Self::new_with_config(secret, network, creds, SignerConfig::default())
+    }
+
+    pub fn new_with_config<T>(
+        secret: Vec<u8>,
+        network: Network,
+        creds: T,
+        config: SignerConfig,
+    ) -> Result<Signer, anyhow::Error>
     where
         T: TlsConfigProvider,
     {
@@ -198,9 +235,8 @@ impl Signer {
         // we need for the rest of the run.
         let init = Signer::initmsg(&mut handler)?;
 
-        let init = HsmdInitReplyV4::from_vec(init).map_err(|e| {
-            anyhow!("Failed to parse init message as HsmdInitReplyV4: {:?}", e)
-        })?;
+        let init = HsmdInitReplyV4::from_vec(init)
+            .map_err(|e| anyhow!("Failed to parse init message as HsmdInitReplyV4: {:?}", e))?;
 
         let id = init.node_id.0.to_vec();
         use vls_protocol::msgs::SerBolt;
@@ -210,10 +246,16 @@ impl Signer {
         // seed by deriving a hardened key tagged with "rune secret".
         let rune_secret = crypto_utils::hkdf_sha256(&sec, RUNE_DERIVATION_SECRET.as_bytes(), &[]);
         let mr = Rune::new_master_rune(&rune_secret, vec![], None, Some(RUNE_VERSION.to_string()))?;
+        let state_signing_secret = Self::derive_state_signing_secret(&sec)?;
+        let state_signing_pubkey =
+            PublicKey::from_secret_key(&Secp256k1::signing_only(), &state_signing_secret);
 
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             secret: sec,
+            state_signing_secret,
+            state_signing_pubkey,
+            state_signature_mode: config.state_signature_mode,
             master_rune: mr,
             services,
             tls: creds.tls_config(),
@@ -285,6 +327,90 @@ impl Signer {
             .handle(Signer::initreq())
             .map_err(|e| Error::Other(anyhow!("Failed to handle init request: {:?}", e)))?;
         Ok(response.map(|a| a.as_vec()).unwrap_or_default())
+    }
+
+    fn derive_state_signing_secret(secret: &[u8; 32]) -> Result<SecretKey, anyhow::Error> {
+        let key = crypto_utils::hkdf_sha256(secret, STATE_DERIVATION_SECRET.as_bytes(), &[]);
+        SecretKey::from_slice(&key).map_err(|e| anyhow!("failed to derive state signing key: {e}"))
+    }
+
+    fn state_signature_digest(key: &str, version: u64, value: &[u8]) -> [u8; 32] {
+        let mut payload =
+            Vec::with_capacity(STATE_SIGNING_DOMAIN.len() + 4 + key.len() + 8 + 4 + value.len());
+        payload.extend_from_slice(STATE_SIGNING_DOMAIN);
+        payload.extend_from_slice(&(key.len() as u32).to_be_bytes());
+        payload.extend_from_slice(key.as_bytes());
+        payload.extend_from_slice(&version.to_be_bytes());
+        payload.extend_from_slice(&(value.len() as u32).to_be_bytes());
+        payload.extend_from_slice(value);
+        let hash = digest(&SHA256, &payload);
+        let mut out = [0u8; 32];
+        out.copy_from_slice(hash.as_ref());
+        out
+    }
+
+    fn sign_state_payload(
+        &self,
+        key: &str,
+        version: u64,
+        value: &[u8],
+    ) -> Result<Vec<u8>, anyhow::Error> {
+        let digest = Self::state_signature_digest(key, version, value);
+        let msg = SecpMessage::from_digest_slice(&digest).map_err(|e| {
+            anyhow!(
+                "failed to build state signature digest for key {}: {}",
+                key,
+                e
+            )
+        })?;
+        let sig = Secp256k1::signing_only().sign_ecdsa(&msg, &self.state_signing_secret);
+        Ok(sig.serialize_compact().to_vec())
+    }
+
+    fn verify_state_entry_signature(&self, entry: &SignerStateEntry) -> Result<(), anyhow::Error> {
+        if entry.signature.len() != COMPACT_SIGNATURE_LEN {
+            return Err(anyhow!(
+                "expected {} signature bytes, got {}",
+                COMPACT_SIGNATURE_LEN,
+                entry.signature.len()
+            ));
+        }
+        let digest = Self::state_signature_digest(&entry.key, entry.version, &entry.value);
+        let msg = SecpMessage::from_digest_slice(&digest)
+            .map_err(|e| anyhow!("failed to build digest message: {}", e))?;
+        let sig = SecpSignature::from_compact(&entry.signature)
+            .map_err(|e| anyhow!("invalid compact signature: {}", e))?;
+        Secp256k1::verification_only()
+            .verify_ecdsa(&msg, &sig, &self.state_signing_pubkey)
+            .map_err(|e| anyhow!("signature verification failed: {}", e))?;
+        Ok(())
+    }
+
+    fn verify_incoming_state_signatures(&self, entries: &[SignerStateEntry]) -> Result<(), Error> {
+        if self.state_signature_mode == StateSignatureMode::Off {
+            return Ok(());
+        }
+
+        for entry in entries {
+            if entry.signature.is_empty() {
+                if self.state_signature_mode == StateSignatureMode::Hard {
+                    return Err(Error::Other(anyhow!(
+                        "missing state signature for key {}",
+                        entry.key
+                    )));
+                }
+                continue;
+            }
+
+            self.verify_state_entry_signature(entry).map_err(|e| {
+                Error::Other(anyhow!(
+                    "invalid state signature for key {}: {}",
+                    entry.key,
+                    e
+                ))
+            })?;
+        }
+        Ok(())
     }
 
     /// Filter out any request that is not signed, such that the
@@ -488,6 +614,7 @@ impl Signer {
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
         debug!("Processing request {:?}", req);
+        self.verify_incoming_state_signatures(&req.signer_state)?;
         let incoming_state: crate::persist::State = req.signer_state.clone().into();
 
         // Create sketch from incoming state (nodelet's view) so we can
@@ -600,7 +727,10 @@ impl Signer {
                 node_id: self.node_id(),
             })
             .await;
-            return Err(Error::Other(anyhow!("Failed to update state from context: {:?}", e)));
+            return Err(Error::Other(anyhow!(
+                "Failed to update state from context: {:?}",
+                e
+            )));
         }
         log::trace!("State updated");
 
@@ -613,7 +743,10 @@ impl Signer {
             Some(c) => {
                 let node_id_len = c.node_id.len();
                 let pk: [u8; 33] = c.node_id.try_into().map_err(|_| {
-                    Error::Other(anyhow!("Invalid node_id length in context: expected 33 bytes, got {}", node_id_len))
+                    Error::Other(anyhow!(
+                        "Invalid node_id length in context: expected 33 bytes, got {}",
+                        node_id_len
+                    ))
                 })?;
                 let pk = vls_protocol::model::PubKey(pk);
                 root_handler
@@ -638,9 +771,17 @@ impl Signer {
 
         let signer_state: Vec<crate::pb::SignerStateEntry> = {
             debug!("Serializing state changes to report to node");
-            let state = self.state.lock().map_err(|e| {
-                Error::Other(anyhow!("Failed to acquire state lock for serialization: {:?}", e))
+            let mut state = self.state.lock().map_err(|e| {
+                Error::Other(anyhow!(
+                    "Failed to acquire state lock for serialization: {:?}",
+                    e
+                ))
             })?;
+            state
+                .resign_signatures(|key, version, value| {
+                    self.sign_state_payload(key, version, value)
+                })
+                .map_err(|e| Error::Other(anyhow!("Failed to sign signer state entries: {e}")))?;
             let full_wire_bytes = {
                 let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
                 signer_state_response_wire_bytes(&full_entries)
@@ -788,7 +929,10 @@ impl Signer {
         };
 
         if initmsg.len() <= 35 {
-            error!("Legacy init message too short: expected >35 bytes, got {}", initmsg.len());
+            error!(
+                "Legacy init message too short: expected >35 bytes, got {}",
+                initmsg.len()
+            );
             return vec![];
         }
         initmsg[35..].to_vec()
@@ -1225,13 +1369,11 @@ fn update_state_from_context(
     log::debug!("Updating state from {} context request", requests.len());
     let node = handler.node();
 
-    requests
-        .iter()
-        .for_each(|r| {
-            if let Err(e) = update_state_from_request(r, &node) {
-                log::warn!("Failed to update state from request: {:?}", e);
-            }
-        });
+    requests.iter().for_each(|r| {
+        if let Err(e) = update_state_from_request(r, &node) {
+            log::warn!("Failed to update state from request: {:?}", e);
+        }
+    });
     Ok(())
 }
 
@@ -1244,23 +1386,21 @@ fn update_state_from_request(
     match request {
         model::Request::SendPay(model::cln::SendpayRequest {
             bolt11: Some(inv), ..
-        }) => {
-            match Invoice::from_str(inv) {
-                Ok(invoice) => {
-                    log::debug!(
-                        "Adding invoice {:?} as side-effect of this sendpay {:?}",
-                        invoice,
-                        request
-                    );
-                    if let Err(e) = node.add_invoice(invoice) {
-                        log::warn!("Failed to add invoice to node state: {:?}", e);
-                    }
-                }
-                Err(e) => {
-                    log::warn!("Failed to parse invoice from sendpay request: {:?}", e);
+        }) => match Invoice::from_str(inv) {
+            Ok(invoice) => {
+                log::debug!(
+                    "Adding invoice {:?} as side-effect of this sendpay {:?}",
+                    invoice,
+                    request
+                );
+                if let Err(e) = node.add_invoice(invoice) {
+                    log::warn!("Failed to add invoice to node state: {:?}", e);
                 }
             }
-        }
+            Err(e) => {
+                log::warn!("Failed to parse invoice from sendpay request: {:?}", e);
+            }
+        },
         _ => {}
     }
 
@@ -1307,6 +1447,33 @@ mod tests {
     use super::*;
     use crate::credentials;
     use crate::pb;
+    use serde_json::json;
+    use vls_protocol::msgs::SerBolt;
+
+    fn mk_signer(mode: StateSignatureMode) -> Signer {
+        Signer::new_with_config(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: mode,
+            },
+        )
+        .unwrap()
+    }
+
+    fn heartbeat_raw() -> Vec<u8> {
+        vls_protocol::msgs::GetHeartbeat {}.as_vec()
+    }
+
+    fn mk_state_entry(key: &str, version: u64, value: serde_json::Value) -> SignerStateEntry {
+        SignerStateEntry {
+            version,
+            key: key.to_string(),
+            value: serde_json::to_vec(&value).unwrap(),
+            signature: vec![],
+        }
+    }
 
     /// We should not sign messages that we get from the node, since
     /// we're using the sign_message RPC message to create TLS
@@ -1359,6 +1526,152 @@ mod tests {
                 .to_string(),
             *"protocol error: ShortRead"
         )
+    }
+
+    #[test]
+    fn test_state_signature_roundtrip() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        entry.signature = signer
+            .sign_state_payload(&entry.key, entry.version, &entry.value)
+            .unwrap();
+        assert!(signer.verify_state_entry_signature(&entry).is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_soft_mode_accepts_missing_signature_and_repairs() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let key = "nodes/test".to_string();
+        let req = HsmRequest {
+            request_id: 42,
+            context: None,
+            raw: heartbeat_raw(),
+            signer_state: vec![mk_state_entry(&key, 1, json!({"v": 1}))],
+            requests: vec![],
+        };
+        let response = signer.process_request(req).await.unwrap();
+        let repaired = response
+            .signer_state
+            .iter()
+            .find(|e| e.key == key)
+            .expect("expected repaired entry in diff");
+        assert_eq!(repaired.signature.len(), COMPACT_SIGNATURE_LEN);
+    }
+
+    #[tokio::test]
+    async fn test_soft_mode_rejects_invalid_signature() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        entry.signature = vec![1u8; COMPACT_SIGNATURE_LEN];
+        let err = signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![entry],
+                requests: vec![],
+            })
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("invalid state signature"));
+    }
+
+    #[tokio::test]
+    async fn test_hard_mode_rejects_missing_signature() {
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let err = signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![mk_state_entry("nodes/test", 1, json!({"v": 1}))],
+                requests: vec![],
+            })
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("missing state signature"));
+    }
+
+    #[tokio::test]
+    async fn test_hard_mode_rejects_invalid_signature() {
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        entry.signature = vec![2u8; COMPACT_SIGNATURE_LEN];
+        let err = signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![entry],
+                requests: vec![],
+            })
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("invalid state signature"));
+    }
+
+    #[tokio::test]
+    async fn test_hard_mode_accepts_valid_signature() {
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        entry.signature = signer
+            .sign_state_payload(&entry.key, entry.version, &entry.value)
+            .unwrap();
+
+        let res = signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![entry],
+                requests: vec![],
+            })
+            .await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_off_mode_accepts_invalid_and_missing_signatures() {
+        let signer = mk_signer(StateSignatureMode::Off);
+        let mut invalid = mk_state_entry("nodes/invalid", 1, json!({"v": 1}));
+        invalid.signature = vec![3u8; COMPACT_SIGNATURE_LEN];
+        let missing = mk_state_entry("nodes/missing", 1, json!({"v": 2}));
+        let res = signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![invalid, missing],
+                requests: vec![],
+            })
+            .await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_malformed_state_value_returns_error() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let entry = SignerStateEntry {
+            version: 1,
+            key: "nodes/bad".to_string(),
+            value: b"{".to_vec(),
+            signature: vec![],
+        };
+        let err = signer
+            .process_request(HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![entry],
+                requests: vec![],
+            })
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("Failed to decode signer state"));
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::chain::tracker::ChainTracker;
 use lightning_signer::channel::ChannelId;
@@ -382,7 +383,6 @@ impl State {
                     let mut inserted = incoming.clone();
                     if incoming_is_tombstone {
                         inserted.value = serde_json::Value::Null;
-                        inserted.signature = vec![];
                     }
                     self.values.insert(key.clone(), inserted);
                 }
@@ -398,7 +398,11 @@ impl State {
                             newver
                         );
                         res.changes.push((key.to_owned(), Some(v.version), newver));
-                        *v = StateEntry::new(newver, serde_json::Value::Null);
+                        *v = StateEntry {
+                            version: newver,
+                            value: serde_json::Value::Null,
+                            signature: incoming.signature.clone(),
+                        };
                         continue;
                     }
 
@@ -413,6 +417,11 @@ impl State {
                     }
 
                     if v.version == newver {
+                        if v.value == incoming.value && v.signature != incoming.signature {
+                            trace!("Updating signature for key {} at version={}", key, newver);
+                            res.changes.push((key.to_owned(), Some(v.version), newver));
+                            v.signature = incoming.signature.clone();
+                        }
                         continue;
                     } else if v.version > newver {
                         warn!(
@@ -469,10 +478,35 @@ impl State {
                 Some(old_entry) if old_entry.version < new_entry.version => {
                     values.insert(key.clone(), new_entry.clone());
                 }
+                Some(old_entry)
+                    if old_entry.version == new_entry.version
+                        && old_entry.signature != new_entry.signature =>
+                {
+                    values.insert(key.clone(), new_entry.clone());
+                }
                 _ => {}
             }
         }
         State { values }
+    }
+
+    /// Sign entries missing signatures and return how many signatures were added.
+    pub fn resign_signatures<F>(&mut self, mut signer: F) -> anyhow::Result<usize>
+    where
+        F: FnMut(&str, u64, &[u8]) -> anyhow::Result<Vec<u8>>,
+    {
+        let mut changed = 0usize;
+        for (key, entry) in self.values.iter_mut() {
+            if !entry.signature.is_empty() {
+                continue;
+            }
+            let value = serde_json::to_vec(&entry.value)
+                .map_err(|e| anyhow!("failed to serialize state value for key {key}: {e}"))?;
+            let signature = signer(key, entry.version, &value)?;
+            entry.signature = signature;
+            changed += 1;
+        }
+        Ok(changed)
     }
 
     pub fn sketch(&self) -> StateSketch {
@@ -492,8 +526,14 @@ impl State {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
+struct SketchEntry {
+    version: u64,
+    signature: Vec<u8>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct StateSketch {
-    versions: BTreeMap<String, u64>,
+    versions: BTreeMap<String, SketchEntry>,
 }
 
 impl StateSketch {
@@ -510,7 +550,13 @@ impl StateSketch {
     /// Apply versions from `state` without clearing existing entries.
     pub fn apply_state(&mut self, state: &State) {
         for (key, value) in state.values.iter() {
-            self.versions.insert(key.clone(), value.version);
+            self.versions.insert(
+                key.clone(),
+                SketchEntry {
+                    version: value.version,
+                    signature: value.signature.clone(),
+                },
+            );
         }
     }
 
@@ -522,7 +568,12 @@ impl StateSketch {
                 None => {
                     values.insert(key.clone(), new_entry.clone());
                 }
-                Some(oldver) if *oldver < new_entry.version => {
+                Some(old) if old.version < new_entry.version => {
+                    values.insert(key.clone(), new_entry.clone());
+                }
+                Some(old)
+                    if old.version == new_entry.version && old.signature != new_entry.signature =>
+                {
                     values.insert(key.clone(), new_entry.clone());
                 }
                 _ => {}
@@ -546,21 +597,40 @@ impl Into<Vec<crate::pb::SignerStateEntry>> for State {
     }
 }
 
+impl TryFrom<&[crate::pb::SignerStateEntry]> for State {
+    type Error = anyhow::Error;
+
+    fn try_from(v: &[crate::pb::SignerStateEntry]) -> Result<State, Self::Error> {
+        let values = v
+            .iter()
+            .map(|entry| -> anyhow::Result<(String, StateEntry)> {
+                let value = serde_json::from_slice(&entry.value).map_err(|e| {
+                    anyhow!(
+                        "failed to decode signer state value for key {}: {}",
+                        entry.key,
+                        e
+                    )
+                })?;
+
+                Ok((
+                    entry.key.to_owned(),
+                    StateEntry {
+                        version: entry.version,
+                        value,
+                        signature: entry.signature.clone(),
+                    },
+                ))
+            })
+            .collect::<anyhow::Result<BTreeMap<_, _>>>()?;
+
+        Ok(State { values })
+    }
+}
+
 impl From<Vec<crate::pb::SignerStateEntry>> for State {
     fn from(v: Vec<crate::pb::SignerStateEntry>) -> State {
-        use std::iter::FromIterator;
-        let values = BTreeMap::from_iter(v.iter().map(|v| {
-            (
-                v.key.to_owned(),
-                StateEntry {
-                    version: v.version,
-                    value: serde_json::from_slice(&v.value).unwrap(),
-                    signature: v.signature.clone(),
-                },
-            )
-        }));
-
-        State { values }
+        State::try_from(v.as_slice())
+            .expect("signer state entries must contain valid JSON payloads")
     }
 }
 
@@ -1021,6 +1091,77 @@ mod tests {
     }
 
     #[test]
+    fn merge_same_version_updates_signature_when_value_matches() {
+        let mut base_values = BTreeMap::new();
+        base_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 2,
+                value: json!({"v": 1}),
+                signature: vec![1],
+            },
+        );
+        let mut base = State {
+            values: base_values,
+        };
+
+        let mut incoming_values = BTreeMap::new();
+        incoming_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 2,
+                value: json!({"v": 1}),
+                signature: vec![9, 9],
+            },
+        );
+        let incoming = State {
+            values: incoming_values,
+        };
+
+        let res = base.merge(&incoming).unwrap();
+        assert_eq!(res.conflict_count, 0);
+        let merged = base.values.get("k").unwrap();
+        assert_eq!(merged.version, 2);
+        assert_eq!(merged.value, json!({"v": 1}));
+        assert_eq!(merged.signature, vec![9, 9]);
+    }
+
+    #[test]
+    fn merge_same_version_does_not_overwrite_value() {
+        let mut base_values = BTreeMap::new();
+        base_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 2,
+                value: json!({"v": 1}),
+                signature: vec![1],
+            },
+        );
+        let mut base = State {
+            values: base_values,
+        };
+
+        let mut incoming_values = BTreeMap::new();
+        incoming_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 2,
+                value: json!({"v": 999}),
+                signature: vec![9, 9],
+            },
+        );
+        let incoming = State {
+            values: incoming_values,
+        };
+
+        let _ = base.merge(&incoming).unwrap();
+        let merged = base.values.get("k").unwrap();
+        assert_eq!(merged.version, 2);
+        assert_eq!(merged.value, json!({"v": 1}));
+        assert_eq!(merged.signature, vec![1]);
+    }
+
+    #[test]
     fn omit_tombstones_omits_tombstoned_entries() {
         let state = mk_state(vec![
             ("k1", 1, json!({"v": 1})),
@@ -1059,6 +1200,37 @@ mod tests {
         assert_entry(&diff, "k4", 0, json!({"v": 4}));
         assert_entry_absent(&diff, "k1");
         assert_entry_absent(&diff, "k3");
+    }
+
+    #[test]
+    fn diff_state_includes_signature_only_changes() {
+        let mut old_values = BTreeMap::new();
+        old_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 5,
+                value: json!({"v": 5}),
+                signature: vec![1],
+            },
+        );
+        let old = State { values: old_values };
+
+        let mut new_values = BTreeMap::new();
+        new_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 5,
+                value: json!({"v": 5}),
+                signature: vec![2, 3],
+            },
+        );
+        let new = State { values: new_values };
+
+        let diff = old.diff_state(&new);
+        assert_eq!(diff.values.len(), 1);
+        let entry = diff.values.get("k").unwrap();
+        assert_eq!(entry.version, 5);
+        assert_eq!(entry.signature, vec![2, 3]);
     }
 
     #[test]
@@ -1128,6 +1300,37 @@ mod tests {
     }
 
     #[test]
+    fn sketch_diff_includes_signature_only_changes() {
+        let mut old_values = BTreeMap::new();
+        old_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 8,
+                value: json!({"v": 8}),
+                signature: vec![1],
+            },
+        );
+        let old = State { values: old_values };
+
+        let mut new_values = BTreeMap::new();
+        new_values.insert(
+            "k".to_string(),
+            StateEntry {
+                version: 8,
+                value: json!({"v": 8}),
+                signature: vec![4, 5, 6],
+            },
+        );
+        let new = State { values: new_values };
+
+        let diff = old.sketch().diff_state(&new);
+        assert_eq!(diff.values.len(), 1);
+        let entry = diff.values.get("k").unwrap();
+        assert_eq!(entry.version, 8);
+        assert_eq!(entry.signature, vec![4, 5, 6]);
+    }
+
+    #[test]
     fn merge_tombstone_deletes_older_live_entry() {
         let live_key = format!("{CHANNEL_PREFIX}/abc");
         let mut state = mk_state(vec![(live_key.as_str(), 2, json!({"v": 1}))]);
@@ -1172,6 +1375,57 @@ mod tests {
 
         assert_eq!(res.conflict_count, 1);
         assert_entry(&state, "k1", 5, json!({"v": 5}));
+    }
+
+    #[test]
+    fn signer_state_entry_try_from_rejects_invalid_json_value() {
+        let entries = vec![SignerStateEntry {
+            version: 1,
+            key: "bad".to_string(),
+            value: b"not-json".to_vec(),
+            signature: vec![],
+        }];
+
+        let res = State::try_from(entries.as_slice());
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn resign_signatures_only_signs_missing_entries() {
+        let mut values = BTreeMap::new();
+        values.insert(
+            "signed".to_string(),
+            StateEntry {
+                version: 1,
+                value: json!({"v": 1}),
+                signature: vec![9, 9],
+            },
+        );
+        values.insert(
+            "unsigned".to_string(),
+            StateEntry {
+                version: 2,
+                value: json!({"v": 2}),
+                signature: vec![],
+            },
+        );
+
+        let mut state = State { values };
+        let mut calls = 0usize;
+        let changed = state
+            .resign_signatures(|_, _, _| {
+                calls += 1;
+                Ok(vec![1, 2, 3, 4])
+            })
+            .unwrap();
+
+        assert_eq!(calls, 1);
+        assert_eq!(changed, 1);
+        assert_eq!(state.values.get("signed").unwrap().signature, vec![9, 9]);
+        assert_eq!(
+            state.values.get("unsigned").unwrap().signature,
+            vec![1, 2, 3, 4]
+        );
     }
 
     #[test]
