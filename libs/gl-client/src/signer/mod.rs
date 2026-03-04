@@ -488,14 +488,19 @@ impl Signer {
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
         debug!("Processing request {:?}", req);
-        let diff: crate::persist::State = req.signer_state.clone().into();
+        let incoming_state: crate::persist::State = req.signer_state.clone().into();
 
-        let (prestate_sketch, prestate_log) = {
+        // Create sketch from incoming state (nodelet's view) so we can
+        // send back any entries the nodelet doesn't know about yet,
+        // including the initial VLS state created during Signer::new().
+        let prestate_sketch = incoming_state.sketch();
+
+        let prestate_log = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
             })?;
-            let merge_res = state.merge(&diff).map_err(|e| {
+            let merge_res = state.merge(&incoming_state).map_err(|e| {
                 Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
             })?;
             if merge_res.has_conflicts() {
@@ -505,12 +510,9 @@ impl Signer {
                 );
             }
             trace!("Processing request {}", hex::encode(&req.raw));
-            let log_state = serde_json::to_string(&*state).map_err(|e| {
+            serde_json::to_string(&*state).map_err(|e| {
                 Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
-            })?;
-
-
-            (state.sketch(), log_state)
+            })?
         };
 
         // The first two bytes represent the message type. Check that
