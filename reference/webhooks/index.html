@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -199,15 +199,15 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/>
               </svg>
-              <a href="https://github.com/Blockstream/greenlight/commit/8b74c38ff62ed1dc3145dc9d277fe610fc59b7b5" target="_blank" title="Go to Commit">
-                8b74c38
+              <a href="https://github.com/Blockstream/greenlight/commit/3ddf07282b8f460aac2fb73f5f5c1f335ec4ac02" target="_blank" title="Go to Commit">
+                3ddf072
               </a>
             </div>
             <div class="git-info-item" title="Last Updated">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/>
               </svg>
-              2025-12-04
+              2026-03-04
             </div>
           </div>
         </div>
@@ -1113,6 +1113,8 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
@@ -1155,6 +1157,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1163,44 +1167,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#webhooks" class="md-nav__link">
+  <a href="#webhook-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Webhooks
+        Webhook Types
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Events
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-a-webhook-to-a-greenlight-node" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a Webhook to a Greenlight Node
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Adding a Webhook to a Greenlight Node">
+    <nav class="md-nav" aria-label="Webhook Types">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#per-node-webhooks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        Per-Node Webhooks
       
     </span>
   </a>
@@ -1208,21 +1190,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#step-1-initialize-a-scheduler" class="md-nav__link">
+  <a href="#per-developer-webhooks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Initialize a Scheduler
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-2-add-the-webhook" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2: Add the Webhook
+        Per-Developer Webhooks
       
     </span>
   </a>
@@ -1235,13 +1206,141 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-webhook-payloads" class="md-nav__link">
+  <a href="#event-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Webhook Payloads
+        Event Types
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#payload-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Payload Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice_payment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        invoice_payment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node_stuck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        node_stuck
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signature-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signature Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#signature-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification Examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delivery-guarantees" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delivery Guarantees
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Delivery Guarantees">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-retries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Retries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-triggers-retries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Triggers Retries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1256,6 +1355,28 @@
   
     <nav class="md-nav" aria-label="Managing Webhooks">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-webhook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a Webhook
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#listing-webhooks" class="md-nav__link">
@@ -1279,19 +1400,91 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rotating-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating Secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#rotating-webhook-secrets" class="md-nav__link">
+  <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rotating Webhook Secrets
+        Best Practices
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#idempotency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Idempotency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1490,6 +1683,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1498,44 +1693,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#webhooks" class="md-nav__link">
+  <a href="#webhook-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Webhooks
+        Webhook Types
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Events
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-a-webhook-to-a-greenlight-node" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a Webhook to a Greenlight Node
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Adding a Webhook to a Greenlight Node">
+    <nav class="md-nav" aria-label="Webhook Types">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#per-node-webhooks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        Per-Node Webhooks
       
     </span>
   </a>
@@ -1543,21 +1716,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#step-1-initialize-a-scheduler" class="md-nav__link">
+  <a href="#per-developer-webhooks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Initialize a Scheduler
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-2-add-the-webhook" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2: Add the Webhook
+        Per-Developer Webhooks
       
     </span>
   </a>
@@ -1570,13 +1732,141 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-webhook-payloads" class="md-nav__link">
+  <a href="#event-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Webhook Payloads
+        Event Types
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#payload-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Payload Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice_payment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        invoice_payment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node_stuck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        node_stuck
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#signature-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signature Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#signature-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signature Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification Examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delivery-guarantees" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delivery Guarantees
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Delivery Guarantees">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-retries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Retries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-triggers-retries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Triggers Retries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1591,6 +1881,28 @@
   
     <nav class="md-nav" aria-label="Managing Webhooks">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-webhook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a Webhook
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#listing-webhooks" class="md-nav__link">
@@ -1614,19 +1926,91 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rotating-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating Secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#rotating-webhook-secrets" class="md-nav__link">
+  <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rotating Webhook Secrets
+        Best Practices
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#idempotency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Idempotency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1650,199 +2034,778 @@
   
 
 
-  <h1>Webhooks</h1>
+<h1 id="webhooks">Webhooks</h1>
+<p>Webhooks allow your application to receive real-time HTTP notifications when events occur on your Greenlight nodes. Instead of polling for changes, Greenlight pushes event data to your endpoints as soon as events happen.</p>
+<p><strong>Quick links:</strong> <a href="#event-types">Event Types</a> | <a href="#signature-verification">Signature Verification</a> | <a href="#managing-webhooks">Managing Webhooks</a> | <a href="#best-practices">Best Practices</a></p>
+<h2 id="webhook-types">Webhook Types</h2>
+<p>Greenlight supports two types of webhooks that serve different use cases:</p>
+<h3 id="per-node-webhooks">Per-Node Webhooks</h3>
+<p>Per-node webhooks are registered via the Scheduler API and apply to a single node. Use these when you need fine-grained control over which endpoints receive events from specific nodes.</p>
+<ul>
+<li>Registered using <code>add_outgoing_webhook()</code> API</li>
+<li>Maximum <strong>20 webhooks per node</strong></li>
+<li>Managed individually per node</li>
+<li><strong>Use case:</strong> Monitoring specific nodes, per-customer webhook endpoints</li>
+</ul>
+<h3 id="per-developer-webhooks">Per-Developer Webhooks</h3>
+<p>Per-developer webhooks are registered via the Greenlight Developer Console and automatically receive events from <strong>all nodes</strong> registered with your developer certificate.</p>
+<ul>
+<li>Registered in the Developer Console</li>
+<li>Applies to all nodes sharing your <code>referrer_pubkey</code></li>
+<li>Single endpoint receives events from your entire fleet</li>
+<li><strong>Use case:</strong> App-wide monitoring, centralized event processing for wallet apps</li>
+</ul>
+<pre class="mermaid"><code>graph TB
+    subgraph "Your Application"
+        EP1[Per-Node Endpoint&lt;br/&gt;node-a.example.com/webhook]
+        EP2[Per-Node Endpoint&lt;br/&gt;node-b.example.com/webhook]
+        EP3[App-Wide Endpoint&lt;br/&gt;app.example.com/webhooks]
+    end
 
-<h2 id="webhooks">Webhooks</h2>
-<p>Webhooks are URLs that receive HTTP requests containing event-related data. They allow applications to notify external systems of important events in real-time. The event source can be part of the same hosting application or an entirely different system.</p>
-<p>With Greenlight, you can use webhooks to subscribe to events related to a given node. Each node supports up to <strong>20 webhooks</strong>, and duplicate URLs are allowed to facilitate secret rotations.</p>
-<h2 id="events">Events</h2>
-<p>Events are sent as HTTP <code>POST</code> requests with JSON payloads containing event details. The payload structure is as follows:</p>
+    subgraph "Per-Node Webhooks"
+        NodeA[Node A] --&gt;|events| EP1
+        NodeB[Node B] --&gt;|events| EP2
+    end
+
+    subgraph "Per-Developer Webhook"
+        NodeA -.-&gt;|events| EP3
+        NodeB -.-&gt;|events| EP3
+        NodeC[Node C] -.-&gt;|events| EP3
+    end
+
+    DC[Developer Console] --&gt;|registered| EP3</code></pre>
+<p>Both webhook types use the same payload format and signature scheme, so your endpoint code works identically regardless of how the webhook was registered.</p>
+<hr />
+<h2 id="event-types">Event Types</h2>
+<h3 id="payload-structure">Payload Structure</h3>
+<p>All webhook payloads share a common structure:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">&lt;versio</span><span class="kc">n</span><span class="err">&gt;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">&lt;</span><span class="kc">n</span><span class="err">ode_id&gt;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">&lt;eve</span><span class="kc">nt</span><span class="err">_</span><span class="kc">t</span><span class="err">ype&gt;</span>
+<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7293847502938475029&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02abc123def456...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoice_payment&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067200</span><span class="p">,</span>
+<span class="w">  </span><span class="err">...eve</span><span class="kc">nt</span><span class="mi">-</span><span class="err">speci</span><span class="kc">f</span><span class="err">ic</span><span class="w"> </span><span class="kc">f</span><span class="err">ields...</span>
 <span class="p">}</span>
 </code></pre></div>
-<h2 id="adding-a-webhook-to-a-greenlight-node">Adding a Webhook to a Greenlight Node</h2>
-<h3 id="prerequisites">Prerequisites</h3>
-<p>Before adding a webhook, ensure the following:</p>
-<ul>
-<li>A <strong>public TLS-secured endpoint</strong> that can receive webhook events.</li>
-<li>Access to a Greenlight node's <strong>device certificate</strong>.</li>
-</ul>
-<h3 id="step-1-initialize-a-scheduler">Step 1: Initialize a Scheduler</h3>
-<p>To add a webhook, first initialize a scheduler using the node ID and device certificate (obtained during node registration).</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Rust</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">device_cert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">include_bytes!</span><span class="p">(</span><span class="s">&quot;path-to-device-cert&quot;</span><span class="p">);</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">device_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="fm">include_bytes!</span><span class="p">(</span><span class="s">&quot;path-to-device-key&quot;</span><span class="p">);</span>
-
-<span class="kd">let</span><span class="w"> </span><span class="n">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Builder</span><span class="p">::</span><span class="n">as_device</span><span class="p">()</span>
-<span class="w">    </span><span class="p">.</span><span class="n">with_identity</span><span class="p">(</span><span class="n">device_cert</span><span class="p">,</span><span class="w"> </span><span class="n">device_key</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
-<span class="w">    </span><span class="p">.</span><span class="n">expect</span><span class="p">(</span><span class="s">&quot;Failed to build Device credentials&quot;</span><span class="p">);</span>
-
-<span class="kd">let</span><span class="w"> </span><span class="n">node_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">hex</span><span class="p">::</span><span class="n">decode</span><span class="p">(</span><span class="s">&quot;hex-node-id&quot;</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span>
-
-<span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">::</span><span class="n">with_credentials</span><span class="p">(</span>
-<span class="w">    </span><span class="n">node_id</span><span class="p">,</span>
-<span class="w">    </span><span class="n">gl_client</span><span class="p">::</span><span class="n">bitcoin</span><span class="p">::</span><span class="n">Network</span><span class="p">::</span><span class="n">Bitcoin</span><span class="p">,</span>
-<span class="w">    </span><span class="n">utils</span><span class="p">::</span><span class="n">scheduler_uri</span><span class="p">(),</span>
-<span class="w">    </span><span class="n">credentials</span>
-<span class="p">)</span>
-<span class="p">.</span><span class="k">await</span>
-<span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event_id</code></td>
+<td>string</td>
+<td>Unique identifier (snowflake ID) for deduplication</td>
+</tr>
+<tr>
+<td><code>node_id</code></td>
+<td>string</td>
+<td>Hex-encoded 33-byte compressed public key</td>
+</tr>
+<tr>
+<td><code>event_type</code></td>
+<td>string</td>
+<td>Event type: <code>invoice_payment</code> or <code>node_stuck</code></td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>integer</td>
+<td>Unix timestamp (seconds) when the event occurred</td>
+</tr>
+</tbody>
+</table>
+<p>Additional fields are included depending on the event type.</p>
+<hr />
+<h3 id="invoice_payment">invoice_payment</h3>
+<p>Triggered when your node receives an incoming payment.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>payment_hash</code></td>
+<td>string</td>
+<td>Hex-encoded 32-byte payment hash</td>
+</tr>
+<tr>
+<td><code>preimage</code></td>
+<td>string</td>
+<td>Hex-encoded 32-byte payment preimage (proof of payment)</td>
+</tr>
+<tr>
+<td><code>amount_msat</code></td>
+<td>integer</td>
+<td>Amount received in millisatoshis</td>
+</tr>
+<tr>
+<td><code>bolt11</code></td>
+<td>string</td>
+<td>The BOLT11 invoice that was paid</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>string</td>
+<td>Invoice label (if set during creation)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example payload:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7293847502938475029&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoice_payment&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067200</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;payment_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;preimage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;amount_msat&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;bolt11&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lnbc1u1pjkx3xypp5...&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order-12345&quot;</span>
+<span class="p">}</span>
 </code></pre></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:1"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Python</label></div>
+<p><strong>Common use cases:</strong></p>
+<ul>
+<li>Confirming payment receipt in e-commerce applications</li>
+<li>Triggering order fulfillment workflows</li>
+<li>Updating user balances in custody applications</li>
+<li>Sending payment confirmation notifications to users</li>
+</ul>
+<hr />
+<h3 id="node_stuck">node_stuck</h3>
+<p>Triggered when a node falls behind the blockchain tip and cannot process new blocks.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>blockheight</code></td>
+<td>integer</td>
+<td>Node's current synced block height</td>
+</tr>
+<tr>
+<td><code>headheight</code></td>
+<td>integer</td>
+<td>Current blockchain tip height</td>
+</tr>
+<tr>
+<td><code>lag</code></td>
+<td>integer</td>
+<td>Number of blocks behind (<code>headheight - blockheight</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example payload:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7293847502938475030&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;node_stuck&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067300</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;blockheight&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820000</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;headheight&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820150</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">150</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Common use cases:</strong></p>
+<ul>
+<li>Alerting operations teams to sync issues</li>
+<li>Temporarily pausing payment processing</li>
+<li>Triggering automated recovery procedures</li>
+<li>Monitoring node health dashboards</li>
+</ul>
+<hr />
+<h2 id="signature-verification">Signature Verification</h2>
+<p>Every webhook request includes an HMAC-SHA256 signature in the <code>gl-signature</code> header. <strong>Always verify this signature before processing the payload.</strong></p>
+<h3 id="signature-details">Signature Details</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Header</td>
+<td><code>gl-signature</code></td>
+</tr>
+<tr>
+<td>Algorithm</td>
+<td>HMAC-SHA256</td>
+</tr>
+<tr>
+<td>Encoding</td>
+<td>Base64 (standard alphabet)</td>
+</tr>
+<tr>
+<td>Input</td>
+<td>Raw request body bytes</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td>Returned from <code>add_outgoing_webhook()</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Verify Before Parsing</p>
+<p>The signature is computed over the <strong>raw request body bytes</strong>. You must verify
+the signature before parsing JSON. Any whitespace changes or re-encoding
+will invalidate the signature.</p>
+</div>
+<h3 id="http-headers">HTTP Headers</h3>
+<p>Greenlight sends these headers with every webhook request:</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Content-Type</code></td>
+<td><code>application/json</code></td>
+</tr>
+<tr>
+<td><code>gl-signature</code></td>
+<td>Base64-encoded HMAC-SHA256 signature</td>
+</tr>
+<tr>
+<td><code>X-Greenlight-Event</code></td>
+<td>Event type (e.g., <code>invoice_payment</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="verification-examples">Verification Examples</h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Python</label><label for="__tabbed_1_2">Rust</label><label for="__tabbed_1_3">Node.js</label></div>
 <div class="tabbed-content">
-<div class="tabbed-block"></div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">hmac</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">abort</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">WEBHOOK_SECRET</span> <span class="o">=</span> <span class="s2">&quot;your-webhook-secret&quot;</span>  <span class="c1"># From add_outgoing_webhook()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">secret</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Verify the gl-signature header matches the payload.&quot;&quot;&quot;</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
+        <span class="n">secret</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span>
+        <span class="n">payload</span><span class="p">,</span>
+        <span class="n">digestmod</span><span class="o">=</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span>
+    <span class="p">)</span>
+    <span class="n">computed</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">expected</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">computed</span><span class="p">,</span> <span class="n">signature</span><span class="p">)</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/webhook&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">():</span>
+    <span class="c1"># Get raw body BEFORE parsing</span>
+    <span class="n">raw_body</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gl-signature&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">raw_body</span><span class="p">,</span> <span class="n">signature</span><span class="p">,</span> <span class="n">WEBHOOK_SECRET</span><span class="p">):</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">401</span><span class="p">,</span> <span class="s2">&quot;Invalid signature&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Safe to parse now</span>
+    <span class="n">event</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+
+    <span class="c1"># Handle event based on type</span>
+    <span class="k">if</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;event_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;invoice_payment&quot;</span><span class="p">:</span>
+        <span class="n">handle_payment</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;event_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;node_stuck&quot;</span><span class="p">:</span>
+        <span class="n">handle_stuck_node</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">200</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">axum</span><span class="p">::{</span>
+<span class="w">    </span><span class="n">body</span><span class="p">::</span><span class="n">Bytes</span><span class="p">,</span>
+<span class="w">    </span><span class="n">http</span><span class="p">::{</span><span class="n">HeaderMap</span><span class="p">,</span><span class="w"> </span><span class="n">StatusCode</span><span class="p">},</span>
+<span class="w">    </span><span class="n">routing</span><span class="p">::</span><span class="n">post</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Router</span><span class="p">,</span>
+<span class="p">};</span>
+<span class="k">use</span><span class="w"> </span><span class="n">base64</span><span class="p">::</span><span class="n">Engine</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">hmac</span><span class="p">::{</span><span class="n">Hmac</span><span class="p">,</span><span class="w"> </span><span class="n">Mac</span><span class="p">};</span>
+<span class="k">use</span><span class="w"> </span><span class="n">sha2</span><span class="p">::</span><span class="n">Sha256</span><span class="p">;</span>
+
+<span class="k">const</span><span class="w"> </span><span class="n">WEBHOOK_SECRET</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;your-webhook-secret&quot;</span><span class="p">;</span>
+
+<span class="k">fn</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">],</span><span class="w"> </span><span class="n">signature</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nb">Ok</span><span class="p">(</span><span class="k">mut</span><span class="w"> </span><span class="n">mac</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Hmac</span><span class="p">::</span><span class="o">&lt;</span><span class="n">Sha256</span><span class="o">&gt;</span><span class="p">::</span><span class="n">new_from_slice</span><span class="p">(</span><span class="n">secret</span><span class="p">.</span><span class="n">as_bytes</span><span class="p">())</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">};</span>
+<span class="w">    </span><span class="n">mac</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">payload</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mac</span><span class="p">.</span><span class="n">finalize</span><span class="p">();</span>
+
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">base64</span><span class="p">::</span><span class="n">engine</span><span class="p">::</span><span class="n">general_purpose</span><span class="p">::</span><span class="n">STANDARD</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">computed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">engine</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">into_bytes</span><span class="p">());</span>
+
+<span class="w">    </span><span class="c1">// Constant-time comparison</span>
+<span class="w">    </span><span class="n">computed</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">signature</span>
+<span class="p">}</span>
+
+<span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">(</span>
+<span class="w">    </span><span class="n">headers</span><span class="p">:</span><span class="w"> </span><span class="nc">HeaderMap</span><span class="p">,</span>
+<span class="w">    </span><span class="n">body</span><span class="p">:</span><span class="w"> </span><span class="nc">Bytes</span><span class="p">,</span>
+<span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">StatusCode</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">signature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">headers</span>
+<span class="w">        </span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;gl-signature&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">to_str</span><span class="p">().</span><span class="n">ok</span><span class="p">())</span>
+<span class="w">        </span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">!</span><span class="n">verify_signature</span><span class="p">(</span><span class="o">&amp;</span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="n">signature</span><span class="p">,</span><span class="w"> </span><span class="n">WEBHOOK_SECRET</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">StatusCode</span><span class="p">::</span><span class="n">UNAUTHORIZED</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Safe to parse</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">event</span><span class="p">:</span><span class="w"> </span><span class="nc">serde_json</span><span class="p">::</span><span class="n">Value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">match</span><span class="w"> </span><span class="n">serde_json</span><span class="p">::</span><span class="n">from_slice</span><span class="p">(</span><span class="o">&amp;</span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nb">Ok</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">e</span><span class="p">,</span>
+<span class="w">        </span><span class="nb">Err</span><span class="p">(</span><span class="n">_</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">StatusCode</span><span class="p">::</span><span class="n">BAD_REQUEST</span><span class="p">,</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="c1">// Handle event...</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Received event: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">[</span><span class="s">&quot;event_type&quot;</span><span class="p">]);</span>
+
+<span class="w">    </span><span class="n">StatusCode</span><span class="p">::</span><span class="n">OK</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">express</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;express&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">crypto</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;crypto&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">app</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">express</span><span class="p">();</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">WEBHOOK_SECRET</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">WEBHOOK_SECRET</span><span class="p">;</span>
+
+<span class="kd">function</span><span class="w"> </span><span class="nx">verifySignature</span><span class="p">(</span><span class="nx">payload</span><span class="p">,</span><span class="w"> </span><span class="nx">signature</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">hmac</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">createHmac</span><span class="p">(</span><span class="s1">&#39;sha256&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">hmac</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">payload</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">computed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">hmac</span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="s1">&#39;base64&#39;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Timing-safe comparison</span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">timingSafeEqual</span><span class="p">(</span>
+<span class="w">            </span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="nx">computed</span><span class="p">),</span>
+<span class="w">            </span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="nx">signature</span><span class="p">)</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Use raw body parser for signature verification</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s1">&#39;/webhook&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">express</span><span class="p">.</span><span class="nx">raw</span><span class="p">({</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="w"> </span><span class="p">}),</span><span class="w"> </span><span class="p">(</span><span class="nx">req</span><span class="p">,</span><span class="w"> </span><span class="nx">res</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">signature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="s1">&#39;gl-signature&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">verifySignature</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span><span class="w"> </span><span class="nx">signature</span><span class="p">,</span><span class="w"> </span><span class="nx">WEBHOOK_SECRET</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mf">401</span><span class="p">).</span><span class="nx">send</span><span class="p">(</span><span class="s1">&#39;Invalid signature&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Safe to parse</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">event</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">toString</span><span class="p">());</span>
+
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`Received </span><span class="si">${</span><span class="nx">event</span><span class="p">.</span><span class="nx">event_type</span><span class="si">}</span><span class="sb"> for node </span><span class="si">${</span><span class="nx">event</span><span class="p">.</span><span class="nx">node_id</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Handle event based on type</span>
+<span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">event_type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;invoice_payment&#39;</span><span class="o">:</span>
+<span class="w">            </span><span class="nx">handlePayment</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;node_stuck&#39;</span><span class="o">:</span>
+<span class="w">            </span><span class="nx">handleStuckNode</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="nx">res</span><span class="p">.</span><span class="nx">sendStatus</span><span class="p">(</span><span class="mf">200</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">listen</span><span class="p">(</span><span class="mf">3000</span><span class="p">);</span>
+</code></pre></div>
 </div>
 </div>
+</div>
+<hr />
+<h2 id="delivery-guarantees">Delivery Guarantees</h2>
+<h3 id="automatic-retries">Automatic Retries</h3>
+<p>Failed webhook deliveries are automatically retried with exponential backoff:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Maximum attempts</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Base delay</td>
+<td>60 seconds</td>
+</tr>
+<tr>
+<td>Backoff multiplier</td>
+<td>2x</td>
+</tr>
+<tr>
+<td>HTTP timeout</td>
+<td>30 seconds</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Retry schedule:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Attempt</th>
+<th>Delay After Failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Immediate</td>
+</tr>
+<tr>
+<td>2</td>
+<td>60 seconds</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2 minutes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4 minutes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>8 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>After 5 failed attempts, the event is dropped.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant S as Greenlight Service
+    participant H as Webhook Dispatcher
+    participant E as Your Endpoint
+
+    S-&gt;&gt;H: Event occurs
+    H-&gt;&gt;E: POST webhook
+
+    alt Success (2xx)
+        E--&gt;&gt;H: 200 OK
+        Note over H: Delivery complete
+    else Failure (5xx/timeout)
+        E--&gt;&gt;H: 500 Error
+        Note over H: Queue for retry
+        H-&gt;&gt;H: Wait 60s
+        H-&gt;&gt;E: Retry POST
+        E--&gt;&gt;H: 200 OK
+        Note over H: Delivery complete
+    end</code></pre>
+<h3 id="what-triggers-retries">What Triggers Retries</h3>
+<p>Deliveries are <strong>retried</strong> on:</p>
+<ul>
+<li>HTTP 5xx responses (server errors)</li>
+<li>Connection timeouts</li>
+<li>Network errors (connection refused, DNS failure)</li>
+</ul>
+<p>Deliveries are <strong>not retried</strong> on:</p>
+<ul>
+<li>HTTP 2xx responses (success)</li>
+<li>HTTP 4xx responses (client errors - fix your endpoint)</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Return 500 for Temporary Failures</p>
+<p>If your endpoint encounters a temporary issue (database unavailable, rate limited),
+return HTTP 500 or 503 to trigger a retry. Return 4xx only for permanent failures
+like invalid signatures.</p>
+</div>
+<hr />
+<h2 id="managing-webhooks">Managing Webhooks</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<p>Before adding a webhook:</p>
+<ul>
+<li>A <strong>public HTTPS endpoint</strong> that can receive webhook events</li>
+<li>Access to your node's <strong>device certificate</strong></li>
+</ul>
+<h3 id="adding-a-webhook">Adding a Webhook</h3>
+<p>Initialize a scheduler and register your webhook endpoint:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Python</label><label for="__tabbed_2_2">Rust</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">glclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">Credentials</span><span class="p">,</span> <span class="n">Scheduler</span>
 
-<span class="n">certpath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;device.pem&quot;</span><span class="p">)</span>
-<span class="n">keypath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;device-key.pem&quot;</span><span class="p">)</span>
-<span class="n">capath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;ca.pem&quot;</span><span class="p">)</span>
-<span class="n">runepath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;rune&quot;</span><span class="p">)</span>
-
+<span class="c1"># Load credentials</span>
 <span class="n">creds</span> <span class="o">=</span> <span class="n">Credentials</span><span class="o">.</span><span class="n">from_parts</span><span class="p">(</span>
-    <span class="n">certpath</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
-    <span class="n">keypath</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
-    <span class="n">capath</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
-    <span class="n">runepath</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;device.pem&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;device-key.pem&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;ca.pem&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;rune&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
 <span class="p">)</span>
 
-<span class="n">node_id</span> <span class="o">=</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s2">&quot;hex-node-id&quot;</span><span class="p">)</span>
+<span class="n">node_id</span> <span class="o">=</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s2">&quot;02a1b2c3...&quot;</span><span class="p">)</span>
 
 <span class="n">scheduler</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span>
     <span class="n">node_id</span><span class="o">=</span><span class="n">node_id</span><span class="p">,</span>
     <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span>
     <span class="n">creds</span><span class="o">=</span><span class="n">creds</span>
 <span class="p">)</span>
+
+<span class="c1"># Add webhook</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">&quot;https://example.com/webhook&quot;</span><span class="p">)</span>
+
+<span class="c1"># Store the secret securely - it cannot be recovered!</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Webhook ID: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Secret: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">secret</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
-<h3 id="step-2-add-the-webhook">Step 2: Add the Webhook</h3>
-<p>Once the scheduler is initialized, add a webhook using <code>add_outgoing_webhook</code>. Ensure that your webhook URL is correctly formatted.</p>
-<div class="admonition warning">
-<p class="admonition-title">Secure Your Webhook Secret</p>
-<p>The <code>add_outgoing_webhook</code> method returns a <strong>secret</strong> used for webhook request validation. 
-Store this securely as it <strong>cannot be recovered</strong> if lost.</p>
 </div>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:1"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Rust</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">scheduler</span><span class="p">::</span><span class="n">Scheduler</span><span class="p">;</span>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">credentials</span><span class="p">::</span><span class="n">Builder</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">scheduler</span><span class="p">::</span><span class="n">Scheduler</span><span class="p">;</span>
 <span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">bitcoin</span><span class="p">::</span><span class="n">Network</span><span class="p">;</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">webhook_uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;https://example.com&quot;</span><span class="p">;</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">add_webhook_response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="n">webhook_uri</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Builder</span><span class="p">::</span><span class="n">as_device</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">with_identity</span><span class="p">(</span><span class="n">device_cert</span><span class="p">,</span><span class="w"> </span><span class="n">device_key</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">expect</span><span class="p">(</span><span class="s">&quot;Failed to build credentials&quot;</span><span class="p">);</span>
 
-<span class="n">save_secret_to_db</span><span class="p">(</span><span class="n">signer</span><span class="p">.</span><span class="n">node_id</span><span class="p">(),</span><span class="w"> </span><span class="o">&amp;</span><span class="n">add_webhook_response</span><span class="p">.</span><span class="n">secret</span><span class="p">);</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">::</span><span class="n">with_credentials</span><span class="p">(</span>
+<span class="w">    </span><span class="n">node_id</span><span class="p">,</span>
+<span class="w">    </span><span class="n">Network</span><span class="p">::</span><span class="n">Bitcoin</span><span class="p">,</span>
+<span class="w">    </span><span class="n">scheduler_uri</span><span class="p">,</span>
+<span class="w">    </span><span class="n">credentials</span>
+<span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+
+<span class="c1">// Add webhook</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span>
+<span class="w">    </span><span class="p">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s">&quot;https://example.com/webhook&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+
+<span class="c1">// Store the secret securely - it cannot be recovered!</span>
+<span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Webhook ID: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
+<span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Secret: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">secret</span><span class="p">);</span>
 </code></pre></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:1"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Python</label></div>
+</div>
+</div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Secure Your Secret</p>
+<p>The webhook secret is returned <strong>only once</strong> when you register the webhook.
+Store it securely in your secrets manager. If lost, you must delete the
+webhook and create a new one.</p>
+</div>
+<h3 id="listing-webhooks">Listing Webhooks</h3>
+<p>Retrieve all registered webhooks for a node:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Python</label><label for="__tabbed_3_2">Rust</label></div>
 <div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">&quot;https://example.com&quot;</span><span class="p">)</span>
-
-<span class="n">save_secret_to_db</span><span class="p">(</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">(),</span> <span class="n">add_webhook_response</span><span class="o">.</span><span class="n">secret</span><span class="p">)</span>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">webhooks</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">list_outgoing_webhooks</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">webhook</span> <span class="ow">in</span> <span class="n">webhooks</span><span class="o">.</span><span class="n">outgoing_webhooks</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ID: </span><span class="si">{</span><span class="n">webhook</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, URL: </span><span class="si">{</span><span class="n">webhook</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="verifying-webhook-payloads">Verifying Webhook Payloads</h2>
-<p>Webhook payloads are verified using the <strong>secret</strong> returned from <code>add_outgoing_webhook</code>. This secret is unique per node and is used to validate payloads via <strong>HMAC-SHA256 hashing</strong>. The generated hash should match the <strong>base64-encoded</strong> value in the <code>gl-signature</code> header.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="5:1"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Rust</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
 </div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">base64</span><span class="p">::</span><span class="n">Engine</span><span class="p">;</span>
-<span class="k">use</span><span class="w"> </span><span class="n">hmac</span><span class="p">::{</span><span class="n">Hmac</span><span class="p">,</span><span class="w"> </span><span class="n">Mac</span><span class="p">};</span>
-<span class="k">use</span><span class="w"> </span><span class="n">sha2</span><span class="p">::</span><span class="n">Sha256</span><span class="p">;</span>
-
-<span class="k">fn</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">secret</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="nb">String</span><span class="p">,</span><span class="w"> </span><span class="n">gl_signature</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="nb">String</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="k">mut</span><span class="w"> </span><span class="n">hmac</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Hmac</span><span class="p">::</span><span class="o">&lt;</span><span class="n">Sha256</span><span class="o">&gt;</span><span class="p">::</span><span class="n">new_from_slice</span><span class="p">(</span><span class="n">secret</span><span class="p">.</span><span class="n">as_bytes</span><span class="p">()).</span><span class="n">expect</span><span class="p">(</span><span class="s">&quot;Failed to create HMAC&quot;</span><span class="p">);</span>
-<span class="w">    </span><span class="n">hmac</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="o">&amp;</span><span class="n">message</span><span class="p">.</span><span class="n">as_bytes</span><span class="p">());</span>
-<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">hmac_output_bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">hmac</span><span class="p">.</span><span class="n">finalize</span><span class="p">().</span><span class="n">into_bytes</span><span class="p">();</span>
-
-<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">engine</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">base64</span><span class="p">::</span><span class="n">engine</span><span class="p">::</span><span class="n">general_purpose</span><span class="p">::</span><span class="n">STANDARD</span><span class="p">;</span>
-<span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">engine</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hmac_output_bytes</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="o">*</span><span class="n">gl_signature</span><span class="p">)</span>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">webhooks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">list_outgoing_webhooks</span><span class="p">().</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<span class="k">for</span><span class="w"> </span><span class="n">webhook</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">webhooks</span><span class="p">.</span><span class="n">outgoing_webhooks</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;ID: {}, URL: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">webhook</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">webhook</span><span class="p">.</span><span class="n">uri</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="6:1"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Python</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
 </div>
 </div>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">hmac</span><span class="o">,</span><span class="w"> </span><span class="nn">hashlib</span><span class="o">,</span><span class="w"> </span><span class="nn">base64</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">secret</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="n">payload_hmac</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
-        <span class="nb">bytes</span><span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="s2">&quot;UTF-8&quot;</span><span class="p">),</span> <span class="n">body</span><span class="p">,</span> <span class="n">digestmod</span><span class="o">=</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span>
-    <span class="p">)</span>
-    <span class="k">return</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">payload_hmac</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span> <span class="o">==</span> <span class="n">sig</span>
-</code></pre></div>
-<h2 id="managing-webhooks">Managing Webhooks</h2>
-<h3 id="listing-webhooks">Listing Webhooks</h3>
-<p>To retrieve registered webhooks for a node, use <code>list_outgoing_webhooks</code>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="7:1"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Rust</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
 </div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">outgoing_webhooks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">list_outgoing_webhooks</span><span class="p">().</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
-</code></pre></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="8:1"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><div class="tabbed-labels"><label for="__tabbed_8_1">Python</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="n">outgoing_webhooks</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">list_outgoing_webhooks</span><span class="p">()</span>
-</code></pre></div>
-<h3 id="deleting-webhooks">Deleting Webhooks</h3>
-<p>To delete webhooks, pass the webhook ID(s) to <code>delete_outgoing_webhook</code>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="9:1"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><div class="tabbed-labels"><label for="__tabbed_9_1">Rust</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="n">scheduler</span><span class="p">.</span><span class="n">delete_outgoing_webhooks</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
-</code></pre></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="10:1"><input checked="checked" id="__tabbed_10_1" name="__tabbed_10" type="radio" /><div class="tabbed-labels"><label for="__tabbed_10_1">Python</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="n">scheduler</span><span class="o">.</span><span class="n">delete_outgoing_webhooks</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
-</code></pre></div>
-<h2 id="rotating-webhook-secrets">Rotating Webhook Secrets</h2>
-<p>Rotating a webhook secret <strong>invalidates</strong> the old secret and generates a new one. To ensure a smooth transition:</p>
-<ol>
-<li>Add a <strong>new webhook</strong> with the same URL.</li>
-<li>Rotate the <strong>old webhook secret</strong>.</li>
-<li>Delete either the new or old webhook, depending on whether you need a <strong>static webhook ID</strong>.</li>
-</ol>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Ensure payload verification occurs <strong>before</strong> JSON parsing. Any modification to the payload before hashing will invalidate the signature.</p>
+<p>Secrets are not included in the list response for security reasons.</p>
 </div>
-<div class="tabbed-set tabbed-alternate" data-tabs="11:1"><input checked="checked" id="__tabbed_11_1" name="__tabbed_11" type="radio" /><div class="tabbed-labels"><label for="__tabbed_11_1">Rust</label></div>
+<h3 id="deleting-webhooks">Deleting Webhooks</h3>
+<p>Remove webhooks by their IDs:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Python</label><label for="__tabbed_4_2">Rust</label></div>
 <div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">secret_response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">rotate_outgoing_webhook_secret</span><span class="p">(</span><span class="mi">1</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">scheduler</span><span class="o">.</span><span class="n">delete_outgoing_webhooks</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 </code></pre></div>
-<div class="tabbed-set tabbed-alternate" data-tabs="12:1"><input checked="checked" id="__tabbed_12_1" name="__tabbed_12" type="radio" /><div class="tabbed-labels"><label for="__tabbed_12_1">Python</label></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">scheduler</span><span class="p">.</span><span class="n">delete_webhooks</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">]).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="rotating-secrets">Rotating Secrets</h3>
+<p>To rotate a webhook secret without downtime:</p>
+<ol>
+<li><strong>Add a new webhook</strong> with the same URL</li>
+<li><strong>Update your endpoint</strong> to accept both secrets temporarily</li>
+<li><strong>Delete the old webhook</strong> (or rotate its secret)</li>
+<li><strong>Remove the old secret</strong> from your endpoint</li>
+</ol>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Python</label><label for="__tabbed_5_2">Rust</label></div>
 <div class="tabbed-content">
-<div class="tabbed-block"></div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c1"># Option A: Add new webhook, delete old</span>
+<span class="n">new_response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">&quot;https://example.com/webhook&quot;</span><span class="p">)</span>
+<span class="c1"># Update your endpoint to use new_response.secret</span>
+<span class="n">scheduler</span><span class="o">.</span><span class="n">delete_outgoing_webhooks</span><span class="p">([</span><span class="n">old_webhook_id</span><span class="p">])</span>
+
+<span class="c1"># Option B: Rotate existing webhook&#39;s secret</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">rotate_outgoing_webhook_secret</span><span class="p">(</span><span class="n">webhook_id</span><span class="p">)</span>
+<span class="c1"># response.secret contains the new secret</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c1">// Rotate existing webhook&#39;s secret</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span>
+<span class="w">    </span><span class="p">.</span><span class="n">rotate_outgoing_webhook_secret</span><span class="p">(</span><span class="n">webhook_id</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<span class="c1">// response.secret contains the new secret</span>
+</code></pre></div>
 </div>
 </div>
-<div class="highlight"><pre><span></span><code><span class="n">secret_response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">rotate_outgoing_webhook_secret</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</div>
+<p><strong>Handling rotation in your endpoint:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># During rotation: accept multiple secrets</span>
+<span class="n">SECRETS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;WEBHOOK_SECRET_OLD&quot;</span><span class="p">],</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;WEBHOOK_SECRET_NEW&quot;</span><span class="p">],</span>
+<span class="p">]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">SECRETS</span><span class="p">:</span>
+        <span class="n">expected</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secret</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">payload</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">)</span>
+        <span class="n">computed</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">expected</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">computed</span><span class="p">,</span> <span class="n">signature</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div>
+<hr />
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="idempotency">Idempotency</h3>
+<p>Webhooks may be delivered more than once due to retries or network issues. Design your handlers to be idempotent using the <code>event_id</code> field.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
+
+<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">()</span>
+<span class="n">EVENT_TTL</span> <span class="o">=</span> <span class="mi">86400</span>  <span class="c1"># 24 hours</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">event_id</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;event_id&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Check if already processed (atomic set-if-not-exists)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;webhook:</span><span class="si">{</span><span class="n">event_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ex</span><span class="o">=</span><span class="n">EVENT_TTL</span><span class="p">):</span>
+        <span class="k">return</span>  <span class="c1"># Already processed, skip</span>
+
+    <span class="c1"># Process the event</span>
+    <span class="n">process_payment</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Event ID Retention</p>
+<p>Keep event IDs for at least 24 hours to handle delayed retries.
+Redis with TTL or a database table with cleanup jobs works well.</p>
+</div>
+<h3 id="response-time">Response Time</h3>
+<p>Return a response quickly (within 30 seconds). Perform heavy processing asynchronously.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">celery</span><span class="w"> </span><span class="kn">import</span> <span class="n">Celery</span>
+
+<span class="n">celery</span> <span class="o">=</span> <span class="n">Celery</span><span class="p">(</span><span class="s1">&#39;tasks&#39;</span><span class="p">,</span> <span class="n">broker</span><span class="o">=</span><span class="s1">&#39;redis://localhost&#39;</span><span class="p">)</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/webhook&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">():</span>
+    <span class="n">event</span> <span class="o">=</span> <span class="n">verify_and_parse</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="c1"># Queue for background processing</span>
+    <span class="n">process_event</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="c1"># Return immediately</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">200</span>
+
+<span class="nd">@celery</span><span class="o">.</span><span class="n">task</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_event</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="c1"># Heavy processing happens here</span>
+    <span class="o">...</span>
+</code></pre></div>
+<h3 id="error-handling">Error Handling</h3>
+<p>Use appropriate HTTP status codes:</p>
+<table>
+<thead>
+<tr>
+<th>Response</th>
+<th>When to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>200 OK</code></td>
+<td>Event processed successfully</td>
+</tr>
+<tr>
+<td><code>202 Accepted</code></td>
+<td>Event received, processing async</td>
+</tr>
+<tr>
+<td><code>400 Bad Request</code></td>
+<td>Malformed payload (won't retry)</td>
+</tr>
+<tr>
+<td><code>401 Unauthorized</code></td>
+<td>Invalid signature (won't retry)</td>
+</tr>
+<tr>
+<td><code>500 Internal Server Error</code></td>
+<td>Temporary failure (will retry)</td>
+</tr>
+<tr>
+<td><code>503 Service Unavailable</code></td>
+<td>Overloaded (will retry)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>HTTPS required</strong> - Webhook endpoints must use HTTPS with valid certificates</li>
+<li><strong>Verify signatures</strong> - Always verify the <code>gl-signature</code> header before processing</li>
+<li><strong>Validate early</strong> - Verify signatures before parsing JSON</li>
+<li><strong>Use constant-time comparison</strong> - Prevents timing attacks on signature verification</li>
+<li><strong>Store secrets securely</strong> - Use environment variables or a secrets manager</li>
+</ul>
+<h3 id="testing">Testing</h3>
+<p>For local development, use a tunneling service:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Using ngrok</span>
+ngrok<span class="w"> </span>http<span class="w"> </span><span class="m">8000</span>
+
+<span class="c1"># Register the ngrok URL as your webhook endpoint</span>
+<span class="c1"># https://abc123.ngrok.io/webhook</span>
+</code></pre></div>
+<p>Test signature verification independently:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">test_signature_verification</span><span class="p">():</span>
+    <span class="n">secret</span> <span class="o">=</span> <span class="s2">&quot;test-secret&quot;</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;{&quot;event_id&quot;:&quot;123&quot;,&quot;event_type&quot;:&quot;invoice_payment&quot;}&#39;</span>
+
+    <span class="c1"># Compute expected signature</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span>
+        <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secret</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">payload</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+
+    <span class="k">assert</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="s2">&quot;wrong&quot;</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;tampered&quot;</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -1894,10 +2857,10 @@ Store this securely as it <strong>cannot be recovered</strong> if lost.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "content.code.annotate", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "content.code.annotate", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
