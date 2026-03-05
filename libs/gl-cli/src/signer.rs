@@ -2,7 +2,9 @@ use crate::error::{Error, Result};
 use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
-use gl_client::signer::{Signer, SignerConfig, StateSignatureMode};
+use gl_client::signer::{
+    Signer, SignerConfig, StateSignatureMode, StateSignatureOverrideConfig,
+};
 use lightning_signer::bitcoin::Network;
 use std::path::Path;
 use tokio::{join, signal};
@@ -42,6 +44,10 @@ pub enum Command {
     Run {
         #[arg(long, value_enum, default_value_t = StateSignatureModeArg::Soft)]
         state_signature_mode: StateSignatureModeArg,
+        #[arg(long = "state-override")]
+        state_override: Option<String>,
+        #[arg(long = "state-override-note")]
+        state_override_note: Option<String>,
     },
     /// Prints the version of the signer used
     Version,
@@ -51,7 +57,17 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
     match cmd {
         Command::Run {
             state_signature_mode,
-        } => run_handler(config, state_signature_mode).await,
+            state_override,
+            state_override_note,
+        } => {
+            run_handler(
+                config,
+                state_signature_mode,
+                state_override,
+                state_override_note,
+            )
+            .await
+        }
         Command::Version => version(config).await,
     }
 }
@@ -59,6 +75,8 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
 async fn run_handler<P: AsRef<Path>>(
     config: Config<P>,
     state_signature_mode: StateSignatureModeArg,
+    state_override: Option<String>,
+    state_override_note: Option<String>,
 ) -> Result<()> {
     // Check if we can find a seed file, if we can not find one, we need to register first.
     let seed_path = config.data_dir.as_ref().join(SEED_FILE_NAME);
@@ -84,12 +102,27 @@ async fn run_handler<P: AsRef<Path>>(
             )))
         }
     };
+
+    if state_override.is_none() && state_override_note.is_some() {
+        return Err(Error::custom(
+            "--state-override-note requires --state-override",
+        ));
+    }
+
+    let state_signature_override = state_override.map(|ack| {
+        StateSignatureOverrideConfig {
+            ack,
+            note: state_override_note,
+        }
+    });
+
     let signer = Signer::new_with_config(
         seed,
         config.network,
         creds.clone(),
         SignerConfig {
             state_signature_mode: state_signature_mode.into(),
+            state_signature_override,
         },
     )
     .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
@@ -130,7 +163,13 @@ mod tests {
         match cli.cmd {
             Command::Run {
                 state_signature_mode,
-            } => assert_eq!(state_signature_mode, StateSignatureModeArg::Hard),
+                state_override,
+                state_override_note,
+            } => {
+                assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
+                assert!(state_override.is_none());
+                assert!(state_override_note.is_none());
+            }
             _ => panic!("expected run command"),
         }
     }
@@ -141,7 +180,13 @@ mod tests {
         match cli.cmd {
             Command::Run {
                 state_signature_mode,
-            } => assert_eq!(state_signature_mode, StateSignatureModeArg::Soft),
+                state_override,
+                state_override_note,
+            } => {
+                assert_eq!(state_signature_mode, StateSignatureModeArg::Soft);
+                assert!(state_override.is_none());
+                assert!(state_override_note.is_none());
+            }
             _ => panic!("expected run command"),
         }
     }
@@ -159,8 +204,43 @@ mod tests {
         match cli.cmd {
             RootCommand::Signer(Command::Run {
                 state_signature_mode,
-            }) => assert_eq!(state_signature_mode, StateSignatureModeArg::Off),
+                state_override,
+                state_override_note,
+            }) => {
+                assert_eq!(state_signature_mode, StateSignatureModeArg::Off);
+                assert!(state_override.is_none());
+                assert!(state_override_note.is_none());
+            }
             _ => panic!("expected signer run"),
+        }
+    }
+
+    #[test]
+    fn parse_override_flags() {
+        let cli = TestCli::parse_from([
+            "test",
+            "run",
+            "--state-signature-mode",
+            "hard",
+            "--state-override",
+            "I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE",
+            "--state-override-note",
+            "debug session",
+        ]);
+        match cli.cmd {
+            Command::Run {
+                state_signature_mode,
+                state_override,
+                state_override_note,
+            } => {
+                assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
+                assert_eq!(
+                    state_override.as_deref(),
+                    Some("I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE")
+                );
+                assert_eq!(state_override_note.as_deref(), Some("debug session"));
+            }
+            _ => panic!("expected run command"),
         }
     }
 }
