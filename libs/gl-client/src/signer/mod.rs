@@ -58,6 +58,7 @@ const RUNE_VERSION: &str = "gl0";
 const RUNE_DERIVATION_SECRET: &str = "gl-commando";
 const STATE_DERIVATION_SECRET: &str = "greenlight/state-signing/v1";
 const STATE_SIGNING_DOMAIN: &[u8] = b"greenlight/state-signing/v1\0";
+const STATE_SIGNATURE_OVERRIDE_ACK: &str = "I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE";
 const COMPACT_SIGNATURE_LEN: usize = 64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,9 +74,28 @@ impl Default for StateSignatureMode {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StateSignatureOverrideConfig {
+    pub ack: String,
+    pub note: Option<String>,
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
+    pub state_signature_override: Option<StateSignatureOverrideConfig>,
+}
+
+#[derive(Debug, Default)]
+struct OverrideSignatureUsage {
+    missing_keys: Vec<String>,
+    invalid_keys: Vec<String>,
+}
+
+impl OverrideSignatureUsage {
+    fn is_used(&self) -> bool {
+        !self.missing_keys.is_empty() || !self.invalid_keys.is_empty()
+    }
 }
 
 #[derive(Clone)]
@@ -84,6 +104,8 @@ pub struct Signer {
     state_signing_secret: SecretKey,
     state_signing_pubkey: PublicKey,
     state_signature_mode: StateSignatureMode,
+    state_signature_override_enabled: bool,
+    state_signature_override_note: Option<String>,
     master_rune: Rune,
     services: NodeServices,
     tls: TlsConfig,
@@ -156,6 +178,37 @@ impl Signer {
         use lightning_signer::util::clock::StandardClock;
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
+        let state_signature_mode = config.state_signature_mode;
+        let (state_signature_override_enabled, state_signature_override_note) =
+            match config.state_signature_override {
+                Some(override_config) => {
+                    if state_signature_mode == StateSignatureMode::Off {
+                        return Err(anyhow!(
+                            "state signature override is incompatible with state signature mode off"
+                        ));
+                    }
+
+                    if override_config.ack != STATE_SIGNATURE_OVERRIDE_ACK {
+                        return Err(anyhow!(
+                            "invalid state signature override ack, expected {}",
+                            STATE_SIGNATURE_OVERRIDE_ACK
+                        ));
+                    }
+
+                    let note = override_config
+                        .note
+                        .and_then(|n| {
+                            let trimmed = n.trim().to_string();
+                            if trimmed.is_empty() {
+                                None
+                            } else {
+                                Some(trimmed)
+                            }
+                        });
+                    (true, note)
+                }
+                None => (false, None),
+            };
         let mut sec: [u8; 32] = [0; 32];
         sec.copy_from_slice(&secret[0..32]);
 
@@ -255,7 +308,9 @@ impl Signer {
             secret: sec,
             state_signing_secret,
             state_signing_pubkey,
-            state_signature_mode: config.state_signature_mode,
+            state_signature_mode,
+            state_signature_override_enabled,
+            state_signature_override_note,
             master_rune: mr,
             services,
             tls: creds.tls_config(),
@@ -386,31 +441,98 @@ impl Signer {
         Ok(())
     }
 
-    fn verify_incoming_state_signatures(&self, entries: &[SignerStateEntry]) -> Result<(), Error> {
+    fn state_signature_mode_label(&self) -> &'static str {
+        match self.state_signature_mode {
+            StateSignatureMode::Off => "off",
+            StateSignatureMode::Soft => "soft",
+            StateSignatureMode::Hard => "hard",
+        }
+    }
+
+    fn inspect_incoming_state_signatures(
+        &self,
+        entries: &[SignerStateEntry],
+    ) -> Result<OverrideSignatureUsage, Error> {
         if self.state_signature_mode == StateSignatureMode::Off {
-            return Ok(());
+            return Ok(OverrideSignatureUsage::default());
         }
 
-        for entry in entries {
+        let mut usage = OverrideSignatureUsage::default();
+        let mut first_error: Option<anyhow::Error> = None;
+
+        for entry in entries.iter() {
             if entry.signature.is_empty() {
                 if self.state_signature_mode == StateSignatureMode::Hard {
-                    return Err(Error::Other(anyhow!(
-                        "missing state signature for key {}",
-                        entry.key
-                    )));
+                    usage.missing_keys.push(entry.key.clone());
+                    if first_error.is_none() {
+                        first_error = Some(anyhow!("missing state signature for key {}", entry.key));
+                    }
                 }
                 continue;
             }
 
-            self.verify_state_entry_signature(entry).map_err(|e| {
-                Error::Other(anyhow!(
-                    "invalid state signature for key {}: {}",
-                    entry.key,
-                    e
-                ))
-            })?;
+            if let Err(e) = self.verify_state_entry_signature(entry) {
+                usage.invalid_keys.push(entry.key.clone());
+                if first_error.is_none() {
+                    first_error = Some(anyhow!("invalid state signature for key {}: {}", entry.key, e));
+                }
+            }
         }
-        Ok(())
+
+        if usage.is_used() && !self.state_signature_override_enabled {
+            return Err(Error::Other(
+                first_error
+                    .unwrap_or_else(|| anyhow!("state signature verification failed unexpectedly")),
+            ));
+        }
+
+        Ok(usage)
+    }
+
+    async fn report_state_signature_override_enabled(&self) {
+        if !self.state_signature_override_enabled {
+            return;
+        }
+
+        let message = report::build_state_signature_override_enabled_message(
+            self.state_signature_mode_label(),
+            &self.id,
+            self.state_signature_override_note.as_deref(),
+        );
+        warn!("{}", message);
+        report::Reporter::report(crate::pb::scheduler::SignerRejection {
+            msg: message,
+            request: None,
+            git_version: GITHASH.to_string(),
+            node_id: self.node_id(),
+        })
+        .await;
+    }
+
+    async fn report_state_signature_override_usage(
+        &self,
+        req: &HsmRequest,
+        usage: &OverrideSignatureUsage,
+    ) {
+        if !usage.is_used() || !self.state_signature_override_enabled {
+            return;
+        }
+
+        let message = report::build_state_signature_override_used_message(
+            self.state_signature_mode_label(),
+            req.request_id as u64,
+            &usage.missing_keys,
+            &usage.invalid_keys,
+            self.state_signature_override_note.as_deref(),
+        );
+        warn!("{}", message);
+        report::Reporter::report(crate::pb::scheduler::SignerRejection {
+            msg: message,
+            request: Some(req.clone()),
+            git_version: GITHASH.to_string(),
+            node_id: self.node_id(),
+        })
+        .await;
     }
 
     /// Filter out any request that is not signed, such that the
@@ -614,8 +736,17 @@ impl Signer {
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
         debug!("Processing request {:?}", req);
-        self.verify_incoming_state_signatures(&req.signer_state)?;
-        let incoming_state: crate::persist::State = req.signer_state.clone().into();
+        let req = req;
+
+        let signature_usage = self.inspect_incoming_state_signatures(&req.signer_state)?;
+        if signature_usage.is_used() {
+            self.report_state_signature_override_usage(&req, &signature_usage)
+                .await;
+        }
+
+        let incoming_state = crate::persist::State::try_from(req.signer_state.as_slice())
+            .map_err(|e| Error::Other(anyhow!("Failed to decode signer state: {e}")))?;
+
 
         // Create sketch from incoming state (nodelet's view) so we can
         // send back any entries the nodelet doesn't know about yet,
@@ -945,6 +1076,7 @@ impl Signer {
     pub async fn run_forever(&self, shutdown: mpsc::Receiver<()>) -> Result<(), anyhow::Error> {
         let scheduler_uri = crate::utils::scheduler_uri();
         debug!("Starting signer run loop");
+        self.report_state_signature_override_enabled().await;
         let res = Self::run_forever_with_uri(&self, shutdown, scheduler_uri).await;
         debug!("Exited signer run loop");
         res
@@ -1450,6 +1582,13 @@ mod tests {
     use serde_json::json;
     use vls_protocol::msgs::SerBolt;
 
+    fn test_override_config(note: Option<&str>) -> StateSignatureOverrideConfig {
+        StateSignatureOverrideConfig {
+            ack: STATE_SIGNATURE_OVERRIDE_ACK.to_string(),
+            note: note.map(str::to_string),
+        }
+    }
+
     fn mk_signer(mode: StateSignatureMode) -> Signer {
         Signer::new_with_config(
             vec![0u8; 32],
@@ -1457,6 +1596,20 @@ mod tests {
             credentials::Nobody::default(),
             SignerConfig {
                 state_signature_mode: mode,
+                state_signature_override: None,
+            },
+        )
+        .unwrap()
+    }
+
+    fn mk_signer_with_override(mode: StateSignatureMode, note: Option<&str>) -> Signer {
+        Signer::new_with_config(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: mode,
+                state_signature_override: Some(test_override_config(note)),
             },
         )
         .unwrap()
@@ -1531,7 +1684,7 @@ mod tests {
     #[test]
     fn test_state_signature_roundtrip() {
         let signer = mk_signer(StateSignatureMode::Soft);
-        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        let mut entry = mk_state_entry("state/test", 1, json!({"v": 1}));
         entry.signature = signer
             .sign_state_payload(&entry.key, entry.version, &entry.value)
             .unwrap();
@@ -1541,7 +1694,7 @@ mod tests {
     #[tokio::test]
     async fn test_soft_mode_accepts_missing_signature_and_repairs() {
         let signer = mk_signer(StateSignatureMode::Soft);
-        let key = "nodes/test".to_string();
+        let key = "state/test".to_string();
         let req = HsmRequest {
             request_id: 42,
             context: None,
@@ -1561,7 +1714,7 @@ mod tests {
     #[tokio::test]
     async fn test_soft_mode_rejects_invalid_signature() {
         let signer = mk_signer(StateSignatureMode::Soft);
-        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        let mut entry = mk_state_entry("state/test", 1, json!({"v": 1}));
         entry.signature = vec![1u8; COMPACT_SIGNATURE_LEN];
         let err = signer
             .process_request(HsmRequest {
@@ -1585,7 +1738,7 @@ mod tests {
                 request_id: 0,
                 context: None,
                 raw: heartbeat_raw(),
-                signer_state: vec![mk_state_entry("nodes/test", 1, json!({"v": 1}))],
+                signer_state: vec![mk_state_entry("state/test", 1, json!({"v": 1}))],
                 requests: vec![],
             })
             .await
@@ -1597,7 +1750,7 @@ mod tests {
     #[tokio::test]
     async fn test_hard_mode_rejects_invalid_signature() {
         let signer = mk_signer(StateSignatureMode::Hard);
-        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        let mut entry = mk_state_entry("state/test", 1, json!({"v": 1}));
         entry.signature = vec![2u8; COMPACT_SIGNATURE_LEN];
         let err = signer
             .process_request(HsmRequest {
@@ -1616,7 +1769,7 @@ mod tests {
     #[tokio::test]
     async fn test_hard_mode_accepts_valid_signature() {
         let signer = mk_signer(StateSignatureMode::Hard);
-        let mut entry = mk_state_entry("nodes/test", 1, json!({"v": 1}));
+        let mut entry = mk_state_entry("state/test", 1, json!({"v": 1}));
         entry.signature = signer
             .sign_state_payload(&entry.key, entry.version, &entry.value)
             .unwrap();
@@ -1636,9 +1789,9 @@ mod tests {
     #[tokio::test]
     async fn test_off_mode_accepts_invalid_and_missing_signatures() {
         let signer = mk_signer(StateSignatureMode::Off);
-        let mut invalid = mk_state_entry("nodes/invalid", 1, json!({"v": 1}));
+        let mut invalid = mk_state_entry("state/invalid", 1, json!({"v": 1}));
         invalid.signature = vec![3u8; COMPACT_SIGNATURE_LEN];
-        let missing = mk_state_entry("nodes/missing", 1, json!({"v": 2}));
+        let missing = mk_state_entry("state/missing", 1, json!({"v": 2}));
         let res = signer
             .process_request(HsmRequest {
                 request_id: 0,
@@ -1649,6 +1802,172 @@ mod tests {
             })
             .await;
         assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_soft_mode_override_accepts_invalid_across_requests() {
+        let signer = mk_signer_with_override(StateSignatureMode::Soft, Some("test override"));
+
+        let mut invalid1 = mk_state_entry("state/invalid1", 1, json!({"v": 1}));
+        invalid1.signature = vec![4u8; COMPACT_SIGNATURE_LEN];
+        signer
+            .process_request(HsmRequest {
+                request_id: 1,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![invalid1],
+            requests: vec![],
+            })
+            .await
+            .unwrap();
+        let snapshot1: Vec<SignerStateEntry> = {
+            let state_guard = signer.state.lock().unwrap();
+            state_guard.clone().into()
+        };
+        let persisted1 = snapshot1.iter().find(|e| e.key == "state/invalid1").unwrap();
+        assert_eq!(persisted1.signature, vec![4u8; COMPACT_SIGNATURE_LEN]);
+
+        let mut invalid2 = mk_state_entry("state/invalid2", 1, json!({"v": 2}));
+        invalid2.signature = vec![5u8; COMPACT_SIGNATURE_LEN];
+        let res2 = signer
+            .process_request(HsmRequest {
+                request_id: 2,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![invalid2],
+                requests: vec![],
+            })
+            .await;
+        assert!(res2.is_ok());
+
+        let snapshot2: Vec<SignerStateEntry> = {
+            let state_guard = signer.state.lock().unwrap();
+            state_guard.clone().into()
+        };
+        let persisted2 = snapshot2.iter().find(|e| e.key == "state/invalid2").unwrap();
+        assert_eq!(persisted2.signature, vec![5u8; COMPACT_SIGNATURE_LEN]);
+    }
+
+    #[tokio::test]
+    async fn test_hard_mode_override_accepts_missing_across_requests() {
+        let signer = mk_signer_with_override(StateSignatureMode::Hard, Some("test override"));
+
+        for (key, request_id) in [("state/missing1", 10u32), ("state/missing2", 11u32)] {
+            signer
+                .process_request(HsmRequest {
+                    request_id,
+                    context: None,
+                    raw: heartbeat_raw(),
+                    signer_state: vec![mk_state_entry(key, 1, json!({"v": request_id}))],
+                    requests: vec![],
+                })
+                .await
+                .unwrap();
+            let snapshot: Vec<SignerStateEntry> = {
+                let state_guard = signer.state.lock().unwrap();
+                state_guard.clone().into()
+            };
+            let persisted = snapshot.iter().find(|entry| entry.key == key).unwrap();
+            assert_eq!(persisted.signature.len(), COMPACT_SIGNATURE_LEN);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_hard_mode_override_accepts_invalid_signature() {
+        let signer = mk_signer_with_override(StateSignatureMode::Hard, Some("test override"));
+        let mut invalid = mk_state_entry("state/invalid-hard", 1, json!({"v": 3}));
+        invalid.signature = vec![6u8; COMPACT_SIGNATURE_LEN];
+
+        signer
+            .process_request(HsmRequest {
+                request_id: 12,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![invalid],
+                requests: vec![],
+            })
+            .await
+            .unwrap();
+
+        let snapshot: Vec<SignerStateEntry> = {
+            let state_guard = signer.state.lock().unwrap();
+            state_guard.clone().into()
+        };
+        let persisted = snapshot
+            .iter()
+            .find(|entry| entry.key == "state/invalid-hard")
+            .unwrap();
+        assert_eq!(persisted.signature, vec![6u8; COMPACT_SIGNATURE_LEN]);
+    }
+
+    #[tokio::test]
+    async fn test_override_preserves_invalid_signature_without_touching_valid_signature() {
+        let signer = mk_signer_with_override(StateSignatureMode::Soft, Some("repair"));
+
+        let mut valid = mk_state_entry("state/valid", 1, json!({"v": 1}));
+        valid.signature = signer
+            .sign_state_payload(&valid.key, valid.version, &valid.value)
+            .unwrap();
+        let mut invalid = mk_state_entry("state/invalid", 1, json!({"v": 2}));
+        invalid.signature = vec![7u8; COMPACT_SIGNATURE_LEN];
+
+        signer
+            .process_request(HsmRequest {
+                request_id: 13,
+                context: None,
+                raw: heartbeat_raw(),
+                signer_state: vec![valid.clone(), invalid],
+                requests: vec![],
+            })
+            .await
+            .unwrap();
+
+        let snapshot: Vec<SignerStateEntry> = {
+            let state_guard = signer.state.lock().unwrap();
+            state_guard.clone().into()
+        };
+
+        let persisted_valid = snapshot.iter().find(|entry| entry.key == "state/valid").unwrap();
+        let preserved_invalid = snapshot
+            .iter()
+            .find(|entry| entry.key == "state/invalid")
+            .unwrap();
+
+        assert_eq!(persisted_valid.signature, valid.signature);
+        assert_eq!(preserved_invalid.signature, vec![7u8; COMPACT_SIGNATURE_LEN]);
+    }
+
+    #[test]
+    fn test_override_rejected_when_mode_off() {
+        let signer = Signer::new_with_config(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: StateSignatureMode::Off,
+                state_signature_override: Some(test_override_config(Some("test"))),
+            },
+        );
+        let err = signer.err().unwrap().to_string();
+        assert!(err.contains("incompatible with state signature mode off"));
+    }
+
+    #[test]
+    fn test_override_rejected_for_invalid_ack() {
+        let signer = Signer::new_with_config(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: StateSignatureMode::Soft,
+                state_signature_override: Some(StateSignatureOverrideConfig {
+                    ack: "WRONG".to_string(),
+                    note: None,
+                }),
+            },
+        );
+        let err = signer.err().unwrap().to_string();
+        assert!(err.contains("invalid state signature override ack"));
     }
 
     #[tokio::test]
