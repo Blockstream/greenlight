@@ -238,15 +238,42 @@ quickStart();
 | `label`       | `string` | Label assigned to the invoice          |
 | `amountMsat`  | `number` | Amount received in millisatoshis       |
 
-## Development
+## Testing
 
-### Running Tests
+The test setup starts and stops all required infrastructure automatically.
+
+### Running the Tests
 
 ```bash
+# Run all tests
 npm test
+
+# Run with verbose infrastructure logs
+VERBOSE=1 npm test
+
+# Run a specific test file
+npm test -- --verbose tests/node.spec.ts
 ```
 
-### Local npm Publishing
+### How It Works
+
+The global setup script `./tests/jest.globalSetup.ts` automatically:
+- Starts `test_setup.py`, spinning up bitcoind, the Greenlight scheduler, and an LSPS2-compatible LSP node
+- Waits for all services to be ready
+- Injects the required environment variables (`GL_SCHEDULER_GRPC_URI`, `GL_CA_CRT`, `GL_NOBODY_CRT`, `GL_NOBODY_KEY`, `LSP_RPC_SOCKET`, `LSP_NODE_ID`, `LSP_PROMISE_SECRET`, `GL_FUND_SERVER`)
+- Shuts everything down after all tests complete
+
+### Test Helpers
+
+`test.helper.ts` provides utilities for interacting with the running infrastructure:
+
+| Function | Description |
+|----------|-------------|
+| `fundNode(node, amountSats?)` | Funds a test node with on-chain Bitcoin, waiting until the node detects the confirmed UTXO |
+| `lspInfo()` | Returns the LSP node's RPC socket, node ID, and promise secret |
+
+
+## Local npm Publishing
 This workflow only builds for local platform. For multi-platform builds, use the GitHub Actions workflow which cross-compiles for all supported targets.
 
 ```bash
