@@ -410,7 +410,7 @@ impl Signer {
         version: u64,
         value: &[u8],
     ) -> Result<Vec<u8>, anyhow::Error> {
-        let digest = Self::state_signature_digest(key, version, value);
+        let digest = Self::state_signature_digest(key, version, &value);
         let msg = SecpMessage::from_digest_slice(&digest).map_err(|e| {
             anyhow!(
                 "failed to build state signature digest for key {}: {}",
