@@ -1,3 +1,5 @@
+mod canonical;
+
 use anyhow::anyhow;
 use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::chain::tracker::ChainTracker;
@@ -18,6 +20,8 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+use self::canonical::{canonical_json_bytes, CanonicalJsonValue};
 
 const NODE_PREFIX: &str = "nodes";
 const NODE_STATE_PREFIX: &str = "nodestates";
@@ -41,6 +45,10 @@ impl StateEntry {
             signature: vec![],
         }
     }
+
+    fn canonical_value_bytes(&self) -> anyhow::Result<Vec<u8>> {
+        canonical_json_bytes(&self.value)
+    }
 }
 
 impl Serialize for StateEntry {
@@ -55,7 +63,7 @@ impl Serialize for StateEntry {
         };
 
         seq.serialize_element(&self.version)?;
-        seq.serialize_element(&self.value)?;
+        seq.serialize_element(&CanonicalJsonValue(&self.value))?;
         if !self.signature.is_empty() {
             seq.serialize_element(&self.signature)?;
         }
@@ -500,8 +508,7 @@ impl State {
             if !entry.signature.is_empty() {
                 continue;
             }
-            let value = serde_json::to_vec(&entry.value)
-                .map_err(|e| anyhow!("failed to serialize state value for key {key}: {e}"))?;
+            let value = entry.canonical_value_bytes()?;
             let signature = signer(key, entry.version, &value)?;
             entry.signature = signature;
             changed += 1;
@@ -589,7 +596,9 @@ impl Into<Vec<crate::pb::SignerStateEntry>> for State {
             .iter()
             .map(|(k, v)| crate::pb::SignerStateEntry {
                 key: k.to_owned(),
-                value: serde_json::to_vec(&v.value).unwrap(),
+                value: v
+                    .canonical_value_bytes()
+                    .expect("canonical signer state value"),
                 version: v.version,
                 signature: v.signature.clone(),
             })
@@ -1048,6 +1057,18 @@ mod tests {
     }
 
     #[test]
+    fn state_entry_canonical_value_bytes_sorts_nested_object_keys() {
+        let entry = StateEntry::new(0, json!({
+            "z": {"b": 1, "a": 2},
+            "a": [{"d": 4, "c": 3}]
+        }));
+
+        let bytes = entry.canonical_value_bytes().unwrap();
+
+        assert_eq!(bytes, br#"{"a":[{"c":3,"d":4}],"z":{"a":2,"b":1}}"#);
+    }
+
+    #[test]
     fn signer_state_entry_conversions_preserve_signature() {
         let entries = vec![SignerStateEntry {
             version: 5,
@@ -1064,6 +1085,22 @@ mod tests {
 
         let roundtrip: Vec<SignerStateEntry> = state.into();
         assert_eq!(roundtrip, entries);
+    }
+
+    #[test]
+    fn signer_state_entry_conversions_emit_canonical_value_bytes() {
+        let entries = vec![SignerStateEntry {
+            version: 6,
+            key: "k".to_string(),
+            value: br#"{ "b": 1, "a": 2 }"#.to_vec(),
+            signature: vec![11, 12],
+        }];
+
+        let state: State = entries.into();
+        let roundtrip: Vec<SignerStateEntry> = state.into();
+        assert_eq!(roundtrip.len(), 1);
+        assert_eq!(roundtrip[0].value, br#"{"a":2,"b":1}"#);
+        assert_eq!(roundtrip[0].signature, vec![11, 12]);
     }
 
     #[test]
