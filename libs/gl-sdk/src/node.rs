@@ -76,7 +76,10 @@ impl Node {
         let res = exec(gl_client.lsp_invoice(req))
             .map_err(|s| Error::Rpc(s.to_string()))?
             .into_inner();
-        Ok(ReceiveResponse { bolt11: res.bolt11 })
+        Ok(ReceiveResponse {
+            bolt11: res.bolt11,
+            opening_fee_msat: res.opening_fee_msat,
+        })
     }
 
     pub fn send(&self, invoice: String, amount_msat: Option<u64>) -> Result<SendResponse, Error> {
@@ -330,6 +333,9 @@ impl From<clnpb::PayResponse> for SendResponse {
 #[derive(uniffi::Record)]
 pub struct ReceiveResponse {
     pub bolt11: String,
+    /// The fee charged by the LSP for opening a JIT channel, in
+    /// millisatoshi. This is 0 if no JIT channel was needed.
+    pub opening_fee_msat: u64,
 }
 
 #[derive(uniffi::Enum, Clone)]

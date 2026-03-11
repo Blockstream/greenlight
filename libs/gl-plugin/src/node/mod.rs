@@ -247,6 +247,7 @@ impl Node for PluginNodeServer {
                     expires_at: res.expires_at as u32,
                     payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(&res.payment_hash).to_vec(),
                     payment_secret: res.payment_secret.to_vec(),
+                    opening_fee_msat: 0,
                 }));
             }
 
@@ -279,8 +280,18 @@ impl Node for PluginNodeServer {
         let lsp = &lsps[0];
         log::info!("Selecting {:?} for invoice negotiation", lsp);
 
+        // Compute the expected opening fee from the LSP's fee parameters.
+        let opening_fee_msat = lsp.params.first().map_or(0, |p| {
+            let min_fee: u64 = p.min_fee_msat.parse().unwrap_or(0);
+            let proportional_fee = req
+                .amount_msat
+                .saturating_mul(p.proportional)
+                .div_ceil(1_000_000);
+            std::cmp::max(min_fee, proportional_fee)
+        });
+
         // Use the new RPC method name for versions > v25.05gl1
-        let res = if *version > *"v25.05gl1" {
+        let mut res = if *version > *"v25.05gl1" {
             let mut invreq: crate::requests::LspInvoiceRequestV2 = req.into();
             invreq.lsp_id = lsp.node_id.to_owned();
             rpc.call_typed(&invreq)
@@ -294,6 +305,7 @@ impl Node for PluginNodeServer {
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
         };
 
+        res.opening_fee_msat = opening_fee_msat;
         Ok(Response::new(res.into()))
     }
 
