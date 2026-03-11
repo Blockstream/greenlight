@@ -187,8 +187,8 @@ message NodeConfig {
 
 
 // The `GlConfig` is used to pass greenlight-specific startup parameters
-// to the node. The `gl-plugin` will look for a serialized config object in 
-// the node's datastore to load these values from. Please refer to the 
+// to the node. The `gl-plugin` will look for a serialized config object in
+// the node's datastore to load these values from. Please refer to the
 // individual fields to learn what they do.
 message GlConfig {
 	string close_to_addr = 1;
@@ -240,7 +240,7 @@ message LspInvoiceRequest {
   // Optional: for discounts/API keys
   string token = 2; // len=0 => None
   // Pass-through of cln invoice rpc params
-  uint64 amount_msat = 3;  // 0 => Any
+  uint64 amount_msat = 3; // 0 => Any
   string description = 4;
   string label = 5;
 }
@@ -250,6 +250,10 @@ message LspInvoiceResponse {
   uint32 expires_at = 3;
   bytes payment_hash = 4;
   bytes payment_secret = 5;
+  // The fee charged by the LSP for opening a JIT channel, in
+  // millisatoshi. This is 0 if the node already had sufficient
+  // incoming capacity and no JIT channel was needed.
+  uint64 opening_fee_msat = 6;
 }
 
 // Request for streaming node events. Currently empty but defined as

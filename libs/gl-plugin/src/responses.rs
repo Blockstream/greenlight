@@ -341,6 +341,10 @@ pub struct InvoiceResponse {
     pub expires_at: u32,
     pub payment_hash: String,
     pub payment_secret: String,
+    /// LSP opening fee in millisatoshi. Not returned by CLN, but set
+    /// by the caller based on LSPS2 fee parameters.
+    #[serde(default)]
+    pub opening_fee_msat: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -369,6 +373,7 @@ impl From<InvoiceResponse> for crate::pb::LspInvoiceResponse {
             expires_at: o.expires_at,
             payment_hash: hex::decode(o.payment_hash).unwrap(),
             payment_secret: hex::decode(o.payment_secret).unwrap(),
+            opening_fee_msat: o.opening_fee_msat,
         }
     }
 }
@@ -414,6 +419,7 @@ mod test {
             expires_at: 123,
             payment_hash: "AABBCCDDEEFF".to_owned(),
             payment_secret: "1122334455".to_owned(),
+            opening_fee_msat: 0,
         }];
 
         for t in tests {

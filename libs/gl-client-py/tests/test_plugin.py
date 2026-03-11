@@ -236,3 +236,8 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     assert len(inv.route_hints.route_hints) == 1
     rh = inv.route_hints.route_hints[0]
     assert rh.pubkey == bytes.fromhex(lsp_id)
+
+    # The response should include the LSP opening fee computed from
+    # the LSPS2 fee parameters (min_fee_msat=1000, proportional=1000).
+    # For 31337 msat: max(1000, ceil(31337 * 1000 / 1_000_000)) = 1000
+    assert res.opening_fee_msat == 1000

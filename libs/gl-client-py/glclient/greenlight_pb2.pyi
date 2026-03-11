@@ -369,8 +369,8 @@ Global___NodeConfig: _TypeAlias = NodeConfig  # noqa: Y015
 @_typing.final
 class GlConfig(_message.Message):
     """The `GlConfig` is used to pass greenlight-specific startup parameters
-    to the node. The `gl-plugin` will look for a serialized config object in 
-    the node's datastore to load these values from. Please refer to the 
+    to the node. The `gl-plugin` will look for a serialized config object in
+    the node's datastore to load these values from. Please refer to the
     individual fields to learn what they do.
     """
 
@@ -568,11 +568,17 @@ class LspInvoiceResponse(_message.Message):
     EXPIRES_AT_FIELD_NUMBER: _builtins.int
     PAYMENT_HASH_FIELD_NUMBER: _builtins.int
     PAYMENT_SECRET_FIELD_NUMBER: _builtins.int
+    OPENING_FEE_MSAT_FIELD_NUMBER: _builtins.int
     bolt11: _builtins.str
     created_index: _builtins.int
     expires_at: _builtins.int
     payment_hash: _builtins.bytes
     payment_secret: _builtins.bytes
+    opening_fee_msat: _builtins.int
+    """The fee charged by the LSP for opening a JIT channel, in
+    millisatoshi. This is 0 if the node already had sufficient
+    incoming capacity and no JIT channel was needed.
+    """
     def __init__(
         self,
         *,
@@ -581,8 +587,9 @@ class LspInvoiceResponse(_message.Message):
         expires_at: _builtins.int = ...,
         payment_hash: _builtins.bytes = ...,
         payment_secret: _builtins.bytes = ...,
+        opening_fee_msat: _builtins.int = ...,
     ) -> None: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["bolt11", b"bolt11", "created_index", b"created_index", "expires_at", b"expires_at", "payment_hash", b"payment_hash", "payment_secret", b"payment_secret"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["bolt11", b"bolt11", "created_index", b"created_index", "expires_at", b"expires_at", "opening_fee_msat", b"opening_fee_msat", "payment_hash", b"payment_hash", "payment_secret", b"payment_secret"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
 
 Global___LspInvoiceResponse: _TypeAlias = LspInvoiceResponse  # noqa: Y015
