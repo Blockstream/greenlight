@@ -1,25 +1,22 @@
-import * as crypto from 'crypto';
-import * as bip39 from 'bip39';
-import { Credentials, Scheduler, Signer, Node } from '../index.js';
-import { fundWallet, lspInfo } from './test.helper';
+import { Handle, Node, Scheduler } from '../index.js';
+import { getGLNode, fundWallet, getLspInvoice } from './test.helper';
 
 describe('Node', () => {
+  let scheduler: Scheduler = new Scheduler('regtest');
+  let glNodes: Array<{ node: Node; handle: Handle }> = [];
   let node: Node;
-  let credentials: Credentials;
 
   beforeEach(async () => {
-    const rand: Buffer = crypto.randomBytes(16);
-    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    const scheduler = new Scheduler('regtest');
-    const signer = new Signer(MNEMONIC);
-    credentials = await scheduler.register(signer);
-    node = new Node(credentials);
+    glNodes.push(await getGLNode(scheduler, false));
+    node = glNodes[0].node;
   });
 
   afterEach(async () => {
-    if (node) {
-      await node.stop();
+    for (const { node: n, handle: h } of glNodes) {
+      h.stop();
+      await n.stop();
     }
+    glNodes = [];
   });
 
   it('can be constructed from credentials', async () => {
@@ -111,45 +108,33 @@ describe('Node', () => {
   });
 
   describe('calls onchainSend', () => {
-    it.skip('can attempt to send specific amount on-chain', async () => {
+    it('can send specific amount on-chain', async () => {
       await fundWallet(node, 500_000_000);
-      const rand2: Buffer = crypto.randomBytes(16);
-      const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-      const scheduler2 = new Scheduler('regtest');
-      const signer2 = new Signer(MNEMONIC2);
-      const credentials2 = await scheduler2.register(signer2);
-      const node2 = new Node(credentials2);
-      const destAddress = (await node2.onchainReceive()).bech32;
+      const extraGLNode = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
+      glNodes.push(extraGLNode);
+      const destAddress = (await extraGLNode.node.onchainReceive()).bech32;
       const response = await node.onchainSend(destAddress, '10000sat');
       expect(response).toBeTruthy();
     });
 
-    it.skip('can attempt to send all funds on-chain', async () => {
+    it('can attempt to send all funds on-chain', async () => {
       await fundWallet(node, 500_000_000);
-      const rand2: Buffer = crypto.randomBytes(16);
-      const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-      const scheduler2 = new Scheduler('regtest');
-      const signer2 = new Signer(MNEMONIC2);
-      const credentials2 = await scheduler2.register(signer2);
-      const node2 = new Node(credentials2);
-      const destAddress = (await node2.onchainReceive()).bech32;
+      const extraGLNode = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
+      glNodes.push(extraGLNode);
+      const destAddress = (await extraGLNode.node.onchainReceive()).bech32;
       const response = await node.onchainSend(destAddress, 'all');
       expect(response).toBeTruthy();
     });
   });
 
   describe('calls receive', () => {
-    it.skip('can create invoice with amount', async () => {
-      const { rpcSocket, nodeId } = lspInfo();
-      // Connect to the LSP as a peer
-      console.log('LSP Node Info:', rpcSocket, nodeId);
-      // await node.connectPeer(lspNodeInfo.id, lspNodeInfo.bindings[0].address, lspNodeInfo.bindings[0].port);
-      // await new Promise(resolve => setTimeout(resolve, 2000));
-
+    it('can create invoice with amount', async () => {
+      const extraGLNode = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
+      glNodes.push(extraGLNode);
       const label = `test-${Date.now()}`;
       const description = 'Test payment';
       const amountMsat = 100000;
-      const response = await node.receive(label, description, amountMsat);
+      const response = await extraGLNode.node.receive(label, description, amountMsat);
       expect(response).toBeTruthy();
       expect(typeof response.bolt11).toBe('string');
       expect(response.bolt11.length).toBeGreaterThan(0);
@@ -159,44 +144,17 @@ describe('Node', () => {
 
   describe('calls send', () => {
     it.skip('can attempt to send payment to valid invoice', async () => {
-      const { rpcSocket, nodeId } = lspInfo();
       await fundWallet(node, 500_000_000);
-      const rand2: Buffer = crypto.randomBytes(16);
-      const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-      const scheduler2 = new Scheduler('regtest');
-      const signer2 = new Signer(MNEMONIC2);
-      const credentials2 = await scheduler2.register(signer2);
-      const node2 = new Node(credentials2);
-      const receiveRes = await node2.receive(`test-${Date.now()}`, 'Test payment', 100000);
-      const sendResponse = await node.send(receiveRes.bolt11);
+      const bolt11 = await getLspInvoice(100_000);
+      const sendResponse = await node.send(bolt11);
       expect(sendResponse).toBeTruthy();
     });
 
     it.skip('can send with explicit amount for zero-amount invoice', async () => {
-      const { rpcSocket, nodeId } = lspInfo();
       await fundWallet(node, 500_000_000);
-      const rand2: Buffer = crypto.randomBytes(16);
-      const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-      const scheduler2 = new Scheduler('regtest');
-      const signer2 = new Signer(MNEMONIC2);
-      const credentials2 = await scheduler2.register(signer2);
-      const node2 = new Node(credentials2);
-      const receiveRes = await node2.receive(`test-${Date.now()}`, 'Test payment');
-      const sendResponse = await node.send(receiveRes.bolt11);
+      const bolt11 = await getLspInvoice(0);
+      const sendResponse = await node.send(bolt11, 200_000);
       expect(sendResponse).toBeTruthy();
-    });
-  });
-
-  describe('calls stop', () => {
-    it('can stop the node', async () => {
-      const rand: Buffer = crypto.randomBytes(16);
-      const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-      const testScheduler = new Scheduler('regtest');
-      const testSigner = new Signer(MNEMONIC);
-      const testCredentials = await testScheduler.register(testSigner);
-      const testNode = new Node(testCredentials);
-
-      await expect(testNode.stop()).resolves.not.toThrow();
     });
   });
 });
