@@ -24,8 +24,7 @@ async function waitForEnvFile(): Promise<Record<string, string>> {
     'GL_NOBODY_KEY',
     'LSP_RPC_SOCKET',
     'LSP_NODE_ID',
-    'LSP_PROMISE_SECRET',
-    'GL_FUND_SERVER',
+    'TEST_SETUP_SERVER_URL'
   ];
 
   const deadline = Date.now() + SERVER_READY_TIMEOUT_MS;
