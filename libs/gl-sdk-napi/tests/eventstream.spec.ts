@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
-import { Credentials, Scheduler, Signer, Node, NodeEventStream, NodeEvent, InvoicePaidEvent } from '../index.js';
-import { startLspServer, stopLspServer, fundNode } from './test.helper.js';
+import { Credentials, Scheduler, Signer, Node, NodeEventStream, NodeEvent, InvoicePaidEvent, Handle } from '../index.js';
+import { fundWallet, getGLNode } from './test.helper.js';
 
 describe('NodeEvent (type contract)', () => {
   it('NodeEvent and InvoicePaidEvent are assignable from NAPI-generated types', () => {
@@ -28,16 +28,12 @@ describe('NodeEvent (type contract)', () => {
 // ============================================================================
 
 describe('NodeEventStream (integration)', () => {
-  let credentials: Credentials;
+  let scheduler: Scheduler = new Scheduler('regtest');
   let node: Node;
+  let handle: Handle;
 
   beforeAll(async () => {
-    const rand: Buffer = crypto.randomBytes(16);
-    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    const scheduler = new Scheduler('regtest');
-    const signer = new Signer(MNEMONIC);
-    credentials = await scheduler.register(signer);
-    node = new Node(credentials);
+    ({node, handle } = await getGLNode(scheduler, false) as { node: Node; handle: Handle });
     try {
       const probe = await node.streamNodeEvents();
       void probe;
@@ -49,6 +45,7 @@ describe('NodeEventStream (integration)', () => {
 
   afterAll(async () => {
     if (node) {
+      handle.stop();
       await node.stop();
     }
   });
@@ -94,25 +91,24 @@ describe('NodeEventStream (integration)', () => {
   });
 
   it('next returns null after the node is stopped', async () => {
-    const stream: NodeEventStream = await node.streamNodeEvents();
-    await node.stop();
-
+    const mnemonic2 = bip39.entropyToMnemonic(crypto.randomBytes(16).toString('hex'));
+    const signer2 = new Signer(mnemonic2);
+    const handle2 = await signer2.start();
+    const credentials2 = await scheduler.register(signer2);
+    let node2 = new Node(credentials2);
+    const stream: NodeEventStream = await node2.streamNodeEvents();
+    await node2.stop();
     const result = await stream.next();
     expect(result).toBeNull();
-    node = new Node(credentials);
+    node2 = new Node(credentials2);
+    handle2.stop()
+    await node2.stop();
   });
 
   it.skip('receives real invoice_paid event', async () => {
-      await startLspServer();
-      await fundNode(node, 0.5);
+      await fundWallet(node, 500_000_000);
+      const { node: node2, handle: handle2 } = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
       const stream: NodeEventStream = await node.streamNodeEvents();
-      const rand2: Buffer = crypto.randomBytes(16);
-      const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-      const scheduler2 = new Scheduler('regtest');
-      const signer2 = new Signer(MNEMONIC2);
-      const credentials2 = await scheduler2.register(signer2);
-      const node2 = new Node(credentials2);
-
       const label = `jest-${Date.now()}`;
       const receiveRes = await node.receive(label, 'jest event stream test', 1_000);
       const sendResponse = await node2.send(receiveRes.bolt11);
@@ -146,7 +142,8 @@ describe('NodeEventStream (integration)', () => {
       expect(p.label).toBe(label);
       expect(typeof p.amountMsat).toBe('number');
       expect(p.amountMsat).toBeGreaterThan(0);
-      await stopLspServer();
+      handle2.stop();
+      await node2.stop();
     },
     15_000 // extended timeout for payment round-trip
   );
