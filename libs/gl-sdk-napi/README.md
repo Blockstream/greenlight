@@ -260,7 +260,7 @@ npm test -- --verbose tests/node.spec.ts
 The global setup script `./tests/jest.globalSetup.ts` automatically:
 - Starts `test_setup.py`, spinning up bitcoind, the Greenlight scheduler, and an LSPS2-compatible LSP node
 - Waits for all services to be ready
-- Injects the required environment variables (`GL_SCHEDULER_GRPC_URI`, `GL_CA_CRT`, `GL_NOBODY_CRT`, `GL_NOBODY_KEY`, `LSP_RPC_SOCKET`, `LSP_NODE_ID`, `LSP_PROMISE_SECRET`, `GL_FUND_SERVER`)
+- Injects the required environment variables (`GL_SCHEDULER_GRPC_URI`, `GL_CA_CRT`, `GL_NOBODY_CRT`, `GL_NOBODY_KEY`, `LSP_RPC_SOCKET`, `LSP_NODE_ID`, `TEST_SETUP_SERVER_URL`)
 - Shuts everything down after all tests complete
 
 ### Test Helpers

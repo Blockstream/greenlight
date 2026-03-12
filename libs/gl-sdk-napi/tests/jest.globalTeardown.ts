@@ -3,6 +3,7 @@ import * as path from 'path';
 
 const GLTESTS_DIR = '/tmp/gltests';
 const PID_FILE = path.join(GLTESTS_DIR, 'gltestserver.pid');
+const ENV_FILE = path.join(GLTESTS_DIR, '.env');
 
 export default async function globalTeardown(): Promise<void> {
   console.log(`\n🛑 Stopping test_setup...`);
@@ -28,6 +29,20 @@ export default async function globalTeardown(): Promise<void> {
 
     if (fs.existsSync(PID_FILE)) {
       fs.unlinkSync(PID_FILE);
+    }
+
+    // Clean up TMP_DIR — derived from GL_CERT_PATH in the .env file
+    if (fs.existsSync(ENV_FILE)) {
+      const envContents = fs.readFileSync(ENV_FILE, 'utf8');
+      const certPathMatch = envContents.match(/^GL_CERT_PATH=(.+)$/m);
+      if (certPathMatch) {
+        const tmpDir = path.dirname(certPathMatch[1].trim());
+        if (tmpDir && tmpDir !== '/' && tmpDir.includes('gl-lsp-setup-')) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          console.log(`   Removed TMP_DIR: ${tmpDir}`);
+        }
+      }
+      fs.unlinkSync(ENV_FILE);
     }
   } catch {
     // Ignore all teardown errors
