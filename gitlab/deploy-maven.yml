@@ -4,7 +4,7 @@ build_kotlin:
     - m4
   rules:
     - if: "$CI_COMMIT_TAG"
-    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
   script:
     - task build:kotlin
   artifacts:
@@ -50,7 +50,7 @@ publish_snapshot_to_maven:
     - job: build_kotlin
       artifacts: true
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
   script:
     - cd libs/gl-sdk-android

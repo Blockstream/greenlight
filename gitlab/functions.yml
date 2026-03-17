@@ -27,7 +27,7 @@ build_ci_image:
       changes:
         paths:
           - docker/ci.Dockerfile
-        compare_to: master
+        compare_to: main
   script:
     - docker pull ${CI_IMAGE}:latest || true
     - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}-$(date +%Y%m%d)
