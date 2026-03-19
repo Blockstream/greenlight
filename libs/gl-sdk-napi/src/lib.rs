@@ -5,17 +5,18 @@ use napi_derive::napi;
 
 // Import from glsdk crate (gl-sdk library)
 use glsdk::{
-    Credentials as GlCredentials,
-    Node as GlNode,
-    NodeEventStream as GlNodeEventStream,
-    NodeEvent as GlNodeEvent,
-    Scheduler as GlScheduler,
-    Signer as GlSigner,
-    Handle as GlHandle,
-    Network as GlNetwork,
     // Enum types for conversion
     ChannelState as GlChannelState,
+    Credentials as GlCredentials,
+    DeveloperCert as GlDeveloperCert,
+    Handle as GlHandle,
+    Network as GlNetwork,
+    Node as GlNode,
+    NodeEvent as GlNodeEvent,
+    NodeEventStream as GlNodeEventStream,
     OutputStatus as GlOutputStatus,
+    Scheduler as GlScheduler,
+    Signer as GlSigner,
 };
 
 // ============================================================================
@@ -185,6 +186,11 @@ pub struct FundChannel {
 // ============================================================================
 
 #[napi]
+pub struct DeveloperCert {
+    inner: GlDeveloperCert,
+}
+
+#[napi]
 pub struct Credentials {
     inner: GlCredentials,
 }
@@ -219,14 +225,28 @@ pub struct NodeEventStream {
 // ============================================================================
 
 #[napi]
+impl DeveloperCert {
+    /// Create a new developer certificate from cert and key PEM bytes
+    /// obtained from the Greenlight Developer Console.
+    ///
+    /// # Arguments
+    /// * `cert` - Certificate PEM bytes
+    /// * `key` - Private key PEM bytes
+    #[napi(constructor)]
+    pub fn new(cert: Buffer, key: Buffer) -> Self {
+        let inner = GlDeveloperCert::new(cert.to_vec(), key.to_vec());
+        Self { inner }
+    }
+}
+
+#[napi]
 impl Credentials {
     /// Load credentials from raw bytes
     #[napi(factory)]
     pub async fn load(raw: Buffer) -> Result<Credentials> {
         let bytes = raw.to_vec();
         let inner = tokio::task::spawn_blocking(move || {
-            GlCredentials::load(bytes)
-                .map_err(|e| Error::from_reason(e.to_string()))
+            GlCredentials::load(bytes).map_err(|e| Error::from_reason(e.to_string()))
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))??;
@@ -239,8 +259,7 @@ impl Credentials {
     pub async fn save(&self) -> Result<Buffer> {
         let inner = self.inner.clone();
         let bytes = tokio::task::spawn_blocking(move || {
-            inner.save()
-                .map_err(|e| Error::from_reason(e.to_string()))
+            inner.save().map_err(|e| Error::from_reason(e.to_string()))
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))??;
@@ -261,16 +280,32 @@ impl Scheduler {
         let gl_network = match network.to_lowercase().as_str() {
             "bitcoin" => GlNetwork::BITCOIN,
             "regtest" => GlNetwork::REGTEST,
-            _ => return Err(Error::from_reason(format!(
-                "Invalid network: {}. Must be 'bitcoin' or 'regtest'",
-                network
-            ))),
+            _ => {
+                return Err(Error::from_reason(format!(
+                    "Invalid network: {}. Must be 'bitcoin' or 'regtest'",
+                    network
+                )))
+            }
         };
 
-        let inner = GlScheduler::new(gl_network)
-            .map_err(|e| Error::from_reason(e.to_string()))?;
+        let inner = GlScheduler::new(gl_network).map_err(|e| Error::from_reason(e.to_string()))?;
 
         Ok(Self { inner })
+    }
+
+    /// Configure a developer certificate obtained from the Greenlight
+    /// Developer Console. Nodes registered through this scheduler
+    /// will be associated with the developer's account.
+    ///
+    /// Returns a new Scheduler instance with the developer certificate
+    /// configured.
+    ///
+    /// # Arguments
+    /// * `cert` - Developer certificate from the Greenlight Developer Console
+    #[napi]
+    pub fn with_developer_cert(&self, cert: &DeveloperCert) -> Scheduler {
+        let inner = self.inner.with_developer_cert(&cert.inner);
+        Scheduler { inner }
     }
 
     /// Register a new node with the scheduler
@@ -322,8 +357,7 @@ impl Signer {
     #[napi(constructor)]
     pub fn new(phrase: String) -> Result<Self> {
         // Constructor stays sync — pure key derivation, no I/O
-        let inner = GlSigner::new(phrase)
-            .map_err(|e| Error::from_reason(e.to_string()))?;
+        let inner = GlSigner::new(phrase).map_err(|e| Error::from_reason(e.to_string()))?;
 
         Ok(Self { inner })
     }
@@ -411,8 +445,8 @@ impl Node {
     #[napi(constructor)]
     pub fn new(credentials: &Credentials) -> Result<Self> {
         // Constructor stays sync — connection is established lazily
-        let inner = GlNode::new(&credentials.inner)
-            .map_err(|e| Error::from_reason(e.to_string()))?;
+        let inner =
+            GlNode::new(&credentials.inner).map_err(|e| Error::from_reason(e.to_string()))?;
 
         Ok(Self { inner })
     }
@@ -422,7 +456,8 @@ impl Node {
     pub async fn stop(&self) -> Result<()> {
         let inner = self.inner.clone();
         tokio::task::spawn_blocking(move || {
-            inner.stop()
+            inner
+                .stop()
                 .map_err(|e| Error::from_reason(format!("Failed to stop node: {:?}", e)))
         })
         .await
@@ -597,14 +632,18 @@ impl Node {
         .map_err(|e| Error::from_reason(e.to_string()))??;
 
         Ok(ListPeersResponse {
-            peers: response.peers.into_iter().map(|p| Peer {
-                id: Buffer::from(p.id),
-                connected: p.connected,
-                num_channels: p.num_channels,
-                netaddr: p.netaddr,
-                remote_addr: p.remote_addr,
-                features: p.features.map(Buffer::from),
-            }).collect(),
+            peers: response
+                .peers
+                .into_iter()
+                .map(|p| Peer {
+                    id: Buffer::from(p.id),
+                    connected: p.connected,
+                    num_channels: p.num_channels,
+                    netaddr: p.netaddr,
+                    remote_addr: p.remote_addr,
+                    features: p.features.map(Buffer::from),
+                })
+                .collect(),
         })
     }
 
@@ -624,19 +663,23 @@ impl Node {
         .map_err(|e| Error::from_reason(e.to_string()))??;
 
         Ok(ListPeerChannelsResponse {
-            channels: response.channels.into_iter().map(|c| PeerChannel {
-                peer_id: Buffer::from(c.peer_id),
-                peer_connected: c.peer_connected,
-                state: channel_state_to_string(&c.state),
-                short_channel_id: c.short_channel_id,
-                channel_id: c.channel_id.map(Buffer::from),
-                funding_txid: c.funding_txid.map(Buffer::from),
-                funding_outnum: c.funding_outnum,
-                to_us_msat: c.to_us_msat.map(|v| v as i64),
-                total_msat: c.total_msat.map(|v| v as i64),
-                spendable_msat: c.spendable_msat.map(|v| v as i64),
-                receivable_msat: c.receivable_msat.map(|v| v as i64),
-            }).collect(),
+            channels: response
+                .channels
+                .into_iter()
+                .map(|c| PeerChannel {
+                    peer_id: Buffer::from(c.peer_id),
+                    peer_connected: c.peer_connected,
+                    state: channel_state_to_string(&c.state),
+                    short_channel_id: c.short_channel_id,
+                    channel_id: c.channel_id.map(Buffer::from),
+                    funding_txid: c.funding_txid.map(Buffer::from),
+                    funding_outnum: c.funding_outnum,
+                    to_us_msat: c.to_us_msat.map(|v| v as i64),
+                    total_msat: c.total_msat.map(|v| v as i64),
+                    spendable_msat: c.spendable_msat.map(|v| v as i64),
+                    receivable_msat: c.receivable_msat.map(|v| v as i64),
+                })
+                .collect(),
         })
     }
 
@@ -656,25 +699,33 @@ impl Node {
         .map_err(|e| Error::from_reason(e.to_string()))??;
 
         Ok(ListFundsResponse {
-            outputs: response.outputs.into_iter().map(|o| FundOutput {
-                txid: Buffer::from(o.txid),
-                output: o.output,
-                amount_msat: o.amount_msat as i64,
-                status: output_status_to_string(&o.status),
-                address: o.address,
-                blockheight: o.blockheight,
-            }).collect(),
-            channels: response.channels.into_iter().map(|c| FundChannel {
-                peer_id: Buffer::from(c.peer_id),
-                our_amount_msat: c.our_amount_msat as i64,
-                amount_msat: c.amount_msat as i64,
-                funding_txid: Buffer::from(c.funding_txid),
-                funding_output: c.funding_output,
-                connected: c.connected,
-                state: channel_state_to_string(&c.state),
-                short_channel_id: c.short_channel_id,
-                channel_id: c.channel_id.map(Buffer::from),
-            }).collect(),
+            outputs: response
+                .outputs
+                .into_iter()
+                .map(|o| FundOutput {
+                    txid: Buffer::from(o.txid),
+                    output: o.output,
+                    amount_msat: o.amount_msat as i64,
+                    status: output_status_to_string(&o.status),
+                    address: o.address,
+                    blockheight: o.blockheight,
+                })
+                .collect(),
+            channels: response
+                .channels
+                .into_iter()
+                .map(|c| FundChannel {
+                    peer_id: Buffer::from(c.peer_id),
+                    our_amount_msat: c.our_amount_msat as i64,
+                    amount_msat: c.amount_msat as i64,
+                    funding_txid: Buffer::from(c.funding_txid),
+                    funding_output: c.funding_output,
+                    connected: c.connected,
+                    state: channel_state_to_string(&c.state),
+                    short_channel_id: c.short_channel_id,
+                    channel_id: c.channel_id.map(Buffer::from),
+                })
+                .collect(),
         })
     }
 }
