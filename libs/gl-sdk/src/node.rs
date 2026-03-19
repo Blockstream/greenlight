@@ -406,8 +406,6 @@ impl From<clnpb::GetinfoResponse> for GetInfoResponse {
     }
 }
 
-
-
 // ============================================================
 // ListPeers response types
 // ============================================================
@@ -449,8 +447,6 @@ impl From<clnpb::ListpeersPeers> for Peer {
         }
     }
 }
-
-
 
 // ============================================================
 // ListPeerChannels response types
@@ -542,8 +538,6 @@ impl From<clnpb::ListpeerchannelsChannels> for PeerChannel {
         }
     }
 }
-
-
 
 // ============================================================
 // ListFunds response types
@@ -641,8 +635,6 @@ impl From<clnpb::ListfundsChannels> for FundChannel {
     }
 }
 
-
-
 // ============================================================
 // NodeEvent streaming types
 // ============================================================
@@ -717,5 +709,3 @@ impl From<glpb::NodeEvent> for NodeEvent {
         }
     }
 }
-
-

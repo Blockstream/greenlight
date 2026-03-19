@@ -13,6 +13,7 @@ site
 target
 *.egg-info
 *.dylib
+.mypy_cache
 
 # These files are auto generated and may contain sensible data that
 # we do not want to check-in!
