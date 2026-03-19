@@ -19,7 +19,7 @@ pub enum Error {
 
     #[error("Invalid argument: {0}={1}")]
     Argument(String, String),
-    
+
     #[error("Generic error: {0}")]
     Other(String),
 }
@@ -30,7 +30,7 @@ mod signer;
 mod util;
 
 pub use crate::{
-    credentials::Credentials,
+    credentials::{Credentials, DeveloperCert},
     node::{
         ChannelState, FundChannel, FundOutput, GetInfoResponse, InvoicePaidEvent,
         ListFundsResponse, ListPeerChannelsResponse, ListPeersResponse, Node, NodeEvent,

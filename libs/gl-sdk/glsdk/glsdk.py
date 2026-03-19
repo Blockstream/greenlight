@@ -490,6 +490,8 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_register() != 20821:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_scheduler_with_developer_cert() != 64139:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_signer_authenticate() != 55935:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_signer_node_id() != 43931:
@@ -497,6 +499,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_method_signer_start() != 9404:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_credentials_load() != 25306:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_constructor_developercert_new() != 57793:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_node_new() != 7003:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -630,6 +634,22 @@ _UniffiLib.uniffi_glsdk_fn_method_credentials_save.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_credentials_save.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_clone_developercert.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_developercert.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_developercert.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_developercert.restype = None
+_UniffiLib.uniffi_glsdk_fn_constructor_developercert_new.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_developercert_new.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_handle.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -760,6 +780,12 @@ _UniffiLib.uniffi_glsdk_fn_method_scheduler_register.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_scheduler_register.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_scheduler_with_developer_cert.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_scheduler_with_developer_cert.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_signer.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1104,6 +1130,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.restype = ctypes.c_uin
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_register.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_register.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_scheduler_with_developer_cert.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_scheduler_with_developer_cert.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_signer_authenticate.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_signer_authenticate.restype = ctypes.c_uint16
@@ -1116,6 +1145,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_signer_start.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_node_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_node_new.restype = ctypes.c_uint16
@@ -1233,6 +1265,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -2926,6 +2960,94 @@ class _UniffiConverterTypeCredentials:
     @classmethod
     def write(cls, value: CredentialsProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
+class DeveloperCertProtocol(typing.Protocol):
+    """
+    A developer certificate obtained from the Greenlight Developer
+    Console (GDC). When provided to a `Scheduler` via
+    `with_developer_cert()`, nodes registered through that scheduler
+    will be associated with the developer's account.
+
+    If no developer certificate is provided, the scheduler falls back
+    to the compiled-in default certificate, which may be sufficient
+    when using an invite code instead.
+    """
+
+    pass
+# DeveloperCert is a Rust-only trait - it's a wrapper around a Rust implementation.
+class DeveloperCert():
+    """
+    A developer certificate obtained from the Greenlight Developer
+    Console (GDC). When provided to a `Scheduler` via
+    `with_developer_cert()`, nodes registered through that scheduler
+    will be associated with the developer's account.
+
+    If no developer certificate is provided, the scheduler falls back
+    to the compiled-in default certificate, which may be sufficient
+    when using an invite code instead.
+    """
+
+    _pointer: ctypes.c_void_p
+    def __init__(self, cert: "bytes",key: "bytes"):
+        """
+        Create a new `DeveloperCert` from the certificate and private
+        key PEM bytes obtained from the Greenlight Developer Console.
+        """
+
+        _UniffiConverterBytes.check_lower(cert)
+        
+        _UniffiConverterBytes.check_lower(key)
+        
+        self._pointer = _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_constructor_developercert_new,
+        _UniffiConverterBytes.lower(cert),
+        _UniffiConverterBytes.lower(key))
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_developercert, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_developercert, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+
+class _UniffiConverterTypeDeveloperCert:
+
+    @staticmethod
+    def lift(value: int):
+        return DeveloperCert._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: DeveloperCert):
+        if not isinstance(value, DeveloperCert):
+            raise TypeError("Expected DeveloperCert instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: DeveloperCertProtocol):
+        if not isinstance(value, DeveloperCert):
+            raise TypeError("Expected DeveloperCert instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: DeveloperCertProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
 class HandleProtocol(typing.Protocol):
     """
     A handle to interact with a signer loop running and processing
@@ -3419,6 +3541,17 @@ class SchedulerProtocol(typing.Protocol):
         raise NotImplementedError
     def register(self, signer: "Signer",code: "typing.Optional[str]"):
         raise NotImplementedError
+    def with_developer_cert(self, cert: "DeveloperCert"):
+        """
+        Configure a developer certificate obtained from the Greenlight
+        Developer Console. Nodes registered through this scheduler
+        will be associated with the developer's account.
+
+        Returns a new `Scheduler` instance with the developer
+        certificate configured.
+        """
+
+        raise NotImplementedError
 # Scheduler is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Scheduler():
     _pointer: ctypes.c_void_p
@@ -3473,6 +3606,27 @@ class Scheduler():
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_scheduler_register,self._uniffi_clone_pointer(),
         _UniffiConverterTypeSigner.lower(signer),
         _UniffiConverterOptionalString.lower(code))
+        )
+
+
+
+
+
+    def with_developer_cert(self, cert: "DeveloperCert") -> "Scheduler":
+        """
+        Configure a developer certificate obtained from the Greenlight
+        Developer Console. Nodes registered through this scheduler
+        will be associated with the developer's account.
+
+        Returns a new `Scheduler` instance with the developer
+        certificate configured.
+        """
+
+        _UniffiConverterTypeDeveloperCert.check_lower(cert)
+        
+        return _UniffiConverterTypeScheduler.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_scheduler_with_developer_cert,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeDeveloperCert.lower(cert))
         )
 
 
@@ -3625,6 +3779,7 @@ __all__ = [
     "ReceiveResponse",
     "SendResponse",
     "Credentials",
+    "DeveloperCert",
     "Handle",
     "Node",
     "NodeEventStream",
