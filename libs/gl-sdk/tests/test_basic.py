@@ -57,6 +57,47 @@ def test_node_creation_fails_with_empty_creds():
         node = glsdk.Node(creds)
 
 
+def test_developer_cert_construction():
+    """Test that DeveloperCert can be constructed with cert and key bytes."""
+    cert = glsdk.DeveloperCert(b"fake-cert-pem", b"fake-key-pem")
+    assert cert is not None
+    assert isinstance(cert, glsdk.DeveloperCert)
+
+
+def test_developer_cert_type_error():
+    """Test that passing wrong types to DeveloperCert raises TypeError."""
+    with pytest.raises(TypeError):
+        glsdk.DeveloperCert("not bytes", b"key")
+    with pytest.raises(TypeError):
+        glsdk.DeveloperCert(b"cert", "not bytes")
+
+
+def test_scheduler_with_developer_cert():
+    """Test that with_developer_cert returns a new Scheduler instance."""
+    cert = glsdk.DeveloperCert(b"fake-cert-pem", b"fake-key-pem")
+    scheduler = glsdk.Scheduler(glsdk.Network.BITCOIN)
+    scheduler_with_cert = scheduler.with_developer_cert(cert)
+
+    # Should return a new Scheduler instance, not modify the original
+    assert scheduler_with_cert is not None
+    assert isinstance(scheduler_with_cert, glsdk.Scheduler)
+
+
+def test_register_with_developer_cert(scheduler, nobody_id):
+    """Test that register works when using an explicit DeveloperCert."""
+    # Load the test nobody cert/key from the fixture's byte attributes
+    dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
+
+    signer = glsdk.Signer(
+        "abandon abandon abandon abandon abandon abandon "
+        "abandon abandon abandon abandon abandon about"
+    )
+    s = glsdk.Scheduler(glsdk.Network.BITCOIN).with_developer_cert(dev_cert)
+    creds = s.register(signer, code=None)
+    assert creds is not None
+    assert isinstance(creds, glsdk.Credentials)
+
+
 def test_register_and_auth(scheduler, clients):
     signer = glsdk.Signer(
         "abandon abandon abandon abandon abandon abandon "
