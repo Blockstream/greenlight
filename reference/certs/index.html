@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
@@ -199,15 +199,15 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/>
               </svg>
-              <a href="https://github.com/Blockstream/greenlight/commit/3ddf07282b8f460aac2fb73f5f5c1f335ec4ac02" target="_blank" title="Go to Commit">
-                3ddf072
+              <a href="https://github.com/Blockstream/greenlight/commit/2c1cec6ba340ef356642c12171584c4be3057d9e" target="_blank" title="Go to Commit">
+                2c1cec6
               </a>
             </div>
             <div class="git-info-item" title="Last Updated">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/>
               </svg>
-              2026-03-04
+              2026-03-19
             </div>
           </div>
         </div>
@@ -1113,6 +1113,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Providing the certificates at runtime">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-the-sdk-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the SDK (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-gl-client-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using gl-client directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1445,6 +1473,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Providing the certificates at runtime">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-the-sdk-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the SDK (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-gl-client-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using gl-client directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1520,32 +1576,95 @@ warning: Set &quot;GL_CUSTOM_NOBODY_KEY&quot; and &quot;GL_CUSTOM_NOBODY_CERT&qu
 <h2 id="providing-the-certificates-at-runtime">Providing the certificates at runtime</h2>
 <p>In case you do not want to provide the certificate at compile-time,
 e.g., because you are using pre-compiled language bindings, you can
-also provide the certificates at runtime. The following code snippets show how to construct a <code>Signer</code> and a <code>Scheduler</code> instance with the certificates:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Rust</label><label for="__tabbed_1_2">Python</label></div>
+also provide the certificates at runtime.</p>
+<h3 id="using-the-sdk-recommended">Using the SDK (recommended)</h3>
+<p>The SDK (<code>gl-sdk</code>) provides a <code>DeveloperCert</code> type and a builder
+method on the <code>Scheduler</code>. Create a <code>DeveloperCert</code> from the PEM
+bytes of the certificate and key, then pass it to the scheduler using
+<code>with_developer_cert()</code>:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Python</label><label for="__tabbed_1_2">Kotlin</label><label for="__tabbed_1_3">Swift</label><label for="__tabbed_1_4">JavaScript</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">tls</span><span class="p">::{</span><span class="n">Signer</span><span class="p">,</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">,</span><span class="w"> </span><span class="n">TlsConfig</span><span class="p">};</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">tls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TlsConfig</span><span class="p">::</span><span class="n">new</span><span class="p">()</span><span class="o">?</span><span class="p">.</span><span class="n">identity</span><span class="p">(</span><span class="n">certificate</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">glsdk</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">signer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Signer</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span><span class="w"> </span><span class="n">Network</span><span class="p">::</span><span class="n">Bitcoin</span><span class="p">,</span><span class="w"> </span><span class="n">tls</span><span class="p">);</span>
+<span class="c1"># Load cert and key bytes (e.g., from files or secure storage)</span>
+<span class="n">cert</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;client.crt&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">key</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;client-key.pem&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 
-<span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">::</span><span class="n">with</span><span class="p">(</span><span class="n">signer</span><span class="p">.</span><span class="n">node_id</span><span class="p">(),</span><span class="w"> </span><span class="n">Network</span><span class="p">::</span><span class="n">Bitcoin</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;uri&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">tls</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<span class="n">dev_cert</span> <span class="o">=</span> <span class="n">glsdk</span><span class="o">.</span><span class="n">DeveloperCert</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">glsdk</span><span class="o">.</span><span class="n">Scheduler</span><span class="p">(</span><span class="n">glsdk</span><span class="o">.</span><span class="n">Network</span><span class="o">.</span><span class="n">BITCOIN</span><span class="p">)</span><span class="o">.</span><span class="n">with_developer_cert</span><span class="p">(</span><span class="n">dev_cert</span><span class="p">)</span>
+<span class="n">creds</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">glclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">TlsConfig</span><span class="p">,</span> <span class="n">Signer</span><span class="p">,</span> <span class="n">Scheduler</span>
-<span class="n">tls</span> <span class="o">=</span> <span class="n">TlsConfig</span><span class="p">()</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">device_cert</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">device_key</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">cert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;client.crt&quot;</span><span class="p">).</span><span class="na">readBytes</span><span class="p">()</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;client-key.pem&quot;</span><span class="p">).</span><span class="na">readBytes</span><span class="p">()</span>
 
-<span class="n">signer</span> <span class="o">=</span> <span class="n">Signer</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">devCert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DeveloperCert</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">(</span><span class="n">Network</span><span class="p">.</span><span class="na">BITCOIN</span><span class="p">).</span><span class="na">withDeveloperCert</span><span class="p">(</span><span class="n">devCert</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">creds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="na">register</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="nv">cert</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Data</span><span class="p">(</span><span class="n">contentsOf</span><span class="p">:</span><span class="w"> </span><span class="n">URL</span><span class="p">(</span><span class="n">fileURLWithPath</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;client.crt&quot;</span><span class="p">))</span>
+<span class="kd">let</span><span class="w"> </span><span class="nv">key</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">Data</span><span class="p">(</span><span class="n">contentsOf</span><span class="p">:</span><span class="w"> </span><span class="n">URL</span><span class="p">(</span><span class="n">fileURLWithPath</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;client-key.pem&quot;</span><span class="p">))</span>
 
-<span class="n">node</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span><span class="n">node_id</span><span class="o">=</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">(),</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">tls</span><span class="o">=</span><span class="n">tls</span><span class="p">)</span><span class="o">.</span><span class="n">node</span><span class="p">()</span>
+<span class="kd">let</span><span class="w"> </span><span class="nv">devCert</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">DeveloperCert</span><span class="p">(</span><span class="n">cert</span><span class="p">:</span><span class="w"> </span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">:</span><span class="w"> </span><span class="n">key</span><span class="p">)</span>
+<span class="kd">let</span><span class="w"> </span><span class="nv">scheduler</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">(</span><span class="n">network</span><span class="p">:</span><span class="w"> </span><span class="p">.</span><span class="n">bitcoin</span><span class="p">).</span><span class="n">withDeveloperCert</span><span class="p">(</span><span class="n">cert</span><span class="p">:</span><span class="w"> </span><span class="n">devCert</span><span class="p">)</span>
+<span class="kd">let</span><span class="w"> </span><span class="nv">creds</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">register</span><span class="p">(</span><span class="n">signer</span><span class="p">:</span><span class="w"> </span><span class="n">signer</span><span class="p">,</span><span class="w"> </span><span class="n">code</span><span class="p">:</span><span class="w"> </span><span class="kc">nil</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">DeveloperCert</span><span class="p">,</span><span class="w"> </span><span class="nx">Scheduler</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;gl-sdk&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">cert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">fs</span><span class="p">.</span><span class="nx">readFileSync</span><span class="p">(</span><span class="s1">&#39;client.crt&#39;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">fs</span><span class="p">.</span><span class="nx">readFileSync</span><span class="p">(</span><span class="s1">&#39;client-key.pem&#39;</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">devCert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">DeveloperCert</span><span class="p">(</span><span class="nx">cert</span><span class="p">,</span><span class="w"> </span><span class="nx">key</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Scheduler</span><span class="p">(</span><span class="s1">&#39;bitcoin&#39;</span><span class="p">).</span><span class="nx">withDeveloperCert</span><span class="p">(</span><span class="nx">devCert</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">creds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">scheduler</span><span class="p">.</span><span class="nx">register</span><span class="p">(</span><span class="nx">signer</span><span class="p">);</span>
 </code></pre></div>
 </div>
 </div>
 </div>
-<p>Notice that this is the same way that the <code>TlsConfig</code> is configured
-with the user credentials provided from the <code>register()</code> and
-<code>recover()</code> results.</p>
+<p>If you are using an invite code instead of a developer certificate,
+simply omit the <code>with_developer_cert()</code> call:</p>
+<div class="highlight"><pre><span></span><code><span class="n">scheduler</span> <span class="o">=</span> <span class="n">glsdk</span><span class="o">.</span><span class="n">Scheduler</span><span class="p">(</span><span class="n">glsdk</span><span class="o">.</span><span class="n">Network</span><span class="o">.</span><span class="n">BITCOIN</span><span class="p">)</span>
+<span class="n">creds</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="s2">&quot;your-invite-code&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="using-gl-client-directly">Using gl-client directly</h3>
+<p>For the lower-level <code>gl-client</code> library, you can construct a
+<code>Nobody</code> credential with custom certificate bytes:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Rust</label><label for="__tabbed_2_2">Python</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">credentials</span><span class="p">::</span><span class="n">Nobody</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">scheduler</span><span class="p">::</span><span class="n">Scheduler</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">gl_client</span><span class="p">::</span><span class="n">signer</span><span class="p">::</span><span class="n">Signer</span><span class="p">;</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">cert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">fs</span><span class="p">::</span><span class="n">read</span><span class="p">(</span><span class="s">&quot;client.crt&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">fs</span><span class="p">::</span><span class="n">read</span><span class="p">(</span><span class="s">&quot;client-key.pem&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">developer_creds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Nobody</span><span class="p">::</span><span class="n">with</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="n">signer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Signer</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span><span class="w"> </span><span class="n">Network</span><span class="p">::</span><span class="n">Bitcoin</span><span class="p">,</span><span class="w"> </span><span class="n">developer_creds</span><span class="p">.</span><span class="n">clone</span><span class="p">())</span><span class="o">?</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">Network</span><span class="p">::</span><span class="n">Bitcoin</span><span class="p">,</span><span class="w"> </span><span class="n">developer_creds</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">signer</span><span class="p">,</span><span class="w"> </span><span class="nb">None</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">glclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">Credentials</span><span class="p">,</span> <span class="n">Signer</span><span class="p">,</span> <span class="n">Scheduler</span>
+
+<span class="n">cert</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;client.crt&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">key</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;client-key.pem&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">creds</span> <span class="o">=</span> <span class="n">Credentials</span><span class="o">.</span><span class="n">nobody_with</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+<span class="n">signer</span> <span class="o">=</span> <span class="n">Signer</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">creds</span><span class="o">=</span><span class="n">creds</span><span class="p">)</span>
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span><span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span> <span class="n">creds</span><span class="o">=</span><span class="n">creds</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">signer</span><span class="p">)</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>Certificates are credentials authenticating you as the
