@@ -53,31 +53,100 @@ warning: Set "GL_CUSTOM_NOBODY_KEY" and "GL_CUSTOM_NOBODY_CERT" to use a custom 
 
 In case you do not want to provide the certificate at compile-time,
 e.g., because you are using pre-compiled language bindings, you can
-also provide the certificates at runtime. The following code snippets show how to construct a `Signer` and a `Scheduler` instance with the certificates:
+also provide the certificates at runtime.
+
+### Using the SDK (recommended)
+
+The SDK (`gl-sdk`) provides a `DeveloperCert` type and a builder
+method on the `Scheduler`. Create a `DeveloperCert` from the PEM
+bytes of the certificate and key, then pass it to the scheduler using
+`with_developer_cert()`:
+
+=== "Python"
+	```python
+	import glsdk
+
+	# Load cert and key bytes (e.g., from files or secure storage)
+	cert = open("client.crt", "rb").read()
+	key = open("client-key.pem", "rb").read()
+
+	dev_cert = glsdk.DeveloperCert(cert, key)
+	scheduler = glsdk.Scheduler(glsdk.Network.BITCOIN).with_developer_cert(dev_cert)
+	creds = scheduler.register(signer, code=None)
+	```
+
+=== "Kotlin"
+	```kotlin
+	val cert = File("client.crt").readBytes()
+	val key = File("client-key.pem").readBytes()
+
+	val devCert = DeveloperCert(cert, key)
+	val scheduler = Scheduler(Network.BITCOIN).withDeveloperCert(devCert)
+	val creds = scheduler.register(signer, null)
+	```
+
+=== "Swift"
+	```swift
+	let cert = try Data(contentsOf: URL(fileURLWithPath: "client.crt"))
+	let key = try Data(contentsOf: URL(fileURLWithPath: "client-key.pem"))
+
+	let devCert = DeveloperCert(cert: cert, key: key)
+	let scheduler = Scheduler(network: .bitcoin).withDeveloperCert(cert: devCert)
+	let creds = try scheduler.register(signer: signer, code: nil)
+	```
+
+=== "JavaScript"
+	```javascript
+	const { DeveloperCert, Scheduler } = require('gl-sdk');
+
+	const cert = fs.readFileSync('client.crt');
+	const key = fs.readFileSync('client-key.pem');
+
+	const devCert = new DeveloperCert(cert, key);
+	const scheduler = new Scheduler('bitcoin').withDeveloperCert(devCert);
+	const creds = await scheduler.register(signer);
+	```
+
+If you are using an invite code instead of a developer certificate,
+simply omit the `with_developer_cert()` call:
+
+```python
+scheduler = glsdk.Scheduler(glsdk.Network.BITCOIN)
+creds = scheduler.register(signer, code="your-invite-code")
+```
+
+### Using gl-client directly
+
+For the lower-level `gl-client` library, you can construct a
+`Nobody` credential with custom certificate bytes:
 
 === "Rust"
 	```rust
-	use gl_client::tls::{Signer, Scheduler, TlsConfig};
-	let tls = TlsConfig::new()?.identity(certificate, key);
+	use gl_client::credentials::Nobody;
+	use gl_client::scheduler::Scheduler;
+	use gl_client::signer::Signer;
 
-	let signer = Signer(seed, Network::Bitcoin, tls);
+	let cert = std::fs::read("client.crt")?;
+	let key = std::fs::read("client-key.pem")?;
+	let developer_creds = Nobody::with(cert, key);
 
-	let scheduler = Scheduler::with(signer.node_id(), Network::Bitcoin, "uri", &tls).await?;
+	let signer = Signer::new(seed, Network::Bitcoin, developer_creds.clone())?;
+	let scheduler = Scheduler::new(Network::Bitcoin, developer_creds).await?;
+	let res = scheduler.register(&signer, None).await?;
 	```
 
 === "Python"
 	```python
-	from glclient import TlsConfig, Signer, Scheduler
-	tls = TlsConfig().identity(res.device_cert, res.device_key)
+	from glclient import Credentials, Signer, Scheduler
 
-	signer = Signer(seed, network="bitcoin", tls=tls)
+	cert = open("client.crt", "rb").read()
+	key = open("client-key.pem", "rb").read()
+	creds = Credentials.nobody_with(cert, key)
 
-	node = Scheduler(node_id=signer.node_id(), network="bitcoin", tls=tls).node()
+	signer = Signer(seed, network="bitcoin", creds=creds)
+	scheduler = Scheduler(network="bitcoin", creds=creds)
+	res = scheduler.register(signer)
 	```
-
-Notice that this is the same way that the `TlsConfig` is configured
-with the user credentials provided from the `register()` and
-`recover()` results.
 
 !!! important
 	Certificates are credentials authenticating you as the
