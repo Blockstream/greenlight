@@ -212,7 +212,7 @@ pub struct Handle {
 
 #[napi]
 pub struct Node {
-    inner: GlNode,
+    inner: std::sync::Arc<GlNode>,
 }
 
 #[napi]
@@ -448,7 +448,7 @@ impl Node {
         let inner =
             GlNode::new(&credentials.inner).map_err(|e| Error::from_reason(e.to_string()))?;
 
-        Ok(Self { inner })
+        Ok(Self { inner: std::sync::Arc::new(inner) })
     }
 
     /// Stop the node if it is currently running

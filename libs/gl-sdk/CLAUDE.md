@@ -65,7 +65,6 @@ All bindings are generated into `bindings/` directory.
 
 ## Important Notes
 
-- **Workspace structure:** This is a workspace member. The workspace root is at `/home/cdecker/dev/greenlight/202509-sdk/public/`
 - **Task commands:** All `task sdk:*` commands work from any directory in the workspace
 - **UniFFI workflow:** Build library first, then generate bindings. UniFFI reads the compiled library to generate foreign code.
 - **Working directory:** When using cargo directly, commands should be run from the workspace root with `-p gl-sdk`

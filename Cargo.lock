@@ -1605,8 +1605,10 @@ dependencies = [
 name = "gl-sdk"
 version = "0.1.2"
 dependencies = [
+ "anyhow",
  "bip39",
  "gl-client",
+ "hex",
  "once_cell",
  "thiserror 2.0.17",
  "tokio",
