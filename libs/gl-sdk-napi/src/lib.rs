@@ -32,6 +32,8 @@ pub struct ReceiveResponse {
 pub struct SendResponse {
     pub status: u32,
     pub preimage: Buffer,
+    pub payment_hash: Buffer,
+    pub destination_pubkey: Option<Buffer>,
     /// Amount in millisatoshis (as i64 for JS compatibility)
     pub amount_msat: i64,
     /// Amount sent in millisatoshis (as i64 for JS compatibility)
@@ -512,6 +514,8 @@ impl Node {
         Ok(SendResponse {
             status: response.status as u32,
             preimage: Buffer::from(response.preimage),
+            payment_hash: Buffer::from(response.payment_hash),
+            destination_pubkey: response.destination_pubkey.map(Buffer::from),
             amount_msat: response.amount_msat as i64,
             amount_sent_msat: response.amount_sent_msat as i64,
             parts: response.parts,
