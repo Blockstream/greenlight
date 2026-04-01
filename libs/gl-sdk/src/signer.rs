@@ -55,21 +55,7 @@ impl Signer {
     }
 
     pub fn start(&self) -> Result<Handle, Error> {
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
-        let inner = self.inner.clone();
-        std::thread::spawn(move || {
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("building tokio runtime");
-            runtime.block_on(async move {
-                if let Err(e) = inner.run_forever(rx).await {
-                    tracing::error!("Error running signer in thread: {e}")
-                }
-            })
-        });
-
-        Ok(Handle { chan: tx })
+        Ok(Handle::spawn(self.inner.clone()))
     }
 
     pub fn node_id(&self) -> Vec<u8> {
@@ -99,5 +85,24 @@ pub struct Handle {
 impl Handle {
     pub fn stop(&self) {
         self.chan.try_send(()).expect("sending shutdown signal");
+    }
+}
+
+impl Handle {
+    /// Spawns the signer on the shared signer runtime and returns a handle to stop it.
+    pub(crate) fn spawn(signer: gl_client::signer::Signer) -> Self {
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        crate::util::get_signer_runtime().spawn(async move {
+            if let Err(e) = signer.run_forever(rx).await {
+                tracing::error!("Error running signer: {e}");
+            }
+        });
+        Self { chan: tx }
+    }
+
+    /// Sends the shutdown signal, returning true if the signal was
+    /// delivered and false if the signer has already stopped.
+    pub(crate) fn try_stop(&self) -> bool {
+        self.chan.try_send(()).is_ok()
     }
 }

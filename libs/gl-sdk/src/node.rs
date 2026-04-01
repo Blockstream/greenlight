@@ -1,4 +1,5 @@
-use crate::{credentials::Credentials, util::exec, Error};
+use crate::{credentials::Credentials, signer::Handle, util::exec, Error};
+use std::sync::atomic::{AtomicBool, Ordering};
 use gl_client::credentials::NodeIdProvider;
 use gl_client::node::{Client as GlClient, ClnClient, Node as ClientNode};
 use gl_client::pb::{self as glpb, cln as clnpb};
@@ -7,12 +8,15 @@ use tokio::sync::OnceCell;
 
 /// The `Node` is an RPC stub representing the node running in the
 /// cloud. It is the main entrypoint to interact with the node.
-#[derive(uniffi::Object, Clone)]
+#[derive(uniffi::Object)]
 #[allow(unused)]
 pub struct Node {
     inner: ClientNode,
     cln_client: OnceCell<ClnClient>,
     gl_client: OnceCell<GlClient>,
+    stored_credentials: Option<Credentials>,
+    signer_handle: Option<Handle>,
+    disconnected: AtomicBool,
 }
 
 #[uniffi::export]
@@ -32,11 +36,15 @@ impl Node {
             inner,
             cln_client,
             gl_client,
+            stored_credentials: Some(credentials.clone()),
+            signer_handle: None,
+            disconnected: AtomicBool::new(false),
         })
     }
 
     /// Stop the node if it is currently running.
     pub fn stop(&self) -> Result<(), Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::StopRequest {};
@@ -45,6 +53,28 @@ impl Node {
         // telling us that we've lost the connection. This is to
         // be expected on shutdown, so we clamp this to success.
         let _ = exec(cln_client.stop(req));
+        Ok(())
+    }
+
+    /// Returns the serialized credentials for this node.
+    /// The app should persist these bytes and pass them to connect() on next launch.
+    pub fn credentials(&self) -> Result<Vec<u8>, Error> {
+        match &self.stored_credentials {
+            Some(creds) => creds.save(),
+            None => Err(Error::Other(
+                "No credentials stored. Use register/recover/connect to create a Node with credentials.".to_string(),
+            )),
+        }
+    }
+
+    /// Disconnects from the node and stops the signer if running.
+    /// After disconnect, all RPC methods will return an error.
+    /// Safe to call multiple times.
+    pub fn disconnect(&self) -> Result<(), Error> {
+        self.disconnected.store(true, Ordering::Relaxed);
+        if let Some(ref handle) = self.signer_handle {
+            handle.try_stop();
+        }
         Ok(())
     }
 
@@ -64,6 +94,7 @@ impl Node {
         description: String,
         amount_msat: Option<u64>,
     ) -> Result<ReceiveResponse, Error> {
+        self.check_connected()?;
         let mut gl_client = exec(self.get_gl_client())?.clone();
 
         let req = gl_client::pb::LspInvoiceRequest {
@@ -83,6 +114,7 @@ impl Node {
     }
 
     pub fn send(&self, invoice: String, amount_msat: Option<u64>) -> Result<SendResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
         let req = clnpb::PayRequest {
             amount_msat: match amount_msat {
@@ -113,6 +145,7 @@ impl Node {
         destination: String,
         amount_or_all: String,
     ) -> Result<OnchainSendResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         // Decode what the user intends to do. Either we have `all`,
@@ -161,6 +194,7 @@ impl Node {
     }
 
     pub fn onchain_receive(&self) -> Result<OnchainReceiveResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::NewaddrRequest {
@@ -178,6 +212,7 @@ impl Node {
     /// Returns basic information about the node including its ID,
     /// alias, network, and channel counts.
     pub fn get_info(&self) -> Result<GetInfoResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::GetinfoRequest {};
@@ -193,6 +228,7 @@ impl Node {
     /// Returns information about all peers including their connection
     /// status.
     pub fn list_peers(&self) -> Result<ListPeersResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::ListpeersRequest {
@@ -211,6 +247,7 @@ impl Node {
     /// Returns detailed information about all channels including their
     /// state, capacity, and balances.
     pub fn list_peer_channels(&self) -> Result<ListPeerChannelsResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::ListpeerchannelsRequest { id: None };
@@ -226,6 +263,7 @@ impl Node {
     /// Returns information about on-chain outputs and channel funds
     /// that are available or pending.
     pub fn list_funds(&self) -> Result<ListFundsResponse, Error> {
+        self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let req = clnpb::ListfundsRequest { spent: None };
@@ -246,6 +284,7 @@ impl Node {
     /// so other node methods can be called concurrently from other
     /// threads.
     pub fn stream_node_events(&self) -> Result<Arc<NodeEventStream>, Error> {
+        self.check_connected()?;
         let mut gl_client = exec(self.get_gl_client())?.clone();
         let req = glpb::NodeEventsRequest {};
         let stream = exec(gl_client.stream_node_events(req))
@@ -259,6 +298,38 @@ impl Node {
 
 // Not exported through uniffi
 impl Node {
+    fn check_connected(&self) -> Result<(), Error> {
+        if self.disconnected.load(Ordering::Relaxed) {
+            return Err(Error::Other("Node is disconnected".to_string()));
+        }
+        Ok(())
+    }
+
+    /// Internal constructor used by the high-level register/recover/connect functions.
+    /// Creates a Node with credentials and signer handle attached.
+    pub(crate) fn with_signer(
+        credentials: Credentials,
+        handle: Handle,
+    ) -> Result<Self, Error> {
+        let node_id = credentials
+            .inner
+            .node_id()
+            .map_err(|_e| Error::UnparseableCreds())?;
+        let inner = ClientNode::new(node_id, credentials.inner.clone())
+            .expect("infallible client instantiation");
+
+        let cln_client = OnceCell::const_new();
+        let gl_client = OnceCell::const_new();
+        Ok(Node {
+            inner,
+            cln_client,
+            gl_client,
+            stored_credentials: Some(credentials),
+            signer_handle: Some(handle),
+            disconnected: AtomicBool::new(false),
+        })
+    }
+
     async fn get_gl_client<'a>(&'a self) -> Result<&'a GlClient, Error> {
         let inner = self.inner.clone();
         self.gl_client
