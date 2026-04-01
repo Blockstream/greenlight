@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use gl_client::credentials::NodeIdProvider;
 use gl_client::node::{Client as GlClient, ClnClient, Node as ClientNode};
 use gl_client::pb::{self as glpb, cln as clnpb};
+use lightning_invoice::Bolt11Invoice;
 use std::sync::{Arc, Mutex};
 use tokio::sync::OnceCell;
 
@@ -274,6 +275,104 @@ impl Node {
         Ok(res.into())
     }
 
+    /// List all invoices (received payment requests).
+    /// List invoices (received payment requests).
+    /// All parameters are optional filters; pass None to fetch all.
+    pub fn list_invoices(
+        &self,
+        label: Option<String>,
+        invstring: Option<String>,
+        payment_hash: Option<Vec<u8>>,
+        offer_id: Option<String>,
+        index: Option<ListIndex>,
+        start: Option<u64>,
+        limit: Option<u32>,
+    ) -> Result<ListInvoicesResponse, Error> {
+        self.check_connected()?;
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::ListinvoicesRequest {
+            label,
+            invstring,
+            payment_hash,
+            offer_id,
+            index: index.map(|i| i.to_i32()),
+            start,
+            limit,
+        };
+
+        let res = exec(cln_client.list_invoices(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
+    }
+
+    /// List outgoing payments.
+    /// All parameters are optional filters; pass None to fetch all.
+    pub fn list_pays(
+        &self,
+        bolt11: Option<String>,
+        payment_hash: Option<Vec<u8>>,
+        status: Option<PayStatus>,
+        index: Option<ListIndex>,
+        start: Option<u64>,
+        limit: Option<u32>,
+    ) -> Result<ListPaysResponse, Error> {
+        self.check_connected()?;
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        // ListpaysRequest.ListpaysStatus: PENDING=0, COMPLETE=1, FAILED=2
+        let cln_status = status.map(|s| match s {
+            PayStatus::PENDING => 0,
+            PayStatus::COMPLETE => 1,
+            PayStatus::FAILED => 2,
+        });
+
+        let req = clnpb::ListpaysRequest {
+            bolt11,
+            payment_hash,
+            status: cln_status,
+            index: index.map(|i| i.to_i32()),
+            start,
+            limit,
+        };
+
+        let res = exec(cln_client.list_pays(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(res.into())
+    }
+
+    /// List payments (sent and received), merged into a single timeline.
+    /// Defaults to COMPLETE only. Pass a status to override the filter,
+    /// or use list_invoices/list_pays for unfiltered access.
+    /// Results are sorted newest-first.
+    pub fn list_payments(
+        &self,
+        status: Option<PaymentStatus>,
+    ) -> Result<ListPaymentsResponse, Error> {
+        let filter = status.unwrap_or(PaymentStatus::COMPLETE);
+
+        let invoices = self.list_invoices(None, None, None, None, None, None, None)?;
+        let pays = self.list_pays(None, None, None, None, None, None)?;
+
+        let mut payments: Vec<Payment> = Vec::new();
+
+        for inv in &invoices.invoices {
+            payments.push(Payment::from_invoice(inv));
+        }
+        for pay in &pays.pays {
+            payments.push(Payment::from_pay(pay));
+        }
+
+        payments.retain(|p| p.status == filter);
+
+        // Sort newest first by created_at (None sorts last)
+        payments.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        Ok(ListPaymentsResponse { payments })
+    }
+
     /// Stream real-time events from the node.
     ///
     /// Returns a `NodeEventStream` iterator. Call `next()` repeatedly
@@ -384,6 +483,8 @@ impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
 pub struct SendResponse {
     pub status: PayStatus,
     pub preimage: Vec<u8>,
+    pub payment_hash: Vec<u8>,
+    pub destination_pubkey: Option<Vec<u8>>,
     pub amount_msat: u64,
     pub amount_sent_msat: u64,
     pub parts: u32,
@@ -394,6 +495,8 @@ impl From<clnpb::PayResponse> for SendResponse {
         Self {
             status: other.status.into(),
             preimage: other.payment_preimage,
+            payment_hash: other.payment_hash,
+            destination_pubkey: other.destination,
             amount_msat: other.amount_msat.unwrap().msat,
             amount_sent_msat: other.amount_sent_msat.unwrap().msat,
             parts: other.parts,
@@ -704,6 +807,272 @@ impl From<clnpb::ListfundsChannels> for FundChannel {
             channel_id: other.channel_id,
         }
     }
+}
+
+// ============================================================
+// Shared pagination types
+// ============================================================
+
+/// Index field used by CLN's paginated list RPCs.
+#[derive(Clone, uniffi::Enum)]
+pub enum ListIndex {
+    CREATED,
+    UPDATED,
+}
+
+impl ListIndex {
+    fn to_i32(&self) -> i32 {
+        match self {
+            ListIndex::CREATED => 0,
+            ListIndex::UPDATED => 1,
+        }
+    }
+}
+
+// ============================================================
+// ListInvoices response types
+// ============================================================
+
+#[derive(Clone, uniffi::Enum)]
+pub enum InvoiceStatus {
+    UNPAID,
+    PAID,
+    EXPIRED,
+}
+
+impl From<i32> for InvoiceStatus {
+    fn from(i: i32) -> Self {
+        match i {
+            0 => InvoiceStatus::UNPAID,
+            1 => InvoiceStatus::PAID,
+            2 => InvoiceStatus::EXPIRED,
+            o => panic!("Unknown invoice status {}", o),
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct Invoice {
+    pub label: String,
+    pub description: String,
+    pub payment_hash: Vec<u8>,
+    pub status: InvoiceStatus,
+    pub amount_msat: Option<u64>,
+    pub amount_received_msat: Option<u64>,
+    pub bolt11: Option<String>,
+    pub bolt12: Option<String>,
+    pub paid_at: Option<u64>,
+    pub expires_at: u64,
+    pub payment_preimage: Option<Vec<u8>>,
+    pub destination_pubkey: Option<Vec<u8>>,
+}
+
+/// Extract the payee public key from a BOLT11 invoice string.
+fn pubkey_from_bolt11(bolt11: &str) -> Option<Vec<u8>> {
+    let invoice: Bolt11Invoice = bolt11.parse().ok()?;
+    Some(invoice.recover_payee_pub_key().serialize().to_vec())
+}
+
+impl From<clnpb::ListinvoicesInvoices> for Invoice {
+    fn from(other: clnpb::ListinvoicesInvoices) -> Self {
+        let destination_pubkey = other.bolt11.as_deref().and_then(pubkey_from_bolt11);
+        Self {
+            label: other.label,
+            description: other.description.unwrap_or_default(),
+            payment_hash: other.payment_hash,
+            status: other.status.into(),
+            amount_msat: other.amount_msat.map(|a| a.msat),
+            amount_received_msat: other.amount_received_msat.map(|a| a.msat),
+            bolt11: other.bolt11,
+            bolt12: other.bolt12,
+            paid_at: other.paid_at,
+            expires_at: other.expires_at,
+            payment_preimage: other.payment_preimage,
+            destination_pubkey,
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct ListInvoicesResponse {
+    pub invoices: Vec<Invoice>,
+}
+
+impl From<clnpb::ListinvoicesResponse> for ListInvoicesResponse {
+    fn from(other: clnpb::ListinvoicesResponse) -> Self {
+        Self {
+            invoices: other.invoices.into_iter().map(|i| i.into()).collect(),
+        }
+    }
+}
+
+// ============================================================
+// ListPays response types
+// ============================================================
+
+#[derive(Clone, uniffi::Record)]
+pub struct Pay {
+    pub payment_hash: Vec<u8>,
+    pub status: PayStatus,
+    pub destination_pubkey: Option<Vec<u8>>,
+    pub amount_msat: Option<u64>,
+    pub amount_sent_msat: Option<u64>,
+    pub label: Option<String>,
+    pub bolt11: Option<String>,
+    pub description: Option<String>,
+    pub bolt12: Option<String>,
+    pub preimage: Option<Vec<u8>>,
+    pub created_at: u64,
+    pub completed_at: Option<u64>,
+    pub number_of_parts: Option<u64>,
+}
+
+impl From<clnpb::ListpaysPays> for Pay {
+    fn from(other: clnpb::ListpaysPays) -> Self {
+        let status = match other.status {
+            0 => PayStatus::PENDING,  // ListpaysPaysStatus::PENDING = 0
+            1 => PayStatus::FAILED,   // ListpaysPaysStatus::FAILED = 1
+            2 => PayStatus::COMPLETE, // ListpaysPaysStatus::COMPLETE = 2
+            o => panic!("Unknown listpays status {}", o),
+        };
+        Self {
+            payment_hash: other.payment_hash,
+            status,
+            destination_pubkey: other.destination,
+            amount_msat: other.amount_msat.map(|a| a.msat),
+            amount_sent_msat: other.amount_sent_msat.map(|a| a.msat),
+            label: other.label,
+            bolt11: other.bolt11,
+            description: other.description,
+            bolt12: other.bolt12,
+            preimage: other.preimage,
+            created_at: other.created_at,
+            completed_at: other.completed_at,
+            number_of_parts: other.number_of_parts,
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct ListPaysResponse {
+    pub pays: Vec<Pay>,
+}
+
+impl From<clnpb::ListpaysResponse> for ListPaysResponse {
+    fn from(other: clnpb::ListpaysResponse) -> Self {
+        Self {
+            pays: other.pays.into_iter().map(|p| p.into()).collect(),
+        }
+    }
+}
+
+// ============================================================
+// Unified list_payments response types
+// ============================================================
+
+#[derive(Clone, uniffi::Enum)]
+pub enum PaymentDirection {
+    SENT,
+    RECEIVED,
+}
+
+#[derive(Clone, PartialEq, uniffi::Enum)]
+pub enum PaymentStatus {
+    PENDING,
+    COMPLETE,
+    FAILED,
+    EXPIRED,
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct Payment {
+    pub payment_hash: Vec<u8>,
+    pub direction: PaymentDirection,
+    pub status: PaymentStatus,
+    pub invoice_status: Option<InvoiceStatus>,
+    pub pay_status: Option<PayStatus>,
+    pub amount_msat: Option<u64>,
+    pub fee_msat: Option<u64>,
+    pub amount_total_msat: Option<u64>,
+    pub preimage: Option<Vec<u8>>,
+    pub destination_pubkey: Option<Vec<u8>>,
+    pub description: Option<String>,
+    pub bolt11: Option<String>,
+    pub label: Option<String>,
+    pub created_at: Option<u64>,
+    pub invoice: Option<Invoice>,
+    pub pay: Option<Pay>,
+}
+
+impl Payment {
+    fn from_invoice(inv: &Invoice) -> Self {
+        let status = match inv.status {
+            InvoiceStatus::UNPAID => PaymentStatus::PENDING,
+            InvoiceStatus::PAID => PaymentStatus::COMPLETE,
+            InvoiceStatus::EXPIRED => PaymentStatus::EXPIRED,
+        };
+        // Invoices have no created_at in CLN. Use paid_at if available,
+        // fall back to expires_at for unpaid/expired invoices.
+        let created_at = inv.paid_at.or(Some(inv.expires_at));
+        let amount_msat = inv.amount_received_msat;
+        Self {
+            payment_hash: inv.payment_hash.clone(),
+            direction: PaymentDirection::RECEIVED,
+            status,
+            invoice_status: Some(inv.status.clone()),
+            pay_status: None,
+            amount_msat,
+            fee_msat: None,
+            amount_total_msat: amount_msat,
+            preimage: inv.payment_preimage.clone(),
+            destination_pubkey: inv.destination_pubkey.clone(),
+            description: if inv.description.is_empty() {
+                None
+            } else {
+                Some(inv.description.clone())
+            },
+            bolt11: inv.bolt11.clone(),
+            label: Some(inv.label.clone()),
+            created_at,
+            invoice: Some(inv.clone()),
+            pay: None,
+        }
+    }
+
+    fn from_pay(pay: &Pay) -> Self {
+        let status = match pay.status {
+            PayStatus::PENDING => PaymentStatus::PENDING,
+            PayStatus::COMPLETE => PaymentStatus::COMPLETE,
+            PayStatus::FAILED => PaymentStatus::FAILED,
+        };
+        let fee_msat = match (pay.amount_sent_msat, pay.amount_msat) {
+            (Some(sent), Some(amt)) if sent >= amt => Some(sent - amt),
+            _ => None,
+        };
+        Self {
+            payment_hash: pay.payment_hash.clone(),
+            direction: PaymentDirection::SENT,
+            status,
+            invoice_status: None,
+            pay_status: Some(pay.status.clone()),
+            amount_msat: pay.amount_msat,
+            fee_msat,
+            amount_total_msat: pay.amount_sent_msat,
+            preimage: pay.preimage.clone(),
+            destination_pubkey: pay.destination_pubkey.clone(),
+            description: pay.description.clone(),
+            bolt11: pay.bolt11.clone(),
+            label: pay.label.clone(),
+            created_at: Some(pay.created_at),
+            invoice: None,
+            pay: Some(pay.clone()),
+        }
+    }
+}
+
+#[derive(Clone, uniffi::Record)]
+pub struct ListPaymentsResponse {
+    pub payments: Vec<Payment>,
 }
 
 // ============================================================

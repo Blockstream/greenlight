@@ -1609,6 +1609,7 @@ dependencies = [
  "bip39",
  "gl-client",
  "hex",
+ "lightning-invoice",
  "once_cell",
  "thiserror 2.0.17",
  "tokio",
