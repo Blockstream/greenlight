@@ -460,13 +460,35 @@ def _uniffi_check_contract_api_version(lib):
         raise InternalError("UniFFI contract version mismatch: try cleaning and rebuilding your project")
 
 def _uniffi_check_api_checksums(lib):
+    if lib.uniffi_glsdk_checksum_func_connect() != 43555:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_recover() != 39257:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_register() != 39628:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_register_or_recover() != 65070:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_config_with_developer_cert() != 64194:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_config_with_network() != 35643:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_credentials_save() != 26677:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_handle_stop() != 36432:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_credentials() != 39165:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_disconnect() != 43626:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_get_info() != 39460:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_funds() != 21692:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_list_invoices() != 6677:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_list_payments() != 26056:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_list_pays() != 3970:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_peer_channels() != 35210:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -498,6 +520,8 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_signer_start() != 9404:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_constructor_config_new() != 25640:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_credentials_load() != 25306:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_developercert_new() != 57793:
@@ -507,6 +531,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_constructor_scheduler_new() != 15239:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_signer_new() != 62159:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -614,6 +640,32 @@ class _UniffiForeignFutureStructVoid(ctypes.Structure):
     ]
 _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiForeignFutureStructVoid,
 )
+_UniffiLib.uniffi_glsdk_fn_clone_config.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_config.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_config.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_config.restype = None
+_UniffiLib.uniffi_glsdk_fn_constructor_config_new.argtypes = (
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_config_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_config_with_developer_cert.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_config_with_developer_cert.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_config_with_network.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_config_with_network.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_credentials.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -680,6 +732,16 @@ _UniffiLib.uniffi_glsdk_fn_constructor_node_new.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_node_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_node_credentials.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_credentials.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_disconnect.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_disconnect.restype = None
 _UniffiLib.uniffi_glsdk_fn_method_node_get_info.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -690,6 +752,35 @@ _UniffiLib.uniffi_glsdk_fn_method_node_list_funds.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_list_funds.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_list_invoices.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_list_invoices.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_list_payments.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_list_payments.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_list_pays.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_list_pays.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_list_peer_channels.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -801,6 +892,11 @@ _UniffiLib.uniffi_glsdk_fn_constructor_signer_new.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_signer_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed.argtypes = (
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_method_signer_authenticate.argtypes = (
     ctypes.c_void_p,
     ctypes.c_void_p,
@@ -817,6 +913,33 @@ _UniffiLib.uniffi_glsdk_fn_method_signer_start.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_signer_start.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_connect.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_connect.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_recover.argtypes = (
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_register.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_register.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.restype = ctypes.c_void_p
 _UniffiLib.ffi_glsdk_rustbuffer_alloc.argtypes = (
     ctypes.c_uint64,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1085,18 +1208,51 @@ _UniffiLib.ffi_glsdk_rust_future_complete_void.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.ffi_glsdk_rust_future_complete_void.restype = None
+_UniffiLib.uniffi_glsdk_checksum_func_connect.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_connect.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_register.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_register.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_config_with_network.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_config_with_network.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_save.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_save.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_handle_stop.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_handle_stop.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_credentials.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_credentials.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_disconnect.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_disconnect.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_get_info.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_get_info.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_funds.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_funds.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_invoices.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_invoices.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_payments.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_payments.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_pays.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_list_pays.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.restype = ctypes.c_uint16
@@ -1142,6 +1298,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_signer_node_id.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_signer_start.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_signer_start.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_config_new.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_constructor_config_new.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.restype = ctypes.c_uint16
@@ -1157,6 +1316,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.restype = ctypes.c_ui
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.restype = ctypes.c_uint16
 _UniffiLib.ffi_glsdk_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_glsdk_uniffi_contract_version.restype = ctypes.c_uint32
@@ -1265,6 +1427,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -1536,6 +1700,112 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
         _UniffiConverterUInt64.write(value.fees_collected_msat, buf)
 
 
+class Invoice:
+    label: "str"
+    description: "str"
+    payment_hash: "bytes"
+    status: "InvoiceStatus"
+    amount_msat: "typing.Optional[int]"
+    amount_received_msat: "typing.Optional[int]"
+    bolt11: "typing.Optional[str]"
+    bolt12: "typing.Optional[str]"
+    paid_at: "typing.Optional[int]"
+    expires_at: "int"
+    payment_preimage: "typing.Optional[bytes]"
+    destination_pubkey: "typing.Optional[bytes]"
+    def __init__(self, *, label: "str", description: "str", payment_hash: "bytes", status: "InvoiceStatus", amount_msat: "typing.Optional[int]", amount_received_msat: "typing.Optional[int]", bolt11: "typing.Optional[str]", bolt12: "typing.Optional[str]", paid_at: "typing.Optional[int]", expires_at: "int", payment_preimage: "typing.Optional[bytes]", destination_pubkey: "typing.Optional[bytes]"):
+        self.label = label
+        self.description = description
+        self.payment_hash = payment_hash
+        self.status = status
+        self.amount_msat = amount_msat
+        self.amount_received_msat = amount_received_msat
+        self.bolt11 = bolt11
+        self.bolt12 = bolt12
+        self.paid_at = paid_at
+        self.expires_at = expires_at
+        self.payment_preimage = payment_preimage
+        self.destination_pubkey = destination_pubkey
+
+    def __str__(self):
+        return "Invoice(label={}, description={}, payment_hash={}, status={}, amount_msat={}, amount_received_msat={}, bolt11={}, bolt12={}, paid_at={}, expires_at={}, payment_preimage={}, destination_pubkey={})".format(self.label, self.description, self.payment_hash, self.status, self.amount_msat, self.amount_received_msat, self.bolt11, self.bolt12, self.paid_at, self.expires_at, self.payment_preimage, self.destination_pubkey)
+
+    def __eq__(self, other):
+        if self.label != other.label:
+            return False
+        if self.description != other.description:
+            return False
+        if self.payment_hash != other.payment_hash:
+            return False
+        if self.status != other.status:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.amount_received_msat != other.amount_received_msat:
+            return False
+        if self.bolt11 != other.bolt11:
+            return False
+        if self.bolt12 != other.bolt12:
+            return False
+        if self.paid_at != other.paid_at:
+            return False
+        if self.expires_at != other.expires_at:
+            return False
+        if self.payment_preimage != other.payment_preimage:
+            return False
+        if self.destination_pubkey != other.destination_pubkey:
+            return False
+        return True
+
+class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return Invoice(
+            label=_UniffiConverterString.read(buf),
+            description=_UniffiConverterString.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
+            status=_UniffiConverterTypeInvoiceStatus.read(buf),
+            amount_msat=_UniffiConverterOptionalUInt64.read(buf),
+            amount_received_msat=_UniffiConverterOptionalUInt64.read(buf),
+            bolt11=_UniffiConverterOptionalString.read(buf),
+            bolt12=_UniffiConverterOptionalString.read(buf),
+            paid_at=_UniffiConverterOptionalUInt64.read(buf),
+            expires_at=_UniffiConverterUInt64.read(buf),
+            payment_preimage=_UniffiConverterOptionalBytes.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.label)
+        _UniffiConverterString.check_lower(value.description)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterTypeInvoiceStatus.check_lower(value.status)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_received_msat)
+        _UniffiConverterOptionalString.check_lower(value.bolt11)
+        _UniffiConverterOptionalString.check_lower(value.bolt12)
+        _UniffiConverterOptionalUInt64.check_lower(value.paid_at)
+        _UniffiConverterUInt64.check_lower(value.expires_at)
+        _UniffiConverterOptionalBytes.check_lower(value.payment_preimage)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.label, buf)
+        _UniffiConverterString.write(value.description, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterTypeInvoiceStatus.write(value.status, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_received_msat, buf)
+        _UniffiConverterOptionalString.write(value.bolt11, buf)
+        _UniffiConverterOptionalString.write(value.bolt12, buf)
+        _UniffiConverterOptionalUInt64.write(value.paid_at, buf)
+        _UniffiConverterUInt64.write(value.expires_at, buf)
+        _UniffiConverterOptionalBytes.write(value.payment_preimage, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
+
+
 class InvoicePaidEvent:
     """
     Details of a paid invoice.
@@ -1651,6 +1921,93 @@ class _UniffiConverterTypeListFundsResponse(_UniffiConverterRustBuffer):
     def write(value, buf):
         _UniffiConverterSequenceTypeFundOutput.write(value.outputs, buf)
         _UniffiConverterSequenceTypeFundChannel.write(value.channels, buf)
+
+
+class ListInvoicesResponse:
+    invoices: "typing.List[Invoice]"
+    def __init__(self, *, invoices: "typing.List[Invoice]"):
+        self.invoices = invoices
+
+    def __str__(self):
+        return "ListInvoicesResponse(invoices={})".format(self.invoices)
+
+    def __eq__(self, other):
+        if self.invoices != other.invoices:
+            return False
+        return True
+
+class _UniffiConverterTypeListInvoicesResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListInvoicesResponse(
+            invoices=_UniffiConverterSequenceTypeInvoice.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypeInvoice.check_lower(value.invoices)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypeInvoice.write(value.invoices, buf)
+
+
+class ListPaymentsResponse:
+    payments: "typing.List[Payment]"
+    def __init__(self, *, payments: "typing.List[Payment]"):
+        self.payments = payments
+
+    def __str__(self):
+        return "ListPaymentsResponse(payments={})".format(self.payments)
+
+    def __eq__(self, other):
+        if self.payments != other.payments:
+            return False
+        return True
+
+class _UniffiConverterTypeListPaymentsResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListPaymentsResponse(
+            payments=_UniffiConverterSequenceTypePayment.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypePayment.check_lower(value.payments)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypePayment.write(value.payments, buf)
+
+
+class ListPaysResponse:
+    pays: "typing.List[Pay]"
+    def __init__(self, *, pays: "typing.List[Pay]"):
+        self.pays = pays
+
+    def __str__(self):
+        return "ListPaysResponse(pays={})".format(self.pays)
+
+    def __eq__(self, other):
+        if self.pays != other.pays:
+            return False
+        return True
+
+class _UniffiConverterTypeListPaysResponse(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ListPaysResponse(
+            pays=_UniffiConverterSequenceTypePay.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypePay.check_lower(value.pays)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypePay.write(value.pays, buf)
 
 
 class ListPeerChannelsResponse:
@@ -1788,6 +2145,253 @@ class _UniffiConverterTypeOnchainSendResponse(_UniffiConverterRustBuffer):
         _UniffiConverterBytes.write(value.tx, buf)
         _UniffiConverterBytes.write(value.txid, buf)
         _UniffiConverterString.write(value.psbt, buf)
+
+
+class Pay:
+    payment_hash: "bytes"
+    status: "PayStatus"
+    destination_pubkey: "typing.Optional[bytes]"
+    amount_msat: "typing.Optional[int]"
+    amount_sent_msat: "typing.Optional[int]"
+    label: "typing.Optional[str]"
+    bolt11: "typing.Optional[str]"
+    description: "typing.Optional[str]"
+    bolt12: "typing.Optional[str]"
+    preimage: "typing.Optional[bytes]"
+    created_at: "int"
+    completed_at: "typing.Optional[int]"
+    number_of_parts: "typing.Optional[int]"
+    def __init__(self, *, payment_hash: "bytes", status: "PayStatus", destination_pubkey: "typing.Optional[bytes]", amount_msat: "typing.Optional[int]", amount_sent_msat: "typing.Optional[int]", label: "typing.Optional[str]", bolt11: "typing.Optional[str]", description: "typing.Optional[str]", bolt12: "typing.Optional[str]", preimage: "typing.Optional[bytes]", created_at: "int", completed_at: "typing.Optional[int]", number_of_parts: "typing.Optional[int]"):
+        self.payment_hash = payment_hash
+        self.status = status
+        self.destination_pubkey = destination_pubkey
+        self.amount_msat = amount_msat
+        self.amount_sent_msat = amount_sent_msat
+        self.label = label
+        self.bolt11 = bolt11
+        self.description = description
+        self.bolt12 = bolt12
+        self.preimage = preimage
+        self.created_at = created_at
+        self.completed_at = completed_at
+        self.number_of_parts = number_of_parts
+
+    def __str__(self):
+        return "Pay(payment_hash={}, status={}, destination_pubkey={}, amount_msat={}, amount_sent_msat={}, label={}, bolt11={}, description={}, bolt12={}, preimage={}, created_at={}, completed_at={}, number_of_parts={})".format(self.payment_hash, self.status, self.destination_pubkey, self.amount_msat, self.amount_sent_msat, self.label, self.bolt11, self.description, self.bolt12, self.preimage, self.created_at, self.completed_at, self.number_of_parts)
+
+    def __eq__(self, other):
+        if self.payment_hash != other.payment_hash:
+            return False
+        if self.status != other.status:
+            return False
+        if self.destination_pubkey != other.destination_pubkey:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.amount_sent_msat != other.amount_sent_msat:
+            return False
+        if self.label != other.label:
+            return False
+        if self.bolt11 != other.bolt11:
+            return False
+        if self.description != other.description:
+            return False
+        if self.bolt12 != other.bolt12:
+            return False
+        if self.preimage != other.preimage:
+            return False
+        if self.created_at != other.created_at:
+            return False
+        if self.completed_at != other.completed_at:
+            return False
+        if self.number_of_parts != other.number_of_parts:
+            return False
+        return True
+
+class _UniffiConverterTypePay(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return Pay(
+            payment_hash=_UniffiConverterBytes.read(buf),
+            status=_UniffiConverterTypePayStatus.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            amount_msat=_UniffiConverterOptionalUInt64.read(buf),
+            amount_sent_msat=_UniffiConverterOptionalUInt64.read(buf),
+            label=_UniffiConverterOptionalString.read(buf),
+            bolt11=_UniffiConverterOptionalString.read(buf),
+            description=_UniffiConverterOptionalString.read(buf),
+            bolt12=_UniffiConverterOptionalString.read(buf),
+            preimage=_UniffiConverterOptionalBytes.read(buf),
+            created_at=_UniffiConverterUInt64.read(buf),
+            completed_at=_UniffiConverterOptionalUInt64.read(buf),
+            number_of_parts=_UniffiConverterOptionalUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterTypePayStatus.check_lower(value.status)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_sent_msat)
+        _UniffiConverterOptionalString.check_lower(value.label)
+        _UniffiConverterOptionalString.check_lower(value.bolt11)
+        _UniffiConverterOptionalString.check_lower(value.description)
+        _UniffiConverterOptionalString.check_lower(value.bolt12)
+        _UniffiConverterOptionalBytes.check_lower(value.preimage)
+        _UniffiConverterUInt64.check_lower(value.created_at)
+        _UniffiConverterOptionalUInt64.check_lower(value.completed_at)
+        _UniffiConverterOptionalUInt64.check_lower(value.number_of_parts)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterTypePayStatus.write(value.status, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_sent_msat, buf)
+        _UniffiConverterOptionalString.write(value.label, buf)
+        _UniffiConverterOptionalString.write(value.bolt11, buf)
+        _UniffiConverterOptionalString.write(value.description, buf)
+        _UniffiConverterOptionalString.write(value.bolt12, buf)
+        _UniffiConverterOptionalBytes.write(value.preimage, buf)
+        _UniffiConverterUInt64.write(value.created_at, buf)
+        _UniffiConverterOptionalUInt64.write(value.completed_at, buf)
+        _UniffiConverterOptionalUInt64.write(value.number_of_parts, buf)
+
+
+class Payment:
+    payment_hash: "bytes"
+    direction: "PaymentDirection"
+    status: "PaymentStatus"
+    invoice_status: "typing.Optional[InvoiceStatus]"
+    pay_status: "typing.Optional[PayStatus]"
+    amount_msat: "typing.Optional[int]"
+    fee_msat: "typing.Optional[int]"
+    amount_total_msat: "typing.Optional[int]"
+    preimage: "typing.Optional[bytes]"
+    destination_pubkey: "typing.Optional[bytes]"
+    description: "typing.Optional[str]"
+    bolt11: "typing.Optional[str]"
+    label: "typing.Optional[str]"
+    created_at: "typing.Optional[int]"
+    invoice: "typing.Optional[Invoice]"
+    pay: "typing.Optional[Pay]"
+    def __init__(self, *, payment_hash: "bytes", direction: "PaymentDirection", status: "PaymentStatus", invoice_status: "typing.Optional[InvoiceStatus]", pay_status: "typing.Optional[PayStatus]", amount_msat: "typing.Optional[int]", fee_msat: "typing.Optional[int]", amount_total_msat: "typing.Optional[int]", preimage: "typing.Optional[bytes]", destination_pubkey: "typing.Optional[bytes]", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", label: "typing.Optional[str]", created_at: "typing.Optional[int]", invoice: "typing.Optional[Invoice]", pay: "typing.Optional[Pay]"):
+        self.payment_hash = payment_hash
+        self.direction = direction
+        self.status = status
+        self.invoice_status = invoice_status
+        self.pay_status = pay_status
+        self.amount_msat = amount_msat
+        self.fee_msat = fee_msat
+        self.amount_total_msat = amount_total_msat
+        self.preimage = preimage
+        self.destination_pubkey = destination_pubkey
+        self.description = description
+        self.bolt11 = bolt11
+        self.label = label
+        self.created_at = created_at
+        self.invoice = invoice
+        self.pay = pay
+
+    def __str__(self):
+        return "Payment(payment_hash={}, direction={}, status={}, invoice_status={}, pay_status={}, amount_msat={}, fee_msat={}, amount_total_msat={}, preimage={}, destination_pubkey={}, description={}, bolt11={}, label={}, created_at={}, invoice={}, pay={})".format(self.payment_hash, self.direction, self.status, self.invoice_status, self.pay_status, self.amount_msat, self.fee_msat, self.amount_total_msat, self.preimage, self.destination_pubkey, self.description, self.bolt11, self.label, self.created_at, self.invoice, self.pay)
+
+    def __eq__(self, other):
+        if self.payment_hash != other.payment_hash:
+            return False
+        if self.direction != other.direction:
+            return False
+        if self.status != other.status:
+            return False
+        if self.invoice_status != other.invoice_status:
+            return False
+        if self.pay_status != other.pay_status:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.fee_msat != other.fee_msat:
+            return False
+        if self.amount_total_msat != other.amount_total_msat:
+            return False
+        if self.preimage != other.preimage:
+            return False
+        if self.destination_pubkey != other.destination_pubkey:
+            return False
+        if self.description != other.description:
+            return False
+        if self.bolt11 != other.bolt11:
+            return False
+        if self.label != other.label:
+            return False
+        if self.created_at != other.created_at:
+            return False
+        if self.invoice != other.invoice:
+            return False
+        if self.pay != other.pay:
+            return False
+        return True
+
+class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return Payment(
+            payment_hash=_UniffiConverterBytes.read(buf),
+            direction=_UniffiConverterTypePaymentDirection.read(buf),
+            status=_UniffiConverterTypePaymentStatus.read(buf),
+            invoice_status=_UniffiConverterOptionalTypeInvoiceStatus.read(buf),
+            pay_status=_UniffiConverterOptionalTypePayStatus.read(buf),
+            amount_msat=_UniffiConverterOptionalUInt64.read(buf),
+            fee_msat=_UniffiConverterOptionalUInt64.read(buf),
+            amount_total_msat=_UniffiConverterOptionalUInt64.read(buf),
+            preimage=_UniffiConverterOptionalBytes.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            description=_UniffiConverterOptionalString.read(buf),
+            bolt11=_UniffiConverterOptionalString.read(buf),
+            label=_UniffiConverterOptionalString.read(buf),
+            created_at=_UniffiConverterOptionalUInt64.read(buf),
+            invoice=_UniffiConverterOptionalTypeInvoice.read(buf),
+            pay=_UniffiConverterOptionalTypePay.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterTypePaymentDirection.check_lower(value.direction)
+        _UniffiConverterTypePaymentStatus.check_lower(value.status)
+        _UniffiConverterOptionalTypeInvoiceStatus.check_lower(value.invoice_status)
+        _UniffiConverterOptionalTypePayStatus.check_lower(value.pay_status)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.fee_msat)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_total_msat)
+        _UniffiConverterOptionalBytes.check_lower(value.preimage)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
+        _UniffiConverterOptionalString.check_lower(value.description)
+        _UniffiConverterOptionalString.check_lower(value.bolt11)
+        _UniffiConverterOptionalString.check_lower(value.label)
+        _UniffiConverterOptionalUInt64.check_lower(value.created_at)
+        _UniffiConverterOptionalTypeInvoice.check_lower(value.invoice)
+        _UniffiConverterOptionalTypePay.check_lower(value.pay)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterTypePaymentDirection.write(value.direction, buf)
+        _UniffiConverterTypePaymentStatus.write(value.status, buf)
+        _UniffiConverterOptionalTypeInvoiceStatus.write(value.invoice_status, buf)
+        _UniffiConverterOptionalTypePayStatus.write(value.pay_status, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.fee_msat, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_total_msat, buf)
+        _UniffiConverterOptionalBytes.write(value.preimage, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
+        _UniffiConverterOptionalString.write(value.description, buf)
+        _UniffiConverterOptionalString.write(value.bolt11, buf)
+        _UniffiConverterOptionalString.write(value.label, buf)
+        _UniffiConverterOptionalUInt64.write(value.created_at, buf)
+        _UniffiConverterOptionalTypeInvoice.write(value.invoice, buf)
+        _UniffiConverterOptionalTypePay.write(value.pay, buf)
 
 
 class Peer:
@@ -1997,23 +2601,31 @@ class _UniffiConverterTypeReceiveResponse(_UniffiConverterRustBuffer):
 class SendResponse:
     status: "PayStatus"
     preimage: "bytes"
+    payment_hash: "bytes"
+    destination_pubkey: "typing.Optional[bytes]"
     amount_msat: "int"
     amount_sent_msat: "int"
     parts: "int"
-    def __init__(self, *, status: "PayStatus", preimage: "bytes", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
+    def __init__(self, *, status: "PayStatus", preimage: "bytes", payment_hash: "bytes", destination_pubkey: "typing.Optional[bytes]", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
         self.status = status
         self.preimage = preimage
+        self.payment_hash = payment_hash
+        self.destination_pubkey = destination_pubkey
         self.amount_msat = amount_msat
         self.amount_sent_msat = amount_sent_msat
         self.parts = parts
 
     def __str__(self):
-        return "SendResponse(status={}, preimage={}, amount_msat={}, amount_sent_msat={}, parts={})".format(self.status, self.preimage, self.amount_msat, self.amount_sent_msat, self.parts)
+        return "SendResponse(status={}, preimage={}, payment_hash={}, destination_pubkey={}, amount_msat={}, amount_sent_msat={}, parts={})".format(self.status, self.preimage, self.payment_hash, self.destination_pubkey, self.amount_msat, self.amount_sent_msat, self.parts)
 
     def __eq__(self, other):
         if self.status != other.status:
             return False
         if self.preimage != other.preimage:
+            return False
+        if self.payment_hash != other.payment_hash:
+            return False
+        if self.destination_pubkey != other.destination_pubkey:
             return False
         if self.amount_msat != other.amount_msat:
             return False
@@ -2029,6 +2641,8 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
         return SendResponse(
             status=_UniffiConverterTypePayStatus.read(buf),
             preimage=_UniffiConverterBytes.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
             amount_sent_msat=_UniffiConverterUInt64.read(buf),
             parts=_UniffiConverterUInt32.read(buf),
@@ -2038,6 +2652,8 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     def check_lower(value):
         _UniffiConverterTypePayStatus.check_lower(value.status)
         _UniffiConverterBytes.check_lower(value.preimage)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
         _UniffiConverterUInt64.check_lower(value.amount_sent_msat)
         _UniffiConverterUInt32.check_lower(value.parts)
@@ -2046,6 +2662,8 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     def write(value, buf):
         _UniffiConverterTypePayStatus.write(value.status, buf)
         _UniffiConverterBytes.write(value.preimage, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
         _UniffiConverterUInt64.write(value.amount_sent_msat, buf)
         _UniffiConverterUInt32.write(value.parts, buf)
@@ -2368,6 +2986,94 @@ class _UniffiConverterTypeError(_UniffiConverterRustBuffer):
 
 
 
+class InvoiceStatus(enum.Enum):
+    UNPAID = 0
+    
+    PAID = 1
+    
+    EXPIRED = 2
+    
+
+
+class _UniffiConverterTypeInvoiceStatus(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return InvoiceStatus.UNPAID
+        if variant == 2:
+            return InvoiceStatus.PAID
+        if variant == 3:
+            return InvoiceStatus.EXPIRED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == InvoiceStatus.UNPAID:
+            return
+        if value == InvoiceStatus.PAID:
+            return
+        if value == InvoiceStatus.EXPIRED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == InvoiceStatus.UNPAID:
+            buf.write_i32(1)
+        if value == InvoiceStatus.PAID:
+            buf.write_i32(2)
+        if value == InvoiceStatus.EXPIRED:
+            buf.write_i32(3)
+
+
+
+
+
+
+
+class ListIndex(enum.Enum):
+    """
+    Index field used by CLN's paginated list RPCs.
+    """
+
+    CREATED = 0
+    
+    UPDATED = 1
+    
+
+
+class _UniffiConverterTypeListIndex(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return ListIndex.CREATED
+        if variant == 2:
+            return ListIndex.UPDATED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == ListIndex.CREATED:
+            return
+        if value == ListIndex.UPDATED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == ListIndex.CREATED:
+            buf.write_i32(1)
+        if value == ListIndex.UPDATED:
+            buf.write_i32(2)
+
+
+
+
+
+
+
 class Network(enum.Enum):
     BITCOIN = 0
     
@@ -2610,6 +3316,98 @@ class _UniffiConverterTypePayStatus(_UniffiConverterRustBuffer):
 
 
 
+
+
+class PaymentDirection(enum.Enum):
+    SENT = 0
+    
+    RECEIVED = 1
+    
+
+
+class _UniffiConverterTypePaymentDirection(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return PaymentDirection.SENT
+        if variant == 2:
+            return PaymentDirection.RECEIVED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == PaymentDirection.SENT:
+            return
+        if value == PaymentDirection.RECEIVED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == PaymentDirection.SENT:
+            buf.write_i32(1)
+        if value == PaymentDirection.RECEIVED:
+            buf.write_i32(2)
+
+
+
+
+
+
+
+class PaymentStatus(enum.Enum):
+    PENDING = 0
+    
+    COMPLETE = 1
+    
+    FAILED = 2
+    
+    EXPIRED = 3
+    
+
+
+class _UniffiConverterTypePaymentStatus(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return PaymentStatus.PENDING
+        if variant == 2:
+            return PaymentStatus.COMPLETE
+        if variant == 3:
+            return PaymentStatus.FAILED
+        if variant == 4:
+            return PaymentStatus.EXPIRED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == PaymentStatus.PENDING:
+            return
+        if value == PaymentStatus.COMPLETE:
+            return
+        if value == PaymentStatus.FAILED:
+            return
+        if value == PaymentStatus.EXPIRED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == PaymentStatus.PENDING:
+            buf.write_i32(1)
+        if value == PaymentStatus.COMPLETE:
+            buf.write_i32(2)
+        if value == PaymentStatus.FAILED:
+            buf.write_i32(3)
+        if value == PaymentStatus.EXPIRED:
+            buf.write_i32(4)
+
+
+
+
+
 class _UniffiConverterOptionalUInt32(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -2718,6 +3516,114 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterOptionalTypeInvoice(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeInvoice.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeInvoice.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeInvoice.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypePay(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypePay.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypePay.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypePay.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypeInvoiceStatus(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeInvoiceStatus.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeInvoiceStatus.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeInvoiceStatus.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypeListIndex(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeListIndex.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeListIndex.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeListIndex.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalTypeNodeEvent(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -2740,6 +3646,60 @@ class _UniffiConverterOptionalTypeNodeEvent(_UniffiConverterRustBuffer):
             return None
         elif flag == 1:
             return _UniffiConverterTypeNodeEvent.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypePayStatus(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypePayStatus.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypePayStatus.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypePayStatus.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypePaymentStatus(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypePaymentStatus.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypePaymentStatus.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypePaymentStatus.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -2820,6 +3780,81 @@ class _UniffiConverterSequenceTypeFundOutput(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterSequenceTypeInvoice(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeInvoice.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeInvoice.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeInvoice.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypePay(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypePay.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypePay.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypePay.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypePayment(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypePayment.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypePayment.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypePayment.read(buf) for i in range(count)
+        ]
+
+
+
 class _UniffiConverterSequenceTypePeer(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -2869,6 +3904,110 @@ class _UniffiConverterSequenceTypePeerChannel(_UniffiConverterRustBuffer):
         ]
 
 # objects.
+class ConfigProtocol(typing.Protocol):
+    def with_developer_cert(self, cert: "DeveloperCert"):
+        """
+        Return a new Config with the given developer certificate.
+        Nodes registered through this config will be associated with the developer's account.
+        """
+
+        raise NotImplementedError
+    def with_network(self, network: "Network"):
+        """
+        Return a new Config with the given network.
+        """
+
+        raise NotImplementedError
+# Config is a Rust-only trait - it's a wrapper around a Rust implementation.
+class Config():
+    _pointer: ctypes.c_void_p
+    def __init__(self, ):
+        """
+        Create a Config with default settings: BITCOIN network, no developer certificate.
+        """
+
+        self._pointer = _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_constructor_config_new,)
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_config, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_config, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+    def with_developer_cert(self, cert: "DeveloperCert") -> "Config":
+        """
+        Return a new Config with the given developer certificate.
+        Nodes registered through this config will be associated with the developer's account.
+        """
+
+        _UniffiConverterTypeDeveloperCert.check_lower(cert)
+        
+        return _UniffiConverterTypeConfig.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_config_with_developer_cert,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeDeveloperCert.lower(cert))
+        )
+
+
+
+
+
+    def with_network(self, network: "Network") -> "Config":
+        """
+        Return a new Config with the given network.
+        """
+
+        _UniffiConverterTypeNetwork.check_lower(network)
+        
+        return _UniffiConverterTypeConfig.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_config_with_network,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeNetwork.lower(network))
+        )
+
+
+
+
+
+
+class _UniffiConverterTypeConfig:
+
+    @staticmethod
+    def lift(value: int):
+        return Config._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: Config):
+        if not isinstance(value, Config):
+            raise TypeError("Expected Config instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: ConfigProtocol):
+        if not isinstance(value, Config):
+            raise TypeError("Expected Config instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: ConfigProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
 class CredentialsProtocol(typing.Protocol):
     """
     `Credentials` is a container for `node_id`, the mTLS client
@@ -3131,6 +4270,21 @@ class NodeProtocol(typing.Protocol):
     cloud. It is the main entrypoint to interact with the node.
     """
 
+    def credentials(self, ):
+        """
+        Returns the serialized credentials for this node.
+        The app should persist these bytes and pass them to connect() on next launch.
+        """
+
+        raise NotImplementedError
+    def disconnect(self, ):
+        """
+        Disconnects from the node and stops the signer if running.
+        After disconnect, all RPC methods will return an error.
+        Safe to call multiple times.
+        """
+
+        raise NotImplementedError
     def get_info(self, ):
         """
         Get information about the node.
@@ -3146,6 +4300,30 @@ class NodeProtocol(typing.Protocol):
 
         Returns information about on-chain outputs and channel funds
         that are available or pending.
+        """
+
+        raise NotImplementedError
+    def list_invoices(self, label: "typing.Optional[str]",invstring: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",offer_id: "typing.Optional[str]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]"):
+        """
+        List all invoices (received payment requests).
+        List invoices (received payment requests).
+        All parameters are optional filters; pass None to fetch all.
+        """
+
+        raise NotImplementedError
+    def list_payments(self, status: "typing.Optional[PaymentStatus]"):
+        """
+        List payments (sent and received), merged into a single timeline.
+        Defaults to COMPLETE only. Pass a status to override the filter,
+        or use list_invoices/list_pays for unfiltered access.
+        Results are sorted newest-first.
+        """
+
+        raise NotImplementedError
+    def list_pays(self, bolt11: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",status: "typing.Optional[PayStatus]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]"):
+        """
+        List outgoing payments.
+        All parameters are optional filters; pass None to fetch all.
         """
 
         raise NotImplementedError
@@ -3241,6 +4419,34 @@ class Node():
         return inst
 
 
+    def credentials(self, ) -> "bytes":
+        """
+        Returns the serialized credentials for this node.
+        The app should persist these bytes and pass them to connect() on next launch.
+        """
+
+        return _UniffiConverterBytes.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_credentials,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def disconnect(self, ) -> None:
+        """
+        Disconnects from the node and stops the signer if running.
+        After disconnect, all RPC methods will return an error.
+        Safe to call multiple times.
+        """
+
+        _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_disconnect,self._uniffi_clone_pointer(),)
+
+
+
+
+
+
     def get_info(self, ) -> "GetInfoResponse":
         """
         Get information about the node.
@@ -3267,6 +4473,93 @@ class Node():
 
         return _UniffiConverterTypeListFundsResponse.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_funds,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def list_invoices(self, label: "typing.Optional[str]",invstring: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",offer_id: "typing.Optional[str]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]") -> "ListInvoicesResponse":
+        """
+        List all invoices (received payment requests).
+        List invoices (received payment requests).
+        All parameters are optional filters; pass None to fetch all.
+        """
+
+        _UniffiConverterOptionalString.check_lower(label)
+        
+        _UniffiConverterOptionalString.check_lower(invstring)
+        
+        _UniffiConverterOptionalBytes.check_lower(payment_hash)
+        
+        _UniffiConverterOptionalString.check_lower(offer_id)
+        
+        _UniffiConverterOptionalTypeListIndex.check_lower(index)
+        
+        _UniffiConverterOptionalUInt64.check_lower(start)
+        
+        _UniffiConverterOptionalUInt32.check_lower(limit)
+        
+        return _UniffiConverterTypeListInvoicesResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_invoices,self._uniffi_clone_pointer(),
+        _UniffiConverterOptionalString.lower(label),
+        _UniffiConverterOptionalString.lower(invstring),
+        _UniffiConverterOptionalBytes.lower(payment_hash),
+        _UniffiConverterOptionalString.lower(offer_id),
+        _UniffiConverterOptionalTypeListIndex.lower(index),
+        _UniffiConverterOptionalUInt64.lower(start),
+        _UniffiConverterOptionalUInt32.lower(limit))
+        )
+
+
+
+
+
+    def list_payments(self, status: "typing.Optional[PaymentStatus]") -> "ListPaymentsResponse":
+        """
+        List payments (sent and received), merged into a single timeline.
+        Defaults to COMPLETE only. Pass a status to override the filter,
+        or use list_invoices/list_pays for unfiltered access.
+        Results are sorted newest-first.
+        """
+
+        _UniffiConverterOptionalTypePaymentStatus.check_lower(status)
+        
+        return _UniffiConverterTypeListPaymentsResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_payments,self._uniffi_clone_pointer(),
+        _UniffiConverterOptionalTypePaymentStatus.lower(status))
+        )
+
+
+
+
+
+    def list_pays(self, bolt11: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",status: "typing.Optional[PayStatus]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]") -> "ListPaysResponse":
+        """
+        List outgoing payments.
+        All parameters are optional filters; pass None to fetch all.
+        """
+
+        _UniffiConverterOptionalString.check_lower(bolt11)
+        
+        _UniffiConverterOptionalBytes.check_lower(payment_hash)
+        
+        _UniffiConverterOptionalTypePayStatus.check_lower(status)
+        
+        _UniffiConverterOptionalTypeListIndex.check_lower(index)
+        
+        _UniffiConverterOptionalUInt64.check_lower(start)
+        
+        _UniffiConverterOptionalUInt32.check_lower(limit)
+        
+        return _UniffiConverterTypeListPaysResponse.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_pays,self._uniffi_clone_pointer(),
+        _UniffiConverterOptionalString.lower(bolt11),
+        _UniffiConverterOptionalBytes.lower(payment_hash),
+        _UniffiConverterOptionalTypePayStatus.lower(status),
+        _UniffiConverterOptionalTypeListIndex.lower(index),
+        _UniffiConverterOptionalUInt64.lower(start),
+        _UniffiConverterOptionalUInt32.lower(limit))
         )
 
 
@@ -3694,6 +4987,15 @@ class Signer():
         inst = cls.__new__(cls)
         inst._pointer = pointer
         return inst
+    @classmethod
+    def new_from_seed(cls, seed: "bytes"):
+        _UniffiConverterBytes.check_lower(seed)
+        
+        # Call the (fallible) function before creating any half-baked object instances.
+        pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed,
+        _UniffiConverterBytes.lower(seed))
+        return cls._make_instance_(pointer)
+
 
 
     def authenticate(self, creds: "Credentials") -> "Signer":
@@ -3757,27 +5059,113 @@ class _UniffiConverterTypeSigner:
 
 # Async support
 
+def connect(mnemonic: "str",credentials: "bytes",config: "Config") -> "Node":
+    """
+    Connect to an existing Greenlight node using previously saved credentials.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
+    
+    _UniffiConverterBytes.check_lower(credentials)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_connect,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterBytes.lower(credentials),
+        _UniffiConverterTypeConfig.lower(config)))
+
+
+def recover(mnemonic: "str",config: "Config") -> "Node":
+    """
+    Recover credentials for an existing Greenlight node and return a connected Node.
+
+    The app should call `node.credentials()` to get the credential bytes
+    and persist them for future `connect()` calls.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_recover,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterTypeConfig.lower(config)))
+
+
+def register(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
+    """
+    Register a new Greenlight node and return a connected Node with signer running.
+
+    The app should call `node.credentials()` to get the credential bytes
+    and persist them for future `connect()` calls.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
+    
+    _UniffiConverterOptionalString.check_lower(invite_code)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code),
+        _UniffiConverterTypeConfig.lower(config)))
+
+
+def register_or_recover(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
+    """
+    Try to recover an existing node; if none exists, register a new one.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
+    
+    _UniffiConverterOptionalString.check_lower(invite_code)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register_or_recover,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code),
+        _UniffiConverterTypeConfig.lower(config)))
+
+
 __all__ = [
     "InternalError",
     "ChannelState",
     "Error",
+    "InvoiceStatus",
+    "ListIndex",
     "Network",
     "NodeEvent",
     "OutputStatus",
     "PayStatus",
+    "PaymentDirection",
+    "PaymentStatus",
     "FundChannel",
     "FundOutput",
     "GetInfoResponse",
+    "Invoice",
     "InvoicePaidEvent",
     "ListFundsResponse",
+    "ListInvoicesResponse",
+    "ListPaymentsResponse",
+    "ListPaysResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
     "OnchainReceiveResponse",
     "OnchainSendResponse",
+    "Pay",
+    "Payment",
     "Peer",
     "PeerChannel",
     "ReceiveResponse",
     "SendResponse",
+    "connect",
+    "recover",
+    "register",
+    "register_or_recover",
+    "Config",
     "Credentials",
     "DeveloperCert",
     "Handle",

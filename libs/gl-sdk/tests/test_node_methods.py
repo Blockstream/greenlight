@@ -80,6 +80,35 @@ class TestNodeMethods:
         assert hasattr(glsdk.Node, "list_funds")
 
 
+class TestSendResponseFields:
+    """Test that SendResponse includes payment_hash and destination_pubkey."""
+
+    def test_send_response_has_payment_hash(self):
+        response = glsdk.SendResponse(
+            status=glsdk.PayStatus.COMPLETE,
+            preimage=b"\x01" * 32,
+            payment_hash=b"\x00" * 32,
+            destination_pubkey=b"\x02" * 33,
+            amount_msat=1000,
+            amount_sent_msat=1010,
+            parts=1,
+        )
+        assert response.payment_hash == b"\x00" * 32
+        assert response.destination_pubkey == b"\x02" * 33
+
+    def test_send_response_destination_pubkey_is_optional(self):
+        response = glsdk.SendResponse(
+            status=glsdk.PayStatus.COMPLETE,
+            preimage=b"\x01" * 32,
+            payment_hash=b"\x00" * 32,
+            destination_pubkey=None,
+            amount_msat=1000,
+            amount_sent_msat=1010,
+            parts=1,
+        )
+        assert response.destination_pubkey is None
+
+
 class TestResponseTypeFields:
     """Test that response types have expected fields."""
 
