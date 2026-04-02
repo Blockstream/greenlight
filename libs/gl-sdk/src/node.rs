@@ -275,7 +275,74 @@ impl Node {
         Ok(res.into())
     }
 
-    /// List all invoices (received payment requests).
+    /// Get a unified snapshot of the node's balances, capacity, and
+    /// connectivity. Queries the node live each time.
+    pub fn node_state(&self) -> Result<NodeState, Error> {
+        let info = self.get_info()?;
+        let channels = self.list_peer_channels()?;
+        let funds = self.list_funds()?;
+
+        let mut channels_balance_msat: u64 = 0;
+        let mut total_channel_capacity_msat: u64 = 0;
+        let mut max_receivable_single_payment_msat: u64 = 0;
+        let mut total_inbound_liquidity_msat: u64 = 0;
+        let mut pending_onchain_balance_msat: u64 = 0;
+        let mut connected_peers: Vec<Vec<u8>> = Vec::new();
+
+        for ch in &channels.channels {
+            if ch.state.is_open() {
+                channels_balance_msat += ch.spendable_msat.unwrap_or(0);
+                total_channel_capacity_msat += ch.total_msat.unwrap_or(0);
+                let receivable = ch.receivable_msat.unwrap_or(0);
+                if receivable > max_receivable_single_payment_msat {
+                    max_receivable_single_payment_msat = receivable;
+                }
+                total_inbound_liquidity_msat += receivable;
+            }
+            if ch.state.is_closing() {
+                pending_onchain_balance_msat += ch.to_us_msat.unwrap_or(0);
+            }
+            if ch.peer_connected {
+                if !connected_peers.iter().any(|p| p == &ch.peer_id) {
+                    connected_peers.push(ch.peer_id.clone());
+                }
+            }
+        }
+
+        let mut onchain_balance_msat: u64 = 0;
+        let mut unconfirmed_onchain_balance_msat: u64 = 0;
+        for output in &funds.outputs {
+            match output.status {
+                OutputStatus::Confirmed => onchain_balance_msat += output.amount_msat,
+                OutputStatus::Unconfirmed => {
+                    unconfirmed_onchain_balance_msat += output.amount_msat
+                }
+                _ => {}
+            }
+        }
+
+        Ok(NodeState {
+            id: info.id,
+            block_height: info.blockheight,
+            network: info.network,
+            version: info.version,
+            alias: info.alias,
+            color: info.color,
+            num_active_channels: info.num_active_channels,
+            num_pending_channels: info.num_pending_channels,
+            num_inactive_channels: info.num_inactive_channels,
+            channels_balance_msat,
+            total_channel_capacity_msat,
+            onchain_balance_msat,
+            unconfirmed_onchain_balance_msat,
+            pending_onchain_balance_msat,
+            max_receivable_single_payment_msat,
+            total_inbound_liquidity_msat,
+            connected_peers,
+            fees_collected_msat: info.fees_collected_msat,
+        })
+    }
+
     /// List invoices (received payment requests).
     /// All parameters are optional filters; pass None to fetch all.
     pub fn list_invoices(
@@ -684,6 +751,22 @@ impl ChannelState {
             _ => ChannelState::Onchain, // Default fallback
         }
     }
+
+    fn is_open(&self) -> bool {
+        matches!(self, ChannelState::ChanneldNormal)
+    }
+
+    fn is_closing(&self) -> bool {
+        matches!(
+            self,
+            ChannelState::ChanneldShuttingDown
+                | ChannelState::ClosingdSigexchange
+                | ChannelState::ClosingdComplete
+                | ChannelState::AwaitingUnilateral
+                | ChannelState::FundingSpendSeen
+                | ChannelState::Onchain
+        )
+    }
 }
 
 impl From<clnpb::ListpeerchannelsResponse> for ListPeerChannelsResponse {
@@ -1073,6 +1156,32 @@ impl Payment {
 #[derive(Clone, uniffi::Record)]
 pub struct ListPaymentsResponse {
     pub payments: Vec<Payment>,
+}
+
+// ============================================================
+// NodeState — unified node snapshot
+// ============================================================
+
+#[derive(Clone, uniffi::Record)]
+pub struct NodeState {
+    pub id: Vec<u8>,
+    pub block_height: u32,
+    pub network: String,
+    pub version: String,
+    pub alias: Option<String>,
+    pub color: Vec<u8>,
+    pub num_active_channels: u32,
+    pub num_pending_channels: u32,
+    pub num_inactive_channels: u32,
+    pub channels_balance_msat: u64,
+    pub total_channel_capacity_msat: u64,
+    pub onchain_balance_msat: u64,
+    pub unconfirmed_onchain_balance_msat: u64,
+    pub pending_onchain_balance_msat: u64,
+    pub max_receivable_single_payment_msat: u64,
+    pub total_inbound_liquidity_msat: u64,
+    pub connected_peers: Vec<Vec<u8>>,
+    pub fees_collected_msat: u64,
 }
 
 // ============================================================

@@ -2,6 +2,8 @@ package com.blockstream.glsdk
 
 import android.system.Os
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,6 +41,23 @@ class NodeOperationsTest {
                 amountMsat = 20_000_000uL
             )
             println("Lightning Invoice: ${invoice.toString()}")
+        }
+    }
+
+    @Test
+    fun test_node_state_returns_valid_snapshot() {
+        val config = Config()
+        val node = registerOrRecover(mnemonic = testMnemonic, inviteCode = null, config = config)
+        node.use { n ->
+            val state = n.nodeState()
+            assertTrue(state.id.isNotEmpty())
+            assertTrue(state.blockHeight > 0u)
+            assertEquals("bitcoin", state.network)
+            assertTrue(state.version.isNotEmpty())
+            assertEquals(0uL, state.channelsBalanceMsat)
+            assertEquals(0uL, state.totalChannelCapacityMsat)
+            assertEquals(0uL, state.onchainBalanceMsat)
+            assertEquals(0uL, state.totalInboundLiquidityMsat)
         }
     }
 }

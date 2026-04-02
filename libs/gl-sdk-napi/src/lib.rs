@@ -97,6 +97,36 @@ pub struct GetInfoResponse {
     pub fees_collected_msat: i64,
 }
 
+#[napi(object)]
+pub struct NodeState {
+    pub id: Buffer,
+    pub block_height: u32,
+    pub network: String,
+    pub version: String,
+    pub alias: Option<String>,
+    pub color: Buffer,
+    pub num_active_channels: u32,
+    pub num_pending_channels: u32,
+    pub num_inactive_channels: u32,
+    /// Channel balance in millisatoshis (as i64 for JS compatibility)
+    pub channels_balance_msat: i64,
+    /// Total channel capacity in millisatoshis (as i64 for JS compatibility)
+    pub total_channel_capacity_msat: i64,
+    /// Confirmed on-chain balance in millisatoshis (as i64 for JS compatibility)
+    pub onchain_balance_msat: i64,
+    /// Unconfirmed on-chain balance in millisatoshis (as i64 for JS compatibility)
+    pub unconfirmed_onchain_balance_msat: i64,
+    /// Balance from closing channels in millisatoshis (as i64 for JS compatibility)
+    pub pending_onchain_balance_msat: i64,
+    /// Largest receivable in a single payment in millisatoshis (as i64 for JS compatibility)
+    pub max_receivable_single_payment_msat: i64,
+    /// Total inbound liquidity in millisatoshis (as i64 for JS compatibility)
+    pub total_inbound_liquidity_msat: i64,
+    pub connected_peers: Vec<Buffer>,
+    /// Fees collected in millisatoshis (as i64 for JS compatibility)
+    pub fees_collected_msat: i64,
+}
+
 // ============================================================================
 // ListPeers Response Types
 // ============================================================================
@@ -617,6 +647,39 @@ impl Node {
             lightning_dir: response.lightning_dir,
             blockheight: response.blockheight,
             network: response.network,
+            fees_collected_msat: response.fees_collected_msat as i64,
+        })
+    }
+
+    #[napi]
+    pub async fn node_state(&self) -> Result<NodeState> {
+        let inner = self.inner.clone();
+        let response = tokio::task::spawn_blocking(move || {
+            inner
+                .node_state()
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+
+        Ok(NodeState {
+            id: Buffer::from(response.id),
+            block_height: response.block_height,
+            network: response.network,
+            version: response.version,
+            alias: response.alias,
+            color: Buffer::from(response.color),
+            num_active_channels: response.num_active_channels,
+            num_pending_channels: response.num_pending_channels,
+            num_inactive_channels: response.num_inactive_channels,
+            channels_balance_msat: response.channels_balance_msat as i64,
+            total_channel_capacity_msat: response.total_channel_capacity_msat as i64,
+            onchain_balance_msat: response.onchain_balance_msat as i64,
+            unconfirmed_onchain_balance_msat: response.unconfirmed_onchain_balance_msat as i64,
+            pending_onchain_balance_msat: response.pending_onchain_balance_msat as i64,
+            max_receivable_single_payment_msat: response.max_receivable_single_payment_msat as i64,
+            total_inbound_liquidity_msat: response.total_inbound_liquidity_msat as i64,
+            connected_peers: response.connected_peers.into_iter().map(Buffer::from).collect(),
             fees_collected_msat: response.fees_collected_msat as i64,
         })
     }

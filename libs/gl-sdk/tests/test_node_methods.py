@@ -6,6 +6,13 @@ and their response types.
 
 import pytest
 import glsdk
+from gltesting.fixtures import *
+
+
+MNEMONIC = (
+    "abandon abandon abandon abandon abandon abandon "
+    "abandon abandon abandon abandon abandon about"
+)
 
 
 class TestResponseTypes:
@@ -215,3 +222,64 @@ class TestResponseTypeFields:
         assert channel.peer_id == b"\x03" * 33
         assert channel.our_amount_msat == 500000000
         assert channel.connected is True
+
+
+class TestNodeStateType:
+    """Test that NodeState type is properly defined in the bindings."""
+
+    def test_node_state_type_exists(self):
+        assert hasattr(glsdk, "NodeState")
+
+    def test_node_state_record_has_expected_fields(self):
+        state = glsdk.NodeState(
+            id=b"\x02" * 33,
+            block_height=800000,
+            network="regtest",
+            version="v24.11",
+            alias="test-node",
+            color=b"\xff\x00\x00",
+            num_active_channels=2,
+            num_pending_channels=1,
+            num_inactive_channels=0,
+            channels_balance_msat=500_000_000,
+            total_channel_capacity_msat=1_000_000_000,
+            onchain_balance_msat=100_000_000,
+            unconfirmed_onchain_balance_msat=50_000_000,
+            pending_onchain_balance_msat=0,
+            max_receivable_single_payment_msat=400_000_000,
+            total_inbound_liquidity_msat=800_000_000,
+            connected_peers=[b"\x03" * 33],
+            fees_collected_msat=1000,
+        )
+        assert state.id == b"\x02" * 33
+        assert state.block_height == 800000
+        assert state.network == "regtest"
+        assert state.version == "v24.11"
+        assert state.channels_balance_msat == 500_000_000
+        assert state.total_channel_capacity_msat == 1_000_000_000
+        assert state.onchain_balance_msat == 100_000_000
+        assert state.unconfirmed_onchain_balance_msat == 50_000_000
+        assert len(state.connected_peers) == 1
+
+
+class TestNodeStateMethod:
+    """Test node_state() integration."""
+
+    def test_node_has_node_state_method(self):
+        assert hasattr(glsdk.Node, "node_state")
+
+    def test_node_state_returns_valid_snapshot(self, scheduler, nobody_id):
+        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
+        config = glsdk.Config().with_developer_cert(dev_cert)
+        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        state = node.node_state()
+        assert isinstance(state, glsdk.NodeState)
+        assert len(state.id) == 33
+        assert state.block_height > 0
+        assert state.network == "regtest"
+        assert state.version != ""
+        assert state.channels_balance_msat == 0
+        assert state.total_channel_capacity_msat == 0
+        assert state.onchain_balance_msat == 0
+        assert state.total_inbound_liquidity_msat == 0
+        node.disconnect()
