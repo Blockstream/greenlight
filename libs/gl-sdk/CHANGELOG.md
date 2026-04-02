@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.2.0] - 2026-04-02
+
+### Added
+
+- `Node::get_info()` method for retrieving node identity and status
+- `Node::list_peers()` method for listing connected peers
+- `Node::list_peer_channels()` method for detailed channel information
+- `Node::list_funds()` method for on-chain and channel fund balances
+- `Node::stream_node_events()` for real-time event streaming (invoice payments, etc.)
+- `Node::list_invoices()`, `Node::list_pays()`, and `Node::list_payments()` for payment history
+- `DeveloperCert` type and `Scheduler::with_developer_cert()` builder for runtime certificate injection
+- `Signer::new_from_seed()` constructor as an alternative to raw secret bytes
+- High-level authentication API on `Scheduler`
+- `opening_fee_msat` field to `ReceiveResponse` reporting LSP JIT channel fees
+- Many new exported types: `GetInfoResponse`, `ListPeersResponse`, `ListPeerChannelsResponse`, `ListFundsResponse`, `Peer`, `PeerChannel`, `FundChannel`, `FundOutput`, `NodeEvent`, `NodeEventStream`, `InvoicePaidEvent`, `ChannelState`, `OutputStatus`
+
+### Changed
+
+- Response types migrated from `uniffi::Object` to `uniffi::Record` so struct fields are directly accessible from bindings
+- Made `Credentials::load()`, `Credentials::save()`, `Node::receive()`, `Node::send()`, `Node::onchain_send()`, `Node::onchain_receive()`, `Signer::new()`, `Signer::authenticate()`, `Signer::start()`, `Signer::node_id()` public
+
 ## [0.1.1] - 2026-01-16
 
 ### Changed
