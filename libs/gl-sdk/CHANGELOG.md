@@ -18,9 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `Node::list_invoices()`, `Node::list_pays()`, and `Node::list_payments()` for payment history
 - `DeveloperCert` type and `Scheduler::with_developer_cert()` builder for runtime certificate injection
 - `Signer::new_from_seed()` constructor as an alternative to raw secret bytes
-- High-level authentication API on `Scheduler`
+- Top-level `register()`, `recover()`, `connect()`, and `register_or_recover()` convenience functions for simplified onboarding
+- `Config` type for SDK configuration (network, developer cert)
 - `opening_fee_msat` field to `ReceiveResponse` reporting LSP JIT channel fees
-- Many new exported types: `GetInfoResponse`, `ListPeersResponse`, `ListPeerChannelsResponse`, `ListFundsResponse`, `Peer`, `PeerChannel`, `FundChannel`, `FundOutput`, `NodeEvent`, `NodeEventStream`, `InvoicePaidEvent`, `ChannelState`, `OutputStatus`
+- Many new exported types: `GetInfoResponse`, `ListPeersResponse`, `ListPeerChannelsResponse`, `ListFundsResponse`, `ListInvoicesResponse`, `ListPaysResponse`, `ListPaymentsResponse`, `Invoice`, `InvoiceStatus`, `Pay`, `Payment`, `PaymentDirection`, `PaymentStatus`, `ListIndex`, `Peer`, `PeerChannel`, `FundChannel`, `FundOutput`, `NodeEvent`, `NodeEventStream`, `InvoicePaidEvent`, `ChannelState`, `OutputStatus`
 
 ### Changed
 

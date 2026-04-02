@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Retry logic for `get_pairing_data` to improve reliability
 - VLS state synchronization with tombstone and conflict detection support
 - Initial VLS state is now correctly synced to the nodelet on first connect
+- Signer state canonicalization for deterministic serialization
+- Signing modes and state override mode for signer state management
+- Signature persistence in signer state
+- Policy-other warn filter for commitment number desync (avoids noisy warnings)
 
 ### Changed
 
