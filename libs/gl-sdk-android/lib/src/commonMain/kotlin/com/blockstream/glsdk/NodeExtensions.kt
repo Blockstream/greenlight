@@ -27,5 +27,10 @@ public fun Node.listPays(
 
 @Throws(Exception::class)
 public fun Node.listPayments(
-    status: PaymentStatus? = null,
-): ListPaymentsResponse = listPayments(status)
+    filters: List<PaymentTypeFilter>? = null,
+    fromTimestamp: ULong? = null,
+    toTimestamp: ULong? = null,
+    includeFailures: Boolean? = null,
+    offset: UInt? = null,
+    limit: UInt? = null,
+): List<Payment> = listPayments(ListPaymentsRequest(filters, fromTimestamp, toTimestamp, includeFailures, offset, limit))
