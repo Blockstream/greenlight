@@ -344,33 +344,75 @@ impl Node {
     }
 
     /// List payments (sent and received), merged into a single timeline.
-    /// Defaults to COMPLETE only. Pass a status to override the filter,
-    /// or use list_invoices/list_pays for unfiltered access.
+    ///
+    /// Fetches invoices and outgoing payments from the node, merges
+    /// them into a unified list, and applies optional filters.
+    /// Use `list_invoices`/`list_pays` for direct CLN access.
     /// Results are sorted newest-first.
-    pub fn list_payments(
-        &self,
-        status: Option<PaymentStatus>,
-    ) -> Result<ListPaymentsResponse, Error> {
-        let filter = status.unwrap_or(PaymentStatus::COMPLETE);
+    pub fn list_payments(&self, req: ListPaymentsRequest) -> Result<Vec<Payment>, Error> {
+        self.check_connected()?;
+        let mut cln_client = exec(self.get_cln_client())?.clone();
 
-        let invoices = self.list_invoices(None, None, None, None, None, None, None)?;
-        let pays = self.list_pays(None, None, None, None, None, None)?;
+        let invoices = exec(cln_client.list_invoices(clnpb::ListinvoicesRequest::default()))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+        let pays = exec(cln_client.list_pays(clnpb::ListpaysRequest::default()))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
 
         let mut payments: Vec<Payment> = Vec::new();
 
-        for inv in &invoices.invoices {
-            payments.push(Payment::from_invoice(inv));
+        // Should we include received payments?
+        let include_received = req
+            .filters
+            .as_ref()
+            .map(|f| f.is_empty() || f.iter().any(|t| matches!(t, PaymentTypeFilter::Received)))
+            .unwrap_or(true);
+
+        // Should we include sent payments?
+        let include_sent = req
+            .filters
+            .as_ref()
+            .map(|f| f.is_empty() || f.iter().any(|t| matches!(t, PaymentTypeFilter::Sent)))
+            .unwrap_or(true);
+
+        if include_received {
+            payments.extend(invoices.invoices.into_iter().map(|i| -> Payment { i.into() }));
         }
-        for pay in &pays.pays {
-            payments.push(Payment::from_pay(pay));
+        if include_sent {
+            payments.extend(pays.pays.into_iter().map(|p| -> Payment { p.into() }));
         }
 
-        payments.retain(|p| p.status == filter);
+        let include_failures = req.include_failures.unwrap_or(false);
 
-        // Sort newest first by created_at (None sorts last)
-        payments.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        payments.retain(|p| {
+            if !include_failures && matches!(p.status, PaymentStatus::Failed) {
+                return false;
+            }
+            if let Some(from) = req.from_timestamp {
+                if p.payment_time < from {
+                    return false;
+                }
+            }
+            if let Some(to) = req.to_timestamp {
+                if p.payment_time > to {
+                    return false;
+                }
+            }
+            true
+        });
 
-        Ok(ListPaymentsResponse { payments })
+        // Sort newest first
+        payments.sort_by(|a, b| b.payment_time.cmp(&a.payment_time));
+
+        // Apply pagination
+        let offset = req.offset.unwrap_or(0) as usize;
+        let limit = req.limit.unwrap_or(u32::MAX) as usize;
+        let payments = payments.into_iter().skip(offset).take(limit).collect();
+
+        Ok(payments)
     }
 
     /// Stream real-time events from the node.
@@ -967,112 +1009,120 @@ impl From<clnpb::ListpaysResponse> for ListPaysResponse {
 }
 
 // ============================================================
-// Unified list_payments response types
+// Unified list_payments request/response types
 // ============================================================
 
-#[derive(Clone, uniffi::Enum)]
-pub enum PaymentDirection {
-    SENT,
-    RECEIVED,
+#[derive(Clone, Default, uniffi::Record)]
+pub struct ListPaymentsRequest {
+    /// Filter by payment type (Sent, Received). None or empty = all.
+    pub filters: Option<Vec<PaymentTypeFilter>>,
+    /// Include only payments after this epoch timestamp (seconds).
+    pub from_timestamp: Option<u64>,
+    /// Include only payments before this epoch timestamp (seconds).
+    pub to_timestamp: Option<u64>,
+    /// Include failed payments. Default: false.
+    pub include_failures: Option<bool>,
+    /// Pagination offset.
+    pub offset: Option<u32>,
+    /// Pagination limit.
+    pub limit: Option<u32>,
 }
 
-#[derive(Clone, PartialEq, uniffi::Enum)]
-pub enum PaymentStatus {
-    PENDING,
-    COMPLETE,
-    FAILED,
-    EXPIRED,
+#[derive(Clone, uniffi::Enum)]
+pub enum PaymentTypeFilter {
+    Sent,
+    Received,
 }
 
 #[derive(Clone, uniffi::Record)]
 pub struct Payment {
-    pub payment_hash: Vec<u8>,
-    pub direction: PaymentDirection,
+    pub id: String,
+    pub payment_type: PaymentType,
+    pub payment_time: u64,
+    pub amount_msat: u64,
+    pub fee_msat: u64,
     pub status: PaymentStatus,
-    pub invoice_status: Option<InvoiceStatus>,
-    pub pay_status: Option<PayStatus>,
-    pub amount_msat: Option<u64>,
-    pub fee_msat: Option<u64>,
-    pub amount_total_msat: Option<u64>,
-    pub preimage: Option<Vec<u8>>,
-    pub destination_pubkey: Option<Vec<u8>>,
     pub description: Option<String>,
     pub bolt11: Option<String>,
-    pub label: Option<String>,
-    pub created_at: Option<u64>,
-    pub invoice: Option<Invoice>,
-    pub pay: Option<Pay>,
+    pub preimage: Option<Vec<u8>>,
+    pub destination: Option<Vec<u8>>,
 }
 
-impl Payment {
-    fn from_invoice(inv: &Invoice) -> Self {
-        let status = match inv.status {
-            InvoiceStatus::UNPAID => PaymentStatus::PENDING,
-            InvoiceStatus::PAID => PaymentStatus::COMPLETE,
-            InvoiceStatus::EXPIRED => PaymentStatus::EXPIRED,
+#[derive(Clone, uniffi::Enum)]
+pub enum PaymentType {
+    Sent,
+    Received,
+}
+
+#[derive(Clone, uniffi::Enum)]
+pub enum PaymentStatus {
+    Pending,
+    Complete,
+    Failed,
+}
+
+impl From<clnpb::ListinvoicesInvoices> for Payment {
+    fn from(inv: clnpb::ListinvoicesInvoices) -> Self {
+        let status = match inv.status() {
+            clnpb::listinvoices_invoices::ListinvoicesInvoicesStatus::Paid => {
+                PaymentStatus::Complete
+            }
+            clnpb::listinvoices_invoices::ListinvoicesInvoicesStatus::Expired => {
+                PaymentStatus::Failed
+            }
+            clnpb::listinvoices_invoices::ListinvoicesInvoicesStatus::Unpaid => {
+                PaymentStatus::Pending
+            }
         };
-        // Invoices have no created_at in CLN. Use paid_at if available,
-        // fall back to expires_at for unpaid/expired invoices.
-        let created_at = inv.paid_at.or(Some(inv.expires_at));
-        let amount_msat = inv.amount_received_msat;
-        Self {
-            payment_hash: inv.payment_hash.clone(),
-            direction: PaymentDirection::RECEIVED,
-            status,
-            invoice_status: Some(inv.status.clone()),
-            pay_status: None,
+
+        let payment_time = inv.paid_at.unwrap_or(inv.expires_at);
+        let amount_msat = inv
+            .amount_received_msat
+            .or(inv.amount_msat)
+            .map(|a| a.msat)
+            .unwrap_or(0);
+
+        Payment {
+            id: inv.payment_hash.iter().map(|b| format!("{:02x}", b)).collect::<String>(),
+            payment_type: PaymentType::Received,
+            payment_time,
             amount_msat,
-            fee_msat: None,
-            amount_total_msat: amount_msat,
-            preimage: inv.payment_preimage.clone(),
-            destination_pubkey: inv.destination_pubkey.clone(),
-            description: if inv.description.is_empty() {
-                None
-            } else {
-                Some(inv.description.clone())
-            },
-            bolt11: inv.bolt11.clone(),
-            label: Some(inv.label.clone()),
-            created_at,
-            invoice: Some(inv.clone()),
-            pay: None,
-        }
-    }
-
-    fn from_pay(pay: &Pay) -> Self {
-        let status = match pay.status {
-            PayStatus::PENDING => PaymentStatus::PENDING,
-            PayStatus::COMPLETE => PaymentStatus::COMPLETE,
-            PayStatus::FAILED => PaymentStatus::FAILED,
-        };
-        let fee_msat = match (pay.amount_sent_msat, pay.amount_msat) {
-            (Some(sent), Some(amt)) if sent >= amt => Some(sent - amt),
-            _ => None,
-        };
-        Self {
-            payment_hash: pay.payment_hash.clone(),
-            direction: PaymentDirection::SENT,
+            fee_msat: 0,
             status,
-            invoice_status: None,
-            pay_status: Some(pay.status.clone()),
-            amount_msat: pay.amount_msat,
-            fee_msat,
-            amount_total_msat: pay.amount_sent_msat,
-            preimage: pay.preimage.clone(),
-            destination_pubkey: pay.destination_pubkey.clone(),
-            description: pay.description.clone(),
-            bolt11: pay.bolt11.clone(),
-            label: pay.label.clone(),
-            created_at: Some(pay.created_at),
-            invoice: None,
-            pay: Some(pay.clone()),
+            description: inv.description,
+            bolt11: inv.bolt11,
+            preimage: inv.payment_preimage,
+            destination: None,
         }
     }
 }
 
-#[derive(Clone, uniffi::Record)]
-pub struct ListPaymentsResponse {
-    pub payments: Vec<Payment>,
+impl From<clnpb::ListpaysPays> for Payment {
+    fn from(pay: clnpb::ListpaysPays) -> Self {
+        let status = match pay.status() {
+            clnpb::listpays_pays::ListpaysPaysStatus::Complete => PaymentStatus::Complete,
+            clnpb::listpays_pays::ListpaysPaysStatus::Failed => PaymentStatus::Failed,
+            clnpb::listpays_pays::ListpaysPaysStatus::Pending => PaymentStatus::Pending,
+        };
+
+        let payment_time = pay.completed_at.unwrap_or(pay.created_at);
+        let amount_msat = pay.amount_msat.as_ref().map(|a| a.msat).unwrap_or(0);
+        let amount_sent_msat = pay.amount_sent_msat.as_ref().map(|a| a.msat).unwrap_or(0);
+        let fee_msat = amount_sent_msat.saturating_sub(amount_msat);
+
+        Payment {
+            id: pay.payment_hash.iter().map(|b| format!("{:02x}", b)).collect::<String>(),
+            payment_type: PaymentType::Sent,
+            payment_time,
+            amount_msat,
+            fee_msat,
+            status,
+            description: pay.description,
+            bolt11: pay.bolt11,
+            preimage: pay.preimage,
+            destination: pay.destination,
+        }
+    }
 }
 
 // ============================================================

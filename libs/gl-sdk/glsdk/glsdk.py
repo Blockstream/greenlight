@@ -486,7 +486,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_invoices() != 6677:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_list_payments() != 26056:
+    if lib.uniffi_glsdk_checksum_method_node_list_payments() != 43756:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_pays() != 3970:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -1952,33 +1952,92 @@ class _UniffiConverterTypeListInvoicesResponse(_UniffiConverterRustBuffer):
         _UniffiConverterSequenceTypeInvoice.write(value.invoices, buf)
 
 
-class ListPaymentsResponse:
-    payments: "typing.List[Payment]"
-    def __init__(self, *, payments: "typing.List[Payment]"):
-        self.payments = payments
+class ListPaymentsRequest:
+    filters: "typing.Optional[typing.List[PaymentTypeFilter]]"
+    """
+    Filter by payment type (Sent, Received). None or empty = all.
+    """
+
+    from_timestamp: "typing.Optional[int]"
+    """
+    Include only payments after this epoch timestamp (seconds).
+    """
+
+    to_timestamp: "typing.Optional[int]"
+    """
+    Include only payments before this epoch timestamp (seconds).
+    """
+
+    include_failures: "typing.Optional[bool]"
+    """
+    Include failed payments. Default: false.
+    """
+
+    offset: "typing.Optional[int]"
+    """
+    Pagination offset.
+    """
+
+    limit: "typing.Optional[int]"
+    """
+    Pagination limit.
+    """
+
+    def __init__(self, *, filters: "typing.Optional[typing.List[PaymentTypeFilter]]", from_timestamp: "typing.Optional[int]", to_timestamp: "typing.Optional[int]", include_failures: "typing.Optional[bool]", offset: "typing.Optional[int]", limit: "typing.Optional[int]"):
+        self.filters = filters
+        self.from_timestamp = from_timestamp
+        self.to_timestamp = to_timestamp
+        self.include_failures = include_failures
+        self.offset = offset
+        self.limit = limit
 
     def __str__(self):
-        return "ListPaymentsResponse(payments={})".format(self.payments)
+        return "ListPaymentsRequest(filters={}, from_timestamp={}, to_timestamp={}, include_failures={}, offset={}, limit={})".format(self.filters, self.from_timestamp, self.to_timestamp, self.include_failures, self.offset, self.limit)
 
     def __eq__(self, other):
-        if self.payments != other.payments:
+        if self.filters != other.filters:
+            return False
+        if self.from_timestamp != other.from_timestamp:
+            return False
+        if self.to_timestamp != other.to_timestamp:
+            return False
+        if self.include_failures != other.include_failures:
+            return False
+        if self.offset != other.offset:
+            return False
+        if self.limit != other.limit:
             return False
         return True
 
-class _UniffiConverterTypeListPaymentsResponse(_UniffiConverterRustBuffer):
+class _UniffiConverterTypeListPaymentsRequest(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
-        return ListPaymentsResponse(
-            payments=_UniffiConverterSequenceTypePayment.read(buf),
+        return ListPaymentsRequest(
+            filters=_UniffiConverterOptionalSequenceTypePaymentTypeFilter.read(buf),
+            from_timestamp=_UniffiConverterOptionalUInt64.read(buf),
+            to_timestamp=_UniffiConverterOptionalUInt64.read(buf),
+            include_failures=_UniffiConverterOptionalBool.read(buf),
+            offset=_UniffiConverterOptionalUInt32.read(buf),
+            limit=_UniffiConverterOptionalUInt32.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterSequenceTypePayment.check_lower(value.payments)
+        _UniffiConverterOptionalSequenceTypePaymentTypeFilter.check_lower(value.filters)
+        _UniffiConverterOptionalUInt64.check_lower(value.from_timestamp)
+        _UniffiConverterOptionalUInt64.check_lower(value.to_timestamp)
+        _UniffiConverterOptionalBool.check_lower(value.include_failures)
+        _UniffiConverterOptionalUInt32.check_lower(value.offset)
+        _UniffiConverterOptionalUInt32.check_lower(value.limit)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterSequenceTypePayment.write(value.payments, buf)
+        _UniffiConverterOptionalSequenceTypePaymentTypeFilter.write(value.filters, buf)
+        _UniffiConverterOptionalUInt64.write(value.from_timestamp, buf)
+        _UniffiConverterOptionalUInt64.write(value.to_timestamp, buf)
+        _UniffiConverterOptionalBool.write(value.include_failures, buf)
+        _UniffiConverterOptionalUInt32.write(value.offset, buf)
+        _UniffiConverterOptionalUInt32.write(value.limit, buf)
 
 
 class ListPaysResponse:
@@ -2261,75 +2320,51 @@ class _UniffiConverterTypePay(_UniffiConverterRustBuffer):
 
 
 class Payment:
-    payment_hash: "bytes"
-    direction: "PaymentDirection"
+    id: "str"
+    payment_type: "PaymentType"
+    payment_time: "int"
+    amount_msat: "int"
+    fee_msat: "int"
     status: "PaymentStatus"
-    invoice_status: "typing.Optional[InvoiceStatus]"
-    pay_status: "typing.Optional[PayStatus]"
-    amount_msat: "typing.Optional[int]"
-    fee_msat: "typing.Optional[int]"
-    amount_total_msat: "typing.Optional[int]"
-    preimage: "typing.Optional[bytes]"
-    destination_pubkey: "typing.Optional[bytes]"
     description: "typing.Optional[str]"
     bolt11: "typing.Optional[str]"
-    label: "typing.Optional[str]"
-    created_at: "typing.Optional[int]"
-    invoice: "typing.Optional[Invoice]"
-    pay: "typing.Optional[Pay]"
-    def __init__(self, *, payment_hash: "bytes", direction: "PaymentDirection", status: "PaymentStatus", invoice_status: "typing.Optional[InvoiceStatus]", pay_status: "typing.Optional[PayStatus]", amount_msat: "typing.Optional[int]", fee_msat: "typing.Optional[int]", amount_total_msat: "typing.Optional[int]", preimage: "typing.Optional[bytes]", destination_pubkey: "typing.Optional[bytes]", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", label: "typing.Optional[str]", created_at: "typing.Optional[int]", invoice: "typing.Optional[Invoice]", pay: "typing.Optional[Pay]"):
-        self.payment_hash = payment_hash
-        self.direction = direction
-        self.status = status
-        self.invoice_status = invoice_status
-        self.pay_status = pay_status
+    preimage: "typing.Optional[bytes]"
+    destination: "typing.Optional[bytes]"
+    def __init__(self, *, id: "str", payment_type: "PaymentType", payment_time: "int", amount_msat: "int", fee_msat: "int", status: "PaymentStatus", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", preimage: "typing.Optional[bytes]", destination: "typing.Optional[bytes]"):
+        self.id = id
+        self.payment_type = payment_type
+        self.payment_time = payment_time
         self.amount_msat = amount_msat
         self.fee_msat = fee_msat
-        self.amount_total_msat = amount_total_msat
-        self.preimage = preimage
-        self.destination_pubkey = destination_pubkey
+        self.status = status
         self.description = description
         self.bolt11 = bolt11
-        self.label = label
-        self.created_at = created_at
-        self.invoice = invoice
-        self.pay = pay
+        self.preimage = preimage
+        self.destination = destination
 
     def __str__(self):
-        return "Payment(payment_hash={}, direction={}, status={}, invoice_status={}, pay_status={}, amount_msat={}, fee_msat={}, amount_total_msat={}, preimage={}, destination_pubkey={}, description={}, bolt11={}, label={}, created_at={}, invoice={}, pay={})".format(self.payment_hash, self.direction, self.status, self.invoice_status, self.pay_status, self.amount_msat, self.fee_msat, self.amount_total_msat, self.preimage, self.destination_pubkey, self.description, self.bolt11, self.label, self.created_at, self.invoice, self.pay)
+        return "Payment(id={}, payment_type={}, payment_time={}, amount_msat={}, fee_msat={}, status={}, description={}, bolt11={}, preimage={}, destination={})".format(self.id, self.payment_type, self.payment_time, self.amount_msat, self.fee_msat, self.status, self.description, self.bolt11, self.preimage, self.destination)
 
     def __eq__(self, other):
-        if self.payment_hash != other.payment_hash:
+        if self.id != other.id:
             return False
-        if self.direction != other.direction:
+        if self.payment_type != other.payment_type:
             return False
-        if self.status != other.status:
-            return False
-        if self.invoice_status != other.invoice_status:
-            return False
-        if self.pay_status != other.pay_status:
+        if self.payment_time != other.payment_time:
             return False
         if self.amount_msat != other.amount_msat:
             return False
         if self.fee_msat != other.fee_msat:
             return False
-        if self.amount_total_msat != other.amount_total_msat:
-            return False
-        if self.preimage != other.preimage:
-            return False
-        if self.destination_pubkey != other.destination_pubkey:
+        if self.status != other.status:
             return False
         if self.description != other.description:
             return False
         if self.bolt11 != other.bolt11:
             return False
-        if self.label != other.label:
+        if self.preimage != other.preimage:
             return False
-        if self.created_at != other.created_at:
-            return False
-        if self.invoice != other.invoice:
-            return False
-        if self.pay != other.pay:
+        if self.destination != other.destination:
             return False
         return True
 
@@ -2337,61 +2372,43 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return Payment(
-            payment_hash=_UniffiConverterBytes.read(buf),
-            direction=_UniffiConverterTypePaymentDirection.read(buf),
+            id=_UniffiConverterString.read(buf),
+            payment_type=_UniffiConverterTypePaymentType.read(buf),
+            payment_time=_UniffiConverterUInt64.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+            fee_msat=_UniffiConverterUInt64.read(buf),
             status=_UniffiConverterTypePaymentStatus.read(buf),
-            invoice_status=_UniffiConverterOptionalTypeInvoiceStatus.read(buf),
-            pay_status=_UniffiConverterOptionalTypePayStatus.read(buf),
-            amount_msat=_UniffiConverterOptionalUInt64.read(buf),
-            fee_msat=_UniffiConverterOptionalUInt64.read(buf),
-            amount_total_msat=_UniffiConverterOptionalUInt64.read(buf),
-            preimage=_UniffiConverterOptionalBytes.read(buf),
-            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             bolt11=_UniffiConverterOptionalString.read(buf),
-            label=_UniffiConverterOptionalString.read(buf),
-            created_at=_UniffiConverterOptionalUInt64.read(buf),
-            invoice=_UniffiConverterOptionalTypeInvoice.read(buf),
-            pay=_UniffiConverterOptionalTypePay.read(buf),
+            preimage=_UniffiConverterOptionalBytes.read(buf),
+            destination=_UniffiConverterOptionalBytes.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.payment_hash)
-        _UniffiConverterTypePaymentDirection.check_lower(value.direction)
+        _UniffiConverterString.check_lower(value.id)
+        _UniffiConverterTypePaymentType.check_lower(value.payment_type)
+        _UniffiConverterUInt64.check_lower(value.payment_time)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+        _UniffiConverterUInt64.check_lower(value.fee_msat)
         _UniffiConverterTypePaymentStatus.check_lower(value.status)
-        _UniffiConverterOptionalTypeInvoiceStatus.check_lower(value.invoice_status)
-        _UniffiConverterOptionalTypePayStatus.check_lower(value.pay_status)
-        _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
-        _UniffiConverterOptionalUInt64.check_lower(value.fee_msat)
-        _UniffiConverterOptionalUInt64.check_lower(value.amount_total_msat)
-        _UniffiConverterOptionalBytes.check_lower(value.preimage)
-        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalString.check_lower(value.bolt11)
-        _UniffiConverterOptionalString.check_lower(value.label)
-        _UniffiConverterOptionalUInt64.check_lower(value.created_at)
-        _UniffiConverterOptionalTypeInvoice.check_lower(value.invoice)
-        _UniffiConverterOptionalTypePay.check_lower(value.pay)
+        _UniffiConverterOptionalBytes.check_lower(value.preimage)
+        _UniffiConverterOptionalBytes.check_lower(value.destination)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.payment_hash, buf)
-        _UniffiConverterTypePaymentDirection.write(value.direction, buf)
+        _UniffiConverterString.write(value.id, buf)
+        _UniffiConverterTypePaymentType.write(value.payment_type, buf)
+        _UniffiConverterUInt64.write(value.payment_time, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
+        _UniffiConverterUInt64.write(value.fee_msat, buf)
         _UniffiConverterTypePaymentStatus.write(value.status, buf)
-        _UniffiConverterOptionalTypeInvoiceStatus.write(value.invoice_status, buf)
-        _UniffiConverterOptionalTypePayStatus.write(value.pay_status, buf)
-        _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
-        _UniffiConverterOptionalUInt64.write(value.fee_msat, buf)
-        _UniffiConverterOptionalUInt64.write(value.amount_total_msat, buf)
-        _UniffiConverterOptionalBytes.write(value.preimage, buf)
-        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalString.write(value.bolt11, buf)
-        _UniffiConverterOptionalString.write(value.label, buf)
-        _UniffiConverterOptionalUInt64.write(value.created_at, buf)
-        _UniffiConverterOptionalTypeInvoice.write(value.invoice, buf)
-        _UniffiConverterOptionalTypePay.write(value.pay, buf)
+        _UniffiConverterOptionalBytes.write(value.preimage, buf)
+        _UniffiConverterOptionalBytes.write(value.destination, buf)
 
 
 class Peer:
@@ -3318,52 +3335,12 @@ class _UniffiConverterTypePayStatus(_UniffiConverterRustBuffer):
 
 
 
-class PaymentDirection(enum.Enum):
-    SENT = 0
-    
-    RECEIVED = 1
-    
-
-
-class _UniffiConverterTypePaymentDirection(_UniffiConverterRustBuffer):
-    @staticmethod
-    def read(buf):
-        variant = buf.read_i32()
-        if variant == 1:
-            return PaymentDirection.SENT
-        if variant == 2:
-            return PaymentDirection.RECEIVED
-        raise InternalError("Raw enum value doesn't match any cases")
-
-    @staticmethod
-    def check_lower(value):
-        if value == PaymentDirection.SENT:
-            return
-        if value == PaymentDirection.RECEIVED:
-            return
-        raise ValueError(value)
-
-    @staticmethod
-    def write(value, buf):
-        if value == PaymentDirection.SENT:
-            buf.write_i32(1)
-        if value == PaymentDirection.RECEIVED:
-            buf.write_i32(2)
-
-
-
-
-
-
-
 class PaymentStatus(enum.Enum):
     PENDING = 0
     
     COMPLETE = 1
     
     FAILED = 2
-    
-    EXPIRED = 3
     
 
 
@@ -3377,8 +3354,6 @@ class _UniffiConverterTypePaymentStatus(_UniffiConverterRustBuffer):
             return PaymentStatus.COMPLETE
         if variant == 3:
             return PaymentStatus.FAILED
-        if variant == 4:
-            return PaymentStatus.EXPIRED
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
@@ -3388,8 +3363,6 @@ class _UniffiConverterTypePaymentStatus(_UniffiConverterRustBuffer):
         if value == PaymentStatus.COMPLETE:
             return
         if value == PaymentStatus.FAILED:
-            return
-        if value == PaymentStatus.EXPIRED:
             return
         raise ValueError(value)
 
@@ -3401,8 +3374,82 @@ class _UniffiConverterTypePaymentStatus(_UniffiConverterRustBuffer):
             buf.write_i32(2)
         if value == PaymentStatus.FAILED:
             buf.write_i32(3)
-        if value == PaymentStatus.EXPIRED:
-            buf.write_i32(4)
+
+
+
+
+
+
+
+class PaymentType(enum.Enum):
+    SENT = 0
+    
+    RECEIVED = 1
+    
+
+
+class _UniffiConverterTypePaymentType(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return PaymentType.SENT
+        if variant == 2:
+            return PaymentType.RECEIVED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == PaymentType.SENT:
+            return
+        if value == PaymentType.RECEIVED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == PaymentType.SENT:
+            buf.write_i32(1)
+        if value == PaymentType.RECEIVED:
+            buf.write_i32(2)
+
+
+
+
+
+
+
+class PaymentTypeFilter(enum.Enum):
+    SENT = 0
+    
+    RECEIVED = 1
+    
+
+
+class _UniffiConverterTypePaymentTypeFilter(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return PaymentTypeFilter.SENT
+        if variant == 2:
+            return PaymentTypeFilter.RECEIVED
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == PaymentTypeFilter.SENT:
+            return
+        if value == PaymentTypeFilter.RECEIVED:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == PaymentTypeFilter.SENT:
+            buf.write_i32(1)
+        if value == PaymentTypeFilter.RECEIVED:
+            buf.write_i32(2)
 
 
 
@@ -3462,6 +3509,33 @@ class _UniffiConverterOptionalUInt64(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterOptionalBool(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterBool.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterBool.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterBool.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalString(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -3511,87 +3585,6 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
             return None
         elif flag == 1:
             return _UniffiConverterBytes.read(buf)
-        else:
-            raise InternalError("Unexpected flag byte for optional type")
-
-
-
-class _UniffiConverterOptionalTypeInvoice(_UniffiConverterRustBuffer):
-    @classmethod
-    def check_lower(cls, value):
-        if value is not None:
-            _UniffiConverterTypeInvoice.check_lower(value)
-
-    @classmethod
-    def write(cls, value, buf):
-        if value is None:
-            buf.write_u8(0)
-            return
-
-        buf.write_u8(1)
-        _UniffiConverterTypeInvoice.write(value, buf)
-
-    @classmethod
-    def read(cls, buf):
-        flag = buf.read_u8()
-        if flag == 0:
-            return None
-        elif flag == 1:
-            return _UniffiConverterTypeInvoice.read(buf)
-        else:
-            raise InternalError("Unexpected flag byte for optional type")
-
-
-
-class _UniffiConverterOptionalTypePay(_UniffiConverterRustBuffer):
-    @classmethod
-    def check_lower(cls, value):
-        if value is not None:
-            _UniffiConverterTypePay.check_lower(value)
-
-    @classmethod
-    def write(cls, value, buf):
-        if value is None:
-            buf.write_u8(0)
-            return
-
-        buf.write_u8(1)
-        _UniffiConverterTypePay.write(value, buf)
-
-    @classmethod
-    def read(cls, buf):
-        flag = buf.read_u8()
-        if flag == 0:
-            return None
-        elif flag == 1:
-            return _UniffiConverterTypePay.read(buf)
-        else:
-            raise InternalError("Unexpected flag byte for optional type")
-
-
-
-class _UniffiConverterOptionalTypeInvoiceStatus(_UniffiConverterRustBuffer):
-    @classmethod
-    def check_lower(cls, value):
-        if value is not None:
-            _UniffiConverterTypeInvoiceStatus.check_lower(value)
-
-    @classmethod
-    def write(cls, value, buf):
-        if value is None:
-            buf.write_u8(0)
-            return
-
-        buf.write_u8(1)
-        _UniffiConverterTypeInvoiceStatus.write(value, buf)
-
-    @classmethod
-    def read(cls, buf):
-        flag = buf.read_u8()
-        if flag == 0:
-            return None
-        elif flag == 1:
-            return _UniffiConverterTypeInvoiceStatus.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -3678,11 +3671,11 @@ class _UniffiConverterOptionalTypePayStatus(_UniffiConverterRustBuffer):
 
 
 
-class _UniffiConverterOptionalTypePaymentStatus(_UniffiConverterRustBuffer):
+class _UniffiConverterOptionalSequenceTypePaymentTypeFilter(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
         if value is not None:
-            _UniffiConverterTypePaymentStatus.check_lower(value)
+            _UniffiConverterSequenceTypePaymentTypeFilter.check_lower(value)
 
     @classmethod
     def write(cls, value, buf):
@@ -3691,7 +3684,7 @@ class _UniffiConverterOptionalTypePaymentStatus(_UniffiConverterRustBuffer):
             return
 
         buf.write_u8(1)
-        _UniffiConverterTypePaymentStatus.write(value, buf)
+        _UniffiConverterSequenceTypePaymentTypeFilter.write(value, buf)
 
     @classmethod
     def read(cls, buf):
@@ -3699,7 +3692,7 @@ class _UniffiConverterOptionalTypePaymentStatus(_UniffiConverterRustBuffer):
         if flag == 0:
             return None
         elif flag == 1:
-            return _UniffiConverterTypePaymentStatus.read(buf)
+            return _UniffiConverterSequenceTypePaymentTypeFilter.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -3901,6 +3894,31 @@ class _UniffiConverterSequenceTypePeerChannel(_UniffiConverterRustBuffer):
 
         return [
             _UniffiConverterTypePeerChannel.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypePaymentTypeFilter(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypePaymentTypeFilter.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypePaymentTypeFilter.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypePaymentTypeFilter.read(buf) for i in range(count)
         ]
 
 # objects.
@@ -4311,11 +4329,13 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
-    def list_payments(self, status: "typing.Optional[PaymentStatus]"):
+    def list_payments(self, req: "ListPaymentsRequest"):
         """
         List payments (sent and received), merged into a single timeline.
-        Defaults to COMPLETE only. Pass a status to override the filter,
-        or use list_invoices/list_pays for unfiltered access.
+
+        Fetches invoices and outgoing payments from the node, merges
+        them into a unified list, and applies optional filters.
+        Use `list_invoices`/`list_pays` for direct CLN access.
         Results are sorted newest-first.
         """
 
@@ -4515,19 +4535,21 @@ class Node():
 
 
 
-    def list_payments(self, status: "typing.Optional[PaymentStatus]") -> "ListPaymentsResponse":
+    def list_payments(self, req: "ListPaymentsRequest") -> "typing.List[Payment]":
         """
         List payments (sent and received), merged into a single timeline.
-        Defaults to COMPLETE only. Pass a status to override the filter,
-        or use list_invoices/list_pays for unfiltered access.
+
+        Fetches invoices and outgoing payments from the node, merges
+        them into a unified list, and applies optional filters.
+        Use `list_invoices`/`list_pays` for direct CLN access.
         Results are sorted newest-first.
         """
 
-        _UniffiConverterOptionalTypePaymentStatus.check_lower(status)
+        _UniffiConverterTypeListPaymentsRequest.check_lower(req)
         
-        return _UniffiConverterTypeListPaymentsResponse.lift(
+        return _UniffiConverterSequenceTypePayment.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_payments,self._uniffi_clone_pointer(),
-        _UniffiConverterOptionalTypePaymentStatus.lower(status))
+        _UniffiConverterTypeListPaymentsRequest.lower(req))
         )
 
 
@@ -5140,8 +5162,9 @@ __all__ = [
     "NodeEvent",
     "OutputStatus",
     "PayStatus",
-    "PaymentDirection",
     "PaymentStatus",
+    "PaymentType",
+    "PaymentTypeFilter",
     "FundChannel",
     "FundOutput",
     "GetInfoResponse",
@@ -5149,7 +5172,7 @@ __all__ = [
     "InvoicePaidEvent",
     "ListFundsResponse",
     "ListInvoicesResponse",
-    "ListPaymentsResponse",
+    "ListPaymentsRequest",
     "ListPaysResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
