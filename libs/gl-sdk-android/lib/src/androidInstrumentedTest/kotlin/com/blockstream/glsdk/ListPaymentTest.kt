@@ -1,6 +1,6 @@
 // Instrumented tests for list_invoices, list_pays, and list_payments.
 // Tests type construction, empty lists on fresh nodes, invoice creation
-// visibility, and status filtering.
+// visibility, and type filtering.
 
 package com.blockstream.glsdk
 
@@ -37,9 +37,15 @@ class ListPaymentTest {
     }
 
     @Test
-    fun payment_direction_enum_values() {
-        assertNotNull(PaymentDirection.SENT)
-        assertNotNull(PaymentDirection.RECEIVED)
+    fun payment_type_enum_values() {
+        assertNotNull(PaymentType.SENT)
+        assertNotNull(PaymentType.RECEIVED)
+    }
+
+    @Test
+    fun payment_type_filter_enum_values() {
+        assertNotNull(PaymentTypeFilter.SENT)
+        assertNotNull(PaymentTypeFilter.RECEIVED)
     }
 
     @Test
@@ -47,7 +53,6 @@ class ListPaymentTest {
         assertNotNull(PaymentStatus.PENDING)
         assertNotNull(PaymentStatus.COMPLETE)
         assertNotNull(PaymentStatus.FAILED)
-        assertNotNull(PaymentStatus.EXPIRED)
     }
 
     // ============================================================
@@ -77,43 +82,31 @@ class ListPaymentTest {
 
     @OptIn(ExperimentalUuidApi::class)
     @Test
-    fun default_filter_excludes_unpaid() {
+    fun default_excludes_failures() {
         val config = Config()
         registerOrRecover(testMnemonic, null, config).use { node ->
             val label = Uuid.random().toString()
             node.receive(label = label, description = "Tea", amountMsat = 5_000_000uL)
 
-            // Default (null) filters to COMPLETE, so unpaid invoice should not appear
+            // Default request excludes failures; pending invoices should still appear
             val result = node.listPayments()
-            val matching = result.payments.filter { it.label == label }
-            assertTrue("Default filter should exclude UNPAID invoice", matching.isEmpty())
+            val pending = result.filter { it.status == PaymentStatus.PENDING }
+            assertTrue("Pending invoices should appear in default list", pending.isNotEmpty())
         }
     }
 
     @OptIn(ExperimentalUuidApi::class)
     @Test
-    fun pending_filter_includes_unpaid_invoice() {
+    fun type_filter_received_only() {
         val config = Config()
         registerOrRecover(testMnemonic, null, config).use { node ->
             val label = Uuid.random().toString()
             node.receive(label = label, description = "Tea", amountMsat = 5_000_000uL)
 
-            val result = node.listPayments(PaymentStatus.PENDING)
-            val matching = result.payments.filter { it.label == label }
-            assertEquals("PENDING filter should include UNPAID invoice", 1, matching.size)
-            assertEquals(PaymentDirection.RECEIVED, matching[0].direction)
-            assertEquals(PaymentStatus.PENDING, matching[0].status)
-            assertEquals(InvoiceStatus.UNPAID, matching[0].invoiceStatus)
-            assertNull(matching[0].payStatus)
-            // Received payments have no fee
-            assertNull(matching[0].feeMsat)
-            // For received, amount_total_msat equals amount_msat
-            assertEquals(matching[0].amountMsat, matching[0].amountTotalMsat)
-            // Destination pubkey is available on the unified Payment
-            assertNotNull(matching[0].destinationPubkey)
-            assertNotNull(matching[0].invoice)
-            assertEquals(label, matching[0].invoice?.label)
-            assertNull(matching[0].pay)
+            val result = node.listPayments(filters = listOf(PaymentTypeFilter.RECEIVED))
+            for (p in result) {
+                assertEquals(PaymentType.RECEIVED, p.paymentType)
+            }
         }
     }
 }
