@@ -133,110 +133,104 @@ class TestListPaysMethod:
 class TestPaymentTypes:
     """Test that unified payment types exist in the bindings."""
 
-    def test_payment_direction_enum_exists(self):
-        assert hasattr(glsdk, "PaymentDirection")
-        assert hasattr(glsdk.PaymentDirection, "SENT")
-        assert hasattr(glsdk.PaymentDirection, "RECEIVED")
+    def test_list_payments_request_exists(self):
+        req = glsdk.ListPaymentsRequest(
+            filters=None,
+            from_timestamp=None,
+            to_timestamp=None,
+            include_failures=None,
+            offset=None,
+            limit=None,
+        )
+        assert req.filters is None
+        assert req.include_failures is None
+
+    def test_list_payments_request_with_filters(self):
+        req = glsdk.ListPaymentsRequest(
+            filters=[glsdk.PaymentTypeFilter.SENT],
+            from_timestamp=1000,
+            to_timestamp=2000,
+            include_failures=True,
+            offset=10,
+            limit=50,
+        )
+        assert len(req.filters) == 1
+        assert req.from_timestamp == 1000
+        assert req.to_timestamp == 2000
+        assert req.include_failures is True
+        assert req.offset == 10
+        assert req.limit == 50
+
+    def test_payment_type_enum_exists(self):
+        assert hasattr(glsdk, "PaymentType")
+        assert hasattr(glsdk.PaymentType, "SENT")
+        assert hasattr(glsdk.PaymentType, "RECEIVED")
+
+    def test_payment_type_filter_enum_exists(self):
+        assert hasattr(glsdk, "PaymentTypeFilter")
+        assert hasattr(glsdk.PaymentTypeFilter, "SENT")
+        assert hasattr(glsdk.PaymentTypeFilter, "RECEIVED")
 
     def test_payment_status_enum_exists(self):
         assert hasattr(glsdk, "PaymentStatus")
         assert hasattr(glsdk.PaymentStatus, "PENDING")
         assert hasattr(glsdk.PaymentStatus, "COMPLETE")
         assert hasattr(glsdk.PaymentStatus, "FAILED")
-        assert hasattr(glsdk.PaymentStatus, "EXPIRED")
 
-    def test_payment_record_with_invoice(self):
-        inv = glsdk.Invoice(
-            label="test",
-            description="coffee",
-            payment_hash=b"\x00" * 32,
-            status=glsdk.InvoiceStatus.PAID,
-            amount_msat=1000,
-            amount_received_msat=1000,
-            bolt11="lnbc1...",
-            bolt12=None,
-            paid_at=1234567890,
-            expires_at=1234567900,
-            payment_preimage=b"\xab" * 32,
-            destination_pubkey=b"\x02" * 33,
-        )
+    def test_payment_record_received(self):
         payment = glsdk.Payment(
-            payment_hash=b"\x00" * 32,
-            direction=glsdk.PaymentDirection.RECEIVED,
-            status=glsdk.PaymentStatus.COMPLETE,
-            invoice_status=glsdk.InvoiceStatus.PAID,
-            pay_status=None,
+            id="00" * 32,
+            payment_type=glsdk.PaymentType.RECEIVED,
+            payment_time=1234567890,
             amount_msat=1000,
-            fee_msat=None,
-            amount_total_msat=1000,
+            fee_msat=0,
+            status=glsdk.PaymentStatus.COMPLETE,
+            description="coffee",
+            bolt11="lnbc1...",
             preimage=b"\xab" * 32,
-            destination_pubkey=b"\x02" * 33,
-            description="coffee",
-            bolt11="lnbc1...",
-            label="test",
-            created_at=1234567890,
-            invoice=inv,
-            pay=None,
+            destination=None,
         )
-        assert payment.direction == glsdk.PaymentDirection.RECEIVED
+        assert payment.payment_type == glsdk.PaymentType.RECEIVED
         assert payment.status == glsdk.PaymentStatus.COMPLETE
-        assert payment.invoice_status == glsdk.InvoiceStatus.PAID
-        assert payment.pay_status is None
-        assert payment.fee_msat is None
-        assert payment.amount_total_msat == payment.amount_msat
+        assert payment.fee_msat == 0
+        assert payment.amount_msat == 1000
         assert payment.preimage == b"\xab" * 32
-        assert payment.destination_pubkey == b"\x02" * 33
-        assert payment.invoice is not None
-        assert payment.invoice.label == "test"
-        assert payment.pay is None
+        assert payment.destination is None
 
-    def test_payment_record_with_pay(self):
-        p = glsdk.Pay(
-            payment_hash=b"\x00" * 32,
-            status=glsdk.PayStatus.COMPLETE,
-            destination_pubkey=b"\x02" * 33,
-            amount_msat=1000,
-            amount_sent_msat=1010,
-            label="test",
-            bolt11="lnbc1...",
-            description="coffee",
-            bolt12=None,
-            preimage=b"\x01" * 32,
-            created_at=1234567890,
-            completed_at=1234567900,
-            number_of_parts=1,
-        )
+    def test_payment_record_sent(self):
         payment = glsdk.Payment(
-            payment_hash=b"\x00" * 32,
-            direction=glsdk.PaymentDirection.SENT,
-            status=glsdk.PaymentStatus.COMPLETE,
-            invoice_status=None,
-            pay_status=glsdk.PayStatus.COMPLETE,
+            id="00" * 32,
+            payment_type=glsdk.PaymentType.SENT,
+            payment_time=1234567890,
             amount_msat=1000,
             fee_msat=10,
-            amount_total_msat=1010,
-            preimage=b"\x01" * 32,
-            destination_pubkey=b"\x02" * 33,
+            status=glsdk.PaymentStatus.COMPLETE,
             description="coffee",
             bolt11="lnbc1...",
-            label="test",
-            created_at=1234567890,
-            invoice=None,
-            pay=p,
+            preimage=b"\x01" * 32,
+            destination=b"\x02" * 33,
         )
-        assert payment.direction == glsdk.PaymentDirection.SENT
+        assert payment.payment_type == glsdk.PaymentType.SENT
         assert payment.amount_msat == 1000
         assert payment.fee_msat == 10
-        assert payment.amount_total_msat == 1010
         assert payment.preimage == b"\x01" * 32
-        assert payment.destination_pubkey == b"\x02" * 33
-        assert payment.invoice is None
-        assert payment.pay is not None
-        assert payment.pay.created_at == 1234567890
+        assert payment.destination == b"\x02" * 33
 
-    def test_list_payments_response_exists(self):
-        response = glsdk.ListPaymentsResponse(payments=[])
-        assert response.payments == []
+    def test_payment_record_pending(self):
+        payment = glsdk.Payment(
+            id="00" * 32,
+            payment_type=glsdk.PaymentType.RECEIVED,
+            payment_time=1234567890,
+            amount_msat=0,
+            fee_msat=0,
+            status=glsdk.PaymentStatus.PENDING,
+            description=None,
+            bolt11=None,
+            preimage=None,
+            destination=None,
+        )
+        assert payment.status == glsdk.PaymentStatus.PENDING
+        assert payment.amount_msat == 0
 
 
 class TestListPaymentsMethod:
@@ -249,9 +243,13 @@ class TestListPaymentsMethod:
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
         node = glsdk.register_or_recover(MNEMONIC, None, config)
-        result = node.list_payments(status=None)
-        assert isinstance(result, glsdk.ListPaymentsResponse)
-        assert result.payments == []
+        req = glsdk.ListPaymentsRequest(
+            filters=None, from_timestamp=None, to_timestamp=None,
+            include_failures=None, offset=None, limit=None,
+        )
+        result = node.list_payments(req)
+        assert isinstance(result, list)
+        assert result == []
         node.disconnect()
 
 
@@ -279,8 +277,8 @@ class TestListInvoicesIntegration:
         assert matching[0].destination_pubkey is not None
         node.disconnect()
 
-    def test_default_filter_excludes_unpaid(self, scheduler, nobody_id):
-        """Default (None) filters to COMPLETE, so an unpaid invoice should not appear."""
+    def test_default_excludes_failures(self, scheduler, nobody_id):
+        """Default list_payments excludes failed/expired, so unpaid invoices appear as Pending."""
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
         node = glsdk.register_or_recover(MNEMONIC, None, config)
@@ -288,12 +286,17 @@ class TestListInvoicesIntegration:
         label = str(uuid.uuid4())
         node.receive(label=label, description="tea", amount_msat=5_000_000)
 
-        result = node.list_payments(status=None)
-        matching = [p for p in result.payments if p.label == label]
-        assert len(matching) == 0
+        req = glsdk.ListPaymentsRequest(
+            filters=None, from_timestamp=None, to_timestamp=None,
+            include_failures=None, offset=None, limit=None,
+        )
+        result = node.list_payments(req)
+        # Pending invoices should appear (they are not failures)
+        matching = [p for p in result if p.status == glsdk.PaymentStatus.PENDING]
+        assert len(matching) >= 1
         node.disconnect()
 
-    def test_pending_filter_includes_unpaid_invoice(self, scheduler, nobody_id):
+    def test_type_filter_received_only(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
         node = glsdk.register_or_recover(MNEMONIC, None, config)
@@ -301,40 +304,12 @@ class TestListInvoicesIntegration:
         label = str(uuid.uuid4())
         node.receive(label=label, description="tea", amount_msat=5_000_000)
 
-        result = node.list_payments(status=glsdk.PaymentStatus.PENDING)
-        assert len(result.payments) >= 1
-        matching = [p for p in result.payments if p.label == label]
-        assert len(matching) == 1
-        assert matching[0].direction == glsdk.PaymentDirection.RECEIVED
-        assert matching[0].status == glsdk.PaymentStatus.PENDING
-        assert matching[0].invoice_status == glsdk.InvoiceStatus.UNPAID
-        assert matching[0].pay_status is None
-        assert matching[0].fee_msat is None
-        assert matching[0].invoice is not None
-        assert matching[0].invoice.label == label
-        assert matching[0].pay is None
-        node.disconnect()
-
-    def test_list_payments_explicit_status_filter(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
-
-        label = str(uuid.uuid4())
-        node.receive(label=label, description="filtered", amount_msat=1_000_000)
-
-        # Explicit COMPLETE — same as default, should not include UNPAID invoice
-        result = node.list_payments(status=glsdk.PaymentStatus.COMPLETE)
-        matching = [p for p in result.payments if p.label == label]
-        assert len(matching) == 0
-
-        # Explicit EXPIRED — should not include UNPAID invoice either
-        result = node.list_payments(status=glsdk.PaymentStatus.EXPIRED)
-        matching = [p for p in result.payments if p.label == label]
-        assert len(matching) == 0
-
-        # Explicit PENDING — should include it
-        result = node.list_payments(status=glsdk.PaymentStatus.PENDING)
-        matching = [p for p in result.payments if p.label == label]
-        assert len(matching) == 1
+        req = glsdk.ListPaymentsRequest(
+            filters=[glsdk.PaymentTypeFilter.RECEIVED],
+            from_timestamp=None, to_timestamp=None,
+            include_failures=None, offset=None, limit=None,
+        )
+        result = node.list_payments(req)
+        for p in result:
+            assert p.payment_type == glsdk.PaymentType.RECEIVED
         node.disconnect()
