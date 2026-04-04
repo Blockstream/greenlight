@@ -26,6 +26,7 @@ pub enum Error {
 
 mod config;
 mod credentials;
+mod input;
 mod node;
 mod scheduler;
 mod signer;
@@ -42,6 +43,7 @@ pub use crate::{
         OutputStatus, Pay, PayStatus, Payment, PaymentStatus, PaymentType, PaymentTypeFilter,
         Peer, PeerChannel, ReceiveResponse, SendResponse,
     },
+    input::{InputType, ParsedInvoice},
     scheduler::Scheduler,
     signer::{Handle, Signer},
 };
@@ -206,6 +208,15 @@ pub fn register_or_recover(
         Err(Error::NoSuchNode(_)) => register(mnemonic, invite_code, config),
         Err(e) => Err(e),
     }
+}
+
+/// Parse a string and identify whether it's a BOLT11 invoice or a node ID.
+///
+/// Strips `lightning:` / `LIGHTNING:` prefixes automatically.
+/// Works offline — no node connection needed.
+#[uniffi::export]
+pub fn parse_input(input: String) -> Result<input::InputType, Error> {
+    input::parse_input(input)
 }
 
 #[derive(uniffi::Enum, Debug)]
