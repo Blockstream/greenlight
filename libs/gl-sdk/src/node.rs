@@ -141,6 +141,17 @@ impl Node {
             .map(|r| r.into_inner().into())
     }
 
+    /// Send bitcoin on-chain to a destination address.
+    ///
+    /// # Arguments
+    /// * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+    /// * `amount_or_all` — Amount to send. Accepts:
+    ///   - `"50000"` or `"50000sat"` — 50,000 satoshis
+    ///   - `"50000msat"` — 50,000 millisatoshis
+    ///   - `"all"` — sweep the entire on-chain balance
+    ///
+    /// Returns the raw transaction, txid, and PSBT once broadcast.
+    /// The transaction is broadcast immediately — this is not a dry run.
     pub fn onchain_send(
         &self,
         destination: String,
@@ -168,11 +179,8 @@ impl Node {
                 })),
             },
             (n, "msat") => clnpb::AmountOrAll {
-                // No value suffix, interpret as satoshis. This is an
-                // onchain RPC method, hence the sat denomination by
-                // default.
                 value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
-                    msat: n * 1000,
+                    msat: n,
                 })),
             },
             (0, "all") => clnpb::AmountOrAll {
@@ -194,6 +202,11 @@ impl Node {
             .map(|r| r.into_inner().into())
     }
 
+    /// Generate a fresh on-chain Bitcoin address for receiving funds.
+    ///
+    /// Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
+    /// Either can be shared with a sender. Deposited funds will appear
+    /// in `node_state().onchain_balance_msat` once confirmed.
     pub fn onchain_receive(&self) -> Result<OnchainReceiveResponse, Error> {
         self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
@@ -489,10 +502,14 @@ impl Node {
     }
 }
 
+/// Result of an on-chain send. The transaction has already been broadcast.
 #[derive(uniffi::Record)]
 pub struct OnchainSendResponse {
+    /// The raw signed transaction bytes.
     pub tx: Vec<u8>,
+    /// The transaction ID (32 bytes, reversed byte order as is standard).
     pub txid: Vec<u8>,
+    /// The transaction as a Partially Signed Bitcoin Transaction string.
     pub psbt: String,
 }
 
@@ -506,9 +523,12 @@ impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
     }
 }
 
+/// A pair of on-chain addresses for receiving funds.
 #[derive(uniffi::Record)]
 pub struct OnchainReceiveResponse {
+    /// SegWit v0 (bech32) address — starts with `bc1q` on mainnet.
     pub bech32: String,
+    /// Taproot (bech32m) address — starts with `bc1p` on mainnet.
     pub p2tr: String,
 }
 
