@@ -59,12 +59,17 @@ export default async function globalSetup(): Promise<void> {
 
   console.log('\n🚀 Starting gltestserver...');
 
+  // Run from the workspace root so uv resolves gl-testing and other
+  // workspace dependencies from the top-level pyproject.toml.
+  const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
+
   const server: ChildProcess = spawn(
     'uv',
-    ['run', 'python', path.join(__dirname, 'test_setup.py')],
+    ['run', '--package', 'gl-testing', 'python', path.join(__dirname, 'test_setup.py')],
     {
+      cwd: workspaceRoot,
       detached: true,
-      stdio: verbose ? ['ignore', 'pipe', 'pipe'] : 'ignore',
+      stdio: ['ignore', 'pipe', 'pipe'],
     }
   );
 
@@ -76,9 +81,7 @@ export default async function globalSetup(): Promise<void> {
   fs.writeFileSync(PID_FILE, String(server.pid));
   console.log(`   gltestserver PID: ${server.pid}`);
 
-  if (verbose) {
-    server.stdout?.on('data', (d: Buffer) => process.stdout.write(`[test_setup] ${d}`));
-  }
+  server.stdout?.on('data', (d: Buffer) => process.stdout.write(`[test_setup] ${d}`));
   server.stderr?.on('data', (d: Buffer) => process.stderr.write(`[test_setup] ${d}`));
   server.on('error', (err) => {
     throw new Error(`gltestserver process error: ${err.message}`);
