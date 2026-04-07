@@ -20,8 +20,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `Signer::new_from_seed()` constructor as an alternative to raw secret bytes
 - Top-level `register()`, `recover()`, `connect()`, and `register_or_recover()` convenience functions for simplified onboarding
 - `Config` type for SDK configuration (network, developer cert)
+- `parse_input()` function for parsing BOLT11 invoices and node IDs
 - `opening_fee_msat` field to `ReceiveResponse` reporting LSP JIT channel fees
 - Many new exported types: `GetInfoResponse`, `ListPeersResponse`, `ListPeerChannelsResponse`, `ListFundsResponse`, `ListInvoicesResponse`, `ListPaysResponse`, `ListPaymentsRequest`, `Invoice`, `InvoiceStatus`, `Pay`, `Payment`, `PaymentType`, `PaymentTypeFilter`, `PaymentStatus`, `ListIndex`, `Peer`, `PeerChannel`, `FundChannel`, `FundOutput`, `NodeEvent`, `NodeEventStream`, `InvoicePaidEvent`, `ChannelState`, `OutputStatus`
+
+### Fixed
+
+- Fixed msat parsing in `onchain_send` `amount_or_all` parameter
 
 ### Changed
 
