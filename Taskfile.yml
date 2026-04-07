@@ -67,6 +67,43 @@ tasks:
     cmds:
       - task: signerproxy:build
       - task: plugin:build
+  act:
+    desc: "Run GitHub Actions locally via act in a clean clone"
+    vars:
+      ACT_ARGS: '{{.CLI_ARGS}}'
+    cmds:
+      - |
+        set -e
+        # Create a stash commit capturing the full working state (staged + unstaged + untracked)
+        STASH_HASH=$(git stash create --include-untracked)
+        if [ -z "$STASH_HASH" ]; then
+          STASH_HASH=$(git rev-parse HEAD)
+        fi
+        BRANCH=$(git branch --show-current 2>/dev/null || echo "act-snapshot")
+        : "${BRANCH:=act-snapshot}"
+        echo "Snapshot: $STASH_HASH (branch: $BRANCH)"
+
+        # Clone into a temp directory (shared objects via --reference for speed)
+        CLONE_DIR=$(mktemp -d /tmp/act-XXXXXX)
+        trap "echo 'Cleaning up $CLONE_DIR'; rm -rf '$CLONE_DIR'" EXIT
+        echo "Cloning to $CLONE_DIR"
+        git clone --reference "$(git rev-parse --git-dir)" "$(git rev-parse --show-toplevel)" "$CLONE_DIR"
+        cd "$CLONE_DIR"
+        git checkout -b "${BRANCH}-act" "$STASH_HASH"
+
+        ACT_ARGS="{{.ACT_ARGS}}"
+        if [ -n "$ACT_ARGS" ]; then
+          echo "Running: act $ACT_ARGS"
+          act $ACT_ARGS --platform ubuntu-latest=catthehacker/ubuntu:act-latest
+        else
+          # Run each workflow file separately
+          for wf in .github/workflows/*.yml; do
+            echo ""
+            echo "========== $(basename $wf) =========="
+            act -W "$wf" --platform ubuntu-latest=catthehacker/ubuntu:act-latest || echo "⚠ $(basename $wf) failed"
+          done
+        fi
+
   clean:
     dir: "."
     cmds:
