@@ -15,13 +15,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `Node::list_peer_channels()` method for detailed channel information
 - `Node::list_funds()` method for on-chain and channel fund balances
 - `Node::stream_node_events()` for real-time event streaming (invoice payments, etc.)
-- `Node::list_invoices()`, `Node::list_pays()`, and `Node::list_payments()` for payment history
+- `Node::list_invoices()`, `Node::list_pays()`, and `Node::list_payments(request)` for payment history with request-based filtering
 - `DeveloperCert` type and `Scheduler::with_developer_cert()` builder for runtime certificate injection
 - `Signer::new_from_seed()` constructor as an alternative to raw secret bytes
 - Top-level `register()`, `recover()`, `connect()`, and `register_or_recover()` convenience functions for simplified onboarding
 - `Config` type for SDK configuration (network, developer cert)
 - `opening_fee_msat` field to `ReceiveResponse` reporting LSP JIT channel fees
-- Many new exported types: `GetInfoResponse`, `ListPeersResponse`, `ListPeerChannelsResponse`, `ListFundsResponse`, `ListInvoicesResponse`, `ListPaysResponse`, `ListPaymentsResponse`, `Invoice`, `InvoiceStatus`, `Pay`, `Payment`, `PaymentDirection`, `PaymentStatus`, `ListIndex`, `Peer`, `PeerChannel`, `FundChannel`, `FundOutput`, `NodeEvent`, `NodeEventStream`, `InvoicePaidEvent`, `ChannelState`, `OutputStatus`
+- Many new exported types: `GetInfoResponse`, `ListPeersResponse`, `ListPeerChannelsResponse`, `ListFundsResponse`, `ListInvoicesResponse`, `ListPaysResponse`, `ListPaymentsRequest`, `Invoice`, `InvoiceStatus`, `Pay`, `Payment`, `PaymentType`, `PaymentTypeFilter`, `PaymentStatus`, `ListIndex`, `Peer`, `PeerChannel`, `FundChannel`, `FundOutput`, `NodeEvent`, `NodeEventStream`, `InvoicePaidEvent`, `ChannelState`, `OutputStatus`
 
 ### Changed
 
