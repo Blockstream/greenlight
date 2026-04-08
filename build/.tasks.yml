@@ -36,11 +36,12 @@ tasks:
       - ios
       - ios-sim
     cmds:
-      - cargo run --features bindings -- generate --library ./target/aarch64-apple-ios/release/libglsdk.a --language swift --out-dir ./target/swift
+      - cargo run --bin uniffi-bindgen -- generate --library ./target/aarch64-apple-ios/release/libglsdk.a --language swift --out-dir ./target/swift
       - mkdir -p ./target/swift/include
       - mv target/swift/glsdkFFI.h target/swift/include
       - mv target/swift/glsdkFFI.modulemap  target/swift/include/module.modulemap
-      - xcodebuild -create-xcframework -library target/lipo-ios-sim/release/libglsdk.a -headers target/swift/include -library target/aarch64-apple-ios/release/libglsdk.a -headers target/swift/include -output target/glsdkFFI.xcframework
+      - sed -i '' 's/    header /    umbrella header /' target/swift/include/module.modulemap
+      - xcodebuild -create-xcframework -library target/aarch64-apple-ios-sim/release/libglsdk.a -headers target/swift/include -library target/aarch64-apple-ios/release/libglsdk.a -headers target/swift/include -output target/glsdkFFI.xcframework
 
   linux-*-*:
     vars:
@@ -52,11 +53,14 @@ tasks:
   ios:
     deps:
       - ios-apple-aarch64
-#      - ios-apple-x86_64
 
   ios-sim:
     deps:
       - ios-sim-apple-aarch64
+#      - ios-apple-x86_64
+#   cmds:
+#      - mkdir -p target/lipo-ios-sim/release
+#      - lipo -create target/aarch64-apple-ios-sim/release/libglsdk.a target/x86_64-apple-ios/release/libglsdk.a -output target/lipo-ios-sim/release/libglsdk.a
 
   ios-apple-*:
     vars:
