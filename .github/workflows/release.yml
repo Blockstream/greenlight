@@ -205,10 +205,11 @@ jobs:
           fi
           
           echo "Validating $CHANGELOG..."
-          
+
           # Run kacl-cli verify with JSON output for structured error reporting
           # The JSON output makes it easier to parse and display errors
-          if kacl-cli verify --json "$CHANGELOG" > /tmp/kacl-output.json 2>&1; then
+          # Note: kacl-cli reads CHANGELOG.md from cwd, does not accept file arguments
+          if (cd "$CRATE_DIR" && kacl-cli verify --json) > /tmp/kacl-output.json 2>&1; then
             echo "✅ Changelog format is valid"
           else
             echo "❌ ERROR: Changelog format validation failed"
