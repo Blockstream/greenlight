@@ -34,10 +34,24 @@ includes:
     dir: "libs/gl-sdk/"
 
 tasks:
+  check-changelogs:
+    desc: "Validate all changelogs follow Keep a Changelog format"
+    cmds:
+      - |
+        status=0
+        for cl in libs/gl-client/CHANGELOG.md libs/gl-sdk/CHANGELOG.md libs/gl-plugin/CHANGELOG.md libs/gl-client-py/CHANGELOG.md libs/gl-testing/CHANGELOG.md; do
+          if [ -f "$cl" ]; then
+            echo "Checking $cl..."
+            (cd "$(dirname "$cl")" && uv run --with python-kacl kacl-cli verify) || status=1
+          fi
+        done
+        exit $status
+
   ci-check:
     deps:
       - ci-build
     cmds:
+      - task: check-changelogs
       - task: sdk:test
       - task: clientpy:check
       - task: testing:check

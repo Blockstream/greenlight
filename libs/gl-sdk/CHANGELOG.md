@@ -38,3 +38,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Updated gl-client dependency to support CLN v25.12 signer.
+
+[0.2.0]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.1.1...gl-sdk-v0.2.0
+[0.1.1]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-v0.1.1
