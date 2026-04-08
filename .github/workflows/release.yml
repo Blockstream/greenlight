@@ -342,7 +342,7 @@ jobs:
           
           # Check if this crate has been published before
           # If not, we can't run semver checks (nothing to compare against)
-          if ! cargo info "$CRATE" 2>/dev/null | grep -q "^$CRATE"; then
+          if ! cargo info "$CRATE" --registry crates-io &>/dev/null; then
             echo "ℹ️  Crate not yet published to crates.io - skipping semver check"
             echo "    (First release has nothing to compare against)"
             exit 0
@@ -452,7 +452,7 @@ jobs:
           echo "🚀 Publishing $CRATE v$VERSION to crates.io..."
 
           # Check if this version is already published (idempotent retries)
-          if cargo info "${CRATE}@${VERSION}" 2>/dev/null | grep -q "^${CRATE}"; then
+          if cargo info "${CRATE}@${VERSION}" --registry crates-io &>/dev/null; then
             echo "✅ $CRATE v$VERSION is already published on crates.io — skipping"
           else
             cargo publish -p "$CRATE"
