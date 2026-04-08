@@ -1,0 +1,27 @@
+name: GreenlightBindings
+options:
+  bundleIdPrefix: com.blockstream
+targets:
+  glsdkFFI:
+    type: framework
+    platform: iOS
+    deploymentTarget: "13.0"
+    settings:
+      MACH_O_TYPE: staticlib
+      GENERATE_MASTER_OBJECT_FILE: YES
+      GENERATE_INFOPLIST_FILE: YES
+      STRIP_INSTALLED_PRODUCT: NO
+      BUILD_LIBRARIES_FOR_DISTRIBUTION: YES
+      SKIP_INSTALL: NO
+      DEFINES_MODULE: YES
+      ENABLE_BITCODE: NO
+      # Conditional paths:
+      "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "../../target/aarch64-apple-ios/release"
+      "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "../../target/lipo-ios-sim/release"
+    sources:
+      - path: "../target/swift/glsdkFFI.h"
+        headerVisibility: public
+    dependencies:
+      # Link the library name. Xcode will look in the search paths defined above.
+      - framework: libglsdk.a
+        embed: false
