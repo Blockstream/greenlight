@@ -2,6 +2,9 @@
 name = "gl-sdk"
 version = "0.2.0"
 edition = "2024"
+description = "High-level SDK for Greenlight with UniFFI language bindings"
+license = "MIT"
+repository = "https://github.com/Blockstream/greenlight"
 
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
