@@ -37,11 +37,7 @@ tasks:
       - ios-sim
     cmds:
       - cargo run --bin uniffi-bindgen -- generate --library ./target/aarch64-apple-ios/release/libglsdk.a --language swift --out-dir ./target/swift
-      - mkdir -p ./target/swift/include
-      - mv target/swift/glsdkFFI.h target/swift/include
-      - mv target/swift/glsdkFFI.modulemap  target/swift/include/module.modulemap
-      - sed -i '' 's/    header /    umbrella header /' target/swift/include/module.modulemap
-      - xcodebuild -create-xcframework -library target/aarch64-apple-ios-sim/release/libglsdk.a -headers target/swift/include -library target/aarch64-apple-ios/release/libglsdk.a -headers target/swift/include -output target/glsdkFFI.xcframework
+      - xcodebuild -create-xcframework -library target/aarch64-apple-ios-sim/release/libglsdk.a -library target/aarch64-apple-ios/release/libglsdk.a -output target/glsdkFFI.xcframework
 
   linux-*-*:
     vars:
