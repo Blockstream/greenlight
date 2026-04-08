@@ -328,7 +328,8 @@ jobs:
       # ==========================================================================
       
       - name: Install cargo-semver-checks
-        run: cargo install cargo-semver-checks --locked
+        uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall --no-confirm cargo-semver-checks
       
       - name: Check semver compatibility
         run: |
