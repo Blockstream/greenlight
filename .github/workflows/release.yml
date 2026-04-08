@@ -103,7 +103,12 @@ jobs:
           echo "patch=$PATCH" >> $GITHUB_OUTPUT
       
       - uses: dtolnay/rust-toolchain@stable
-      
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       # ==========================================================================
       # CHECK 1: Version Match
       # ==========================================================================
