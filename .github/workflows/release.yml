@@ -44,6 +44,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
