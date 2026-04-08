@@ -37,7 +37,10 @@ tasks:
       - ios-sim
     cmds:
       - cargo run --bin uniffi-bindgen -- generate --library ./target/aarch64-apple-ios/release/libglsdk.a --language swift --out-dir ./target/swift
-      - xcodebuild -create-xcframework -library target/aarch64-apple-ios-sim/release/libglsdk.a -library target/aarch64-apple-ios/release/libglsdk.a -output target/glsdkFFI.xcframework
+      - xcodegen generate --spec build/project.yml --project ./libs/gl-sdk-swift
+      - xcodebuild archive -project libs/gl-sdk-swift/GreenlightBindings.xcodeproj -scheme glsdkFFI -archivePath "./target/ios.xcarchive" -sdk iphoneos -destination "generic/platform=iOS"
+      - xcodebuild archive -project libs/gl-sdk-swift/GreenlightBindings.xcodeproj -scheme glsdkFFI -archivePath "./target/ios_sim.xcarchive" -sdk iphonesimulator -destination "generic/platform=iOS Simulator"
+      - xcodebuild -create-xcframework -framework "./target/ios.xcarchive/Products/Library/Frameworks/glsdkFFI.framework" -framework "./target/ios_sim.xcarchive/Products/Library/Frameworks/glsdkFFI.framework" -output "./target/glsdkFFI.xcframework"
 
   linux-*-*:
     vars:
@@ -53,10 +56,10 @@ tasks:
   ios-sim:
     deps:
       - ios-sim-apple-aarch64
-#      - ios-apple-x86_64
-#   cmds:
-#      - mkdir -p target/lipo-ios-sim/release
-#      - lipo -create target/aarch64-apple-ios-sim/release/libglsdk.a target/x86_64-apple-ios/release/libglsdk.a -output target/lipo-ios-sim/release/libglsdk.a
+      - ios-apple-x86_64
+    cmds:
+      - mkdir -p target/lipo-ios-sim/release
+      - lipo -create target/aarch64-apple-ios-sim/release/libglsdk.a target/x86_64-apple-ios/release/libglsdk.a -output target/lipo-ios-sim/release/libglsdk.a
 
   ios-apple-*:
     vars:
