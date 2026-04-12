@@ -4,6 +4,12 @@ All notable changes to the subprojects will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+ - Fixed signer rejecting valid `PreapproveInvoice` requests for uppercase bolt11 invoices by using case-insensitive comparison, matching the bech32 spec (BIP173). ([#698](https://github.com/Blockstream/greenlight/pull/698))
+
 ## [0.3.3]
 
 ### Changed
