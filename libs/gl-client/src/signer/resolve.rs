@@ -93,16 +93,16 @@ impl Resolver {
                     true
                 }
                 (Message::PreapproveInvoice(l), Request::Pay(r)) => {
-                    l.invstring.0 == r.bolt11.as_bytes()
+                    l.invstring.0.eq_ignore_ascii_case(r.bolt11.as_bytes())
                 }
                 (Message::PreapproveInvoice(l), Request::PreApproveInvoice(r)) => {
                     // Manually calling preapproveinvoice should
                     // always be allowed. The bolt11 string have to
                     // match.
-                    l.invstring.0 == r.bolt11.as_bytes()
+                    l.invstring.0.eq_ignore_ascii_case(r.bolt11.as_bytes())
                 }
                 (Message::PreapproveInvoice(l), Request::TrampolinePay(r)) => {
-                    l.invstring.0 == r.bolt11.as_bytes()
+                    l.invstring.0.eq_ignore_ascii_case(r.bolt11.as_bytes())
                 }
                 (_, _) => false,
             };
