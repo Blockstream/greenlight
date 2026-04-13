@@ -1,6 +1,7 @@
 use crate::{credentials::Credentials, signer::Handle, util::exec, Error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use gl_client::credentials::NodeIdProvider;
+use gl_client::lnurl::models::LnUrlHttpClient as _;
 use gl_client::node::{Client as GlClient, ClnClient, Node as ClientNode};
 use gl_client::pb::{self as glpb, cln as clnpb};
 use lightning_invoice::Bolt11Invoice;
@@ -447,6 +448,177 @@ impl Node {
         Ok(Arc::new(NodeEventStream {
             inner: Mutex::new(stream),
         }))
+    }
+
+    // ── LNURL methods ───────────────────────────────────────────
+
+    /// Resolve an LNURL or Lightning Address to its endpoint data.
+    ///
+    /// Performs the HTTP GET to the LNURL endpoint and returns the
+    /// typed request data. The result tells you whether this is a
+    /// pay or withdraw request, and includes the service's parameters.
+    ///
+    /// Accepts an LNURL bech32 string, a decoded URL (from
+    /// `parse_input()`), or a Lightning Address (`user@domain`).
+    pub fn resolve_lnurl(
+        &self,
+        input: String,
+    ) -> Result<crate::lnurl::ResolvedLnUrl, Error> {
+        use gl_client::lnurl::models::LnUrlHttpClearnetClient;
+        use gl_client::lnurl::LNURL;
+
+        let lnurl_client = LNURL::new(LnUrlHttpClearnetClient::new());
+        let trimmed = input.trim();
+
+        // Determine the URL to fetch
+        let url = if trimmed.contains('@') {
+            gl_client::lnurl::pay::parse_lightning_address(trimmed)
+                .map_err(|e| Error::Other(e.to_string()))?
+        } else if trimmed.to_uppercase().starts_with("LNURL1") {
+            gl_client::lnurl::utils::parse_lnurl(trimmed)
+                .map_err(|e| Error::Other(e.to_string()))?
+        } else {
+            // Assume it's already a decoded URL
+            trimmed.to_string()
+        };
+
+        let response = exec(lnurl_client.resolve(&url))
+            .map_err(|e| Error::Other(e.to_string()))?;
+
+        let mut resolved: crate::lnurl::ResolvedLnUrl = response.into();
+
+        // Preserve the original input as the lnurl field
+        match &mut resolved {
+            crate::lnurl::ResolvedLnUrl::Pay { data } => {
+                data.lnurl = trimmed.to_string();
+            }
+            crate::lnurl::ResolvedLnUrl::Withdraw { data } => {
+                data.lnurl = trimmed.to_string();
+            }
+        }
+
+        Ok(resolved)
+    }
+
+    /// Execute an LNURL-pay flow (LUD-06).
+    ///
+    /// Sends the chosen amount (and optional comment) to the service's
+    /// callback, receives and validates a BOLT11 invoice, pays it, and
+    /// processes any success action (LUD-09/10).
+    ///
+    /// Call `resolve_lnurl()` first to get the `LnUrlPayRequestData`,
+    /// then build an `LnUrlPayRequest` with the user's chosen amount.
+    pub fn lnurl_pay(
+        &self,
+        request: crate::lnurl::LnUrlPayRequest,
+    ) -> Result<crate::lnurl::LnUrlPayResult, Error> {
+        self.check_connected()?;
+
+        let http_client = gl_client::lnurl::models::LnUrlHttpClearnetClient::new();
+
+        // Reconstruct the wire type for validation + invoice fetch
+        let wire_pay_request = gl_client::lnurl::models::PayRequestResponse {
+            callback: request.data.callback.clone(),
+            max_sendable: request.data.max_sendable,
+            min_sendable: request.data.min_sendable,
+            tag: "payRequest".to_string(),
+            metadata: request.data.metadata.clone(),
+            comment_allowed: if request.data.comment_allowed > 0 {
+                Some(request.data.comment_allowed)
+            } else {
+                None
+            },
+        };
+
+        // Phase 1: Get invoice from service callback
+        let comment = request.comment.as_deref();
+        let (invoice_str, success_action) = exec(
+            wire_pay_request.get_invoice(&http_client, request.amount_msat, comment),
+        )
+        .map_err(|e| Error::Other(e.to_string()))?;
+
+        // Phase 2: Pay the invoice
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+        let pay_response = exec(cln_client.pay(clnpb::PayRequest {
+            bolt11: invoice_str,
+            ..Default::default()
+        }))
+        .map_err(|e| Error::Rpc(e.to_string()))?
+        .into_inner();
+
+        // Phase 3: Process success action if present
+        let processed_action = match success_action {
+            Some(action) => {
+                let processed = action
+                    .process(&pay_response.payment_preimage)
+                    .map_err(|e| Error::Other(e.to_string()))?;
+                Some(processed.into())
+            }
+            None => None,
+        };
+
+        Ok(crate::lnurl::LnUrlPayResult::EndpointSuccess {
+            data: crate::lnurl::LnUrlPaySuccessData {
+                payment_preimage: hex::encode(&pay_response.payment_preimage),
+                success_action: processed_action,
+            },
+        })
+    }
+
+    /// Execute an LNURL-withdraw flow (LUD-03).
+    ///
+    /// Creates an invoice on this node for the requested amount, sends
+    /// it to the service's callback URL, and the service pays it
+    /// asynchronously.
+    ///
+    /// Call `resolve_lnurl()` first to get the `LnUrlWithdrawRequestData`,
+    /// then build an `LnUrlWithdrawRequest` with the user's chosen amount.
+    pub fn lnurl_withdraw(
+        &self,
+        request: crate::lnurl::LnUrlWithdrawRequest,
+    ) -> Result<crate::lnurl::LnUrlWithdrawResult, Error> {
+        self.check_connected()?;
+
+        let http_client = gl_client::lnurl::models::LnUrlHttpClearnetClient::new();
+
+        // Step 1: Create an invoice on our node
+        let description = request
+            .description
+            .unwrap_or(request.data.default_description.clone());
+
+        let invoice_response = self.receive(
+            format!("lnurl-withdraw-{}", request.data.k1),
+            description,
+            Some(request.amount_msat),
+        )?;
+
+        // Step 2: Build callback URL and submit invoice to service
+        let wire_withdraw = gl_client::lnurl::models::WithdrawRequestResponse {
+            tag: "withdrawRequest".to_string(),
+            callback: request.data.callback.clone(),
+            k1: request.data.k1.clone(),
+            default_description: request.data.default_description.clone(),
+            min_withdrawable: request.data.min_withdrawable,
+            max_withdrawable: request.data.max_withdrawable,
+        };
+
+        let callback_url = wire_withdraw
+            .build_callback_url(&invoice_response.bolt11)
+            .map_err(|e| Error::Other(e.to_string()))?;
+
+        // Step 3: Send invoice to service
+        match exec(http_client.send_invoice_for_withdraw_request(&callback_url)) {
+            Ok(_) => Ok(crate::lnurl::LnUrlWithdrawResult::Ok {
+                data: crate::lnurl::LnUrlWithdrawSuccessData {
+                    invoice: invoice_response.bolt11,
+                },
+            }),
+            Err(e) => Ok(crate::lnurl::LnUrlWithdrawResult::ErrorStatus {
+                data: crate::lnurl::LnUrlErrorData {
+                    reason: e.to_string(),
+                },
+            }),
+        }
     }
 }
 
