@@ -462,6 +462,8 @@ def _uniffi_check_contract_api_version(lib):
 def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_func_connect() != 43555:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_parse_input() != 12312:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_recover() != 39257:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_register() != 39628:
@@ -494,9 +496,9 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_peers() != 29567:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 57530:
+    if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 46432:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 44346:
+    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 12590:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_receive() != 39761:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -920,6 +922,11 @@ _UniffiLib.uniffi_glsdk_fn_func_connect.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_func_connect.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_parse_input.argtypes = (
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_parse_input.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_func_recover.argtypes = (
     _UniffiRustBuffer,
     ctypes.c_void_p,
@@ -1211,6 +1218,9 @@ _UniffiLib.ffi_glsdk_rust_future_complete_void.restype = None
 _UniffiLib.uniffi_glsdk_checksum_func_connect.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_connect.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_parse_input.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_parse_input.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_recover.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_recover.restype = ctypes.c_uint16
@@ -2128,8 +2138,20 @@ class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
 
 
 class OnchainReceiveResponse:
+    """
+    A pair of on-chain addresses for receiving funds.
+    """
+
     bech32: "str"
+    """
+    SegWit v0 (bech32) address — starts with `bc1q` on mainnet.
+    """
+
     p2tr: "str"
+    """
+    Taproot (bech32m) address — starts with `bc1p` on mainnet.
+    """
+
     def __init__(self, *, bech32: "str", p2tr: "str"):
         self.bech32 = bech32
         self.p2tr = p2tr
@@ -2164,9 +2186,25 @@ class _UniffiConverterTypeOnchainReceiveResponse(_UniffiConverterRustBuffer):
 
 
 class OnchainSendResponse:
+    """
+    Result of an on-chain send. The transaction has already been broadcast.
+    """
+
     tx: "bytes"
+    """
+    The raw signed transaction bytes.
+    """
+
     txid: "bytes"
+    """
+    The transaction ID (32 bytes, reversed byte order as is standard).
+    """
+
     psbt: "str"
+    """
+    The transaction as a Partially Signed Bitcoin Transaction string.
+    """
+
     def __init__(self, *, tx: "bytes", txid: "bytes", psbt: "str"):
         self.tx = tx
         self.txid = txid
@@ -2204,6 +2242,109 @@ class _UniffiConverterTypeOnchainSendResponse(_UniffiConverterRustBuffer):
         _UniffiConverterBytes.write(value.tx, buf)
         _UniffiConverterBytes.write(value.txid, buf)
         _UniffiConverterString.write(value.psbt, buf)
+
+
+class ParsedInvoice:
+    """
+    Parsed BOLT11 invoice with extracted fields.
+    """
+
+    bolt11: "str"
+    """
+    The original invoice string.
+    """
+
+    payee_pubkey: "typing.Optional[bytes]"
+    """
+    33-byte recipient public key, recovered from the invoice signature.
+    """
+
+    payment_hash: "bytes"
+    """
+    32-byte payment hash identifying this payment.
+    """
+
+    description: "typing.Optional[str]"
+    """
+    Invoice description. None if the invoice uses a description hash.
+    """
+
+    amount_msat: "typing.Optional[int]"
+    """
+    Requested amount in millisatoshis. None for "any amount" invoices.
+    """
+
+    expiry: "int"
+    """
+    Seconds from creation until the invoice expires.
+    """
+
+    timestamp: "int"
+    """
+    Unix timestamp (seconds) when the invoice was created.
+    """
+
+    def __init__(self, *, bolt11: "str", payee_pubkey: "typing.Optional[bytes]", payment_hash: "bytes", description: "typing.Optional[str]", amount_msat: "typing.Optional[int]", expiry: "int", timestamp: "int"):
+        self.bolt11 = bolt11
+        self.payee_pubkey = payee_pubkey
+        self.payment_hash = payment_hash
+        self.description = description
+        self.amount_msat = amount_msat
+        self.expiry = expiry
+        self.timestamp = timestamp
+
+    def __str__(self):
+        return "ParsedInvoice(bolt11={}, payee_pubkey={}, payment_hash={}, description={}, amount_msat={}, expiry={}, timestamp={})".format(self.bolt11, self.payee_pubkey, self.payment_hash, self.description, self.amount_msat, self.expiry, self.timestamp)
+
+    def __eq__(self, other):
+        if self.bolt11 != other.bolt11:
+            return False
+        if self.payee_pubkey != other.payee_pubkey:
+            return False
+        if self.payment_hash != other.payment_hash:
+            return False
+        if self.description != other.description:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.expiry != other.expiry:
+            return False
+        if self.timestamp != other.timestamp:
+            return False
+        return True
+
+class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return ParsedInvoice(
+            bolt11=_UniffiConverterString.read(buf),
+            payee_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
+            description=_UniffiConverterOptionalString.read(buf),
+            amount_msat=_UniffiConverterOptionalUInt64.read(buf),
+            expiry=_UniffiConverterUInt64.read(buf),
+            timestamp=_UniffiConverterUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.bolt11)
+        _UniffiConverterOptionalBytes.check_lower(value.payee_pubkey)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterOptionalString.check_lower(value.description)
+        _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
+        _UniffiConverterUInt64.check_lower(value.expiry)
+        _UniffiConverterUInt64.check_lower(value.timestamp)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.bolt11, buf)
+        _UniffiConverterOptionalBytes.write(value.payee_pubkey, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterOptionalString.write(value.description, buf)
+        _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
+        _UniffiConverterUInt64.write(value.expiry, buf)
+        _UniffiConverterUInt64.write(value.timestamp, buf)
 
 
 class Pay:
@@ -2998,6 +3139,117 @@ class _UniffiConverterTypeError(_UniffiConverterRustBuffer):
         if isinstance(value, Error.Other):
             buf.write_i32(7)
             _UniffiConverterString.write(value._values[0], buf)
+
+
+
+
+
+class InputType:
+    """
+    The result of parsing user input.
+    """
+
+    def __init__(self):
+        raise RuntimeError("InputType cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class BOLT11:
+        """
+        A BOLT11 Lightning invoice.
+        """
+
+        invoice: "ParsedInvoice"
+
+        def __init__(self,invoice: "ParsedInvoice"):
+            self.invoice = invoice
+
+        def __str__(self):
+            return "InputType.BOLT11(invoice={})".format(self.invoice)
+
+        def __eq__(self, other):
+            if not other.is_BOLT11():
+                return False
+            if self.invoice != other.invoice:
+                return False
+            return True
+    
+    class NODE_ID:
+        """
+        A Lightning node public key (66 hex characters, 33 bytes compressed).
+        """
+
+        node_id: "str"
+
+        def __init__(self,node_id: "str"):
+            self.node_id = node_id
+
+        def __str__(self):
+            return "InputType.NODE_ID(node_id={})".format(self.node_id)
+
+        def __eq__(self, other):
+            if not other.is_NODE_ID():
+                return False
+            if self.node_id != other.node_id:
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_BOLT11(self) -> bool:
+        return isinstance(self, InputType.BOLT11)
+    def is_bolt11(self) -> bool:
+        return isinstance(self, InputType.BOLT11)
+    def is_NODE_ID(self) -> bool:
+        return isinstance(self, InputType.NODE_ID)
+    def is_node_id(self) -> bool:
+        return isinstance(self, InputType.NODE_ID)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+InputType.BOLT11 = type("InputType.BOLT11", (InputType.BOLT11, InputType,), {})  # type: ignore
+InputType.NODE_ID = type("InputType.NODE_ID", (InputType.NODE_ID, InputType,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return InputType.BOLT11(
+                _UniffiConverterTypeParsedInvoice.read(buf),
+            )
+        if variant == 2:
+            return InputType.NODE_ID(
+                _UniffiConverterString.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value.is_BOLT11():
+            _UniffiConverterTypeParsedInvoice.check_lower(value.invoice)
+            return
+        if value.is_NODE_ID():
+            _UniffiConverterString.check_lower(value.node_id)
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value.is_BOLT11():
+            buf.write_i32(1)
+            _UniffiConverterTypeParsedInvoice.write(value.invoice, buf)
+        if value.is_NODE_ID():
+            buf.write_i32(2)
+            _UniffiConverterString.write(value.node_id, buf)
+
+
 
 
 
@@ -4366,8 +4618,30 @@ class NodeProtocol(typing.Protocol):
 
         raise NotImplementedError
     def onchain_receive(self, ):
+        """
+        Generate a fresh on-chain Bitcoin address for receiving funds.
+
+        Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
+        Either can be shared with a sender. Deposited funds will appear
+        in `node_state().onchain_balance_msat` once confirmed.
+        """
+
         raise NotImplementedError
     def onchain_send(self, destination: "str",amount_or_all: "str"):
+        """
+        Send bitcoin on-chain to a destination address.
+
+        # Arguments
+        * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+        * `amount_or_all` — Amount to send. Accepts:
+        - `"50000"` or `"50000sat"` — 50,000 satoshis
+        - `"50000msat"` — 50,000 millisatoshis
+        - `"all"` — sweep the entire on-chain balance
+
+        Returns the raw transaction, txid, and PSBT once broadcast.
+        The transaction is broadcast immediately — this is not a dry run.
+        """
+
         raise NotImplementedError
     def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]"):
         """
@@ -4621,6 +4895,14 @@ class Node():
 
 
     def onchain_receive(self, ) -> "OnchainReceiveResponse":
+        """
+        Generate a fresh on-chain Bitcoin address for receiving funds.
+
+        Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
+        Either can be shared with a sender. Deposited funds will appear
+        in `node_state().onchain_balance_msat` once confirmed.
+        """
+
         return _UniffiConverterTypeOnchainReceiveResponse.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive,self._uniffi_clone_pointer(),)
         )
@@ -4630,6 +4912,20 @@ class Node():
 
 
     def onchain_send(self, destination: "str",amount_or_all: "str") -> "OnchainSendResponse":
+        """
+        Send bitcoin on-chain to a destination address.
+
+        # Arguments
+        * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+        * `amount_or_all` — Amount to send. Accepts:
+        - `"50000"` or `"50000sat"` — 50,000 satoshis
+        - `"50000msat"` — 50,000 millisatoshis
+        - `"all"` — sweep the entire on-chain balance
+
+        Returns the raw transaction, txid, and PSBT once broadcast.
+        The transaction is broadcast immediately — this is not a dry run.
+        """
+
         _UniffiConverterString.check_lower(destination)
         
         _UniffiConverterString.check_lower(amount_or_all)
@@ -5098,6 +5394,20 @@ def connect(mnemonic: "str",credentials: "bytes",config: "Config") -> "Node":
         _UniffiConverterTypeConfig.lower(config)))
 
 
+def parse_input(input: "str") -> "InputType":
+    """
+    Parse a string and identify whether it's a BOLT11 invoice or a node ID.
+
+    Strips `lightning:` / `LIGHTNING:` prefixes automatically.
+    Works offline — no node connection needed.
+    """
+
+    _UniffiConverterString.check_lower(input)
+    
+    return _UniffiConverterTypeInputType.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_parse_input,
+        _UniffiConverterString.lower(input)))
+
+
 def recover(mnemonic: "str",config: "Config") -> "Node":
     """
     Recover credentials for an existing Greenlight node and return a connected Node.
@@ -5156,6 +5466,7 @@ __all__ = [
     "InternalError",
     "ChannelState",
     "Error",
+    "InputType",
     "InvoiceStatus",
     "ListIndex",
     "Network",
@@ -5178,6 +5489,7 @@ __all__ = [
     "ListPeersResponse",
     "OnchainReceiveResponse",
     "OnchainSendResponse",
+    "ParsedInvoice",
     "Pay",
     "Payment",
     "Peer",
@@ -5185,6 +5497,7 @@ __all__ = [
     "ReceiveResponse",
     "SendResponse",
     "connect",
+    "parse_input",
     "recover",
     "register",
     "register_or_recover",

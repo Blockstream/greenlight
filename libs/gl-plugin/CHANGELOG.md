@@ -12,3 +12,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Added message type 28 (`hsmd_check_pubkey`) to the list of sticky signer request.
 - Updated gl-client dependency to support CLN v25.12 signer.
+
+[0.3.1]: https://github.com/Blockstream/greenlight/releases/tag/gl-plugin-v0.3.1
+
