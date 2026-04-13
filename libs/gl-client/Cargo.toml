@@ -16,10 +16,12 @@ permissive = []
 export = ["chacha20poly1305", "secp256k1"]
 
 [dependencies]
+aes = "0.8"
 anyhow = "1.0.82"
 async-stream = "0.3.5"
 base64 = "^0.21"
 bech32 = "0.9.1"
+cbc = { version = "0.1", features = ["alloc"] }
 bytes = "1.2.1"
 chrono = "0.4.31"
 hex = "0.4.3"
