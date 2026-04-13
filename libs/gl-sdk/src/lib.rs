@@ -27,6 +27,7 @@ pub enum Error {
 mod config;
 mod credentials;
 mod input;
+mod lnurl;
 mod node;
 mod scheduler;
 mod signer;
@@ -44,6 +45,11 @@ pub use crate::{
         Peer, PeerChannel, ReceiveResponse, SendResponse,
     },
     input::{InputType, ParsedInvoice},
+    lnurl::{
+        LnUrlErrorData, LnUrlPayRequest, LnUrlPayRequestData, LnUrlPayResult,
+        LnUrlPaySuccessData, LnUrlWithdrawRequest, LnUrlWithdrawRequestData,
+        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, ResolvedLnUrl, SuccessActionProcessed,
+    },
     scheduler::Scheduler,
     signer::{Handle, Signer},
 };
