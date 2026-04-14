@@ -379,7 +379,7 @@ async fn fundchannel_handler<P: AsRef<Path>>(
             id: id_bytes,
             amount: Some(amount_sat.into()),
             feerate: None,
-            announce: None,
+            announce: Some(false),
             minconf: None,
             push_msat: None,
             close_to: None,
