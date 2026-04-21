@@ -516,24 +516,16 @@ impl Node {
 
         let http_client = gl_client::lnurl::models::LnUrlHttpClearnetClient::new();
 
-        // Reconstruct the wire type for validation + invoice fetch
-        let wire_pay_request = gl_client::lnurl::models::PayRequestResponse {
-            callback: request.data.callback.clone(),
-            max_sendable: request.data.max_sendable,
-            min_sendable: request.data.min_sendable,
-            tag: "payRequest".to_string(),
-            metadata: request.data.metadata.clone(),
-            comment_allowed: if request.data.comment_allowed > 0 {
-                Some(request.data.comment_allowed)
-            } else {
-                None
-            },
-        };
-
         // Phase 1: Get invoice from service callback
         let comment = request.comment.as_deref();
         let (invoice_str, success_action) = exec(
-            wire_pay_request.get_invoice(&http_client, request.amount_msat, comment),
+            gl_client::lnurl::pay::fetch_invoice(
+                &http_client,
+                &request.data.callback,
+                request.amount_msat,
+                &request.data.metadata,
+                comment,
+            ),
         )
         .map_err(|e| Error::Other(e.to_string()))?;
 
