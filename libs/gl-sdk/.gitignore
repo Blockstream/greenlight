@@ -1,0 +1,5 @@
+# UniFFI-generated build artifacts
+glsdk/glsdk.py
+glsdk/libglsdk.*
+glsdk/__pycache__/
+bindings/
