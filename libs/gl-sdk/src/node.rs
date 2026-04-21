@@ -780,18 +780,12 @@ impl Node {
         )?;
 
         // Step 2: Build callback URL and submit invoice to service
-        let wire_withdraw = gl_client::lnurl::models::WithdrawRequestResponse {
-            tag: "withdrawRequest".to_string(),
-            callback: request.data.callback.clone(),
-            k1: request.data.k1.clone(),
-            default_description: request.data.default_description.clone(),
-            min_withdrawable: request.data.min_withdrawable,
-            max_withdrawable: request.data.max_withdrawable,
-        };
-
-        let callback_url = wire_withdraw
-            .build_callback_url(&invoice_response.bolt11)
-            .map_err(|e| Error::Other(e.to_string()))?;
+        let callback_url = gl_client::lnurl::withdraw::build_withdraw_callback_url(
+            &request.data.callback,
+            &request.data.k1,
+            &invoice_response.bolt11,
+        )
+        .map_err(|e| Error::Other(e.to_string()))?;
 
         // Step 3: Send invoice to service
         match exec(http_client.send_invoice_for_withdraw_request(&callback_url)) {

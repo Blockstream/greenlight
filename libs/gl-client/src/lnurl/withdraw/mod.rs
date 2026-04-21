@@ -9,12 +9,20 @@ impl WithdrawRequestResponse {
     ///
     /// Appends `k1` and `pr` (the BOLT11 invoice) as query parameters.
     pub fn build_callback_url(&self, invoice: &str) -> Result<String> {
-        let mut url = Url::parse(&self.callback)?;
-        url.query_pairs_mut()
-            .append_pair("k1", &self.k1)
-            .append_pair("pr", invoice);
-        Ok(url.to_string())
+        build_withdraw_callback_url(&self.callback, &self.k1, invoice)
     }
+}
+
+/// Build a withdraw callback URL from its individual components.
+///
+/// Appends `k1` and `pr` (the BOLT11 invoice) as query parameters
+/// to the callback base URL.
+pub fn build_withdraw_callback_url(callback: &str, k1: &str, invoice: &str) -> Result<String> {
+    let mut url = Url::parse(callback)?;
+    url.query_pairs_mut()
+        .append_pair("k1", k1)
+        .append_pair("pr", invoice);
+    Ok(url.to_string())
 }
 
 fn convert_value_field_from_str_to_u64(
