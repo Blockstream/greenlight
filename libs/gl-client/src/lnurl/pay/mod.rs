@@ -79,30 +79,47 @@ impl PayRequestResponse {
         amount_msats: u64,
         comment: Option<&str>,
     ) -> Result<(String, Option<SuccessAction>)> {
-        let callback_url = self.build_callback_url(amount_msats, comment)?;
-        let callback_response: PayRequestCallbackResponse = http_client
-            .get_pay_request_callback_response(&callback_url)
-            .await?;
-
-        let invoice = parse_invoice(&callback_response.pr)?;
-        validate_invoice(&invoice, amount_msats, &self.metadata)?;
-        Ok((invoice.to_string(), callback_response.success_action))
+        fetch_invoice(http_client, &self.callback, amount_msats, &self.metadata, comment).await
     }
+}
 
-    /// Build the callback URL with amount and optional comment.
-    fn build_callback_url(
-        &self,
-        amount: u64,
-        comment: Option<&str>,
-    ) -> Result<String> {
-        let mut url = Url::parse(&self.callback)?;
-        url.query_pairs_mut()
-            .append_pair("amount", &amount.to_string());
-        if let Some(c) = comment {
-            url.query_pairs_mut().append_pair("comment", c);
-        }
-        Ok(url.to_string())
+/// Fetch an invoice from a pay-request callback URL.
+///
+/// This is the "phase 2" of the two-phase LNURL-pay flow: the caller
+/// already has the callback URL and metadata from the initial
+/// `payRequest` response, and now requests an invoice for a specific
+/// amount.  The returned invoice is validated against the expected
+/// amount and metadata hash before being returned.
+pub async fn fetch_invoice<T: LnUrlHttpClient>(
+    http_client: &T,
+    callback: &str,
+    amount_msats: u64,
+    metadata: &str,
+    comment: Option<&str>,
+) -> Result<(String, Option<SuccessAction>)> {
+    let callback_url = build_callback_url(callback, amount_msats, comment)?;
+    let callback_response: PayRequestCallbackResponse = http_client
+        .get_pay_request_callback_response(&callback_url)
+        .await?;
+
+    let invoice = parse_invoice(&callback_response.pr)?;
+    validate_invoice(&invoice, amount_msats, metadata)?;
+    Ok((invoice.to_string(), callback_response.success_action))
+}
+
+/// Build a callback URL with amount and optional comment query parameters.
+fn build_callback_url(
+    callback: &str,
+    amount: u64,
+    comment: Option<&str>,
+) -> Result<String> {
+    let mut url = Url::parse(callback)?;
+    url.query_pairs_mut()
+        .append_pair("amount", &amount.to_string());
+    if let Some(c) = comment {
+        url.query_pairs_mut().append_pair("comment", c);
     }
+    Ok(url.to_string())
 }
 
 /// Validate a BOLT11 invoice against the expected amount and metadata.
