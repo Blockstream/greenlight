@@ -229,6 +229,9 @@ pub struct LnUrlPayRequest {
     /// Amount in millisatoshis (i64 for JS)
     pub amount_msat: i64,
     pub comment: Option<String>,
+    /// When true (the default), a URL success action is rejected if its
+    /// domain differs from the callback's domain.
+    pub validate_success_action_url: Option<bool>,
 }
 
 #[napi(object)]
@@ -250,15 +253,23 @@ pub struct LnUrlErrorData {
     pub reason: String,
 }
 
+#[napi(object)]
+pub struct LnUrlPayErrorData {
+    pub payment_hash: String,
+    pub reason: String,
+}
+
 /// Result of an LNURL-pay operation. Discriminated by `type` field.
 #[napi(object)]
 pub struct LnUrlPayResult {
-    /// "success" or "error"
+    /// "success", "error", or "pay_error"
     pub r#type: String,
     /// Present when type == "success"
     pub success: Option<LnUrlPaySuccessData>,
-    /// Present when type == "error"
+    /// Present when type == "error" (LNURL service rejected the request)
     pub error: Option<LnUrlErrorData>,
+    /// Present when type == "pay_error" (invoice fetched but paying it failed)
+    pub pay_error: Option<LnUrlPayErrorData>,
 }
 
 #[napi(object)]
@@ -1026,6 +1037,7 @@ fn gl_lnurl_pay_request_from_napi(req: LnUrlPayRequest) -> glsdk::LnUrlPayReques
         data: gl_pay_request_data_from_napi(req.data),
         amount_msat: req.amount_msat as u64,
         comment: req.comment,
+        validate_success_action_url: req.validate_success_action_url,
     }
 }
 
@@ -1075,11 +1087,22 @@ fn napi_lnurl_pay_result_from_gl(result: glsdk::LnUrlPayResult) -> LnUrlPayResul
                 success_action: data.success_action.map(napi_success_action_from_gl),
             }),
             error: None,
+            pay_error: None,
         },
         glsdk::LnUrlPayResult::EndpointError { data } => LnUrlPayResult {
             r#type: "error".to_string(),
             success: None,
             error: Some(LnUrlErrorData {
+                reason: data.reason,
+            }),
+            pay_error: None,
+        },
+        glsdk::LnUrlPayResult::PayError { data } => LnUrlPayResult {
+            r#type: "pay_error".to_string(),
+            success: None,
+            error: None,
+            pay_error: Some(LnUrlPayErrorData {
+                payment_hash: data.payment_hash,
                 reason: data.reason,
             }),
         },

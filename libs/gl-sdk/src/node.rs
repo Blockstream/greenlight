@@ -19,6 +19,7 @@ pub struct Node {
     stored_credentials: Option<Credentials>,
     signer_handle: Option<Handle>,
     disconnected: AtomicBool,
+    network: gl_client::bitcoin::Network,
 }
 
 #[uniffi::export]
@@ -41,6 +42,7 @@ impl Node {
             stored_credentials: Some(credentials.clone()),
             signer_handle: None,
             disconnected: AtomicBool::new(false),
+            network: gl_client::bitcoin::Network::Bitcoin,
         })
     }
 
@@ -513,37 +515,80 @@ impl Node {
         request: crate::lnurl::LnUrlPayRequest,
     ) -> Result<crate::lnurl::LnUrlPayResult, Error> {
         self.check_connected()?;
+        validate_lnurl_pay_input(&request)?;
 
         let http_client = gl_client::lnurl::models::LnUrlHttpClearnetClient::new();
 
         // Phase 1: Get invoice from service callback
         let comment = request.comment.as_deref();
-        let (invoice_str, success_action) = exec(
+        let (invoice_str, success_action) = match exec(
             gl_client::lnurl::pay::fetch_invoice(
                 &http_client,
                 &request.data.callback,
                 request.amount_msat,
-                &request.data.metadata,
                 comment,
             ),
-        )
-        .map_err(|e| Error::Other(e.to_string()))?;
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                let msg = e.to_string();
+                let reason = msg
+                    .strip_prefix(gl_client::lnurl::pay::LNURL_SERVICE_ERROR_PREFIX)
+                    .unwrap_or(&msg)
+                    .to_string();
+                return Ok(crate::lnurl::LnUrlPayResult::EndpointError {
+                    data: crate::lnurl::LnUrlErrorData { reason },
+                });
+            }
+        };
+
+        if let Some(reason) = invoice_network_mismatch(&invoice_str, self.network) {
+            return Ok(crate::lnurl::LnUrlPayResult::EndpointError {
+                data: crate::lnurl::LnUrlErrorData { reason },
+            });
+        }
 
         // Phase 2: Pay the invoice
         let mut cln_client = exec(self.get_cln_client())?.clone();
-        let pay_response = exec(cln_client.pay(clnpb::PayRequest {
-            bolt11: invoice_str,
+        let pay_response = match exec(cln_client.pay(clnpb::PayRequest {
+            bolt11: invoice_str.clone(),
             ..Default::default()
-        }))
-        .map_err(|e| Error::Rpc(e.to_string()))?
-        .into_inner();
+        })) {
+            Ok(r) => r.into_inner(),
+            Err(e) => {
+                let payment_hash = invoice_str
+                    .parse::<Bolt11Invoice>()
+                    .ok()
+                    .map(|inv| inv.payment_hash().to_string())
+                    .unwrap_or_default();
+                return Ok(crate::lnurl::LnUrlPayResult::PayError {
+                    data: crate::lnurl::LnUrlPayErrorData {
+                        payment_hash,
+                        reason: e.to_string(),
+                    },
+                });
+            }
+        };
 
         // Phase 3: Process success action if present
+        let validate_url = request.validate_success_action_url.unwrap_or(true);
         let processed_action = match success_action {
             Some(action) => {
                 let processed = action
                     .process(&pay_response.payment_preimage)
                     .map_err(|e| Error::Other(e.to_string()))?;
+                if validate_url {
+                    if let gl_client::lnurl::models::ProcessedSuccessAction::Url {
+                        url, ..
+                    } = &processed
+                    {
+                        if let Some(reason) =
+                            url_action_domain_mismatch(&request.data.callback, url)
+                        {
+                            return Err(Error::Other(reason));
+                        }
+                    }
+                }
                 Some(processed.into())
             }
             None => None,
@@ -608,6 +653,83 @@ impl Node {
     }
 }
 
+/// Returns a human-readable reason if the invoice's BOLT-11 currency
+/// prefix does not match the node's configured network.
+///
+/// Not a LUD-06 requirement; this is a wallet-side safety check that
+/// prevents attempting to pay e.g. a testnet invoice from a mainnet
+/// wallet. The payment would fail at the node layer regardless, but
+/// this surfaces a clean error earlier.
+fn invoice_network_mismatch(
+    invoice_str: &str,
+    node_network: gl_client::bitcoin::Network,
+) -> Option<String> {
+    use lightning_invoice::Currency;
+    let invoice = invoice_str.parse::<Bolt11Invoice>().ok()?;
+    let expected = match node_network {
+        gl_client::bitcoin::Network::Bitcoin => Currency::Bitcoin,
+        gl_client::bitcoin::Network::Testnet => Currency::BitcoinTestnet,
+        gl_client::bitcoin::Network::Signet => Currency::Signet,
+        gl_client::bitcoin::Network::Regtest => Currency::Regtest,
+        _ => return None,
+    };
+    if invoice.currency() == expected {
+        None
+    } else {
+        Some(format!(
+            "invoice is for {:?}, but this node is on {:?}",
+            invoice.currency(),
+            node_network
+        ))
+    }
+}
+
+fn url_action_domain_mismatch(callback_url: &str, action_url: &str) -> Option<String> {
+    let cb = url::Url::parse(callback_url).ok()?;
+    let action = url::Url::parse(action_url).ok()?;
+    let cb_domain = cb.domain()?;
+    let action_domain = action.domain()?;
+    if cb_domain == action_domain {
+        None
+    } else {
+        Some(format!(
+            "success action URL domain ({}) does not match the callback domain ({})",
+            action_domain, cb_domain
+        ))
+    }
+}
+
+fn validate_lnurl_pay_input(request: &crate::lnurl::LnUrlPayRequest) -> Result<(), Error> {
+    let data = &request.data;
+    if request.amount_msat < data.min_sendable {
+        return Err(Error::Other(format!(
+            "amount_msat {} is below the service's min_sendable ({})",
+            request.amount_msat, data.min_sendable
+        )));
+    }
+    if request.amount_msat > data.max_sendable {
+        return Err(Error::Other(format!(
+            "amount_msat {} is above the service's max_sendable ({})",
+            request.amount_msat, data.max_sendable
+        )));
+    }
+    if let Some(comment) = request.comment.as_deref() {
+        if data.comment_allowed == 0 && !comment.is_empty() {
+            return Err(Error::Other(
+                "this LNURL service does not accept comments".to_string(),
+            ));
+        }
+        if (comment.len() as u64) > data.comment_allowed {
+            return Err(Error::Other(format!(
+                "comment length {} exceeds the service's comment_allowed ({})",
+                comment.len(),
+                data.comment_allowed
+            )));
+        }
+    }
+    Ok(())
+}
+
 // Not exported through uniffi
 impl Node {
     fn check_connected(&self) -> Result<(), Error> {
@@ -622,6 +744,7 @@ impl Node {
     pub(crate) fn with_signer(
         credentials: Credentials,
         handle: Handle,
+        network: gl_client::bitcoin::Network,
     ) -> Result<Self, Error> {
         let node_id = credentials
             .inner
@@ -639,6 +762,7 @@ impl Node {
             stored_credentials: Some(credentials),
             signer_handle: Some(handle),
             disconnected: AtomicBool::new(false),
+            network,
         })
     }
 

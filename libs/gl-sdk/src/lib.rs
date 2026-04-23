@@ -108,7 +108,7 @@ fn schedule_node(
             .map_err(|e| Error::Other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
-    let node = node::Node::with_signer(credentials, handle)?;
+    let node = node::Node::with_signer(credentials, handle, network)?;
     Ok(Arc::new(node))
 }
 
@@ -198,7 +198,7 @@ pub fn connect(
             .map_err(|e| Error::Other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
-    let node = node::Node::with_signer(creds, handle)?;
+    let node = node::Node::with_signer(creds, handle, network)?;
     Ok(Arc::new(node))
 }
 
