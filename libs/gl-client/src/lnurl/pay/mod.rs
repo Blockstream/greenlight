@@ -1,7 +1,7 @@
 use super::models::SuccessAction;
 use super::utils::parse_lnurl;
 
-use crate::lightning_invoice::{Bolt11Invoice, Bolt11InvoiceDescriptionRef};
+use crate::lightning_invoice::Bolt11Invoice;
 use crate::lnurl::{
     models::{LnUrlHttpClient, PayRequestCallbackResponse, PayRequestResponse},
     utils::parse_invoice,
@@ -10,7 +10,6 @@ use crate::lnurl::{
 use anyhow::{anyhow, ensure, Result};
 use log::debug;
 use reqwest::Url;
-use sha256;
 
 impl PayRequestResponse {
     /// Extract the "text/plain" description from the metadata JSON.
@@ -79,33 +78,45 @@ impl PayRequestResponse {
         amount_msats: u64,
         comment: Option<&str>,
     ) -> Result<(String, Option<SuccessAction>)> {
-        fetch_invoice(http_client, &self.callback, amount_msats, &self.metadata, comment).await
+        fetch_invoice(http_client, &self.callback, amount_msats, comment).await
     }
 }
 
 /// Fetch an invoice from a pay-request callback URL.
 ///
 /// This is the "phase 2" of the two-phase LNURL-pay flow: the caller
-/// already has the callback URL and metadata from the initial
-/// `payRequest` response, and now requests an invoice for a specific
-/// amount.  The returned invoice is validated against the expected
-/// amount and metadata hash before being returned.
+/// already has the callback URL from the initial `payRequest` response,
+/// and now requests an invoice for a specific amount. The returned
+/// invoice is validated to be parseable and match the requested amount.
 pub async fn fetch_invoice<T: LnUrlHttpClient>(
     http_client: &T,
     callback: &str,
     amount_msats: u64,
-    metadata: &str,
     comment: Option<&str>,
 ) -> Result<(String, Option<SuccessAction>)> {
     let callback_url = build_callback_url(callback, amount_msats, comment)?;
-    let callback_response: PayRequestCallbackResponse = http_client
-        .get_pay_request_callback_response(&callback_url)
-        .await?;
+    let raw: serde_json::Value = http_client.get_json(&callback_url).await?;
+
+    if raw.get("status").and_then(|v| v.as_str()) == Some("ERROR") {
+        let reason = raw
+            .get("reason")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown error");
+        return Err(anyhow!("{}{}", LNURL_SERVICE_ERROR_PREFIX, reason));
+    }
+
+    let callback_response: PayRequestCallbackResponse = serde_json::from_value(raw)?;
 
     let invoice = parse_invoice(&callback_response.pr)?;
-    validate_invoice(&invoice, amount_msats, metadata)?;
+    validate_invoice(&invoice, amount_msats)?;
     Ok((invoice.to_string(), callback_response.success_action))
 }
+
+/// Prefix used on `fetch_invoice` errors that originate from the LNURL
+/// service returning a `{"status":"ERROR"}` body. Callers can match on
+/// this prefix to distinguish service-side rejections from transport
+/// or parsing failures.
+pub const LNURL_SERVICE_ERROR_PREFIX: &str = "LNURL service error: ";
 
 /// Build a callback URL with amount and optional comment query parameters.
 fn build_callback_url(
@@ -117,17 +128,15 @@ fn build_callback_url(
     url.query_pairs_mut()
         .append_pair("amount", &amount.to_string());
     if let Some(c) = comment {
-        url.query_pairs_mut().append_pair("comment", c);
+        if !c.is_empty() {
+            url.query_pairs_mut().append_pair("comment", c);
+        }
     }
     Ok(url.to_string())
 }
 
-/// Validate a BOLT11 invoice against the expected amount and metadata.
-fn validate_invoice(
-    invoice: &Bolt11Invoice,
-    amount_msats: u64,
-    metadata: &str,
-) -> Result<()> {
+/// Validate a BOLT11 invoice against the user-requested amount.
+fn validate_invoice(invoice: &Bolt11Invoice, amount_msats: u64) -> Result<()> {
     ensure!(
         invoice.amount_milli_satoshis().unwrap_or_default() == amount_msats,
         "Amount found in invoice was not equal to the amount found in the original request\n\
@@ -135,19 +144,6 @@ fn validate_invoice(
         amount_msats,
         invoice.amount_milli_satoshis()
     );
-
-    let description_hash: String = match invoice.description() {
-        Bolt11InvoiceDescriptionRef::Direct(d) => sha256::digest(d.to_string()),
-        Bolt11InvoiceDescriptionRef::Hash(h) => h.0.to_string(),
-    };
-
-    ensure!(
-        description_hash == sha256::digest(metadata),
-        "description_hash {} does not match the hash of the metadata {}",
-        description_hash,
-        sha256::digest(metadata)
-    );
-
     Ok(())
 }
 
@@ -289,10 +285,10 @@ mod tests {
             convert_to_async_return_value(Ok(x))
         });
 
-        mock_http_client.expect_get_pay_request_callback_response().returning(|_url| {
+        mock_http_client.expect_get_json().returning(|_url| {
             let invoice = "lnbc1u1pjv9qrvsp5e5wwexctzp9yklcrzx448c68q2a7kma55cm67ruajjwfkrswnqvqpp55x6mmz8ch6nahrcuxjsjvs23xkgt8eu748nukq463zhjcjk4s65shp5dd6hc533r655wtyz63jpf6ja08srn6rz6cjhwsjuyckrqwanhjtsxqzjccqpjrzjqw6lfdpjecp4d5t0gxk5khkrzfejjxyxtxg5exqsd95py6rhwwh72rpgrgqq3hcqqgqqqqlgqqqqqqgq9q9qxpqysgq95njz4sz6h7r2qh7txnevcrvg0jdsfpe72cecmjfka8mw5nvm7tydd0j34ps2u9q9h6v5u8h3vxs8jqq5fwehdda6a8qmpn93fm290cquhuc6r";
             let callback_response_json = format!("{{\"pr\":\"{}\",\"routes\":[]}}", invoice);
-            let x = serde_json::from_str(&callback_response_json).unwrap();
+            let x: serde_json::Value = serde_json::from_str(&callback_response_json).unwrap();
             convert_to_async_return_value(Ok(x))
         });
 
@@ -324,10 +320,10 @@ mod tests {
             convert_to_async_return_value(Ok(x))
         });
 
-        mock_http_client.expect_get_pay_request_callback_response().returning(|_url| {
+        mock_http_client.expect_get_json().returning(|_url| {
             let invoice = "lnbcrt1u1pj0ypx6sp5hzczugdw9eyw3fcsjkssux7awjlt68vpj7uhmen7sup0hdlrqxaqpp5gp5fm2sn5rua2jlzftkf5h22rxppwgszs7ncm73pmwhvjcttqp3qdy2tddjyar90p6z7urvv95kug3vyq39xarpwf6zqargv5syxmmfde28yctfdc396tpqtv38getcwshkjer9de6xjenfv4ezytpqyfekzar0wd5xjsrrd9cxsetjwp6ku6ewvdhk6gjat5xqyjw5qcqp29qxpqysgqujuf5zavazln2q9gks7nqwdgjypg2qlvv7aqwfmwg7xmjt8hy4hx2ctr5fcspjvmz9x5wvmur8vh6nkynsvateafm73zwg5hkf7xszsqajqwcf";
             let callback_response_json = format!("{{\"pr\":\"{}\",\"routes\":[]}}", invoice);
-            let x = serde_json::from_str(&callback_response_json).unwrap();
+            let x: serde_json::Value = serde_json::from_str(&callback_response_json).unwrap();
             convert_to_async_return_value(Ok(x))
         });
 

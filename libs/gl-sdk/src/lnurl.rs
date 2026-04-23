@@ -73,6 +73,15 @@ pub struct LnUrlPayRequest {
     pub amount_msat: u64,
     /// Optional comment to send with the payment.
     pub comment: Option<String>,
+    /// When true (the default), a URL success action is rejected if its
+    /// domain differs from the callback's domain.
+    ///
+    /// This is a wallet-side safety convention, not a LUD-09 requirement:
+    /// LUD-09 does not mandate same-domain URLs, but a divergent domain
+    /// can be used to phish users, so the SDK rejects it by default.
+    /// Set to `Some(false)` only if you have a specific reason to trust
+    /// cross-domain success-action URLs from this service.
+    pub validate_success_action_url: Option<bool>,
 }
 
 /// Request to execute an LNURL-withdraw flow.
@@ -95,8 +104,10 @@ pub struct LnUrlWithdrawRequest {
 pub enum LnUrlPayResult {
     /// Payment succeeded.
     EndpointSuccess { data: LnUrlPaySuccessData },
-    /// The LNURL service returned an error.
+    /// The LNURL service returned an error before the invoice was paid.
     EndpointError { data: LnUrlErrorData },
+    /// The invoice was fetched successfully but paying it failed.
+    PayError { data: LnUrlPayErrorData },
 }
 
 /// Successful LNURL-pay result data.
@@ -106,6 +117,15 @@ pub struct LnUrlPaySuccessData {
     pub payment_preimage: String,
     /// Optional success action from the service (LUD-09).
     pub success_action: Option<SuccessActionProcessed>,
+}
+
+/// Details of a failed LNURL-pay attempt on the pay phase.
+#[derive(Clone, uniffi::Record)]
+pub struct LnUrlPayErrorData {
+    /// Hex-encoded payment hash of the invoice the service returned.
+    pub payment_hash: String,
+    /// Human-readable reason the pay attempt failed.
+    pub reason: String,
 }
 
 /// Result of an LNURL-withdraw operation.
