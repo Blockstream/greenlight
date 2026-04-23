@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use async_trait::async_trait;
 use log::debug;
 use mockall::automock;
@@ -97,12 +97,27 @@ impl SuccessAction {
     /// `preimage` is the 32-byte payment preimage from the PayResponse.
     /// For Message and Url variants this is a simple conversion; for Aes
     /// it decrypts the ciphertext using the preimage as the AES-256 key.
+    ///
+    /// All payload-shape checks here are required by the LNURL specs:
+    /// - Message.message ≤ 144 chars (LUD-09)
+    /// - Url.description ≤ 144 chars (LUD-09)
+    /// - Aes.description ≤ 144 chars (LUD-10)
+    /// - Aes.ciphertext ≤ 4096 chars (LUD-10)
+    /// - Aes.iv == exactly 24 base64 chars / 16 bytes (LUD-10)
     pub fn process(self, preimage: &[u8]) -> Result<ProcessedSuccessAction> {
         match self {
             SuccessAction::Message { message } => {
+                ensure!(
+                    message.len() <= 144,
+                    "Message success action exceeds 144 chars"
+                );
                 Ok(ProcessedSuccessAction::Message { message })
             }
             SuccessAction::Url { description, url } => {
+                ensure!(
+                    description.len() <= 144,
+                    "Url success action description exceeds 144 chars"
+                );
                 Ok(ProcessedSuccessAction::Url { description, url })
             }
             SuccessAction::Aes {
@@ -110,6 +125,18 @@ impl SuccessAction {
                 ciphertext,
                 iv,
             } => {
+                ensure!(
+                    description.len() <= 144,
+                    "AES success action description exceeds 144 chars"
+                );
+                ensure!(
+                    ciphertext.len() <= 4096,
+                    "AES success action ciphertext exceeds 4096 chars"
+                );
+                ensure!(
+                    iv.len() == 24,
+                    "AES success action IV must be exactly 24 base64 chars"
+                );
                 let plaintext =
                     super::pay::decrypt_aes_success_action(preimage, &ciphertext, &iv)?;
                 Ok(ProcessedSuccessAction::Aes {

@@ -1647,6 +1647,7 @@ dependencies = [
  "tonic 0.11.0",
  "tracing",
  "uniffi",
+ "url",
 ]
 
 [[package]]
