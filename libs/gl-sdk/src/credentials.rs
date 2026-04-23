@@ -1,5 +1,5 @@
 use crate::Error;
-use gl_client::credentials::Device as DeviceCredentials;
+use gl_client::credentials::{Device as DeviceCredentials, NodeIdProvider};
 
 /// A developer certificate obtained from the Greenlight Developer
 /// Console (GDC). When provided to a `Scheduler` via
@@ -47,5 +47,9 @@ impl Credentials {
 
     pub fn save(&self) -> Result<Vec<u8>, Error> {
         Ok(self.inner.to_bytes())
+    }
+
+    pub fn node_id(&self) -> Result<Vec<u8>, Error> {
+        self.inner.node_id().map_err(|e| Error::Other(e.to_string()))
     }
 }
