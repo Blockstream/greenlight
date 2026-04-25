@@ -39,7 +39,7 @@ pub use crate::{
         ChannelState, FundChannel, FundOutput, GetInfoResponse, Invoice, InvoicePaidEvent,
         InvoiceStatus, ListFundsResponse, ListIndex, ListInvoicesResponse,
         ListPaymentsRequest, ListPeerChannelsResponse, ListPaysResponse, ListPeersResponse,
-        Node, NodeEvent, NodeEventStream, OnchainReceiveResponse, OnchainSendResponse,
+        Node, NodeEvent, NodeEventStream, NodeState, OnchainReceiveResponse, OnchainSendResponse,
         OutputStatus, Pay, PayStatus, Payment, PaymentStatus, PaymentType, PaymentTypeFilter,
         Peer, PeerChannel, ReceiveResponse, SendResponse,
     },

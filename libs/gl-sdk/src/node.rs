@@ -288,7 +288,131 @@ impl Node {
         Ok(res.into())
     }
 
-    /// List all invoices (received payment requests).
+    /// Get a snapshot of the node's balances, capacity, and connectivity.
+    ///
+    /// Aggregates data from multiple RPCs into a single `NodeState`.
+    /// Queries the node live on each call — not cached.
+    pub fn node_state(&self) -> Result<NodeState, Error> {
+        self.check_connected()?;
+        let cln_client = exec(self.get_cln_client())?.clone();
+
+        let (info_res, channels_res, funds_res) = exec(async {
+            let mut c_info = cln_client.clone();
+            let mut c_channels = cln_client.clone();
+            let mut c_funds = cln_client.clone();
+            tokio::join!(
+                c_info.getinfo(clnpb::GetinfoRequest {}),
+                c_channels.list_peer_channels(clnpb::ListpeerchannelsRequest { id: None }),
+                c_funds.list_funds(clnpb::ListfundsRequest { spent: None }),
+            )
+        });
+
+        let info: GetInfoResponse = info_res
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner()
+            .into();
+        let channels: ListPeerChannelsResponse = channels_res
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner()
+            .into();
+        let funds: ListFundsResponse = funds_res
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner()
+            .into();
+
+        let mut channels_balance_msat: u64 = 0;
+        let mut max_payable_msat: u64 = 0;
+        let mut total_channel_capacity_msat: u64 = 0;
+        let mut max_receivable_single_payment_msat: u64 = 0;
+        let mut total_inbound_liquidity_msat: u64 = 0;
+        let mut pending_onchain_balance_msat: u64 = 0;
+        let mut connected_channel_peer_set: std::collections::HashSet<String> =
+            std::collections::HashSet::new();
+
+        for ch in &channels.channels {
+            if ch.state.is_open() {
+                channels_balance_msat += ch.to_us_msat.unwrap_or(0);
+                max_payable_msat += ch.spendable_msat.unwrap_or(0);
+                total_channel_capacity_msat += ch.total_msat.unwrap_or(0);
+                let receivable = ch.receivable_msat.unwrap_or(0);
+                if receivable > max_receivable_single_payment_msat {
+                    max_receivable_single_payment_msat = receivable;
+                }
+                total_inbound_liquidity_msat += receivable;
+            }
+            if channel_payout_still_pending(ch) {
+                pending_onchain_balance_msat += ch.to_us_msat.unwrap_or(0);
+            }
+            if ch.peer_connected {
+                connected_channel_peer_set.insert(ch.peer_id.clone());
+            }
+        }
+        let connected_channel_peers: Vec<String> =
+            connected_channel_peer_set.into_iter().collect();
+
+        let max_chan_reserve_msat =
+            channels_balance_msat.saturating_sub(max_payable_msat);
+
+        let mut onchain_balance_msat: u64 = 0;
+        let mut unconfirmed_onchain_balance_msat: u64 = 0;
+        let mut immature_onchain_balance_msat: u64 = 0;
+        let mut utxos: Vec<FundOutput> = Vec::with_capacity(funds.outputs.len());
+        for output in &funds.outputs {
+            if !matches!(output.status, OutputStatus::Spent) {
+                utxos.push(output.clone());
+            }
+            if output.reserved {
+                continue;
+            }
+            match output.status {
+                OutputStatus::Confirmed => onchain_balance_msat += output.amount_msat,
+                OutputStatus::Unconfirmed => {
+                    unconfirmed_onchain_balance_msat += output.amount_msat
+                }
+                OutputStatus::Immature => {
+                    immature_onchain_balance_msat += output.amount_msat
+                }
+                OutputStatus::Spent => {}
+            }
+        }
+
+        let total_onchain_msat = onchain_balance_msat
+            .saturating_add(unconfirmed_onchain_balance_msat)
+            .saturating_add(immature_onchain_balance_msat);
+        let total_balance_msat = channels_balance_msat
+            .saturating_add(total_onchain_msat)
+            .saturating_add(pending_onchain_balance_msat);
+        let spendable_balance_msat = max_payable_msat.saturating_add(onchain_balance_msat);
+
+
+        Ok(NodeState {
+            id: info.id,
+            block_height: info.blockheight,
+            network: info.network,
+            version: info.version,
+            alias: info.alias,
+            color: info.color,
+            num_active_channels: info.num_active_channels,
+            num_pending_channels: info.num_pending_channels,
+            num_inactive_channels: info.num_inactive_channels,
+            channels_balance_msat,
+            max_payable_msat,
+            total_channel_capacity_msat,
+            max_chan_reserve_msat,
+            onchain_balance_msat,
+            unconfirmed_onchain_balance_msat,
+            immature_onchain_balance_msat,
+            pending_onchain_balance_msat,
+            max_receivable_single_payment_msat,
+            total_inbound_liquidity_msat,
+            connected_channel_peers,
+            utxos,
+            total_onchain_msat,
+            total_balance_msat,
+            spendable_balance_msat,
+        })
+    }
+
     /// List invoices (received payment requests).
     /// All parameters are optional filters; pass None to fetch all.
     pub fn list_invoices(
@@ -519,8 +643,8 @@ impl Node {
 pub struct OnchainSendResponse {
     /// The raw signed transaction bytes.
     pub tx: Vec<u8>,
-    /// The transaction ID (32 bytes, reversed byte order as is standard).
-    pub txid: Vec<u8>,
+    /// The transaction id as lowercase hex (64 chars).
+    pub txid: String,
     /// The transaction as a Partially Signed Bitcoin Transaction string.
     pub psbt: String,
 }
@@ -529,7 +653,7 @@ impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
     fn from(other: clnpb::WithdrawResponse) -> Self {
         Self {
             tx: other.tx,
-            txid: other.txid,
+            txid: hex::encode(&other.txid),
             psbt: other.psbt,
         }
     }
@@ -556,9 +680,12 @@ impl From<clnpb::NewaddrResponse> for OnchainReceiveResponse {
 #[derive(uniffi::Record)]
 pub struct SendResponse {
     pub status: PayStatus,
-    pub preimage: Vec<u8>,
-    pub payment_hash: Vec<u8>,
-    pub destination_pubkey: Option<Vec<u8>>,
+    /// Payment preimage (proof of payment) as lowercase hex (64 chars).
+    pub preimage: String,
+    /// Payment hash as lowercase hex (64 chars).
+    pub payment_hash: String,
+    /// Recipient node pubkey as lowercase hex (66 chars), if known.
+    pub destination_pubkey: Option<String>,
     pub amount_msat: u64,
     pub amount_sent_msat: u64,
     pub parts: u32,
@@ -568,9 +695,9 @@ impl From<clnpb::PayResponse> for SendResponse {
     fn from(other: clnpb::PayResponse) -> Self {
         Self {
             status: other.status.into(),
-            preimage: other.payment_preimage,
-            payment_hash: other.payment_hash,
-            destination_pubkey: other.destination,
+            preimage: hex::encode(&other.payment_preimage),
+            payment_hash: hex::encode(&other.payment_hash),
+            destination_pubkey: other.destination.as_deref().map(hex::encode),
             amount_msat: other.amount_msat.unwrap().msat,
             amount_sent_msat: other.amount_sent_msat.unwrap().msat,
             parts: other.parts,
@@ -621,9 +748,11 @@ impl From<i32> for PayStatus {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct GetInfoResponse {
-    pub id: Vec<u8>,
+    /// Node public key as lowercase hex (66 chars).
+    pub id: String,
     pub alias: Option<String>,
-    pub color: Vec<u8>,
+    /// 3-byte RGB color as lowercase hex (6 chars).
+    pub color: String,
     pub num_peers: u32,
     pub num_pending_channels: u32,
     pub num_active_channels: u32,
@@ -638,9 +767,9 @@ pub struct GetInfoResponse {
 impl From<clnpb::GetinfoResponse> for GetInfoResponse {
     fn from(other: clnpb::GetinfoResponse) -> Self {
         Self {
-            id: other.id,
+            id: hex::encode(&other.id),
             alias: other.alias,
-            color: other.color,
+            color: hex::encode(&other.color),
             num_peers: other.num_peers,
             num_pending_channels: other.num_pending_channels,
             num_active_channels: other.num_active_channels,
@@ -667,7 +796,8 @@ pub struct ListPeersResponse {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct Peer {
-    pub id: Vec<u8>,
+    /// Peer node public key as lowercase hex (66 chars).
+    pub id: String,
     pub connected: bool,
     pub num_channels: Option<u32>,
     pub netaddr: Vec<String>,
@@ -686,7 +816,7 @@ impl From<clnpb::ListpeersResponse> for ListPeersResponse {
 impl From<clnpb::ListpeersPeers> for Peer {
     fn from(other: clnpb::ListpeersPeers) -> Self {
         Self {
-            id: other.id,
+            id: hex::encode(&other.id),
             connected: other.connected,
             num_channels: other.num_channels,
             netaddr: other.netaddr,
@@ -709,17 +839,44 @@ pub struct ListPeerChannelsResponse {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct PeerChannel {
-    pub peer_id: Vec<u8>,
+    /// Peer node public key as lowercase hex (66 chars).
+    pub peer_id: String,
     pub peer_connected: bool,
     pub state: ChannelState,
     pub short_channel_id: Option<String>,
-    pub channel_id: Option<Vec<u8>>,
-    pub funding_txid: Option<Vec<u8>>,
+    /// Channel id as lowercase hex (64 chars).
+    pub channel_id: Option<String>,
+    /// Funding transaction id as lowercase hex (64 chars).
+    pub funding_txid: Option<String>,
     pub funding_outnum: Option<u32>,
     pub to_us_msat: Option<u64>,
     pub total_msat: Option<u64>,
     pub spendable_msat: Option<u64>,
     pub receivable_msat: Option<u64>,
+    /// Which side initiated the close, if the channel is closing or closed.
+    pub closer: Option<ChannelSide>,
+    /// Human-readable status strings from CLN, ordered oldest to newest.
+    /// For a channel in `Onchain` state, the last entry indicates whether
+    /// our payout is still timelocked (`DELAYED_OUTPUT_TO_US`) or already
+    /// available in the on-chain balance.
+    pub status: Vec<String>,
+}
+
+/// Which side of a channel performed a given action (e.g. initiated close).
+#[derive(Clone, uniffi::Enum)]
+pub enum ChannelSide {
+    Local,
+    Remote,
+}
+
+impl ChannelSide {
+    fn from_i32(value: i32) -> Option<Self> {
+        match value {
+            0 => Some(ChannelSide::Local),
+            1 => Some(ChannelSide::Remote),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, uniffi::Enum)]
@@ -737,6 +894,10 @@ pub enum ChannelState {
     DualopendAwaitingLockin,
     DualopendOpenCommitted,
     DualopendOpenCommitReady,
+    /// A state reported by the node that this SDK doesn't recognize.
+    /// Returned when CLN introduces a new channel state after this SDK
+    /// was built. Treated as neither open nor closing by balance math.
+    Unknown,
 }
 
 impl ChannelState {
@@ -755,8 +916,44 @@ impl ChannelState {
             10 => ChannelState::DualopendAwaitingLockin,
             11 => ChannelState::DualopendOpenCommitted,
             12 => ChannelState::DualopendOpenCommitReady,
-            _ => ChannelState::Onchain, // Default fallback
+            _ => ChannelState::Unknown,
         }
+    }
+
+    fn is_open(&self) -> bool {
+        matches!(self, ChannelState::ChanneldNormal)
+    }
+
+}
+
+/// Returns true when the channel still holds on-chain funds that have
+/// not yet been credited to the wallet's on-chain balance.
+///
+/// In closing states up to `FundingSpendSeen`, the payout has not yet
+/// appeared as a wallet UTXO and `to_us_msat` represents funds still
+/// locked in the channel.
+///
+/// In `Onchain` state CLN keeps the channel around for the duration of
+/// the close timelock. Once the close tx is mined the payout is visible
+/// in `listfunds.outputs`, so counting `to_us_msat` again would double
+/// it. The exception is when we initiated the close and our payout is
+/// still timelocked (the last status entry contains `DELAYED_OUTPUT_TO_US`):
+/// in that window the funds exist on-chain but are not yet spendable.
+fn channel_payout_still_pending(ch: &PeerChannel) -> bool {
+    match ch.state {
+        ChannelState::ChanneldShuttingDown
+        | ChannelState::ClosingdSigexchange
+        | ChannelState::ClosingdComplete
+        | ChannelState::AwaitingUnilateral
+        | ChannelState::FundingSpendSeen => true,
+        ChannelState::Onchain => {
+            matches!(ch.closer, Some(ChannelSide::Local))
+                && ch
+                    .status
+                    .last()
+                    .is_some_and(|s| s.contains("DELAYED_OUTPUT_TO_US"))
+        }
+        _ => false,
     }
 }
 
@@ -771,18 +968,21 @@ impl From<clnpb::ListpeerchannelsResponse> for ListPeerChannelsResponse {
 impl From<clnpb::ListpeerchannelsChannels> for PeerChannel {
     fn from(other: clnpb::ListpeerchannelsChannels) -> Self {
         let state = ChannelState::from_i32(other.state);
+        let closer = other.closer.and_then(ChannelSide::from_i32);
         Self {
-            peer_id: other.peer_id,
+            peer_id: hex::encode(&other.peer_id),
             peer_connected: other.peer_connected,
             state,
             short_channel_id: other.short_channel_id,
-            channel_id: other.channel_id,
-            funding_txid: other.funding_txid,
+            channel_id: other.channel_id.as_deref().map(hex::encode),
+            funding_txid: other.funding_txid.as_deref().map(hex::encode),
             funding_outnum: other.funding_outnum,
             to_us_msat: other.to_us_msat.map(|a| a.msat),
             total_msat: other.total_msat.map(|a| a.msat),
             spendable_msat: other.spendable_msat.map(|a| a.msat),
             receivable_msat: other.receivable_msat.map(|a| a.msat),
+            closer,
+            status: other.status,
         }
     }
 }
@@ -801,12 +1001,18 @@ pub struct ListFundsResponse {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct FundOutput {
-    pub txid: Vec<u8>,
+    /// Transaction id as lowercase hex (64 chars).
+    pub txid: String,
     pub output: u32,
     pub amount_msat: u64,
     pub status: OutputStatus,
     pub address: Option<String>,
     pub blockheight: Option<u32>,
+    /// True when this UTXO is currently reserved by an in-flight PSBT
+    /// (e.g. a channel-open or fund-send that has not been broadcast or
+    /// abandoned). Reserved UTXOs are not spendable and must be excluded
+    /// from the wallet's spendable balance.
+    pub reserved: bool,
 }
 
 #[derive(Clone, uniffi::Enum)]
@@ -832,15 +1038,18 @@ impl OutputStatus {
 #[allow(unused)]
 #[derive(Clone, uniffi::Record)]
 pub struct FundChannel {
-    pub peer_id: Vec<u8>,
+    /// Peer node public key as lowercase hex (66 chars).
+    pub peer_id: String,
     pub our_amount_msat: u64,
     pub amount_msat: u64,
-    pub funding_txid: Vec<u8>,
+    /// Funding transaction id as lowercase hex (64 chars).
+    pub funding_txid: String,
     pub funding_output: u32,
     pub connected: bool,
     pub state: ChannelState,
     pub short_channel_id: Option<String>,
-    pub channel_id: Option<Vec<u8>>,
+    /// Channel id as lowercase hex (64 chars).
+    pub channel_id: Option<String>,
 }
 
 impl From<clnpb::ListfundsResponse> for ListFundsResponse {
@@ -856,12 +1065,13 @@ impl From<clnpb::ListfundsOutputs> for FundOutput {
     fn from(other: clnpb::ListfundsOutputs) -> Self {
         let status = OutputStatus::from_i32(other.status);
         Self {
-            txid: other.txid,
+            txid: hex::encode(&other.txid),
             output: other.output,
             amount_msat: other.amount_msat.map(|a| a.msat).unwrap_or(0),
             status,
             address: other.address,
             blockheight: other.blockheight,
+            reserved: other.reserved,
         }
     }
 }
@@ -870,15 +1080,15 @@ impl From<clnpb::ListfundsChannels> for FundChannel {
     fn from(other: clnpb::ListfundsChannels) -> Self {
         let state = ChannelState::from_i32(other.state);
         Self {
-            peer_id: other.peer_id,
+            peer_id: hex::encode(&other.peer_id),
             our_amount_msat: other.our_amount_msat.map(|a| a.msat).unwrap_or(0),
             amount_msat: other.amount_msat.map(|a| a.msat).unwrap_or(0),
-            funding_txid: other.funding_txid,
+            funding_txid: hex::encode(&other.funding_txid),
             funding_output: other.funding_output,
             connected: other.connected,
             state,
             short_channel_id: other.short_channel_id,
-            channel_id: other.channel_id,
+            channel_id: other.channel_id.as_deref().map(hex::encode),
         }
     }
 }
@@ -929,7 +1139,8 @@ impl From<i32> for InvoiceStatus {
 pub struct Invoice {
     pub label: String,
     pub description: String,
-    pub payment_hash: Vec<u8>,
+    /// Payment hash as lowercase hex (64 chars).
+    pub payment_hash: String,
     pub status: InvoiceStatus,
     pub amount_msat: Option<u64>,
     pub amount_received_msat: Option<u64>,
@@ -937,14 +1148,16 @@ pub struct Invoice {
     pub bolt12: Option<String>,
     pub paid_at: Option<u64>,
     pub expires_at: u64,
-    pub payment_preimage: Option<Vec<u8>>,
-    pub destination_pubkey: Option<Vec<u8>>,
+    /// Payment preimage as lowercase hex (64 chars), if the invoice has been paid.
+    pub payment_preimage: Option<String>,
+    /// Recipient node pubkey as lowercase hex (66 chars), recovered from the bolt11.
+    pub destination_pubkey: Option<String>,
 }
 
-/// Extract the payee public key from a BOLT11 invoice string.
-fn pubkey_from_bolt11(bolt11: &str) -> Option<Vec<u8>> {
+/// Extract the payee public key from a BOLT11 invoice string as hex.
+fn pubkey_from_bolt11(bolt11: &str) -> Option<String> {
     let invoice: Bolt11Invoice = bolt11.parse().ok()?;
-    Some(invoice.recover_payee_pub_key().serialize().to_vec())
+    Some(hex::encode(invoice.recover_payee_pub_key().serialize()))
 }
 
 impl From<clnpb::ListinvoicesInvoices> for Invoice {
@@ -953,7 +1166,7 @@ impl From<clnpb::ListinvoicesInvoices> for Invoice {
         Self {
             label: other.label,
             description: other.description.unwrap_or_default(),
-            payment_hash: other.payment_hash,
+            payment_hash: hex::encode(&other.payment_hash),
             status: other.status.into(),
             amount_msat: other.amount_msat.map(|a| a.msat),
             amount_received_msat: other.amount_received_msat.map(|a| a.msat),
@@ -961,7 +1174,7 @@ impl From<clnpb::ListinvoicesInvoices> for Invoice {
             bolt12: other.bolt12,
             paid_at: other.paid_at,
             expires_at: other.expires_at,
-            payment_preimage: other.payment_preimage,
+            payment_preimage: other.payment_preimage.as_deref().map(hex::encode),
             destination_pubkey,
         }
     }
@@ -986,16 +1199,19 @@ impl From<clnpb::ListinvoicesResponse> for ListInvoicesResponse {
 
 #[derive(Clone, uniffi::Record)]
 pub struct Pay {
-    pub payment_hash: Vec<u8>,
+    /// Payment hash as lowercase hex (64 chars).
+    pub payment_hash: String,
     pub status: PayStatus,
-    pub destination_pubkey: Option<Vec<u8>>,
+    /// Recipient node pubkey as lowercase hex (66 chars), if known.
+    pub destination_pubkey: Option<String>,
     pub amount_msat: Option<u64>,
     pub amount_sent_msat: Option<u64>,
     pub label: Option<String>,
     pub bolt11: Option<String>,
     pub description: Option<String>,
     pub bolt12: Option<String>,
-    pub preimage: Option<Vec<u8>>,
+    /// Payment preimage as lowercase hex (64 chars), if the payment completed.
+    pub preimage: Option<String>,
     pub created_at: u64,
     pub completed_at: Option<u64>,
     pub number_of_parts: Option<u64>,
@@ -1010,16 +1226,16 @@ impl From<clnpb::ListpaysPays> for Pay {
             o => panic!("Unknown listpays status {}", o),
         };
         Self {
-            payment_hash: other.payment_hash,
+            payment_hash: hex::encode(&other.payment_hash),
             status,
-            destination_pubkey: other.destination,
+            destination_pubkey: other.destination.as_deref().map(hex::encode),
             amount_msat: other.amount_msat.map(|a| a.msat),
             amount_sent_msat: other.amount_sent_msat.map(|a| a.msat),
             label: other.label,
             bolt11: other.bolt11,
             description: other.description,
             bolt12: other.bolt12,
-            preimage: other.preimage,
+            preimage: other.preimage.as_deref().map(hex::encode),
             created_at: other.created_at,
             completed_at: other.completed_at,
             number_of_parts: other.number_of_parts,
@@ -1076,8 +1292,21 @@ pub struct Payment {
     pub status: PaymentStatus,
     pub description: Option<String>,
     pub bolt11: Option<String>,
-    pub preimage: Option<Vec<u8>>,
-    pub destination: Option<Vec<u8>>,
+    /// Payment preimage as lowercase hex (64 chars), when known.
+    pub preimage: Option<String>,
+    /// Pubkey of the counterparty in the payment, as lowercase hex
+    /// (66 chars).
+    ///
+    /// For `PaymentType::Sent`: the recipient node we paid (when CLN
+    /// reports it).
+    ///
+    /// For `PaymentType::Received`: always `None`. Lightning's privacy
+    /// model does not reveal the sender's pubkey to the recipient — the
+    /// HTLC arrives via one of our channel peers, but that peer is
+    /// usually just a router, not the original payer. The only pubkey
+    /// derivable from a paid invoice is the *payee* (i.e. our own
+    /// node), which is uninteresting to display per-row.
+    pub destination: Option<String>,
 }
 
 #[derive(Clone, uniffi::Enum)]
@@ -1115,7 +1344,7 @@ impl From<clnpb::ListinvoicesInvoices> for Payment {
             .unwrap_or(0);
 
         Payment {
-            id: inv.payment_hash.iter().map(|b| format!("{:02x}", b)).collect::<String>(),
+            id: hex::encode(&inv.payment_hash),
             payment_type: PaymentType::Received,
             payment_time,
             amount_msat,
@@ -1123,7 +1352,7 @@ impl From<clnpb::ListinvoicesInvoices> for Payment {
             status,
             description: inv.description,
             bolt11: inv.bolt11,
-            preimage: inv.payment_preimage,
+            preimage: inv.payment_preimage.as_deref().map(hex::encode),
             destination: None,
         }
     }
@@ -1143,7 +1372,7 @@ impl From<clnpb::ListpaysPays> for Payment {
         let fee_msat = amount_sent_msat.saturating_sub(amount_msat);
 
         Payment {
-            id: pay.payment_hash.iter().map(|b| format!("{:02x}", b)).collect::<String>(),
+            id: hex::encode(&pay.payment_hash),
             payment_type: PaymentType::Sent,
             payment_time,
             amount_msat,
@@ -1151,10 +1380,124 @@ impl From<clnpb::ListpaysPays> for Payment {
             status,
             description: pay.description,
             bolt11: pay.bolt11,
-            preimage: pay.preimage,
-            destination: pay.destination,
+            preimage: pay.preimage.as_deref().map(hex::encode),
+            destination: pay.destination.as_deref().map(hex::encode),
         }
     }
+}
+
+// ============================================================
+// NodeState — unified node snapshot
+// ============================================================
+
+/// A point-in-time snapshot of the node's balances, capacity, and
+/// connectivity. Returned by `node_state()`.
+///
+/// All amounts are in millisatoshis (1 sat = 1000 msat).
+#[derive(Clone, uniffi::Record)]
+pub struct NodeState {
+    /// The node's public key as a lowercase hex string (66 chars).
+    pub id: String,
+    /// Latest block height the node has synced to.
+    pub block_height: u32,
+    /// The Bitcoin network this node is running on (e.g. "bitcoin", "regtest").
+    pub network: String,
+    /// CLN version string (e.g. "v24.11").
+    pub version: String,
+    /// Human-readable node alias, if set.
+    pub alias: Option<String>,
+    /// 3-byte RGB color of the node, as a lowercase hex string (6 chars).
+    pub color: String,
+    /// Number of channels that are open and operational. These are the
+    /// channels that contribute to `channels_balance_msat`,
+    /// `max_payable_msat`, `total_channel_capacity_msat`, and
+    /// `total_inbound_liquidity_msat`.
+    pub num_active_channels: u32,
+    /// Number of channels that are being opened but not yet confirmed.
+    /// Pending channels do not contribute to any balance or capacity
+    /// field on this snapshot; their funds show up only after they
+    /// transition to active.
+    pub num_pending_channels: u32,
+    /// Number of channels that are open but the peer is offline.
+    /// Inactive channels hold balance but cannot be used for payments
+    /// until the peer reconnects; they do not contribute to
+    /// `max_payable_msat` or `total_inbound_liquidity_msat` (those are
+    /// computed from the live `spendable_msat` / `receivable_msat`
+    /// reported by CLN, which goes to zero when the peer is offline).
+    pub num_inactive_channels: u32,
+    /// Total our-side balance across all open channels, including amounts
+    /// that protocol reserves make unspendable.
+    ///
+    /// This is the field a wallet's home screen should show as the
+    /// user's "Lightning balance" — it reflects what they own off-chain,
+    /// matching what they'd expect to see at a glance.
+    ///
+    /// Do **not** use this to gate a send button: some of it is locked
+    /// in channel reserves. Use `max_payable_msat` for that.
+    pub channels_balance_msat: u64,
+    /// Aggregate spendable amount across all open channels. Equal to
+    /// `channels_balance_msat - max_chan_reserve_msat`.
+    ///
+    /// This is the field a send screen should gate against — it is what
+    /// the user can actually move right now over Lightning in total.
+    ///
+    /// Caveat: a single Lightning payment is additionally bounded by
+    /// the largest channel's own `spendable_msat`. Reaching this full
+    /// aggregate amount in one payment requires multi-path-payment
+    /// support from the recipient and a working route.
+    pub max_payable_msat: u64,
+    /// Sum of all open channel capacities (your side + remote side).
+    pub total_channel_capacity_msat: u64,
+    /// Amount locked in protocol channel reserves, computed as
+    /// `channels_balance_msat - max_payable_msat`. These sats are yours
+    /// on paper but cannot be spent until the channel closes.
+    pub max_chan_reserve_msat: u64,
+    /// Confirmed on-chain balance available for spending or opening channels.
+    pub onchain_balance_msat: u64,
+    /// On-chain balance from transactions that have not yet been confirmed.
+    pub unconfirmed_onchain_balance_msat: u64,
+    /// On-chain balance confirmed but not yet spendable (e.g. coinbase
+    /// outputs inside the 100-block maturation window).
+    pub immature_onchain_balance_msat: u64,
+    /// On-chain balance locked in channels that are being closed.
+    /// These funds will become available once the close is confirmed.
+    pub pending_onchain_balance_msat: u64,
+    /// Largest single Lightning payment the node can receive without
+    /// splitting across channels. Bounded by the inbound capacity of
+    /// the largest open channel.
+    pub max_receivable_single_payment_msat: u64,
+    /// Total amount you can receive across all open channels combined.
+    pub total_inbound_liquidity_msat: u64,
+    /// Lowercase hex public keys of peers we have at least one channel
+    /// with and are currently connected to. Peers we're connected to but
+    /// have no channel with are not represented here; for routing-node
+    /// use cases, query `list_peers()` directly.
+    pub connected_channel_peers: Vec<String>,
+    /// Unspent on-chain outputs owned by the node's wallet. Excludes
+    /// spent outputs; includes confirmed, unconfirmed, immature, and
+    /// reserved UTXOs (callers can filter by `status` and `reserved`).
+    pub utxos: Vec<FundOutput>,
+
+    // ------------------------------------------------------------------
+    // Aggregate balance views. All amounts in millisatoshis, matching
+    // the rest of this struct. Callers displaying sats should divide by
+    // 1000 on the UI side.
+    // ------------------------------------------------------------------
+    /// All non-pending on-chain balance buckets summed:
+    /// `onchain_balance_msat + unconfirmed_onchain_balance_msat + immature_onchain_balance_msat`.
+    /// Excludes funds locked in closing channels (`pending_onchain_balance_msat`)
+    /// since those are not yet on-chain UTXOs.
+    pub total_onchain_msat: u64,
+    /// Everything the user owns, summed: channel balance (including
+    /// protocol reserves) + all on-chain buckets + funds locked in
+    /// closing channels. The "total holdings" number a wallet home
+    /// screen typically shows.
+    pub total_balance_msat: u64,
+    /// What the user can spend *right now*:
+    /// `max_payable_msat + onchain_balance_msat`. Excludes reserves,
+    /// unconfirmed, immature, and pending amounts. The number a
+    /// send-money screen should gate against.
+    pub spendable_balance_msat: u64,
 }
 
 // ============================================================
@@ -1203,12 +1546,12 @@ pub enum NodeEvent {
 /// Details of a paid invoice.
 #[derive(Clone, uniffi::Record)]
 pub struct InvoicePaidEvent {
-    /// The payment hash of the paid invoice.
-    pub payment_hash: Vec<u8>,
+    /// Payment hash of the paid invoice as lowercase hex (64 chars).
+    pub payment_hash: String,
     /// The bolt11 invoice string.
     pub bolt11: String,
-    /// The preimage that proves payment.
-    pub preimage: Vec<u8>,
+    /// Preimage that proves payment as lowercase hex (64 chars).
+    pub preimage: String,
     /// The label assigned to the invoice.
     pub label: String,
     /// Amount received in millisatoshis.
@@ -1220,9 +1563,9 @@ impl From<glpb::NodeEvent> for NodeEvent {
         match other.event {
             Some(glpb::node_event::Event::InvoicePaid(paid)) => NodeEvent::InvoicePaid {
                 details: InvoicePaidEvent {
-                    payment_hash: paid.payment_hash,
+                    payment_hash: hex::encode(&paid.payment_hash),
                     bolt11: paid.bolt11,
-                    preimage: paid.preimage,
+                    preimage: hex::encode(&paid.preimage),
                     label: paid.label,
                     amount_msat: paid.amount_msat,
                 },

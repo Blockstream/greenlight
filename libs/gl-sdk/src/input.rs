@@ -8,10 +8,10 @@ use crate::Error;
 pub struct ParsedInvoice {
     /// The original invoice string.
     pub bolt11: String,
-    /// 33-byte recipient public key, recovered from the invoice signature.
-    pub payee_pubkey: Option<Vec<u8>>,
-    /// 32-byte payment hash identifying this payment.
-    pub payment_hash: Vec<u8>,
+    /// Recipient public key as lowercase hex (66 chars), recovered from the invoice signature.
+    pub payee_pubkey: Option<String>,
+    /// Payment hash as lowercase hex (64 chars) identifying this payment.
+    pub payment_hash: String,
     /// Invoice description. None if the invoice uses a description hash.
     pub description: Option<String>,
     /// Requested amount in millisatoshis. None for "any amount" invoices.
@@ -82,14 +82,9 @@ fn try_parse_bolt11(input: &str) -> Option<Result<InputType, Error>> {
         )));
     }
 
-    let payee_pubkey = parsed
-        .recover_payee_pub_key()
-        .serialize()
-        .to_vec();
+    let payee_pubkey = hex::encode(parsed.recover_payee_pub_key().serialize());
 
     let payment_hash = format!("{}", parsed.payment_hash());
-    let payment_hash = hex::decode(&payment_hash)
-        .unwrap_or_default();
 
     let description = match parsed.description() {
         lightning_invoice::Bolt11InvoiceDescriptionRef::Direct(d) => Some(d.to_string()),

@@ -27,9 +27,9 @@ pub struct GetInfoOutput {
 impl From<glsdk::GetInfoResponse> for GetInfoOutput {
     fn from(r: glsdk::GetInfoResponse) -> Self {
         Self {
-            id: hex::encode(&r.id),
+            id: r.id,
             alias: r.alias,
-            color: hex::encode(&r.color),
+            color: r.color,
             num_peers: r.num_peers,
             num_pending_channels: r.num_pending_channels,
             num_active_channels: r.num_active_channels,
@@ -73,7 +73,7 @@ impl From<glsdk::ListPeersResponse> for ListPeersOutput {
 impl From<glsdk::Peer> for PeerOutput {
     fn from(p: glsdk::Peer) -> Self {
         Self {
-            id: hex::encode(&p.id),
+            id: p.id,
             connected: p.connected,
             num_channels: p.num_channels,
             netaddr: p.netaddr,
@@ -130,18 +130,19 @@ fn channel_state_str(s: &glsdk::ChannelState) -> &'static str {
         glsdk::ChannelState::DualopendAwaitingLockin => "DUALOPEND_AWAITING_LOCKIN",
         glsdk::ChannelState::DualopendOpenCommitted => "DUALOPEND_OPEN_COMMITTED",
         glsdk::ChannelState::DualopendOpenCommitReady => "DUALOPEND_OPEN_COMMIT_READY",
+        glsdk::ChannelState::Unknown => "UNKNOWN",
     }
 }
 
 impl From<glsdk::PeerChannel> for PeerChannelOutput {
     fn from(c: glsdk::PeerChannel) -> Self {
         Self {
-            peer_id: hex::encode(&c.peer_id),
+            peer_id: c.peer_id,
             peer_connected: c.peer_connected,
             state: channel_state_str(&c.state).to_string(),
             short_channel_id: c.short_channel_id,
-            channel_id: c.channel_id.map(|v| hex::encode(&v)),
-            funding_txid: c.funding_txid.map(|v| hex::encode(&v)),
+            channel_id: c.channel_id,
+            funding_txid: c.funding_txid,
             funding_outnum: c.funding_outnum,
             to_us_msat: c.to_us_msat,
             total_msat: c.total_msat,
@@ -205,7 +206,7 @@ impl From<glsdk::ListFundsResponse> for ListFundsOutput {
 impl From<glsdk::FundOutput> for FundOutputOutput {
     fn from(o: glsdk::FundOutput) -> Self {
         Self {
-            txid: hex::encode(&o.txid),
+            txid: o.txid,
             output: o.output,
             amount_msat: o.amount_msat,
             status: output_status_str(&o.status).to_string(),
@@ -218,15 +219,15 @@ impl From<glsdk::FundOutput> for FundOutputOutput {
 impl From<glsdk::FundChannel> for FundChannelOutput {
     fn from(c: glsdk::FundChannel) -> Self {
         Self {
-            peer_id: hex::encode(&c.peer_id),
+            peer_id: c.peer_id,
             our_amount_msat: c.our_amount_msat,
             amount_msat: c.amount_msat,
-            funding_txid: hex::encode(&c.funding_txid),
+            funding_txid: c.funding_txid,
             funding_output: c.funding_output,
             connected: c.connected,
             state: channel_state_str(&c.state).to_string(),
             short_channel_id: c.short_channel_id,
-            channel_id: c.channel_id.map(|v| hex::encode(&v)),
+            channel_id: c.channel_id,
         }
     }
 }
@@ -267,7 +268,7 @@ impl From<glsdk::SendResponse> for SendOutput {
     fn from(r: glsdk::SendResponse) -> Self {
         Self {
             status: pay_status_str(&r.status).to_string(),
-            preimage: hex::encode(&r.preimage),
+            preimage: r.preimage,
             amount_msat: r.amount_msat,
             amount_sent_msat: r.amount_sent_msat,
             parts: r.parts,
@@ -301,7 +302,7 @@ impl From<glsdk::OnchainSendResponse> for OnchainSendOutput {
     fn from(r: glsdk::OnchainSendResponse) -> Self {
         Self {
             tx: hex::encode(&r.tx),
-            txid: hex::encode(&r.txid),
+            txid: r.txid,
             psbt: r.psbt,
         }
     }
@@ -330,9 +331,9 @@ impl From<glsdk::NodeEvent> for NodeEventOutput {
     fn from(e: glsdk::NodeEvent) -> Self {
         match e {
             glsdk::NodeEvent::InvoicePaid { details } => NodeEventOutput::InvoicePaid {
-                payment_hash: hex::encode(&details.payment_hash),
+                payment_hash: details.payment_hash,
                 bolt11: details.bolt11,
-                preimage: hex::encode(&details.preimage),
+                preimage: details.preimage,
                 label: details.label,
                 amount_msat: details.amount_msat,
             },

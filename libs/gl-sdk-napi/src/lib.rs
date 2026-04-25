@@ -31,9 +31,12 @@ pub struct ReceiveResponse {
 #[napi(object)]
 pub struct SendResponse {
     pub status: u32,
-    pub preimage: Buffer,
-    pub payment_hash: Buffer,
-    pub destination_pubkey: Option<Buffer>,
+    /// Preimage as lowercase hex (64 chars)
+    pub preimage: String,
+    /// Payment hash as lowercase hex (64 chars)
+    pub payment_hash: String,
+    /// Recipient node pubkey as lowercase hex (66 chars), if known
+    pub destination_pubkey: Option<String>,
     /// Amount in millisatoshis (as i64 for JS compatibility)
     pub amount_msat: i64,
     /// Amount sent in millisatoshis (as i64 for JS compatibility)
@@ -44,7 +47,8 @@ pub struct SendResponse {
 #[napi(object)]
 pub struct OnchainSendResponse {
     pub tx: Buffer,
-    pub txid: Buffer,
+    /// Transaction id as lowercase hex (64 chars)
+    pub txid: String,
     pub psbt: String,
 }
 
@@ -60,9 +64,11 @@ pub struct OnchainReceiveResponse {
 
 #[napi(object)]
 pub struct InvoicePaidEvent {
-    pub payment_hash: Buffer,
+    /// Payment hash as lowercase hex (64 chars)
+    pub payment_hash: String,
     pub bolt11: String,
-    pub preimage: Buffer,
+    /// Preimage as lowercase hex (64 chars)
+    pub preimage: String,
     pub label: String,
     /// Amount in millisatoshis (as i64 for JS compatibility)
     pub amount_msat: i64,
@@ -82,9 +88,11 @@ pub struct NodeEvent {
 
 #[napi(object)]
 pub struct GetInfoResponse {
-    pub id: Buffer,
+    /// Node public key as lowercase hex (66 chars)
+    pub id: String,
     pub alias: Option<String>,
-    pub color: Buffer,
+    /// 3-byte RGB color as lowercase hex (6 chars)
+    pub color: String,
     pub num_peers: u32,
     pub num_pending_channels: u32,
     pub num_active_channels: u32,
@@ -95,6 +103,51 @@ pub struct GetInfoResponse {
     pub network: String,
     /// Fees collected in millisatoshis (as i64 for JS compatibility)
     pub fees_collected_msat: i64,
+}
+
+#[napi(object)]
+pub struct NodeState {
+    /// Node public key as lowercase hex (66 chars)
+    pub id: String,
+    pub block_height: u32,
+    pub network: String,
+    pub version: String,
+    pub alias: Option<String>,
+    /// RGB color as lowercase hex (6 chars)
+    pub color: String,
+    pub num_active_channels: u32,
+    pub num_pending_channels: u32,
+    pub num_inactive_channels: u32,
+    /// Channel balance in millisatoshis (as i64 for JS compatibility)
+    pub channels_balance_msat: i64,
+    /// Max payable across all channels in millisatoshis (as i64 for JS compatibility)
+    pub max_payable_msat: i64,
+    /// Total channel capacity in millisatoshis (as i64 for JS compatibility)
+    pub total_channel_capacity_msat: i64,
+    /// Protocol channel reserve locked across channels in millisatoshis (as i64 for JS compatibility)
+    pub max_chan_reserve_msat: i64,
+    /// Confirmed on-chain balance in millisatoshis (as i64 for JS compatibility)
+    pub onchain_balance_msat: i64,
+    /// Unconfirmed on-chain balance in millisatoshis (as i64 for JS compatibility)
+    pub unconfirmed_onchain_balance_msat: i64,
+    /// Immature (timelocked coinbase) on-chain balance in millisatoshis (as i64 for JS compatibility)
+    pub immature_onchain_balance_msat: i64,
+    /// Balance from closing channels in millisatoshis (as i64 for JS compatibility)
+    pub pending_onchain_balance_msat: i64,
+    /// Largest receivable in a single payment in millisatoshis (as i64 for JS compatibility)
+    pub max_receivable_single_payment_msat: i64,
+    /// Total inbound liquidity in millisatoshis (as i64 for JS compatibility)
+    pub total_inbound_liquidity_msat: i64,
+    /// Peers we have a channel with and are currently connected to (lowercase hex pubkeys)
+    pub connected_channel_peers: Vec<String>,
+    /// Unspent on-chain outputs (excludes spent)
+    pub utxos: Vec<FundOutput>,
+    /// Confirmed + unconfirmed + immature on-chain in millisatoshis (as i64 for JS compatibility)
+    pub total_onchain_msat: i64,
+    /// All user funds summed in millisatoshis (as i64 for JS compatibility)
+    pub total_balance_msat: i64,
+    /// What the user can spend right now in millisatoshis (as i64 for JS compatibility)
+    pub spendable_balance_msat: i64,
 }
 
 // ============================================================================
@@ -108,7 +161,8 @@ pub struct ListPeersResponse {
 
 #[napi(object)]
 pub struct Peer {
-    pub id: Buffer,
+    /// Peer node public key as lowercase hex (66 chars)
+    pub id: String,
     pub connected: bool,
     pub num_channels: Option<u32>,
     pub netaddr: Vec<String>,
@@ -127,13 +181,16 @@ pub struct ListPeerChannelsResponse {
 
 #[napi(object)]
 pub struct PeerChannel {
-    pub peer_id: Buffer,
+    /// Peer node public key as lowercase hex (66 chars)
+    pub peer_id: String,
     pub peer_connected: bool,
     /// Channel state as string (e.g., "CHANNELD_NORMAL", "OPENINGD")
     pub state: String,
     pub short_channel_id: Option<String>,
-    pub channel_id: Option<Buffer>,
-    pub funding_txid: Option<Buffer>,
+    /// Channel id as lowercase hex (64 chars)
+    pub channel_id: Option<String>,
+    /// Funding transaction id as lowercase hex (64 chars)
+    pub funding_txid: Option<String>,
     pub funding_outnum: Option<u32>,
     /// Balance to us in millisatoshis (as i64 for JS compatibility)
     pub to_us_msat: Option<i64>,
@@ -157,7 +214,8 @@ pub struct ListFundsResponse {
 
 #[napi(object)]
 pub struct FundOutput {
-    pub txid: Buffer,
+    /// Transaction id as lowercase hex (64 chars)
+    pub txid: String,
     pub output: u32,
     /// Amount in millisatoshis (as i64 for JS compatibility)
     pub amount_msat: i64,
@@ -165,22 +223,27 @@ pub struct FundOutput {
     pub status: String,
     pub address: Option<String>,
     pub blockheight: Option<u32>,
+    /// True when this UTXO is reserved by an in-flight PSBT
+    pub reserved: bool,
 }
 
 #[napi(object)]
 pub struct FundChannel {
-    pub peer_id: Buffer,
+    /// Peer node public key as lowercase hex (66 chars)
+    pub peer_id: String,
     /// Our amount in millisatoshis (as i64 for JS compatibility)
     pub our_amount_msat: i64,
     /// Total amount in millisatoshis (as i64 for JS compatibility)
     pub amount_msat: i64,
-    pub funding_txid: Buffer,
+    /// Funding transaction id as lowercase hex (64 chars)
+    pub funding_txid: String,
     pub funding_output: u32,
     pub connected: bool,
     /// Channel state as string (e.g., "CHANNELD_NORMAL", "OPENINGD")
     pub state: String,
     pub short_channel_id: Option<String>,
-    pub channel_id: Option<Buffer>,
+    /// Channel id as lowercase hex (64 chars)
+    pub channel_id: Option<String>,
 }
 
 // ============================================================================
@@ -513,9 +576,9 @@ impl Node {
 
         Ok(SendResponse {
             status: response.status as u32,
-            preimage: Buffer::from(response.preimage),
-            payment_hash: Buffer::from(response.payment_hash),
-            destination_pubkey: response.destination_pubkey.map(Buffer::from),
+            preimage: response.preimage,
+            payment_hash: response.payment_hash,
+            destination_pubkey: response.destination_pubkey,
             amount_msat: response.amount_msat as i64,
             amount_sent_msat: response.amount_sent_msat as i64,
             parts: response.parts,
@@ -544,7 +607,7 @@ impl Node {
 
         Ok(OnchainSendResponse {
             tx: Buffer::from(response.tx),
-            txid: Buffer::from(response.txid),
+            txid: response.txid,
             psbt: response.psbt,
         })
     }
@@ -606,9 +669,9 @@ impl Node {
         .map_err(|e| Error::from_reason(e.to_string()))??;
 
         Ok(GetInfoResponse {
-            id: Buffer::from(response.id),
+            id: response.id,
             alias: response.alias,
-            color: Buffer::from(response.color),
+            color: response.color,
             num_peers: response.num_peers,
             num_pending_channels: response.num_pending_channels,
             num_active_channels: response.num_active_channels,
@@ -618,6 +681,57 @@ impl Node {
             blockheight: response.blockheight,
             network: response.network,
             fees_collected_msat: response.fees_collected_msat as i64,
+        })
+    }
+
+    #[napi]
+    pub async fn node_state(&self) -> Result<NodeState> {
+        let inner = self.inner.clone();
+        let response = tokio::task::spawn_blocking(move || {
+            inner
+                .node_state()
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+
+        Ok(NodeState {
+            id: response.id,
+            block_height: response.block_height,
+            network: response.network,
+            version: response.version,
+            alias: response.alias,
+            color: response.color,
+            num_active_channels: response.num_active_channels,
+            num_pending_channels: response.num_pending_channels,
+            num_inactive_channels: response.num_inactive_channels,
+            channels_balance_msat: response.channels_balance_msat as i64,
+            max_payable_msat: response.max_payable_msat as i64,
+            total_channel_capacity_msat: response.total_channel_capacity_msat as i64,
+            max_chan_reserve_msat: response.max_chan_reserve_msat as i64,
+            onchain_balance_msat: response.onchain_balance_msat as i64,
+            unconfirmed_onchain_balance_msat: response.unconfirmed_onchain_balance_msat as i64,
+            immature_onchain_balance_msat: response.immature_onchain_balance_msat as i64,
+            pending_onchain_balance_msat: response.pending_onchain_balance_msat as i64,
+            max_receivable_single_payment_msat: response.max_receivable_single_payment_msat as i64,
+            total_inbound_liquidity_msat: response.total_inbound_liquidity_msat as i64,
+            connected_channel_peers: response.connected_channel_peers,
+            utxos: response
+                .utxos
+                .into_iter()
+                .map(|o| FundOutput {
+                    txid: o.txid,
+                    output: o.output,
+                    amount_msat: o.amount_msat as i64,
+                    status: output_status_to_string(&o.status),
+                    address: o.address,
+                    blockheight: o.blockheight,
+                    reserved: o.reserved,
+                })
+                .collect(),
+            total_onchain_msat: response.total_onchain_msat as i64,
+            total_balance_msat: response.total_balance_msat as i64,
+            spendable_balance_msat: response.spendable_balance_msat as i64,
         })
     }
 
@@ -640,7 +754,7 @@ impl Node {
                 .peers
                 .into_iter()
                 .map(|p| Peer {
-                    id: Buffer::from(p.id),
+                    id: p.id,
                     connected: p.connected,
                     num_channels: p.num_channels,
                     netaddr: p.netaddr,
@@ -671,12 +785,12 @@ impl Node {
                 .channels
                 .into_iter()
                 .map(|c| PeerChannel {
-                    peer_id: Buffer::from(c.peer_id),
+                    peer_id: c.peer_id,
                     peer_connected: c.peer_connected,
                     state: channel_state_to_string(&c.state),
                     short_channel_id: c.short_channel_id,
-                    channel_id: c.channel_id.map(Buffer::from),
-                    funding_txid: c.funding_txid.map(Buffer::from),
+                    channel_id: c.channel_id,
+                    funding_txid: c.funding_txid,
                     funding_outnum: c.funding_outnum,
                     to_us_msat: c.to_us_msat.map(|v| v as i64),
                     total_msat: c.total_msat.map(|v| v as i64),
@@ -707,27 +821,28 @@ impl Node {
                 .outputs
                 .into_iter()
                 .map(|o| FundOutput {
-                    txid: Buffer::from(o.txid),
+                    txid: o.txid,
                     output: o.output,
                     amount_msat: o.amount_msat as i64,
                     status: output_status_to_string(&o.status),
                     address: o.address,
                     blockheight: o.blockheight,
+                    reserved: o.reserved,
                 })
                 .collect(),
             channels: response
                 .channels
                 .into_iter()
                 .map(|c| FundChannel {
-                    peer_id: Buffer::from(c.peer_id),
+                    peer_id: c.peer_id,
                     our_amount_msat: c.our_amount_msat as i64,
                     amount_msat: c.amount_msat as i64,
-                    funding_txid: Buffer::from(c.funding_txid),
+                    funding_txid: c.funding_txid,
                     funding_output: c.funding_output,
                     connected: c.connected,
                     state: channel_state_to_string(&c.state),
                     short_channel_id: c.short_channel_id,
-                    channel_id: c.channel_id.map(Buffer::from),
+                    channel_id: c.channel_id,
                 })
                 .collect(),
         })
@@ -744,9 +859,9 @@ fn napi_node_event_from_gl(event: GlNodeEvent) -> NodeEvent {
         GlNodeEvent::InvoicePaid { details } => NodeEvent {
             event_type: "invoice_paid".to_string(),
             invoice_paid: Some(InvoicePaidEvent {
-                payment_hash: Buffer::from(details.payment_hash),
+                payment_hash: details.payment_hash,
                 bolt11: details.bolt11,
-                preimage: Buffer::from(details.preimage),
+                preimage: details.preimage,
                 label: details.label,
                 amount_msat: details.amount_msat as i64,
             }),
@@ -773,6 +888,7 @@ fn channel_state_to_string(state: &GlChannelState) -> String {
         GlChannelState::DualopendAwaitingLockin => "DUALOPEND_AWAITING_LOCKIN".to_string(),
         GlChannelState::DualopendOpenCommitted => "DUALOPEND_OPEN_COMMITTED".to_string(),
         GlChannelState::DualopendOpenCommitReady => "DUALOPEND_OPEN_COMMIT_READY".to_string(),
+        GlChannelState::Unknown => "UNKNOWN".to_string(),
     }
 }
 
