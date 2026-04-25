@@ -1611,6 +1611,8 @@ dependencies = [
  "hex",
  "lightning-invoice",
  "once_cell",
+ "serde",
+ "serde_json",
  "thiserror 2.0.17",
  "tokio",
  "tonic 0.11.0",

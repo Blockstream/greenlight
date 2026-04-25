@@ -4,6 +4,8 @@ These tests verify that the UniFFI bindings correctly expose the new Node method
 and their response types.
 """
 
+import json
+
 import pytest
 import glsdk
 from gltesting.fixtures import *
@@ -318,4 +320,49 @@ class TestNodeStateMethod:
         assert state.total_channel_capacity_msat == 0
         assert state.onchain_balance_msat == 0
         assert state.total_inbound_liquidity_msat == 0
+        node.disconnect()
+
+
+class TestGenerateDiagnosticData:
+    """Test generate_diagnostic_data() on a freshly registered node."""
+
+    def test_node_has_generate_diagnostic_data_method(self):
+        assert hasattr(glsdk.Node, "generate_diagnostic_data")
+
+    def test_generate_diagnostic_data_returns_well_formed_envelope(
+        self, scheduler, nobody_id
+    ):
+        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
+        config = glsdk.Config().with_developer_cert(dev_cert)
+        node = glsdk.register_or_recover(MNEMONIC, None, config)
+
+        blob = node.generate_diagnostic_data()
+        assert isinstance(blob, str)
+
+        parsed = json.loads(blob)
+        assert isinstance(parsed["timestamp"], int)
+        assert parsed["timestamp"] > 0
+
+        assert "sdk" in parsed
+        assert isinstance(parsed["sdk"]["version"], str)
+        assert parsed["sdk"]["version"] != ""
+        # node_state should serialize as a JSON object on a healthy node.
+        assert isinstance(parsed["sdk"]["node_state"], dict)
+        assert parsed["sdk"]["node_state"]["network"] == "regtest"
+
+        assert "node" in parsed
+        for key in ("getinfo", "listpeerchannels", "listfunds"):
+            assert key in parsed["node"], f"missing node section: {key}"
+        # Payment/invoice history is intentionally excluded from the dump.
+        assert "listpays" not in parsed["node"]
+        assert "listinvoices" not in parsed["node"]
+
+        # Healthy node: getinfo should serialize as an object, not as
+        # {"error": "..."}.
+        getinfo = parsed["node"]["getinfo"]
+        assert isinstance(getinfo, dict)
+        assert "error" not in getinfo
+        assert isinstance(getinfo["id"], str)
+        assert len(getinfo["id"]) == 66
+
         node.disconnect()
