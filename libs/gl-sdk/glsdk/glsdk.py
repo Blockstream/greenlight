@@ -486,7 +486,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_funds() != 21692:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_list_invoices() != 6677:
+    if lib.uniffi_glsdk_checksum_method_node_list_invoices() != 44803:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_payments() != 43756:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -495,6 +495,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_method_node_list_peer_channels() != 35210:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_peers() != 29567:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_node_state() != 41833:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 46432:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -793,6 +795,11 @@ _UniffiLib.uniffi_glsdk_fn_method_node_list_peers.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_list_peers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_node_state.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_node_state.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1269,6 +1276,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.restype = ctypes
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_node_state.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_node_state.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.restype = ctypes.c_uint16
@@ -1456,16 +1466,28 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
 
 
 class FundChannel:
-    peer_id: "bytes"
+    peer_id: "str"
+    """
+    Peer node public key as lowercase hex (66 chars).
+    """
+
     our_amount_msat: "int"
     amount_msat: "int"
-    funding_txid: "bytes"
+    funding_txid: "str"
+    """
+    Funding transaction id as lowercase hex (64 chars).
+    """
+
     funding_output: "int"
     connected: "bool"
     state: "ChannelState"
     short_channel_id: "typing.Optional[str]"
-    channel_id: "typing.Optional[bytes]"
-    def __init__(self, *, peer_id: "bytes", our_amount_msat: "int", amount_msat: "int", funding_txid: "bytes", funding_output: "int", connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[bytes]"):
+    channel_id: "typing.Optional[str]"
+    """
+    Channel id as lowercase hex (64 chars).
+    """
+
+    def __init__(self, *, peer_id: "str", our_amount_msat: "int", amount_msat: "int", funding_txid: "str", funding_output: "int", connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[str]"):
         self.peer_id = peer_id
         self.our_amount_msat = our_amount_msat
         self.amount_msat = amount_msat
@@ -1504,59 +1526,72 @@ class _UniffiConverterTypeFundChannel(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return FundChannel(
-            peer_id=_UniffiConverterBytes.read(buf),
+            peer_id=_UniffiConverterString.read(buf),
             our_amount_msat=_UniffiConverterUInt64.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
-            funding_txid=_UniffiConverterBytes.read(buf),
+            funding_txid=_UniffiConverterString.read(buf),
             funding_output=_UniffiConverterUInt32.read(buf),
             connected=_UniffiConverterBool.read(buf),
             state=_UniffiConverterTypeChannelState.read(buf),
             short_channel_id=_UniffiConverterOptionalString.read(buf),
-            channel_id=_UniffiConverterOptionalBytes.read(buf),
+            channel_id=_UniffiConverterOptionalString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.peer_id)
+        _UniffiConverterString.check_lower(value.peer_id)
         _UniffiConverterUInt64.check_lower(value.our_amount_msat)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
-        _UniffiConverterBytes.check_lower(value.funding_txid)
+        _UniffiConverterString.check_lower(value.funding_txid)
         _UniffiConverterUInt32.check_lower(value.funding_output)
         _UniffiConverterBool.check_lower(value.connected)
         _UniffiConverterTypeChannelState.check_lower(value.state)
         _UniffiConverterOptionalString.check_lower(value.short_channel_id)
-        _UniffiConverterOptionalBytes.check_lower(value.channel_id)
+        _UniffiConverterOptionalString.check_lower(value.channel_id)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.peer_id, buf)
+        _UniffiConverterString.write(value.peer_id, buf)
         _UniffiConverterUInt64.write(value.our_amount_msat, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
-        _UniffiConverterBytes.write(value.funding_txid, buf)
+        _UniffiConverterString.write(value.funding_txid, buf)
         _UniffiConverterUInt32.write(value.funding_output, buf)
         _UniffiConverterBool.write(value.connected, buf)
         _UniffiConverterTypeChannelState.write(value.state, buf)
         _UniffiConverterOptionalString.write(value.short_channel_id, buf)
-        _UniffiConverterOptionalBytes.write(value.channel_id, buf)
+        _UniffiConverterOptionalString.write(value.channel_id, buf)
 
 
 class FundOutput:
-    txid: "bytes"
+    txid: "str"
+    """
+    Transaction id as lowercase hex (64 chars).
+    """
+
     output: "int"
     amount_msat: "int"
     status: "OutputStatus"
     address: "typing.Optional[str]"
     blockheight: "typing.Optional[int]"
-    def __init__(self, *, txid: "bytes", output: "int", amount_msat: "int", status: "OutputStatus", address: "typing.Optional[str]", blockheight: "typing.Optional[int]"):
+    reserved: "bool"
+    """
+    True when this UTXO is currently reserved by an in-flight PSBT
+    (e.g. a channel-open or fund-send that has not been broadcast or
+    abandoned). Reserved UTXOs are not spendable and must be excluded
+    from the wallet's spendable balance.
+    """
+
+    def __init__(self, *, txid: "str", output: "int", amount_msat: "int", status: "OutputStatus", address: "typing.Optional[str]", blockheight: "typing.Optional[int]", reserved: "bool"):
         self.txid = txid
         self.output = output
         self.amount_msat = amount_msat
         self.status = status
         self.address = address
         self.blockheight = blockheight
+        self.reserved = reserved
 
     def __str__(self):
-        return "FundOutput(txid={}, output={}, amount_msat={}, status={}, address={}, blockheight={})".format(self.txid, self.output, self.amount_msat, self.status, self.address, self.blockheight)
+        return "FundOutput(txid={}, output={}, amount_msat={}, status={}, address={}, blockheight={}, reserved={})".format(self.txid, self.output, self.amount_msat, self.status, self.address, self.blockheight, self.reserved)
 
     def __eq__(self, other):
         if self.txid != other.txid:
@@ -1571,43 +1606,56 @@ class FundOutput:
             return False
         if self.blockheight != other.blockheight:
             return False
+        if self.reserved != other.reserved:
+            return False
         return True
 
 class _UniffiConverterTypeFundOutput(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return FundOutput(
-            txid=_UniffiConverterBytes.read(buf),
+            txid=_UniffiConverterString.read(buf),
             output=_UniffiConverterUInt32.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
             status=_UniffiConverterTypeOutputStatus.read(buf),
             address=_UniffiConverterOptionalString.read(buf),
             blockheight=_UniffiConverterOptionalUInt32.read(buf),
+            reserved=_UniffiConverterBool.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.txid)
+        _UniffiConverterString.check_lower(value.txid)
         _UniffiConverterUInt32.check_lower(value.output)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
         _UniffiConverterTypeOutputStatus.check_lower(value.status)
         _UniffiConverterOptionalString.check_lower(value.address)
         _UniffiConverterOptionalUInt32.check_lower(value.blockheight)
+        _UniffiConverterBool.check_lower(value.reserved)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.txid, buf)
+        _UniffiConverterString.write(value.txid, buf)
         _UniffiConverterUInt32.write(value.output, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
         _UniffiConverterTypeOutputStatus.write(value.status, buf)
         _UniffiConverterOptionalString.write(value.address, buf)
         _UniffiConverterOptionalUInt32.write(value.blockheight, buf)
+        _UniffiConverterBool.write(value.reserved, buf)
 
 
 class GetInfoResponse:
-    id: "bytes"
+    id: "str"
+    """
+    Node public key as lowercase hex (66 chars).
+    """
+
     alias: "typing.Optional[str]"
-    color: "bytes"
+    color: "str"
+    """
+    3-byte RGB color as lowercase hex (6 chars).
+    """
+
     num_peers: "int"
     num_pending_channels: "int"
     num_active_channels: "int"
@@ -1617,7 +1665,7 @@ class GetInfoResponse:
     blockheight: "int"
     network: "str"
     fees_collected_msat: "int"
-    def __init__(self, *, id: "bytes", alias: "typing.Optional[str]", color: "bytes", num_peers: "int", num_pending_channels: "int", num_active_channels: "int", num_inactive_channels: "int", version: "str", lightning_dir: "str", blockheight: "int", network: "str", fees_collected_msat: "int"):
+    def __init__(self, *, id: "str", alias: "typing.Optional[str]", color: "str", num_peers: "int", num_pending_channels: "int", num_active_channels: "int", num_inactive_channels: "int", version: "str", lightning_dir: "str", blockheight: "int", network: "str", fees_collected_msat: "int"):
         self.id = id
         self.alias = alias
         self.color = color
@@ -1665,9 +1713,9 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return GetInfoResponse(
-            id=_UniffiConverterBytes.read(buf),
+            id=_UniffiConverterString.read(buf),
             alias=_UniffiConverterOptionalString.read(buf),
-            color=_UniffiConverterBytes.read(buf),
+            color=_UniffiConverterString.read(buf),
             num_peers=_UniffiConverterUInt32.read(buf),
             num_pending_channels=_UniffiConverterUInt32.read(buf),
             num_active_channels=_UniffiConverterUInt32.read(buf),
@@ -1681,9 +1729,9 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.id)
+        _UniffiConverterString.check_lower(value.id)
         _UniffiConverterOptionalString.check_lower(value.alias)
-        _UniffiConverterBytes.check_lower(value.color)
+        _UniffiConverterString.check_lower(value.color)
         _UniffiConverterUInt32.check_lower(value.num_peers)
         _UniffiConverterUInt32.check_lower(value.num_pending_channels)
         _UniffiConverterUInt32.check_lower(value.num_active_channels)
@@ -1696,9 +1744,9 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.id, buf)
+        _UniffiConverterString.write(value.id, buf)
         _UniffiConverterOptionalString.write(value.alias, buf)
-        _UniffiConverterBytes.write(value.color, buf)
+        _UniffiConverterString.write(value.color, buf)
         _UniffiConverterUInt32.write(value.num_peers, buf)
         _UniffiConverterUInt32.write(value.num_pending_channels, buf)
         _UniffiConverterUInt32.write(value.num_active_channels, buf)
@@ -1713,7 +1761,11 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
 class Invoice:
     label: "str"
     description: "str"
-    payment_hash: "bytes"
+    payment_hash: "str"
+    """
+    Payment hash as lowercase hex (64 chars).
+    """
+
     status: "InvoiceStatus"
     amount_msat: "typing.Optional[int]"
     amount_received_msat: "typing.Optional[int]"
@@ -1721,9 +1773,17 @@ class Invoice:
     bolt12: "typing.Optional[str]"
     paid_at: "typing.Optional[int]"
     expires_at: "int"
-    payment_preimage: "typing.Optional[bytes]"
-    destination_pubkey: "typing.Optional[bytes]"
-    def __init__(self, *, label: "str", description: "str", payment_hash: "bytes", status: "InvoiceStatus", amount_msat: "typing.Optional[int]", amount_received_msat: "typing.Optional[int]", bolt11: "typing.Optional[str]", bolt12: "typing.Optional[str]", paid_at: "typing.Optional[int]", expires_at: "int", payment_preimage: "typing.Optional[bytes]", destination_pubkey: "typing.Optional[bytes]"):
+    payment_preimage: "typing.Optional[str]"
+    """
+    Payment preimage as lowercase hex (64 chars), if the invoice has been paid.
+    """
+
+    destination_pubkey: "typing.Optional[str]"
+    """
+    Recipient node pubkey as lowercase hex (66 chars), recovered from the bolt11.
+    """
+
+    def __init__(self, *, label: "str", description: "str", payment_hash: "str", status: "InvoiceStatus", amount_msat: "typing.Optional[int]", amount_received_msat: "typing.Optional[int]", bolt11: "typing.Optional[str]", bolt12: "typing.Optional[str]", paid_at: "typing.Optional[int]", expires_at: "int", payment_preimage: "typing.Optional[str]", destination_pubkey: "typing.Optional[str]"):
         self.label = label
         self.description = description
         self.payment_hash = payment_hash
@@ -1773,7 +1833,7 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
         return Invoice(
             label=_UniffiConverterString.read(buf),
             description=_UniffiConverterString.read(buf),
-            payment_hash=_UniffiConverterBytes.read(buf),
+            payment_hash=_UniffiConverterString.read(buf),
             status=_UniffiConverterTypeInvoiceStatus.read(buf),
             amount_msat=_UniffiConverterOptionalUInt64.read(buf),
             amount_received_msat=_UniffiConverterOptionalUInt64.read(buf),
@@ -1781,15 +1841,15 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
             bolt12=_UniffiConverterOptionalString.read(buf),
             paid_at=_UniffiConverterOptionalUInt64.read(buf),
             expires_at=_UniffiConverterUInt64.read(buf),
-            payment_preimage=_UniffiConverterOptionalBytes.read(buf),
-            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            payment_preimage=_UniffiConverterOptionalString.read(buf),
+            destination_pubkey=_UniffiConverterOptionalString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
         _UniffiConverterString.check_lower(value.label)
         _UniffiConverterString.check_lower(value.description)
-        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterString.check_lower(value.payment_hash)
         _UniffiConverterTypeInvoiceStatus.check_lower(value.status)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_received_msat)
@@ -1797,14 +1857,14 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
         _UniffiConverterOptionalString.check_lower(value.bolt12)
         _UniffiConverterOptionalUInt64.check_lower(value.paid_at)
         _UniffiConverterUInt64.check_lower(value.expires_at)
-        _UniffiConverterOptionalBytes.check_lower(value.payment_preimage)
-        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
+        _UniffiConverterOptionalString.check_lower(value.payment_preimage)
+        _UniffiConverterOptionalString.check_lower(value.destination_pubkey)
 
     @staticmethod
     def write(value, buf):
         _UniffiConverterString.write(value.label, buf)
         _UniffiConverterString.write(value.description, buf)
-        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterString.write(value.payment_hash, buf)
         _UniffiConverterTypeInvoiceStatus.write(value.status, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_received_msat, buf)
@@ -1812,8 +1872,8 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
         _UniffiConverterOptionalString.write(value.bolt12, buf)
         _UniffiConverterOptionalUInt64.write(value.paid_at, buf)
         _UniffiConverterUInt64.write(value.expires_at, buf)
-        _UniffiConverterOptionalBytes.write(value.payment_preimage, buf)
-        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
+        _UniffiConverterOptionalString.write(value.payment_preimage, buf)
+        _UniffiConverterOptionalString.write(value.destination_pubkey, buf)
 
 
 class InvoicePaidEvent:
@@ -1821,9 +1881,9 @@ class InvoicePaidEvent:
     Details of a paid invoice.
     """
 
-    payment_hash: "bytes"
+    payment_hash: "str"
     """
-    The payment hash of the paid invoice.
+    Payment hash of the paid invoice as lowercase hex (64 chars).
     """
 
     bolt11: "str"
@@ -1831,9 +1891,9 @@ class InvoicePaidEvent:
     The bolt11 invoice string.
     """
 
-    preimage: "bytes"
+    preimage: "str"
     """
-    The preimage that proves payment.
+    Preimage that proves payment as lowercase hex (64 chars).
     """
 
     label: "str"
@@ -1846,7 +1906,7 @@ class InvoicePaidEvent:
     Amount received in millisatoshis.
     """
 
-    def __init__(self, *, payment_hash: "bytes", bolt11: "str", preimage: "bytes", label: "str", amount_msat: "int"):
+    def __init__(self, *, payment_hash: "str", bolt11: "str", preimage: "str", label: "str", amount_msat: "int"):
         self.payment_hash = payment_hash
         self.bolt11 = bolt11
         self.preimage = preimage
@@ -1873,26 +1933,26 @@ class _UniffiConverterTypeInvoicePaidEvent(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return InvoicePaidEvent(
-            payment_hash=_UniffiConverterBytes.read(buf),
+            payment_hash=_UniffiConverterString.read(buf),
             bolt11=_UniffiConverterString.read(buf),
-            preimage=_UniffiConverterBytes.read(buf),
+            preimage=_UniffiConverterString.read(buf),
             label=_UniffiConverterString.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterString.check_lower(value.payment_hash)
         _UniffiConverterString.check_lower(value.bolt11)
-        _UniffiConverterBytes.check_lower(value.preimage)
+        _UniffiConverterString.check_lower(value.preimage)
         _UniffiConverterString.check_lower(value.label)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterString.write(value.payment_hash, buf)
         _UniffiConverterString.write(value.bolt11, buf)
-        _UniffiConverterBytes.write(value.preimage, buf)
+        _UniffiConverterString.write(value.preimage, buf)
         _UniffiConverterString.write(value.label, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
 
@@ -2137,6 +2197,347 @@ class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
         _UniffiConverterSequenceTypePeer.write(value.peers, buf)
 
 
+class NodeState:
+    """
+    A point-in-time snapshot of the node's balances, capacity, and
+    connectivity. Returned by `node_state()`.
+
+    All amounts are in millisatoshis (1 sat = 1000 msat).
+    """
+
+    id: "str"
+    """
+    The node's public key as a lowercase hex string (66 chars).
+    """
+
+    block_height: "int"
+    """
+    Latest block height the node has synced to.
+    """
+
+    network: "str"
+    """
+    The Bitcoin network this node is running on (e.g. "bitcoin", "regtest").
+    """
+
+    version: "str"
+    """
+    CLN version string (e.g. "v24.11").
+    """
+
+    alias: "typing.Optional[str]"
+    """
+    Human-readable node alias, if set.
+    """
+
+    color: "str"
+    """
+    3-byte RGB color of the node, as a lowercase hex string (6 chars).
+    """
+
+    num_active_channels: "int"
+    """
+    Number of channels that are open and operational. These are the
+    channels that contribute to `channels_balance_msat`,
+    `max_payable_msat`, `total_channel_capacity_msat`, and
+    `total_inbound_liquidity_msat`.
+    """
+
+    num_pending_channels: "int"
+    """
+    Number of channels that are being opened but not yet confirmed.
+    Pending channels do not contribute to any balance or capacity
+    field on this snapshot; their funds show up only after they
+    transition to active.
+    """
+
+    num_inactive_channels: "int"
+    """
+    Number of channels that are open but the peer is offline.
+    Inactive channels hold balance but cannot be used for payments
+    until the peer reconnects; they do not contribute to
+    `max_payable_msat` or `total_inbound_liquidity_msat` (those are
+    computed from the live `spendable_msat` / `receivable_msat`
+    reported by CLN, which goes to zero when the peer is offline).
+    """
+
+    channels_balance_msat: "int"
+    """
+    Total our-side balance across all open channels, including amounts
+    that protocol reserves make unspendable.
+
+    This is the field a wallet's home screen should show as the
+    user's "Lightning balance" — it reflects what they own off-chain,
+    matching what they'd expect to see at a glance.
+
+    Do **not** use this to gate a send button: some of it is locked
+    in channel reserves. Use `max_payable_msat` for that.
+    """
+
+    max_payable_msat: "int"
+    """
+    Aggregate spendable amount across all open channels. Equal to
+    `channels_balance_msat - max_chan_reserve_msat`.
+
+    This is the field a send screen should gate against — it is what
+    the user can actually move right now over Lightning in total.
+
+    Caveat: a single Lightning payment is additionally bounded by
+    the largest channel's own `spendable_msat`. Reaching this full
+    aggregate amount in one payment requires multi-path-payment
+    support from the recipient and a working route.
+    """
+
+    total_channel_capacity_msat: "int"
+    """
+    Sum of all open channel capacities (your side + remote side).
+    """
+
+    max_chan_reserve_msat: "int"
+    """
+    Amount locked in protocol channel reserves, computed as
+    `channels_balance_msat - max_payable_msat`. These sats are yours
+    on paper but cannot be spent until the channel closes.
+    """
+
+    onchain_balance_msat: "int"
+    """
+    Confirmed on-chain balance available for spending or opening channels.
+    """
+
+    unconfirmed_onchain_balance_msat: "int"
+    """
+    On-chain balance from transactions that have not yet been confirmed.
+    """
+
+    immature_onchain_balance_msat: "int"
+    """
+    On-chain balance confirmed but not yet spendable (e.g. coinbase
+    outputs inside the 100-block maturation window).
+    """
+
+    pending_onchain_balance_msat: "int"
+    """
+    On-chain balance locked in channels that are being closed.
+    These funds will become available once the close is confirmed.
+    """
+
+    max_receivable_single_payment_msat: "int"
+    """
+    Largest single Lightning payment the node can receive without
+    splitting across channels. Bounded by the inbound capacity of
+    the largest open channel.
+    """
+
+    total_inbound_liquidity_msat: "int"
+    """
+    Total amount you can receive across all open channels combined.
+    """
+
+    connected_channel_peers: "typing.List[str]"
+    """
+    Lowercase hex public keys of peers we have at least one channel
+    with and are currently connected to. Peers we're connected to but
+    have no channel with are not represented here; for routing-node
+    use cases, query `list_peers()` directly.
+    """
+
+    utxos: "typing.List[FundOutput]"
+    """
+    Unspent on-chain outputs owned by the node's wallet. Excludes
+    spent outputs; includes confirmed, unconfirmed, immature, and
+    reserved UTXOs (callers can filter by `status` and `reserved`).
+    """
+
+    total_onchain_msat: "int"
+    """
+    All non-pending on-chain balance buckets summed:
+    `onchain_balance_msat + unconfirmed_onchain_balance_msat + immature_onchain_balance_msat`.
+    Excludes funds locked in closing channels (`pending_onchain_balance_msat`)
+    since those are not yet on-chain UTXOs.
+    """
+
+    total_balance_msat: "int"
+    """
+    Everything the user owns, summed: channel balance (including
+    protocol reserves) + all on-chain buckets + funds locked in
+    closing channels. The "total holdings" number a wallet home
+    screen typically shows.
+    """
+
+    spendable_balance_msat: "int"
+    """
+    What the user can spend *right now*:
+    `max_payable_msat + onchain_balance_msat`. Excludes reserves,
+    unconfirmed, immature, and pending amounts. The number a
+    send-money screen should gate against.
+    """
+
+    def __init__(self, *, id: "str", block_height: "int", network: "str", version: "str", alias: "typing.Optional[str]", color: "str", num_active_channels: "int", num_pending_channels: "int", num_inactive_channels: "int", channels_balance_msat: "int", max_payable_msat: "int", total_channel_capacity_msat: "int", max_chan_reserve_msat: "int", onchain_balance_msat: "int", unconfirmed_onchain_balance_msat: "int", immature_onchain_balance_msat: "int", pending_onchain_balance_msat: "int", max_receivable_single_payment_msat: "int", total_inbound_liquidity_msat: "int", connected_channel_peers: "typing.List[str]", utxos: "typing.List[FundOutput]", total_onchain_msat: "int", total_balance_msat: "int", spendable_balance_msat: "int"):
+        self.id = id
+        self.block_height = block_height
+        self.network = network
+        self.version = version
+        self.alias = alias
+        self.color = color
+        self.num_active_channels = num_active_channels
+        self.num_pending_channels = num_pending_channels
+        self.num_inactive_channels = num_inactive_channels
+        self.channels_balance_msat = channels_balance_msat
+        self.max_payable_msat = max_payable_msat
+        self.total_channel_capacity_msat = total_channel_capacity_msat
+        self.max_chan_reserve_msat = max_chan_reserve_msat
+        self.onchain_balance_msat = onchain_balance_msat
+        self.unconfirmed_onchain_balance_msat = unconfirmed_onchain_balance_msat
+        self.immature_onchain_balance_msat = immature_onchain_balance_msat
+        self.pending_onchain_balance_msat = pending_onchain_balance_msat
+        self.max_receivable_single_payment_msat = max_receivable_single_payment_msat
+        self.total_inbound_liquidity_msat = total_inbound_liquidity_msat
+        self.connected_channel_peers = connected_channel_peers
+        self.utxos = utxos
+        self.total_onchain_msat = total_onchain_msat
+        self.total_balance_msat = total_balance_msat
+        self.spendable_balance_msat = spendable_balance_msat
+
+    def __str__(self):
+        return "NodeState(id={}, block_height={}, network={}, version={}, alias={}, color={}, num_active_channels={}, num_pending_channels={}, num_inactive_channels={}, channels_balance_msat={}, max_payable_msat={}, total_channel_capacity_msat={}, max_chan_reserve_msat={}, onchain_balance_msat={}, unconfirmed_onchain_balance_msat={}, immature_onchain_balance_msat={}, pending_onchain_balance_msat={}, max_receivable_single_payment_msat={}, total_inbound_liquidity_msat={}, connected_channel_peers={}, utxos={}, total_onchain_msat={}, total_balance_msat={}, spendable_balance_msat={})".format(self.id, self.block_height, self.network, self.version, self.alias, self.color, self.num_active_channels, self.num_pending_channels, self.num_inactive_channels, self.channels_balance_msat, self.max_payable_msat, self.total_channel_capacity_msat, self.max_chan_reserve_msat, self.onchain_balance_msat, self.unconfirmed_onchain_balance_msat, self.immature_onchain_balance_msat, self.pending_onchain_balance_msat, self.max_receivable_single_payment_msat, self.total_inbound_liquidity_msat, self.connected_channel_peers, self.utxos, self.total_onchain_msat, self.total_balance_msat, self.spendable_balance_msat)
+
+    def __eq__(self, other):
+        if self.id != other.id:
+            return False
+        if self.block_height != other.block_height:
+            return False
+        if self.network != other.network:
+            return False
+        if self.version != other.version:
+            return False
+        if self.alias != other.alias:
+            return False
+        if self.color != other.color:
+            return False
+        if self.num_active_channels != other.num_active_channels:
+            return False
+        if self.num_pending_channels != other.num_pending_channels:
+            return False
+        if self.num_inactive_channels != other.num_inactive_channels:
+            return False
+        if self.channels_balance_msat != other.channels_balance_msat:
+            return False
+        if self.max_payable_msat != other.max_payable_msat:
+            return False
+        if self.total_channel_capacity_msat != other.total_channel_capacity_msat:
+            return False
+        if self.max_chan_reserve_msat != other.max_chan_reserve_msat:
+            return False
+        if self.onchain_balance_msat != other.onchain_balance_msat:
+            return False
+        if self.unconfirmed_onchain_balance_msat != other.unconfirmed_onchain_balance_msat:
+            return False
+        if self.immature_onchain_balance_msat != other.immature_onchain_balance_msat:
+            return False
+        if self.pending_onchain_balance_msat != other.pending_onchain_balance_msat:
+            return False
+        if self.max_receivable_single_payment_msat != other.max_receivable_single_payment_msat:
+            return False
+        if self.total_inbound_liquidity_msat != other.total_inbound_liquidity_msat:
+            return False
+        if self.connected_channel_peers != other.connected_channel_peers:
+            return False
+        if self.utxos != other.utxos:
+            return False
+        if self.total_onchain_msat != other.total_onchain_msat:
+            return False
+        if self.total_balance_msat != other.total_balance_msat:
+            return False
+        if self.spendable_balance_msat != other.spendable_balance_msat:
+            return False
+        return True
+
+class _UniffiConverterTypeNodeState(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return NodeState(
+            id=_UniffiConverterString.read(buf),
+            block_height=_UniffiConverterUInt32.read(buf),
+            network=_UniffiConverterString.read(buf),
+            version=_UniffiConverterString.read(buf),
+            alias=_UniffiConverterOptionalString.read(buf),
+            color=_UniffiConverterString.read(buf),
+            num_active_channels=_UniffiConverterUInt32.read(buf),
+            num_pending_channels=_UniffiConverterUInt32.read(buf),
+            num_inactive_channels=_UniffiConverterUInt32.read(buf),
+            channels_balance_msat=_UniffiConverterUInt64.read(buf),
+            max_payable_msat=_UniffiConverterUInt64.read(buf),
+            total_channel_capacity_msat=_UniffiConverterUInt64.read(buf),
+            max_chan_reserve_msat=_UniffiConverterUInt64.read(buf),
+            onchain_balance_msat=_UniffiConverterUInt64.read(buf),
+            unconfirmed_onchain_balance_msat=_UniffiConverterUInt64.read(buf),
+            immature_onchain_balance_msat=_UniffiConverterUInt64.read(buf),
+            pending_onchain_balance_msat=_UniffiConverterUInt64.read(buf),
+            max_receivable_single_payment_msat=_UniffiConverterUInt64.read(buf),
+            total_inbound_liquidity_msat=_UniffiConverterUInt64.read(buf),
+            connected_channel_peers=_UniffiConverterSequenceString.read(buf),
+            utxos=_UniffiConverterSequenceTypeFundOutput.read(buf),
+            total_onchain_msat=_UniffiConverterUInt64.read(buf),
+            total_balance_msat=_UniffiConverterUInt64.read(buf),
+            spendable_balance_msat=_UniffiConverterUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.id)
+        _UniffiConverterUInt32.check_lower(value.block_height)
+        _UniffiConverterString.check_lower(value.network)
+        _UniffiConverterString.check_lower(value.version)
+        _UniffiConverterOptionalString.check_lower(value.alias)
+        _UniffiConverterString.check_lower(value.color)
+        _UniffiConverterUInt32.check_lower(value.num_active_channels)
+        _UniffiConverterUInt32.check_lower(value.num_pending_channels)
+        _UniffiConverterUInt32.check_lower(value.num_inactive_channels)
+        _UniffiConverterUInt64.check_lower(value.channels_balance_msat)
+        _UniffiConverterUInt64.check_lower(value.max_payable_msat)
+        _UniffiConverterUInt64.check_lower(value.total_channel_capacity_msat)
+        _UniffiConverterUInt64.check_lower(value.max_chan_reserve_msat)
+        _UniffiConverterUInt64.check_lower(value.onchain_balance_msat)
+        _UniffiConverterUInt64.check_lower(value.unconfirmed_onchain_balance_msat)
+        _UniffiConverterUInt64.check_lower(value.immature_onchain_balance_msat)
+        _UniffiConverterUInt64.check_lower(value.pending_onchain_balance_msat)
+        _UniffiConverterUInt64.check_lower(value.max_receivable_single_payment_msat)
+        _UniffiConverterUInt64.check_lower(value.total_inbound_liquidity_msat)
+        _UniffiConverterSequenceString.check_lower(value.connected_channel_peers)
+        _UniffiConverterSequenceTypeFundOutput.check_lower(value.utxos)
+        _UniffiConverterUInt64.check_lower(value.total_onchain_msat)
+        _UniffiConverterUInt64.check_lower(value.total_balance_msat)
+        _UniffiConverterUInt64.check_lower(value.spendable_balance_msat)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.id, buf)
+        _UniffiConverterUInt32.write(value.block_height, buf)
+        _UniffiConverterString.write(value.network, buf)
+        _UniffiConverterString.write(value.version, buf)
+        _UniffiConverterOptionalString.write(value.alias, buf)
+        _UniffiConverterString.write(value.color, buf)
+        _UniffiConverterUInt32.write(value.num_active_channels, buf)
+        _UniffiConverterUInt32.write(value.num_pending_channels, buf)
+        _UniffiConverterUInt32.write(value.num_inactive_channels, buf)
+        _UniffiConverterUInt64.write(value.channels_balance_msat, buf)
+        _UniffiConverterUInt64.write(value.max_payable_msat, buf)
+        _UniffiConverterUInt64.write(value.total_channel_capacity_msat, buf)
+        _UniffiConverterUInt64.write(value.max_chan_reserve_msat, buf)
+        _UniffiConverterUInt64.write(value.onchain_balance_msat, buf)
+        _UniffiConverterUInt64.write(value.unconfirmed_onchain_balance_msat, buf)
+        _UniffiConverterUInt64.write(value.immature_onchain_balance_msat, buf)
+        _UniffiConverterUInt64.write(value.pending_onchain_balance_msat, buf)
+        _UniffiConverterUInt64.write(value.max_receivable_single_payment_msat, buf)
+        _UniffiConverterUInt64.write(value.total_inbound_liquidity_msat, buf)
+        _UniffiConverterSequenceString.write(value.connected_channel_peers, buf)
+        _UniffiConverterSequenceTypeFundOutput.write(value.utxos, buf)
+        _UniffiConverterUInt64.write(value.total_onchain_msat, buf)
+        _UniffiConverterUInt64.write(value.total_balance_msat, buf)
+        _UniffiConverterUInt64.write(value.spendable_balance_msat, buf)
+
+
 class OnchainReceiveResponse:
     """
     A pair of on-chain addresses for receiving funds.
@@ -2195,9 +2596,9 @@ class OnchainSendResponse:
     The raw signed transaction bytes.
     """
 
-    txid: "bytes"
+    txid: "str"
     """
-    The transaction ID (32 bytes, reversed byte order as is standard).
+    The transaction id as lowercase hex (64 chars).
     """
 
     psbt: "str"
@@ -2205,7 +2606,7 @@ class OnchainSendResponse:
     The transaction as a Partially Signed Bitcoin Transaction string.
     """
 
-    def __init__(self, *, tx: "bytes", txid: "bytes", psbt: "str"):
+    def __init__(self, *, tx: "bytes", txid: "str", psbt: "str"):
         self.tx = tx
         self.txid = txid
         self.psbt = psbt
@@ -2227,20 +2628,20 @@ class _UniffiConverterTypeOnchainSendResponse(_UniffiConverterRustBuffer):
     def read(buf):
         return OnchainSendResponse(
             tx=_UniffiConverterBytes.read(buf),
-            txid=_UniffiConverterBytes.read(buf),
+            txid=_UniffiConverterString.read(buf),
             psbt=_UniffiConverterString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
         _UniffiConverterBytes.check_lower(value.tx)
-        _UniffiConverterBytes.check_lower(value.txid)
+        _UniffiConverterString.check_lower(value.txid)
         _UniffiConverterString.check_lower(value.psbt)
 
     @staticmethod
     def write(value, buf):
         _UniffiConverterBytes.write(value.tx, buf)
-        _UniffiConverterBytes.write(value.txid, buf)
+        _UniffiConverterString.write(value.txid, buf)
         _UniffiConverterString.write(value.psbt, buf)
 
 
@@ -2254,14 +2655,14 @@ class ParsedInvoice:
     The original invoice string.
     """
 
-    payee_pubkey: "typing.Optional[bytes]"
+    payee_pubkey: "typing.Optional[str]"
     """
-    33-byte recipient public key, recovered from the invoice signature.
+    Recipient public key as lowercase hex (66 chars), recovered from the invoice signature.
     """
 
-    payment_hash: "bytes"
+    payment_hash: "str"
     """
-    32-byte payment hash identifying this payment.
+    Payment hash as lowercase hex (64 chars) identifying this payment.
     """
 
     description: "typing.Optional[str]"
@@ -2284,7 +2685,7 @@ class ParsedInvoice:
     Unix timestamp (seconds) when the invoice was created.
     """
 
-    def __init__(self, *, bolt11: "str", payee_pubkey: "typing.Optional[bytes]", payment_hash: "bytes", description: "typing.Optional[str]", amount_msat: "typing.Optional[int]", expiry: "int", timestamp: "int"):
+    def __init__(self, *, bolt11: "str", payee_pubkey: "typing.Optional[str]", payment_hash: "str", description: "typing.Optional[str]", amount_msat: "typing.Optional[int]", expiry: "int", timestamp: "int"):
         self.bolt11 = bolt11
         self.payee_pubkey = payee_pubkey
         self.payment_hash = payment_hash
@@ -2318,8 +2719,8 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
     def read(buf):
         return ParsedInvoice(
             bolt11=_UniffiConverterString.read(buf),
-            payee_pubkey=_UniffiConverterOptionalBytes.read(buf),
-            payment_hash=_UniffiConverterBytes.read(buf),
+            payee_pubkey=_UniffiConverterOptionalString.read(buf),
+            payment_hash=_UniffiConverterString.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             amount_msat=_UniffiConverterOptionalUInt64.read(buf),
             expiry=_UniffiConverterUInt64.read(buf),
@@ -2329,8 +2730,8 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
     @staticmethod
     def check_lower(value):
         _UniffiConverterString.check_lower(value.bolt11)
-        _UniffiConverterOptionalBytes.check_lower(value.payee_pubkey)
-        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterOptionalString.check_lower(value.payee_pubkey)
+        _UniffiConverterString.check_lower(value.payment_hash)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
         _UniffiConverterUInt64.check_lower(value.expiry)
@@ -2339,8 +2740,8 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterString.write(value.bolt11, buf)
-        _UniffiConverterOptionalBytes.write(value.payee_pubkey, buf)
-        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterOptionalString.write(value.payee_pubkey, buf)
+        _UniffiConverterString.write(value.payment_hash, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
         _UniffiConverterUInt64.write(value.expiry, buf)
@@ -2348,20 +2749,32 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
 
 
 class Pay:
-    payment_hash: "bytes"
+    payment_hash: "str"
+    """
+    Payment hash as lowercase hex (64 chars).
+    """
+
     status: "PayStatus"
-    destination_pubkey: "typing.Optional[bytes]"
+    destination_pubkey: "typing.Optional[str]"
+    """
+    Recipient node pubkey as lowercase hex (66 chars), if known.
+    """
+
     amount_msat: "typing.Optional[int]"
     amount_sent_msat: "typing.Optional[int]"
     label: "typing.Optional[str]"
     bolt11: "typing.Optional[str]"
     description: "typing.Optional[str]"
     bolt12: "typing.Optional[str]"
-    preimage: "typing.Optional[bytes]"
+    preimage: "typing.Optional[str]"
+    """
+    Payment preimage as lowercase hex (64 chars), if the payment completed.
+    """
+
     created_at: "int"
     completed_at: "typing.Optional[int]"
     number_of_parts: "typing.Optional[int]"
-    def __init__(self, *, payment_hash: "bytes", status: "PayStatus", destination_pubkey: "typing.Optional[bytes]", amount_msat: "typing.Optional[int]", amount_sent_msat: "typing.Optional[int]", label: "typing.Optional[str]", bolt11: "typing.Optional[str]", description: "typing.Optional[str]", bolt12: "typing.Optional[str]", preimage: "typing.Optional[bytes]", created_at: "int", completed_at: "typing.Optional[int]", number_of_parts: "typing.Optional[int]"):
+    def __init__(self, *, payment_hash: "str", status: "PayStatus", destination_pubkey: "typing.Optional[str]", amount_msat: "typing.Optional[int]", amount_sent_msat: "typing.Optional[int]", label: "typing.Optional[str]", bolt11: "typing.Optional[str]", description: "typing.Optional[str]", bolt12: "typing.Optional[str]", preimage: "typing.Optional[str]", created_at: "int", completed_at: "typing.Optional[int]", number_of_parts: "typing.Optional[int]"):
         self.payment_hash = payment_hash
         self.status = status
         self.destination_pubkey = destination_pubkey
@@ -2412,16 +2825,16 @@ class _UniffiConverterTypePay(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return Pay(
-            payment_hash=_UniffiConverterBytes.read(buf),
+            payment_hash=_UniffiConverterString.read(buf),
             status=_UniffiConverterTypePayStatus.read(buf),
-            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            destination_pubkey=_UniffiConverterOptionalString.read(buf),
             amount_msat=_UniffiConverterOptionalUInt64.read(buf),
             amount_sent_msat=_UniffiConverterOptionalUInt64.read(buf),
             label=_UniffiConverterOptionalString.read(buf),
             bolt11=_UniffiConverterOptionalString.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             bolt12=_UniffiConverterOptionalString.read(buf),
-            preimage=_UniffiConverterOptionalBytes.read(buf),
+            preimage=_UniffiConverterOptionalString.read(buf),
             created_at=_UniffiConverterUInt64.read(buf),
             completed_at=_UniffiConverterOptionalUInt64.read(buf),
             number_of_parts=_UniffiConverterOptionalUInt64.read(buf),
@@ -2429,32 +2842,32 @@ class _UniffiConverterTypePay(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterString.check_lower(value.payment_hash)
         _UniffiConverterTypePayStatus.check_lower(value.status)
-        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
+        _UniffiConverterOptionalString.check_lower(value.destination_pubkey)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_sent_msat)
         _UniffiConverterOptionalString.check_lower(value.label)
         _UniffiConverterOptionalString.check_lower(value.bolt11)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalString.check_lower(value.bolt12)
-        _UniffiConverterOptionalBytes.check_lower(value.preimage)
+        _UniffiConverterOptionalString.check_lower(value.preimage)
         _UniffiConverterUInt64.check_lower(value.created_at)
         _UniffiConverterOptionalUInt64.check_lower(value.completed_at)
         _UniffiConverterOptionalUInt64.check_lower(value.number_of_parts)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterString.write(value.payment_hash, buf)
         _UniffiConverterTypePayStatus.write(value.status, buf)
-        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
+        _UniffiConverterOptionalString.write(value.destination_pubkey, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_sent_msat, buf)
         _UniffiConverterOptionalString.write(value.label, buf)
         _UniffiConverterOptionalString.write(value.bolt11, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalString.write(value.bolt12, buf)
-        _UniffiConverterOptionalBytes.write(value.preimage, buf)
+        _UniffiConverterOptionalString.write(value.preimage, buf)
         _UniffiConverterUInt64.write(value.created_at, buf)
         _UniffiConverterOptionalUInt64.write(value.completed_at, buf)
         _UniffiConverterOptionalUInt64.write(value.number_of_parts, buf)
@@ -2469,9 +2882,17 @@ class Payment:
     status: "PaymentStatus"
     description: "typing.Optional[str]"
     bolt11: "typing.Optional[str]"
-    preimage: "typing.Optional[bytes]"
-    destination: "typing.Optional[bytes]"
-    def __init__(self, *, id: "str", payment_type: "PaymentType", payment_time: "int", amount_msat: "int", fee_msat: "int", status: "PaymentStatus", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", preimage: "typing.Optional[bytes]", destination: "typing.Optional[bytes]"):
+    preimage: "typing.Optional[str]"
+    """
+    Payment preimage as lowercase hex (64 chars), when the payment is known.
+    """
+
+    destination: "typing.Optional[str]"
+    """
+    Counterparty node pubkey as lowercase hex (66 chars), when known.
+    """
+
+    def __init__(self, *, id: "str", payment_type: "PaymentType", payment_time: "int", amount_msat: "int", fee_msat: "int", status: "PaymentStatus", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", preimage: "typing.Optional[str]", destination: "typing.Optional[str]"):
         self.id = id
         self.payment_type = payment_type
         self.payment_time = payment_time
@@ -2521,8 +2942,8 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
             status=_UniffiConverterTypePaymentStatus.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             bolt11=_UniffiConverterOptionalString.read(buf),
-            preimage=_UniffiConverterOptionalBytes.read(buf),
-            destination=_UniffiConverterOptionalBytes.read(buf),
+            preimage=_UniffiConverterOptionalString.read(buf),
+            destination=_UniffiConverterOptionalString.read(buf),
         )
 
     @staticmethod
@@ -2535,8 +2956,8 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
         _UniffiConverterTypePaymentStatus.check_lower(value.status)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalString.check_lower(value.bolt11)
-        _UniffiConverterOptionalBytes.check_lower(value.preimage)
-        _UniffiConverterOptionalBytes.check_lower(value.destination)
+        _UniffiConverterOptionalString.check_lower(value.preimage)
+        _UniffiConverterOptionalString.check_lower(value.destination)
 
     @staticmethod
     def write(value, buf):
@@ -2548,18 +2969,22 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
         _UniffiConverterTypePaymentStatus.write(value.status, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalString.write(value.bolt11, buf)
-        _UniffiConverterOptionalBytes.write(value.preimage, buf)
-        _UniffiConverterOptionalBytes.write(value.destination, buf)
+        _UniffiConverterOptionalString.write(value.preimage, buf)
+        _UniffiConverterOptionalString.write(value.destination, buf)
 
 
 class Peer:
-    id: "bytes"
+    id: "str"
+    """
+    Peer node public key as lowercase hex (66 chars).
+    """
+
     connected: "bool"
     num_channels: "typing.Optional[int]"
     netaddr: "typing.List[str]"
     remote_addr: "typing.Optional[str]"
     features: "typing.Optional[bytes]"
-    def __init__(self, *, id: "bytes", connected: "bool", num_channels: "typing.Optional[int]", netaddr: "typing.List[str]", remote_addr: "typing.Optional[str]", features: "typing.Optional[bytes]"):
+    def __init__(self, *, id: "str", connected: "bool", num_channels: "typing.Optional[int]", netaddr: "typing.List[str]", remote_addr: "typing.Optional[str]", features: "typing.Optional[bytes]"):
         self.id = id
         self.connected = connected
         self.num_channels = num_channels
@@ -2589,7 +3014,7 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return Peer(
-            id=_UniffiConverterBytes.read(buf),
+            id=_UniffiConverterString.read(buf),
             connected=_UniffiConverterBool.read(buf),
             num_channels=_UniffiConverterOptionalUInt32.read(buf),
             netaddr=_UniffiConverterSequenceString.read(buf),
@@ -2599,7 +3024,7 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.id)
+        _UniffiConverterString.check_lower(value.id)
         _UniffiConverterBool.check_lower(value.connected)
         _UniffiConverterOptionalUInt32.check_lower(value.num_channels)
         _UniffiConverterSequenceString.check_lower(value.netaddr)
@@ -2608,7 +3033,7 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.id, buf)
+        _UniffiConverterString.write(value.id, buf)
         _UniffiConverterBool.write(value.connected, buf)
         _UniffiConverterOptionalUInt32.write(value.num_channels, buf)
         _UniffiConverterSequenceString.write(value.netaddr, buf)
@@ -2617,18 +3042,43 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
 
 
 class PeerChannel:
-    peer_id: "bytes"
+    peer_id: "str"
+    """
+    Peer node public key as lowercase hex (66 chars).
+    """
+
     peer_connected: "bool"
     state: "ChannelState"
     short_channel_id: "typing.Optional[str]"
-    channel_id: "typing.Optional[bytes]"
-    funding_txid: "typing.Optional[bytes]"
+    channel_id: "typing.Optional[str]"
+    """
+    Channel id as lowercase hex (64 chars).
+    """
+
+    funding_txid: "typing.Optional[str]"
+    """
+    Funding transaction id as lowercase hex (64 chars).
+    """
+
     funding_outnum: "typing.Optional[int]"
     to_us_msat: "typing.Optional[int]"
     total_msat: "typing.Optional[int]"
     spendable_msat: "typing.Optional[int]"
     receivable_msat: "typing.Optional[int]"
-    def __init__(self, *, peer_id: "bytes", peer_connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[bytes]", funding_txid: "typing.Optional[bytes]", funding_outnum: "typing.Optional[int]", to_us_msat: "typing.Optional[int]", total_msat: "typing.Optional[int]", spendable_msat: "typing.Optional[int]", receivable_msat: "typing.Optional[int]"):
+    closer: "typing.Optional[ChannelSide]"
+    """
+    Which side initiated the close, if the channel is closing or closed.
+    """
+
+    status: "typing.List[str]"
+    """
+    Human-readable status strings from CLN, ordered oldest to newest.
+    For a channel in `Onchain` state, the last entry indicates whether
+    our payout is still timelocked (`DELAYED_OUTPUT_TO_US`) or already
+    available in the on-chain balance.
+    """
+
+    def __init__(self, *, peer_id: "str", peer_connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[str]", funding_txid: "typing.Optional[str]", funding_outnum: "typing.Optional[int]", to_us_msat: "typing.Optional[int]", total_msat: "typing.Optional[int]", spendable_msat: "typing.Optional[int]", receivable_msat: "typing.Optional[int]", closer: "typing.Optional[ChannelSide]", status: "typing.List[str]"):
         self.peer_id = peer_id
         self.peer_connected = peer_connected
         self.state = state
@@ -2640,9 +3090,11 @@ class PeerChannel:
         self.total_msat = total_msat
         self.spendable_msat = spendable_msat
         self.receivable_msat = receivable_msat
+        self.closer = closer
+        self.status = status
 
     def __str__(self):
-        return "PeerChannel(peer_id={}, peer_connected={}, state={}, short_channel_id={}, channel_id={}, funding_txid={}, funding_outnum={}, to_us_msat={}, total_msat={}, spendable_msat={}, receivable_msat={})".format(self.peer_id, self.peer_connected, self.state, self.short_channel_id, self.channel_id, self.funding_txid, self.funding_outnum, self.to_us_msat, self.total_msat, self.spendable_msat, self.receivable_msat)
+        return "PeerChannel(peer_id={}, peer_connected={}, state={}, short_channel_id={}, channel_id={}, funding_txid={}, funding_outnum={}, to_us_msat={}, total_msat={}, spendable_msat={}, receivable_msat={}, closer={}, status={})".format(self.peer_id, self.peer_connected, self.state, self.short_channel_id, self.channel_id, self.funding_txid, self.funding_outnum, self.to_us_msat, self.total_msat, self.spendable_msat, self.receivable_msat, self.closer, self.status)
 
     def __eq__(self, other):
         if self.peer_id != other.peer_id:
@@ -2667,52 +3119,62 @@ class PeerChannel:
             return False
         if self.receivable_msat != other.receivable_msat:
             return False
+        if self.closer != other.closer:
+            return False
+        if self.status != other.status:
+            return False
         return True
 
 class _UniffiConverterTypePeerChannel(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return PeerChannel(
-            peer_id=_UniffiConverterBytes.read(buf),
+            peer_id=_UniffiConverterString.read(buf),
             peer_connected=_UniffiConverterBool.read(buf),
             state=_UniffiConverterTypeChannelState.read(buf),
             short_channel_id=_UniffiConverterOptionalString.read(buf),
-            channel_id=_UniffiConverterOptionalBytes.read(buf),
-            funding_txid=_UniffiConverterOptionalBytes.read(buf),
+            channel_id=_UniffiConverterOptionalString.read(buf),
+            funding_txid=_UniffiConverterOptionalString.read(buf),
             funding_outnum=_UniffiConverterOptionalUInt32.read(buf),
             to_us_msat=_UniffiConverterOptionalUInt64.read(buf),
             total_msat=_UniffiConverterOptionalUInt64.read(buf),
             spendable_msat=_UniffiConverterOptionalUInt64.read(buf),
             receivable_msat=_UniffiConverterOptionalUInt64.read(buf),
+            closer=_UniffiConverterOptionalTypeChannelSide.read(buf),
+            status=_UniffiConverterSequenceString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterBytes.check_lower(value.peer_id)
+        _UniffiConverterString.check_lower(value.peer_id)
         _UniffiConverterBool.check_lower(value.peer_connected)
         _UniffiConverterTypeChannelState.check_lower(value.state)
         _UniffiConverterOptionalString.check_lower(value.short_channel_id)
-        _UniffiConverterOptionalBytes.check_lower(value.channel_id)
-        _UniffiConverterOptionalBytes.check_lower(value.funding_txid)
+        _UniffiConverterOptionalString.check_lower(value.channel_id)
+        _UniffiConverterOptionalString.check_lower(value.funding_txid)
         _UniffiConverterOptionalUInt32.check_lower(value.funding_outnum)
         _UniffiConverterOptionalUInt64.check_lower(value.to_us_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.total_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.spendable_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.receivable_msat)
+        _UniffiConverterOptionalTypeChannelSide.check_lower(value.closer)
+        _UniffiConverterSequenceString.check_lower(value.status)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterBytes.write(value.peer_id, buf)
+        _UniffiConverterString.write(value.peer_id, buf)
         _UniffiConverterBool.write(value.peer_connected, buf)
         _UniffiConverterTypeChannelState.write(value.state, buf)
         _UniffiConverterOptionalString.write(value.short_channel_id, buf)
-        _UniffiConverterOptionalBytes.write(value.channel_id, buf)
-        _UniffiConverterOptionalBytes.write(value.funding_txid, buf)
+        _UniffiConverterOptionalString.write(value.channel_id, buf)
+        _UniffiConverterOptionalString.write(value.funding_txid, buf)
         _UniffiConverterOptionalUInt32.write(value.funding_outnum, buf)
         _UniffiConverterOptionalUInt64.write(value.to_us_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.total_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.spendable_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.receivable_msat, buf)
+        _UniffiConverterOptionalTypeChannelSide.write(value.closer, buf)
+        _UniffiConverterSequenceString.write(value.status, buf)
 
 
 class ReceiveResponse:
@@ -2758,13 +3220,25 @@ class _UniffiConverterTypeReceiveResponse(_UniffiConverterRustBuffer):
 
 class SendResponse:
     status: "PayStatus"
-    preimage: "bytes"
-    payment_hash: "bytes"
-    destination_pubkey: "typing.Optional[bytes]"
+    preimage: "str"
+    """
+    Payment preimage (proof of payment) as lowercase hex (64 chars).
+    """
+
+    payment_hash: "str"
+    """
+    Payment hash as lowercase hex (64 chars).
+    """
+
+    destination_pubkey: "typing.Optional[str]"
+    """
+    Recipient node pubkey as lowercase hex (66 chars), if known.
+    """
+
     amount_msat: "int"
     amount_sent_msat: "int"
     parts: "int"
-    def __init__(self, *, status: "PayStatus", preimage: "bytes", payment_hash: "bytes", destination_pubkey: "typing.Optional[bytes]", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
+    def __init__(self, *, status: "PayStatus", preimage: "str", payment_hash: "str", destination_pubkey: "typing.Optional[str]", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
         self.status = status
         self.preimage = preimage
         self.payment_hash = payment_hash
@@ -2798,9 +3272,9 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     def read(buf):
         return SendResponse(
             status=_UniffiConverterTypePayStatus.read(buf),
-            preimage=_UniffiConverterBytes.read(buf),
-            payment_hash=_UniffiConverterBytes.read(buf),
-            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            preimage=_UniffiConverterString.read(buf),
+            payment_hash=_UniffiConverterString.read(buf),
+            destination_pubkey=_UniffiConverterOptionalString.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
             amount_sent_msat=_UniffiConverterUInt64.read(buf),
             parts=_UniffiConverterUInt32.read(buf),
@@ -2809,9 +3283,9 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def check_lower(value):
         _UniffiConverterTypePayStatus.check_lower(value.status)
-        _UniffiConverterBytes.check_lower(value.preimage)
-        _UniffiConverterBytes.check_lower(value.payment_hash)
-        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
+        _UniffiConverterString.check_lower(value.preimage)
+        _UniffiConverterString.check_lower(value.payment_hash)
+        _UniffiConverterOptionalString.check_lower(value.destination_pubkey)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
         _UniffiConverterUInt64.check_lower(value.amount_sent_msat)
         _UniffiConverterUInt32.check_lower(value.parts)
@@ -2819,12 +3293,54 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterTypePayStatus.write(value.status, buf)
-        _UniffiConverterBytes.write(value.preimage, buf)
-        _UniffiConverterBytes.write(value.payment_hash, buf)
-        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
+        _UniffiConverterString.write(value.preimage, buf)
+        _UniffiConverterString.write(value.payment_hash, buf)
+        _UniffiConverterOptionalString.write(value.destination_pubkey, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
         _UniffiConverterUInt64.write(value.amount_sent_msat, buf)
         _UniffiConverterUInt32.write(value.parts, buf)
+
+
+
+
+
+class ChannelSide(enum.Enum):
+    """
+    Which side of a channel performed a given action (e.g. initiated close).
+    """
+
+    LOCAL = 0
+    
+    REMOTE = 1
+    
+
+
+class _UniffiConverterTypeChannelSide(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return ChannelSide.LOCAL
+        if variant == 2:
+            return ChannelSide.REMOTE
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == ChannelSide.LOCAL:
+            return
+        if value == ChannelSide.REMOTE:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == ChannelSide.LOCAL:
+            buf.write_i32(1)
+        if value == ChannelSide.REMOTE:
+            buf.write_i32(2)
+
+
 
 
 
@@ -2856,6 +3372,14 @@ class ChannelState(enum.Enum):
     DUALOPEND_OPEN_COMMITTED = 11
     
     DUALOPEND_OPEN_COMMIT_READY = 12
+    
+    UNKNOWN = 13
+    """
+    A state reported by the node that this SDK doesn't recognize.
+    Returned when CLN introduces a new channel state after this SDK
+    was built. Treated as neither open nor closing by balance math.
+    """
+
     
 
 
@@ -2889,6 +3413,8 @@ class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
             return ChannelState.DUALOPEND_OPEN_COMMITTED
         if variant == 13:
             return ChannelState.DUALOPEND_OPEN_COMMIT_READY
+        if variant == 14:
+            return ChannelState.UNKNOWN
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
@@ -2918,6 +3444,8 @@ class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
         if value == ChannelState.DUALOPEND_OPEN_COMMITTED:
             return
         if value == ChannelState.DUALOPEND_OPEN_COMMIT_READY:
+            return
+        if value == ChannelState.UNKNOWN:
             return
         raise ValueError(value)
 
@@ -2949,6 +3477,8 @@ class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
             buf.write_i32(12)
         if value == ChannelState.DUALOPEND_OPEN_COMMIT_READY:
             buf.write_i32(13)
+        if value == ChannelState.UNKNOWN:
+            buf.write_i32(14)
 
 
 
@@ -3842,6 +4372,33 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
 
 
 
+class _UniffiConverterOptionalTypeChannelSide(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeChannelSide.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeChannelSide.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeChannelSide.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalTypeListIndex(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -4575,7 +5132,6 @@ class NodeProtocol(typing.Protocol):
         raise NotImplementedError
     def list_invoices(self, label: "typing.Optional[str]",invstring: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",offer_id: "typing.Optional[str]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]"):
         """
-        List all invoices (received payment requests).
         List invoices (received payment requests).
         All parameters are optional filters; pass None to fetch all.
         """
@@ -4614,6 +5170,15 @@ class NodeProtocol(typing.Protocol):
 
         Returns information about all peers including their connection
         status.
+        """
+
+        raise NotImplementedError
+    def node_state(self, ):
+        """
+        Get a snapshot of the node's balances, capacity, and connectivity.
+
+        Aggregates data from multiple RPCs into a single `NodeState`.
+        Queries the node live on each call — not cached.
         """
 
         raise NotImplementedError
@@ -4775,7 +5340,6 @@ class Node():
 
     def list_invoices(self, label: "typing.Optional[str]",invstring: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",offer_id: "typing.Optional[str]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]") -> "ListInvoicesResponse":
         """
-        List all invoices (received payment requests).
         List invoices (received payment requests).
         All parameters are optional filters; pass None to fetch all.
         """
@@ -4888,6 +5452,22 @@ class Node():
 
         return _UniffiConverterTypeListPeersResponse.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_peers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def node_state(self, ) -> "NodeState":
+        """
+        Get a snapshot of the node's balances, capacity, and connectivity.
+
+        Aggregates data from multiple RPCs into a single `NodeState`.
+        Queries the node live on each call — not cached.
+        """
+
+        return _UniffiConverterTypeNodeState.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_node_state,self._uniffi_clone_pointer(),)
         )
 
 
@@ -5464,6 +6044,7 @@ def register_or_recover(mnemonic: "str",invite_code: "typing.Optional[str]",conf
 
 __all__ = [
     "InternalError",
+    "ChannelSide",
     "ChannelState",
     "Error",
     "InputType",
@@ -5487,6 +6068,7 @@ __all__ = [
     "ListPaysResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
+    "NodeState",
     "OnchainReceiveResponse",
     "OnchainSendResponse",
     "ParsedInvoice",

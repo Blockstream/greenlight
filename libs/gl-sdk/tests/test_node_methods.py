@@ -6,6 +6,13 @@ and their response types.
 
 import pytest
 import glsdk
+from gltesting.fixtures import *
+
+
+MNEMONIC = (
+    "abandon abandon abandon abandon abandon abandon "
+    "abandon abandon abandon abandon abandon about"
+)
 
 
 class TestResponseTypes:
@@ -84,23 +91,26 @@ class TestSendResponseFields:
     """Test that SendResponse includes payment_hash and destination_pubkey."""
 
     def test_send_response_has_payment_hash(self):
+        preimage_hex = "01" * 32
+        payment_hash_hex = "00" * 32
+        destination_hex = "02" * 33
         response = glsdk.SendResponse(
             status=glsdk.PayStatus.COMPLETE,
-            preimage=b"\x01" * 32,
-            payment_hash=b"\x00" * 32,
-            destination_pubkey=b"\x02" * 33,
+            preimage=preimage_hex,
+            payment_hash=payment_hash_hex,
+            destination_pubkey=destination_hex,
             amount_msat=1000,
             amount_sent_msat=1010,
             parts=1,
         )
-        assert response.payment_hash == b"\x00" * 32
-        assert response.destination_pubkey == b"\x02" * 33
+        assert response.payment_hash == payment_hash_hex
+        assert response.destination_pubkey == destination_hex
 
     def test_send_response_destination_pubkey_is_optional(self):
         response = glsdk.SendResponse(
             status=glsdk.PayStatus.COMPLETE,
-            preimage=b"\x01" * 32,
-            payment_hash=b"\x00" * 32,
+            preimage="01" * 32,
+            payment_hash="00" * 32,
             destination_pubkey=None,
             amount_msat=1000,
             amount_sent_msat=1010,
@@ -114,11 +124,11 @@ class TestResponseTypeFields:
 
     def test_get_info_response_has_expected_fields(self):
         """Test GetInfoResponse has expected field attributes."""
-        # Create instance to check fields
+        node_id_hex = "02" * 33
         response = glsdk.GetInfoResponse(
-            id=b"\x02" * 33,
+            id=node_id_hex,
             alias="test-node",
-            color=b"\xff\x00\x00",
+            color="ff0000",
             num_peers=0,
             num_pending_channels=0,
             num_active_channels=0,
@@ -129,7 +139,7 @@ class TestResponseTypeFields:
             network="regtest",
             fees_collected_msat=0,
         )
-        assert response.id == b"\x02" * 33
+        assert response.id == node_id_hex
         assert response.alias == "test-node"
         assert response.network == "regtest"
         assert response.blockheight == 100
@@ -152,66 +162,160 @@ class TestResponseTypeFields:
 
     def test_peer_record_has_expected_fields(self):
         """Test Peer record has expected fields."""
+        peer_id_hex = "03" * 33
         peer = glsdk.Peer(
-            id=b"\x03" * 33,
+            id=peer_id_hex,
             connected=True,
             num_channels=1,
             netaddr=["127.0.0.1:9735"],
             remote_addr="192.168.1.1:9735",
             features=b"\x00",
         )
-        assert peer.id == b"\x03" * 33
+        assert peer.id == peer_id_hex
         assert peer.connected is True
         assert peer.num_channels == 1
         assert "127.0.0.1:9735" in peer.netaddr
 
     def test_peer_channel_record_has_expected_fields(self):
         """Test PeerChannel record has expected fields."""
+        peer_id_hex = "03" * 33
+        channel_id_hex = "00" * 32
+        funding_txid_hex = "ab" * 32
         channel = glsdk.PeerChannel(
-            peer_id=b"\x03" * 33,
+            peer_id=peer_id_hex,
             peer_connected=True,
             state=glsdk.ChannelState.CHANNELD_NORMAL,
             short_channel_id="123x1x0",
-            channel_id=b"\x00" * 32,
-            funding_txid=b"\xab" * 32,
+            channel_id=channel_id_hex,
+            funding_txid=funding_txid_hex,
             funding_outnum=0,
             to_us_msat=500000000,
             total_msat=1000000000,
             spendable_msat=400000000,
             receivable_msat=400000000,
+            closer=None,
+            status=[],
         )
-        assert channel.peer_id == b"\x03" * 33
+        assert channel.peer_id == peer_id_hex
         assert channel.peer_connected is True
         assert channel.state == glsdk.ChannelState.CHANNELD_NORMAL
         assert channel.total_msat == 1000000000
+        assert channel.closer is None
+        assert channel.status == []
 
     def test_fund_output_record_has_expected_fields(self):
         """Test FundOutput record has expected fields."""
+        txid_hex = "ab" * 32
         output = glsdk.FundOutput(
-            txid=b"\xab" * 32,
+            txid=txid_hex,
             output=0,
             amount_msat=1000000000,
             status=glsdk.OutputStatus.CONFIRMED,
             address="bcrt1qtest",
             blockheight=100,
+            reserved=False,
         )
-        assert output.txid == b"\xab" * 32
+        assert output.txid == txid_hex
         assert output.amount_msat == 1000000000
         assert output.status == glsdk.OutputStatus.CONFIRMED
+        assert output.reserved is False
 
     def test_fund_channel_record_has_expected_fields(self):
         """Test FundChannel record has expected fields."""
+        peer_id_hex = "03" * 33
+        funding_txid_hex = "ab" * 32
+        channel_id_hex = "00" * 32
         channel = glsdk.FundChannel(
-            peer_id=b"\x03" * 33,
+            peer_id=peer_id_hex,
             our_amount_msat=500000000,
             amount_msat=1000000000,
-            funding_txid=b"\xab" * 32,
+            funding_txid=funding_txid_hex,
             funding_output=0,
             connected=True,
             state=glsdk.ChannelState.CHANNELD_NORMAL,
             short_channel_id="123x1x0",
-            channel_id=b"\x00" * 32,
+            channel_id=channel_id_hex,
         )
-        assert channel.peer_id == b"\x03" * 33
+        assert channel.peer_id == peer_id_hex
         assert channel.our_amount_msat == 500000000
         assert channel.connected is True
+
+
+class TestNodeStateType:
+    """Test that NodeState type is properly defined in the bindings."""
+
+    def test_node_state_type_exists(self):
+        assert hasattr(glsdk, "NodeState")
+
+    def test_node_state_record_has_expected_fields(self):
+        node_id_hex = "02" * 33
+        peer_id_hex = "03" * 33
+        state = glsdk.NodeState(
+            id=node_id_hex,
+            block_height=800000,
+            network="regtest",
+            version="v24.11",
+            alias="test-node",
+            color="ff0000",
+            num_active_channels=2,
+            num_pending_channels=1,
+            num_inactive_channels=0,
+            channels_balance_msat=500_000_000,
+            max_payable_msat=450_000_000,
+            total_channel_capacity_msat=1_000_000_000,
+            max_chan_reserve_msat=50_000_000,
+            onchain_balance_msat=100_000_000,
+            unconfirmed_onchain_balance_msat=50_000_000,
+            immature_onchain_balance_msat=0,
+            pending_onchain_balance_msat=0,
+            max_receivable_single_payment_msat=400_000_000,
+            total_inbound_liquidity_msat=800_000_000,
+            connected_channel_peers=[peer_id_hex],
+            utxos=[],
+            total_onchain_msat=150_000_000,
+            total_balance_msat=650_000_000,
+            spendable_balance_msat=550_000_000,
+        )
+        assert state.id == node_id_hex
+        assert state.block_height == 800000
+        assert state.network == "regtest"
+        assert state.version == "v24.11"
+        assert state.channels_balance_msat == 500_000_000
+        assert state.max_payable_msat == 450_000_000
+        assert state.total_channel_capacity_msat == 1_000_000_000
+        assert state.max_chan_reserve_msat == 50_000_000
+        assert state.onchain_balance_msat == 100_000_000
+        assert state.unconfirmed_onchain_balance_msat == 50_000_000
+        assert state.immature_onchain_balance_msat == 0
+        assert state.total_onchain_msat == 150_000_000
+        assert state.total_balance_msat == 650_000_000
+        assert state.spendable_balance_msat == 550_000_000
+        assert len(state.connected_channel_peers) == 1
+        assert state.connected_channel_peers[0] == peer_id_hex
+        assert state.utxos == []
+
+
+class TestNodeStateMethod:
+    """Test node_state() integration."""
+
+    def test_node_has_node_state_method(self):
+        assert hasattr(glsdk.Node, "node_state")
+
+    def test_node_state_returns_valid_snapshot(self, scheduler, nobody_id):
+        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
+        config = glsdk.Config().with_developer_cert(dev_cert)
+        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        state = node.node_state()
+        assert isinstance(state, glsdk.NodeState)
+        # Node id is a lowercase hex pubkey (33 bytes → 66 chars).
+        assert isinstance(state.id, str)
+        assert len(state.id) == 66
+        assert state.block_height > 0
+        assert state.network == "regtest"
+        assert state.version != ""
+        assert state.channels_balance_msat == 0
+        assert state.max_payable_msat == 0
+        assert state.total_channel_capacity_msat == 0
+        assert state.onchain_balance_msat == 0
+        assert state.total_inbound_liquidity_msat == 0
+        node.disconnect()

@@ -30,7 +30,7 @@ public fun Node.listPayments(
     filters: List<PaymentTypeFilter>? = null,
     fromTimestamp: ULong? = null,
     toTimestamp: ULong? = null,
-    includeFailures: Boolean? = null,
+    includeFailures: Boolean = false,
     offset: UInt? = null,
     limit: UInt? = null,
 ): List<Payment> = listPayments(ListPaymentsRequest(filters, fromTimestamp, toTimestamp, includeFailures, offset, limit))
