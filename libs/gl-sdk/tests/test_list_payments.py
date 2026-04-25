@@ -277,8 +277,10 @@ class TestListInvoicesIntegration:
         assert matching[0].destination_pubkey is not None
         node.disconnect()
 
-    def test_default_excludes_failures(self, scheduler, nobody_id):
-        """Default list_payments excludes failed/expired, so unpaid invoices appear as Pending."""
+    def test_unpaid_invoices_excluded(self, scheduler, nobody_id):
+        """list_payments returns only paid invoices on the received side.
+        Open / expired invoices live behind list_invoices() for direct
+        inspection."""
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
         node = glsdk.register_or_recover(MNEMONIC, None, config)
@@ -286,14 +288,19 @@ class TestListInvoicesIntegration:
         label = str(uuid.uuid4())
         node.receive(label=label, description="tea", amount_msat=5_000_000)
 
+        # The invoice we just created is unpaid and must NOT appear in
+        # list_payments output.
         req = glsdk.ListPaymentsRequest(
             filters=None, from_timestamp=None, to_timestamp=None,
             include_failures=None, offset=None, limit=None,
         )
         result = node.list_payments(req)
-        # Pending invoices should appear (they are not failures)
-        matching = [p for p in result if p.status == glsdk.PaymentStatus.PENDING]
-        assert len(matching) >= 1
+        # Sanity: every returned received row is COMPLETE.
+        for p in result:
+            if p.payment_type == glsdk.PaymentType.RECEIVED:
+                assert p.status == glsdk.PaymentStatus.COMPLETE, (
+                    f"non-Complete received payment: {p}"
+                )
         node.disconnect()
 
     def test_type_filter_received_only(self, scheduler, nobody_id):

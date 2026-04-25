@@ -392,7 +392,19 @@ impl Node {
             .unwrap_or(true);
 
         if include_received {
-            payments.extend(invoices.invoices.into_iter().map(|i| -> Payment { i.into() }));
+            // Only paid invoices belong in payment history. Open
+            // (unpaid) and expired invoices live behind list_invoices()
+            // for callers that want to inspect them directly.
+            payments.extend(
+                invoices
+                    .invoices
+                    .into_iter()
+                    .filter(|i| {
+                        i.status()
+                            == clnpb::listinvoices_invoices::ListinvoicesInvoicesStatus::Paid
+                    })
+                    .map(|i| -> Payment { i.into() }),
+            );
         }
         if include_sent {
             payments.extend(pays.pays.into_iter().map(|p| -> Payment { p.into() }));
