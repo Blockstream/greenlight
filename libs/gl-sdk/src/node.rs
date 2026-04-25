@@ -584,6 +584,70 @@ impl Node {
             inner: Mutex::new(stream),
         }))
     }
+
+    /// Collect a diagnostic snapshot of the node and SDK state.
+    ///
+    /// Returns a pretty-printed JSON string with shape:
+    /// `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
+    /// The `node` object contains one entry per CLN RPC (`getinfo`,
+    /// `listpeerchannels`, `listfunds`); each value is the serialized
+    /// response, or `{ "error": "..." }` if that RPC failed. Payment and
+    /// invoice history are deliberately excluded to avoid leaking
+    /// preimages, payment hashes, bolt11 strings, and labels into support
+    /// dumps. Intended for support tickets.
+    pub fn generate_diagnostic_data(&self) -> Result<String, Error> {
+        self.check_connected()?;
+
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        let getinfo = render_section(self.get_info());
+        let listpeerchannels = render_section(self.list_peer_channels());
+        let listfunds = render_section(self.list_funds());
+        let node_state = render_section(self.node_state());
+
+        build_diagnostic_json(
+            timestamp,
+            env!("CARGO_PKG_VERSION"),
+            getinfo,
+            listpeerchannels,
+            listfunds,
+            node_state,
+        )
+    }
+}
+
+fn render_section<T: serde::Serialize>(result: Result<T, Error>) -> serde_json::Value {
+    match result {
+        Ok(v) => serde_json::to_value(&v)
+            .unwrap_or_else(|e| serde_json::json!({ "error": e.to_string() })),
+        Err(e) => serde_json::json!({ "error": e.to_string() }),
+    }
+}
+
+fn build_diagnostic_json(
+    timestamp: u64,
+    sdk_version: &str,
+    getinfo: serde_json::Value,
+    listpeerchannels: serde_json::Value,
+    listfunds: serde_json::Value,
+    node_state: serde_json::Value,
+) -> Result<String, Error> {
+    let envelope = serde_json::json!({
+        "timestamp": timestamp,
+        "node": {
+            "getinfo": getinfo,
+            "listpeerchannels": listpeerchannels,
+            "listfunds": listfunds,
+        },
+        "sdk": {
+            "version": sdk_version,
+            "node_state": node_state,
+        }
+    });
+    serde_json::to_string_pretty(&envelope).map_err(|e| Error::Other(e.to_string()))
 }
 
 // Not exported through uniffi
@@ -713,7 +777,7 @@ pub struct ReceiveResponse {
     pub opening_fee_msat: u64,
 }
 
-#[derive(uniffi::Enum, Clone)]
+#[derive(uniffi::Enum, Clone, serde::Serialize)]
 pub enum PayStatus {
     COMPLETE = 0,
     PENDING = 1,
@@ -746,7 +810,7 @@ impl From<i32> for PayStatus {
 // ============================================================
 
 #[allow(unused)]
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct GetInfoResponse {
     /// Node public key as lowercase hex (66 chars).
     pub id: String,
@@ -831,13 +895,13 @@ impl From<clnpb::ListpeersPeers> for Peer {
 // ============================================================
 
 #[allow(unused)]
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct ListPeerChannelsResponse {
     pub channels: Vec<PeerChannel>,
 }
 
 #[allow(unused)]
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct PeerChannel {
     /// Peer node public key as lowercase hex (66 chars).
     pub peer_id: String,
@@ -863,7 +927,7 @@ pub struct PeerChannel {
 }
 
 /// Which side of a channel performed a given action (e.g. initiated close).
-#[derive(Clone, uniffi::Enum)]
+#[derive(Clone, serde::Serialize, uniffi::Enum)]
 pub enum ChannelSide {
     Local,
     Remote,
@@ -879,7 +943,7 @@ impl ChannelSide {
     }
 }
 
-#[derive(Clone, uniffi::Enum)]
+#[derive(Clone, serde::Serialize, uniffi::Enum)]
 pub enum ChannelState {
     Openingd,
     ChanneldAwaitingLockin,
@@ -992,14 +1056,14 @@ impl From<clnpb::ListpeerchannelsChannels> for PeerChannel {
 // ============================================================
 
 #[allow(unused)]
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct ListFundsResponse {
     pub outputs: Vec<FundOutput>,
     pub channels: Vec<FundChannel>,
 }
 
 #[allow(unused)]
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct FundOutput {
     /// Transaction id as lowercase hex (64 chars).
     pub txid: String,
@@ -1015,7 +1079,7 @@ pub struct FundOutput {
     pub reserved: bool,
 }
 
-#[derive(Clone, uniffi::Enum)]
+#[derive(Clone, serde::Serialize, uniffi::Enum)]
 pub enum OutputStatus {
     Unconfirmed,
     Confirmed,
@@ -1036,7 +1100,7 @@ impl OutputStatus {
 }
 
 #[allow(unused)]
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct FundChannel {
     /// Peer node public key as lowercase hex (66 chars).
     pub peer_id: String,
@@ -1117,7 +1181,7 @@ impl ListIndex {
 // ListInvoices response types
 // ============================================================
 
-#[derive(Clone, uniffi::Enum)]
+#[derive(Clone, serde::Serialize, uniffi::Enum)]
 pub enum InvoiceStatus {
     UNPAID,
     PAID,
@@ -1135,7 +1199,7 @@ impl From<i32> for InvoiceStatus {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct Invoice {
     pub label: String,
     pub description: String,
@@ -1180,7 +1244,7 @@ impl From<clnpb::ListinvoicesInvoices> for Invoice {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct ListInvoicesResponse {
     pub invoices: Vec<Invoice>,
 }
@@ -1197,7 +1261,7 @@ impl From<clnpb::ListinvoicesResponse> for ListInvoicesResponse {
 // ListPays response types
 // ============================================================
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct Pay {
     /// Payment hash as lowercase hex (64 chars).
     pub payment_hash: String,
@@ -1243,7 +1307,7 @@ impl From<clnpb::ListpaysPays> for Pay {
     }
 }
 
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct ListPaysResponse {
     pub pays: Vec<Pay>,
 }
@@ -1394,7 +1458,7 @@ impl From<clnpb::ListpaysPays> for Payment {
 /// connectivity. Returned by `node_state()`.
 ///
 /// All amounts are in millisatoshis (1 sat = 1000 msat).
-#[derive(Clone, uniffi::Record)]
+#[derive(Clone, serde::Serialize, uniffi::Record)]
 pub struct NodeState {
     /// The node's public key as a lowercase hex string (66 chars).
     pub id: String,
@@ -1574,3 +1638,4 @@ impl From<glpb::NodeEvent> for NodeEvent {
         }
     }
 }
+

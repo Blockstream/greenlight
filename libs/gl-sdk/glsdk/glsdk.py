@@ -474,6 +474,8 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_network() != 35643:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_credentials_node_id() != 16312:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_credentials_save() != 26677:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_handle_stop() != 36432:
@@ -481,6 +483,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_method_node_credentials() != 39165:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_disconnect() != 43626:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data() != 41140:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_get_info() != 39460:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -685,6 +689,11 @@ _UniffiLib.uniffi_glsdk_fn_constructor_credentials_load.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_credentials_load.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_credentials_node_id.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_credentials_node_id.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_credentials_save.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -746,6 +755,11 @@ _UniffiLib.uniffi_glsdk_fn_method_node_disconnect.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_disconnect.restype = None
+_UniffiLib.uniffi_glsdk_fn_method_node_generate_diagnostic_data.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_generate_diagnostic_data.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_get_info.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1243,6 +1257,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.restype = cty
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_network.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_network.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_credentials_node_id.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_credentials_node_id.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_save.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_save.restype = ctypes.c_uint16
@@ -1255,6 +1272,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_credentials.restype = ctypes.c_uint
 _UniffiLib.uniffi_glsdk_checksum_method_node_disconnect.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_disconnect.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_get_info.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_get_info.restype = ctypes.c_uint16
@@ -2884,12 +2904,23 @@ class Payment:
     bolt11: "typing.Optional[str]"
     preimage: "typing.Optional[str]"
     """
-    Payment preimage as lowercase hex (64 chars), when the payment is known.
+    Payment preimage as lowercase hex (64 chars), when known.
     """
 
     destination: "typing.Optional[str]"
     """
-    Counterparty node pubkey as lowercase hex (66 chars), when known.
+    Pubkey of the counterparty in the payment, as lowercase hex
+    (66 chars).
+
+    For `PaymentType::Sent`: the recipient node we paid (when CLN
+    reports it).
+
+    For `PaymentType::Received`: always `None`. Lightning's privacy
+    model does not reveal the sender's pubkey to the recipient — the
+    HTLC arrives via one of our channel peers, but that peer is
+    usually just a router, not the original payer. The only pubkey
+    derivable from a paid invoice is the *payee* (i.e. our own
+    node), which is uninteresting to display per-row.
     """
 
     def __init__(self, *, id: "str", payment_type: "PaymentType", payment_time: "int", amount_msat: "int", fee_msat: "int", status: "PaymentStatus", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", preimage: "typing.Optional[str]", destination: "typing.Optional[str]"):
@@ -4844,6 +4875,8 @@ class CredentialsProtocol(typing.Protocol):
     background.
     """
 
+    def node_id(self, ):
+        raise NotImplementedError
     def save(self, ):
         raise NotImplementedError
 # Credentials is a Rust-only trait - it's a wrapper around a Rust implementation.
@@ -4886,6 +4919,15 @@ class Credentials():
         pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_credentials_load,
         _UniffiConverterBytes.lower(raw))
         return cls._make_instance_(pointer)
+
+
+
+    def node_id(self, ) -> "bytes":
+        return _UniffiConverterBytes.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_credentials_node_id,self._uniffi_clone_pointer(),)
+        )
+
+
 
 
 
@@ -5112,6 +5154,19 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
+    def generate_diagnostic_data(self, ):
+        """
+        Collect a diagnostic snapshot of the node and SDK state.
+
+        Returns a pretty-printed JSON string with shape:
+        `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
+        The `node` object contains one entry per CLN RPC (`getinfo`,
+        `listpeerchannels`, `listfunds`, `listpays`, `listinvoices`); each
+        value is the serialized response, or `{ "error": "..." }` if that
+        RPC failed. Intended for support tickets.
+        """
+
+        raise NotImplementedError
     def get_info(self, ):
         """
         Get information about the node.
@@ -5301,6 +5356,26 @@ class Node():
 
         _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_disconnect,self._uniffi_clone_pointer(),)
 
+
+
+
+
+
+    def generate_diagnostic_data(self, ) -> "str":
+        """
+        Collect a diagnostic snapshot of the node and SDK state.
+
+        Returns a pretty-printed JSON string with shape:
+        `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
+        The `node` object contains one entry per CLN RPC (`getinfo`,
+        `listpeerchannels`, `listfunds`, `listpays`, `listinvoices`); each
+        value is the serialized response, or `{ "error": "..." }` if that
+        RPC failed. Intended for support tickets.
+        """
+
+        return _UniffiConverterString.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_generate_diagnostic_data,self._uniffi_clone_pointer(),)
+        )
 
 
 
