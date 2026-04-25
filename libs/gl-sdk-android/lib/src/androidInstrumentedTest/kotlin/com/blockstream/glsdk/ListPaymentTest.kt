@@ -82,16 +82,24 @@ class ListPaymentTest {
 
     @OptIn(ExperimentalUuidApi::class)
     @Test
-    fun default_excludes_failures() {
+    fun unpaid_invoices_excluded() {
         val config = Config()
         registerOrRecover(testMnemonic, null, config).use { node ->
             val label = Uuid.random().toString()
             node.receive(label = label, description = "Tea", amountMsat = 5_000_000uL)
 
-            // Default request excludes failures; pending invoices should still appear
+            // listPayments returns paid invoices only on the received
+            // side. The unpaid invoice we just created must not appear.
             val result = node.listPayments()
-            val pending = result.filter { it.status == PaymentStatus.PENDING }
-            assertTrue("Pending invoices should appear in default list", pending.isNotEmpty())
+            for (p in result) {
+                if (p.paymentType == PaymentType.RECEIVED) {
+                    assertEquals(
+                        "non-Complete received payment: $p",
+                        PaymentStatus.COMPLETE,
+                        p.status,
+                    )
+                }
+            }
         }
     }
 
