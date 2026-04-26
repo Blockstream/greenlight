@@ -27,6 +27,7 @@ import threading
 import itertools
 import traceback
 import typing
+import asyncio
 import platform
 
 # Used for default argument values
@@ -460,17 +461,19 @@ def _uniffi_check_contract_api_version(lib):
         raise InternalError("UniFFI contract version mismatch: try cleaning and rebuilding your project")
 
 def _uniffi_check_api_checksums(lib):
-    if lib.uniffi_glsdk_checksum_func_parse_input() != 12312:
+    if lib.uniffi_glsdk_checksum_func_connect() != 43555:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_set_log_level() != 52328:
+    if lib.uniffi_glsdk_checksum_func_parse_input() != 43159:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_set_logger() != 10523:
+    if lib.uniffi_glsdk_checksum_func_recover() != 39257:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_register() != 39628:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_register_or_recover() != 65070:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_developer_cert() != 64194:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_network() != 35643:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_credentials_node_id() != 16312:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_credentials_save() != 26677:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -480,13 +483,11 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_disconnect() != 43626:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data() != 10944:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_get_info() != 39460:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_funds() != 21692:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_list_invoices() != 44803:
+    if lib.uniffi_glsdk_checksum_method_node_list_invoices() != 6677:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_payments() != 43756:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -496,7 +497,9 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_peers() != 29567:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_node_state() != 41833:
+    if lib.uniffi_glsdk_checksum_method_node_lnurl_pay() != 61306:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_lnurl_withdraw() != 61467:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 46432:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -509,16 +512,6 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_method_node_stop() != 20186:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_stream_node_events() != 5933:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_nodebuilder_connect() != 47474:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_nodebuilder_recover() != 46087:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_nodebuilder_register() != 49580:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover() != 5543:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener() != 56760:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -540,17 +533,13 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_developercert_new() != 57793:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_constructor_nodebuilder_new() != 34740:
+    if lib.uniffi_glsdk_checksum_constructor_node_new() != 7003:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_scheduler_new() != 15239:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_signer_new() != 62159:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_loglistener_on_log() != 34844:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event() != 17790:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -658,22 +647,6 @@ class _UniffiForeignFutureStructVoid(ctypes.Structure):
     ]
 _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiForeignFutureStructVoid,
 )
-_UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-class _UniffiVTableCallbackInterfaceLogListener(ctypes.Structure):
-    _fields_ = [
-        ("on_log", _UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0),
-        ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
-    ]
-class _UniffiVTableCallbackInterfaceNodeEventListener(ctypes.Structure):
-    _fields_ = [
-        ("on_event", _UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0),
-        ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
-    ]
 _UniffiLib.uniffi_glsdk_fn_clone_config.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -715,11 +688,6 @@ _UniffiLib.uniffi_glsdk_fn_constructor_credentials_load.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_credentials_load.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_method_credentials_node_id.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_credentials_node_id.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_credentials_save.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -766,6 +734,11 @@ _UniffiLib.uniffi_glsdk_fn_free_node.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_free_node.restype = None
+_UniffiLib.uniffi_glsdk_fn_constructor_node_new.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_node_new.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_method_node_credentials.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -776,11 +749,6 @@ _UniffiLib.uniffi_glsdk_fn_method_node_disconnect.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_disconnect.restype = None
-_UniffiLib.uniffi_glsdk_fn_method_node_generate_diagnostic_data.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_node_generate_diagnostic_data.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_get_info.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -830,11 +798,18 @@ _UniffiLib.uniffi_glsdk_fn_method_node_list_peers.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_list_peers.restype = _UniffiRustBuffer
-_UniffiLib.uniffi_glsdk_fn_method_node_node_state.argtypes = (
+_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_pay.argtypes = (
     ctypes.c_void_p,
+    _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_method_node_node_state.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_pay.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_withdraw.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_withdraw.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -872,54 +847,6 @@ _UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_free_nodebuilder.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_free_nodebuilder.restype = None
-_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect.argtypes = (
-    ctypes.c_void_p,
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover.argtypes = (
-    ctypes.c_void_p,
-    _UniffiRustBuffer,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register.argtypes = (
-    ctypes.c_void_p,
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover.argtypes = (
-    ctypes.c_void_p,
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener.argtypes = (
-    ctypes.c_void_p,
-    ctypes.c_uint64,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_nodeeventstream.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1005,30 +932,37 @@ _UniffiLib.uniffi_glsdk_fn_method_signer_start.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_signer_start.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.argtypes = (
-    ctypes.POINTER(_UniffiVTableCallbackInterfaceLogListener),
+_UniffiLib.uniffi_glsdk_fn_func_connect.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.restype = None
-_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener.argtypes = (
-    ctypes.POINTER(_UniffiVTableCallbackInterfaceNodeEventListener),
-)
-_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener.restype = None
+_UniffiLib.uniffi_glsdk_fn_func_connect.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_func_parse_input.argtypes = (
     _UniffiRustBuffer,
-    ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_func_parse_input.restype = _UniffiRustBuffer
-_UniffiLib.uniffi_glsdk_fn_func_set_log_level.argtypes = (
+_UniffiLib.uniffi_glsdk_fn_func_parse_input.restype = ctypes.c_uint64
+_UniffiLib.uniffi_glsdk_fn_func_recover.argtypes = (
     _UniffiRustBuffer,
+    ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_func_set_log_level.restype = None
-_UniffiLib.uniffi_glsdk_fn_func_set_logger.argtypes = (
+_UniffiLib.uniffi_glsdk_fn_func_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_register.argtypes = (
     _UniffiRustBuffer,
-    ctypes.c_uint64,
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
-_UniffiLib.uniffi_glsdk_fn_func_set_logger.restype = None
+_UniffiLib.uniffi_glsdk_fn_func_register.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.restype = ctypes.c_void_p
 _UniffiLib.ffi_glsdk_rustbuffer_alloc.argtypes = (
     ctypes.c_uint64,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1297,24 +1231,27 @@ _UniffiLib.ffi_glsdk_rust_future_complete_void.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.ffi_glsdk_rust_future_complete_void.restype = None
+_UniffiLib.uniffi_glsdk_checksum_func_connect.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_connect.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_parse_input.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_parse_input.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_set_log_level.argtypes = (
+_UniffiLib.uniffi_glsdk_checksum_func_recover.argtypes = (
 )
-_UniffiLib.uniffi_glsdk_checksum_func_set_log_level.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_set_logger.argtypes = (
+_UniffiLib.uniffi_glsdk_checksum_func_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_register.argtypes = (
 )
-_UniffiLib.uniffi_glsdk_checksum_func_set_logger.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_register.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_network.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_network.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_credentials_node_id.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_credentials_node_id.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_save.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_save.restype = ctypes.c_uint16
@@ -1327,9 +1264,6 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_credentials.restype = ctypes.c_uint
 _UniffiLib.uniffi_glsdk_checksum_method_node_disconnect.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_disconnect.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_get_info.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_get_info.restype = ctypes.c_uint16
@@ -1351,9 +1285,12 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.restype = ctypes
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_node_node_state.argtypes = (
+_UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_pay.argtypes = (
 )
-_UniffiLib.uniffi_glsdk_checksum_method_node_node_state.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_pay.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_withdraw.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_withdraw.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.restype = ctypes.c_uint16
@@ -1372,21 +1309,6 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_stop.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_connect.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_connect.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_recover.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_recover.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.restype = ctypes.c_uint16
@@ -1417,9 +1339,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.restype = ctypes.c
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_constructor_nodebuilder_new.argtypes = (
+_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.argtypes = (
 )
-_UniffiLib.uniffi_glsdk_checksum_constructor_nodebuilder_new.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.restype = ctypes.c_uint16
@@ -1429,12 +1351,6 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new.restype = ctypes.c_uint1
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event.restype = ctypes.c_uint16
 _UniffiLib.ffi_glsdk_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_glsdk_uniffi_contract_version.restype = ctypes.c_uint32
@@ -1443,38 +1359,7 @@ _uniffi_check_contract_api_version(_UniffiLib)
 # _uniffi_check_api_checksums(_UniffiLib)
 
 # Public interface members begin here.
-# Magic number for the Rust proxy to call using the same mechanism as every other method,
-# to free the callback once it's dropped by Rust.
-_UNIFFI_IDX_CALLBACK_FREE = 0
-# Return codes for callback calls
-_UNIFFI_CALLBACK_SUCCESS = 0
-_UNIFFI_CALLBACK_ERROR = 1
-_UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
 
-class _UniffiCallbackInterfaceFfiConverter:
-    _handle_map = _UniffiHandleMap()
-
-    @classmethod
-    def lift(cls, handle):
-        return cls._handle_map.get(handle)
-
-    @classmethod
-    def read(cls, buf):
-        handle = buf.read_u64()
-        cls.lift(handle)
-
-    @classmethod
-    def check_lower(cls, cb):
-        pass
-
-    @classmethod
-    def lower(cls, cb):
-        handle = cls._handle_map.insert(cb)
-        return handle
-
-    @classmethod
-    def write(cls, cb, buf):
-        buf.write_u64(cls.lower(cb))
 
 class _UniffiConverterUInt32(_UniffiConverterPrimitiveInt):
     CLASS_NAME = "u32"
@@ -1592,31 +1477,17 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
 
 
 
-
-
 class FundChannel:
-    peer_id: "str"
-    """
-    Peer node public key as lowercase hex (66 chars).
-    """
-
+    peer_id: "bytes"
     our_amount_msat: "int"
     amount_msat: "int"
-    funding_txid: "str"
-    """
-    Funding transaction id as lowercase hex (64 chars).
-    """
-
+    funding_txid: "bytes"
     funding_output: "int"
     connected: "bool"
     state: "ChannelState"
     short_channel_id: "typing.Optional[str]"
-    channel_id: "typing.Optional[str]"
-    """
-    Channel id as lowercase hex (64 chars).
-    """
-
-    def __init__(self, *, peer_id: "str", our_amount_msat: "int", amount_msat: "int", funding_txid: "str", funding_output: "int", connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[str]"):
+    channel_id: "typing.Optional[bytes]"
+    def __init__(self, *, peer_id: "bytes", our_amount_msat: "int", amount_msat: "int", funding_txid: "bytes", funding_output: "int", connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[bytes]"):
         self.peer_id = peer_id
         self.our_amount_msat = our_amount_msat
         self.amount_msat = amount_msat
@@ -1655,72 +1526,59 @@ class _UniffiConverterTypeFundChannel(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return FundChannel(
-            peer_id=_UniffiConverterString.read(buf),
+            peer_id=_UniffiConverterBytes.read(buf),
             our_amount_msat=_UniffiConverterUInt64.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
-            funding_txid=_UniffiConverterString.read(buf),
+            funding_txid=_UniffiConverterBytes.read(buf),
             funding_output=_UniffiConverterUInt32.read(buf),
             connected=_UniffiConverterBool.read(buf),
             state=_UniffiConverterTypeChannelState.read(buf),
             short_channel_id=_UniffiConverterOptionalString.read(buf),
-            channel_id=_UniffiConverterOptionalString.read(buf),
+            channel_id=_UniffiConverterOptionalBytes.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.peer_id)
+        _UniffiConverterBytes.check_lower(value.peer_id)
         _UniffiConverterUInt64.check_lower(value.our_amount_msat)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
-        _UniffiConverterString.check_lower(value.funding_txid)
+        _UniffiConverterBytes.check_lower(value.funding_txid)
         _UniffiConverterUInt32.check_lower(value.funding_output)
         _UniffiConverterBool.check_lower(value.connected)
         _UniffiConverterTypeChannelState.check_lower(value.state)
         _UniffiConverterOptionalString.check_lower(value.short_channel_id)
-        _UniffiConverterOptionalString.check_lower(value.channel_id)
+        _UniffiConverterOptionalBytes.check_lower(value.channel_id)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.peer_id, buf)
+        _UniffiConverterBytes.write(value.peer_id, buf)
         _UniffiConverterUInt64.write(value.our_amount_msat, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
-        _UniffiConverterString.write(value.funding_txid, buf)
+        _UniffiConverterBytes.write(value.funding_txid, buf)
         _UniffiConverterUInt32.write(value.funding_output, buf)
         _UniffiConverterBool.write(value.connected, buf)
         _UniffiConverterTypeChannelState.write(value.state, buf)
         _UniffiConverterOptionalString.write(value.short_channel_id, buf)
-        _UniffiConverterOptionalString.write(value.channel_id, buf)
+        _UniffiConverterOptionalBytes.write(value.channel_id, buf)
 
 
 class FundOutput:
-    txid: "str"
-    """
-    Transaction id as lowercase hex (64 chars).
-    """
-
+    txid: "bytes"
     output: "int"
     amount_msat: "int"
     status: "OutputStatus"
     address: "typing.Optional[str]"
     blockheight: "typing.Optional[int]"
-    reserved: "bool"
-    """
-    True when this UTXO is currently reserved by an in-flight PSBT
-    (e.g. a channel-open or fund-send that has not been broadcast or
-    abandoned). Reserved UTXOs are not spendable and must be excluded
-    from the wallet's spendable balance.
-    """
-
-    def __init__(self, *, txid: "str", output: "int", amount_msat: "int", status: "OutputStatus", address: "typing.Optional[str]", blockheight: "typing.Optional[int]", reserved: "bool"):
+    def __init__(self, *, txid: "bytes", output: "int", amount_msat: "int", status: "OutputStatus", address: "typing.Optional[str]", blockheight: "typing.Optional[int]"):
         self.txid = txid
         self.output = output
         self.amount_msat = amount_msat
         self.status = status
         self.address = address
         self.blockheight = blockheight
-        self.reserved = reserved
 
     def __str__(self):
-        return "FundOutput(txid={}, output={}, amount_msat={}, status={}, address={}, blockheight={}, reserved={})".format(self.txid, self.output, self.amount_msat, self.status, self.address, self.blockheight, self.reserved)
+        return "FundOutput(txid={}, output={}, amount_msat={}, status={}, address={}, blockheight={})".format(self.txid, self.output, self.amount_msat, self.status, self.address, self.blockheight)
 
     def __eq__(self, other):
         if self.txid != other.txid:
@@ -1735,56 +1593,43 @@ class FundOutput:
             return False
         if self.blockheight != other.blockheight:
             return False
-        if self.reserved != other.reserved:
-            return False
         return True
 
 class _UniffiConverterTypeFundOutput(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return FundOutput(
-            txid=_UniffiConverterString.read(buf),
+            txid=_UniffiConverterBytes.read(buf),
             output=_UniffiConverterUInt32.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
             status=_UniffiConverterTypeOutputStatus.read(buf),
             address=_UniffiConverterOptionalString.read(buf),
             blockheight=_UniffiConverterOptionalUInt32.read(buf),
-            reserved=_UniffiConverterBool.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.txid)
+        _UniffiConverterBytes.check_lower(value.txid)
         _UniffiConverterUInt32.check_lower(value.output)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
         _UniffiConverterTypeOutputStatus.check_lower(value.status)
         _UniffiConverterOptionalString.check_lower(value.address)
         _UniffiConverterOptionalUInt32.check_lower(value.blockheight)
-        _UniffiConverterBool.check_lower(value.reserved)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.txid, buf)
+        _UniffiConverterBytes.write(value.txid, buf)
         _UniffiConverterUInt32.write(value.output, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
         _UniffiConverterTypeOutputStatus.write(value.status, buf)
         _UniffiConverterOptionalString.write(value.address, buf)
         _UniffiConverterOptionalUInt32.write(value.blockheight, buf)
-        _UniffiConverterBool.write(value.reserved, buf)
 
 
 class GetInfoResponse:
-    id: "str"
-    """
-    Node public key as lowercase hex (66 chars).
-    """
-
+    id: "bytes"
     alias: "typing.Optional[str]"
-    color: "str"
-    """
-    3-byte RGB color as lowercase hex (6 chars).
-    """
-
+    color: "bytes"
     num_peers: "int"
     num_pending_channels: "int"
     num_active_channels: "int"
@@ -1794,7 +1639,7 @@ class GetInfoResponse:
     blockheight: "int"
     network: "str"
     fees_collected_msat: "int"
-    def __init__(self, *, id: "str", alias: "typing.Optional[str]", color: "str", num_peers: "int", num_pending_channels: "int", num_active_channels: "int", num_inactive_channels: "int", version: "str", lightning_dir: "str", blockheight: "int", network: "str", fees_collected_msat: "int"):
+    def __init__(self, *, id: "bytes", alias: "typing.Optional[str]", color: "bytes", num_peers: "int", num_pending_channels: "int", num_active_channels: "int", num_inactive_channels: "int", version: "str", lightning_dir: "str", blockheight: "int", network: "str", fees_collected_msat: "int"):
         self.id = id
         self.alias = alias
         self.color = color
@@ -1842,9 +1687,9 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return GetInfoResponse(
-            id=_UniffiConverterString.read(buf),
+            id=_UniffiConverterBytes.read(buf),
             alias=_UniffiConverterOptionalString.read(buf),
-            color=_UniffiConverterString.read(buf),
+            color=_UniffiConverterBytes.read(buf),
             num_peers=_UniffiConverterUInt32.read(buf),
             num_pending_channels=_UniffiConverterUInt32.read(buf),
             num_active_channels=_UniffiConverterUInt32.read(buf),
@@ -1858,9 +1703,9 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.id)
+        _UniffiConverterBytes.check_lower(value.id)
         _UniffiConverterOptionalString.check_lower(value.alias)
-        _UniffiConverterString.check_lower(value.color)
+        _UniffiConverterBytes.check_lower(value.color)
         _UniffiConverterUInt32.check_lower(value.num_peers)
         _UniffiConverterUInt32.check_lower(value.num_pending_channels)
         _UniffiConverterUInt32.check_lower(value.num_active_channels)
@@ -1873,9 +1718,9 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.id, buf)
+        _UniffiConverterBytes.write(value.id, buf)
         _UniffiConverterOptionalString.write(value.alias, buf)
-        _UniffiConverterString.write(value.color, buf)
+        _UniffiConverterBytes.write(value.color, buf)
         _UniffiConverterUInt32.write(value.num_peers, buf)
         _UniffiConverterUInt32.write(value.num_pending_channels, buf)
         _UniffiConverterUInt32.write(value.num_active_channels, buf)
@@ -1890,11 +1735,7 @@ class _UniffiConverterTypeGetInfoResponse(_UniffiConverterRustBuffer):
 class Invoice:
     label: "str"
     description: "str"
-    payment_hash: "str"
-    """
-    Payment hash as lowercase hex (64 chars).
-    """
-
+    payment_hash: "bytes"
     status: "InvoiceStatus"
     amount_msat: "typing.Optional[int]"
     amount_received_msat: "typing.Optional[int]"
@@ -1902,17 +1743,9 @@ class Invoice:
     bolt12: "typing.Optional[str]"
     paid_at: "typing.Optional[int]"
     expires_at: "int"
-    payment_preimage: "typing.Optional[str]"
-    """
-    Payment preimage as lowercase hex (64 chars), if the invoice has been paid.
-    """
-
-    destination_pubkey: "typing.Optional[str]"
-    """
-    Recipient node pubkey as lowercase hex (66 chars), recovered from the bolt11.
-    """
-
-    def __init__(self, *, label: "str", description: "str", payment_hash: "str", status: "InvoiceStatus", amount_msat: "typing.Optional[int]", amount_received_msat: "typing.Optional[int]", bolt11: "typing.Optional[str]", bolt12: "typing.Optional[str]", paid_at: "typing.Optional[int]", expires_at: "int", payment_preimage: "typing.Optional[str]", destination_pubkey: "typing.Optional[str]"):
+    payment_preimage: "typing.Optional[bytes]"
+    destination_pubkey: "typing.Optional[bytes]"
+    def __init__(self, *, label: "str", description: "str", payment_hash: "bytes", status: "InvoiceStatus", amount_msat: "typing.Optional[int]", amount_received_msat: "typing.Optional[int]", bolt11: "typing.Optional[str]", bolt12: "typing.Optional[str]", paid_at: "typing.Optional[int]", expires_at: "int", payment_preimage: "typing.Optional[bytes]", destination_pubkey: "typing.Optional[bytes]"):
         self.label = label
         self.description = description
         self.payment_hash = payment_hash
@@ -1962,7 +1795,7 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
         return Invoice(
             label=_UniffiConverterString.read(buf),
             description=_UniffiConverterString.read(buf),
-            payment_hash=_UniffiConverterString.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
             status=_UniffiConverterTypeInvoiceStatus.read(buf),
             amount_msat=_UniffiConverterOptionalUInt64.read(buf),
             amount_received_msat=_UniffiConverterOptionalUInt64.read(buf),
@@ -1970,15 +1803,15 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
             bolt12=_UniffiConverterOptionalString.read(buf),
             paid_at=_UniffiConverterOptionalUInt64.read(buf),
             expires_at=_UniffiConverterUInt64.read(buf),
-            payment_preimage=_UniffiConverterOptionalString.read(buf),
-            destination_pubkey=_UniffiConverterOptionalString.read(buf),
+            payment_preimage=_UniffiConverterOptionalBytes.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
         _UniffiConverterString.check_lower(value.label)
         _UniffiConverterString.check_lower(value.description)
-        _UniffiConverterString.check_lower(value.payment_hash)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
         _UniffiConverterTypeInvoiceStatus.check_lower(value.status)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_received_msat)
@@ -1986,14 +1819,14 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
         _UniffiConverterOptionalString.check_lower(value.bolt12)
         _UniffiConverterOptionalUInt64.check_lower(value.paid_at)
         _UniffiConverterUInt64.check_lower(value.expires_at)
-        _UniffiConverterOptionalString.check_lower(value.payment_preimage)
-        _UniffiConverterOptionalString.check_lower(value.destination_pubkey)
+        _UniffiConverterOptionalBytes.check_lower(value.payment_preimage)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
 
     @staticmethod
     def write(value, buf):
         _UniffiConverterString.write(value.label, buf)
         _UniffiConverterString.write(value.description, buf)
-        _UniffiConverterString.write(value.payment_hash, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
         _UniffiConverterTypeInvoiceStatus.write(value.status, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_received_msat, buf)
@@ -2001,8 +1834,8 @@ class _UniffiConverterTypeInvoice(_UniffiConverterRustBuffer):
         _UniffiConverterOptionalString.write(value.bolt12, buf)
         _UniffiConverterOptionalUInt64.write(value.paid_at, buf)
         _UniffiConverterUInt64.write(value.expires_at, buf)
-        _UniffiConverterOptionalString.write(value.payment_preimage, buf)
-        _UniffiConverterOptionalString.write(value.destination_pubkey, buf)
+        _UniffiConverterOptionalBytes.write(value.payment_preimage, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
 
 
 class InvoicePaidEvent:
@@ -2010,9 +1843,9 @@ class InvoicePaidEvent:
     Details of a paid invoice.
     """
 
-    payment_hash: "str"
+    payment_hash: "bytes"
     """
-    Payment hash of the paid invoice as lowercase hex (64 chars).
+    The payment hash of the paid invoice.
     """
 
     bolt11: "str"
@@ -2020,9 +1853,9 @@ class InvoicePaidEvent:
     The bolt11 invoice string.
     """
 
-    preimage: "str"
+    preimage: "bytes"
     """
-    Preimage that proves payment as lowercase hex (64 chars).
+    The preimage that proves payment.
     """
 
     label: "str"
@@ -2035,7 +1868,7 @@ class InvoicePaidEvent:
     Amount received in millisatoshis.
     """
 
-    def __init__(self, *, payment_hash: "str", bolt11: "str", preimage: "str", label: "str", amount_msat: "int"):
+    def __init__(self, *, payment_hash: "bytes", bolt11: "str", preimage: "bytes", label: "str", amount_msat: "int"):
         self.payment_hash = payment_hash
         self.bolt11 = bolt11
         self.preimage = preimage
@@ -2062,26 +1895,26 @@ class _UniffiConverterTypeInvoicePaidEvent(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return InvoicePaidEvent(
-            payment_hash=_UniffiConverterString.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
             bolt11=_UniffiConverterString.read(buf),
-            preimage=_UniffiConverterString.read(buf),
+            preimage=_UniffiConverterBytes.read(buf),
             label=_UniffiConverterString.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.payment_hash)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
         _UniffiConverterString.check_lower(value.bolt11)
-        _UniffiConverterString.check_lower(value.preimage)
+        _UniffiConverterBytes.check_lower(value.preimage)
         _UniffiConverterString.check_lower(value.label)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.payment_hash, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
         _UniffiConverterString.write(value.bolt11, buf)
-        _UniffiConverterString.write(value.preimage, buf)
+        _UniffiConverterBytes.write(value.preimage, buf)
         _UniffiConverterString.write(value.label, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
 
@@ -2326,418 +2159,513 @@ class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
         _UniffiConverterSequenceTypePeer.write(value.peers, buf)
 
 
-class LogEntry:
+class LnUrlErrorData:
     """
-    A single log message from the SDK.
-    """
-
-    level: "LogLevel"
-    message: "str"
-    target: "str"
-    """
-    The module that produced this log (e.g. "gl_client::scheduler").
+    Error returned by an LNURL service endpoint.
     """
 
-    file: "typing.Optional[str]"
-    """
-    Source file path, if the log macro recorded one.
-    """
-
-    line: "typing.Optional[int]"
-    """
-    Source line number, if the log macro recorded one.
-    """
-
-    def __init__(self, *, level: "LogLevel", message: "str", target: "str", file: "typing.Optional[str]", line: "typing.Optional[int]"):
-        self.level = level
-        self.message = message
-        self.target = target
-        self.file = file
-        self.line = line
+    reason: "str"
+    def __init__(self, *, reason: "str"):
+        self.reason = reason
 
     def __str__(self):
-        return "LogEntry(level={}, message={}, target={}, file={}, line={})".format(self.level, self.message, self.target, self.file, self.line)
+        return "LnUrlErrorData(reason={})".format(self.reason)
 
     def __eq__(self, other):
-        if self.level != other.level:
-            return False
-        if self.message != other.message:
-            return False
-        if self.target != other.target:
-            return False
-        if self.file != other.file:
-            return False
-        if self.line != other.line:
+        if self.reason != other.reason:
             return False
         return True
 
-class _UniffiConverterTypeLogEntry(_UniffiConverterRustBuffer):
+class _UniffiConverterTypeLnUrlErrorData(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
-        return LogEntry(
-            level=_UniffiConverterTypeLogLevel.read(buf),
-            message=_UniffiConverterString.read(buf),
-            target=_UniffiConverterString.read(buf),
-            file=_UniffiConverterOptionalString.read(buf),
-            line=_UniffiConverterOptionalUInt32.read(buf),
+        return LnUrlErrorData(
+            reason=_UniffiConverterString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterTypeLogLevel.check_lower(value.level)
-        _UniffiConverterString.check_lower(value.message)
-        _UniffiConverterString.check_lower(value.target)
-        _UniffiConverterOptionalString.check_lower(value.file)
-        _UniffiConverterOptionalUInt32.check_lower(value.line)
+        _UniffiConverterString.check_lower(value.reason)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterTypeLogLevel.write(value.level, buf)
-        _UniffiConverterString.write(value.message, buf)
-        _UniffiConverterString.write(value.target, buf)
-        _UniffiConverterOptionalString.write(value.file, buf)
-        _UniffiConverterOptionalUInt32.write(value.line, buf)
+        _UniffiConverterString.write(value.reason, buf)
 
 
-class NodeState:
+class LnUrlPayErrorData:
     """
-    A point-in-time snapshot of the node's balances, capacity, and
-    connectivity. Returned by `node_state()`.
-
-    All amounts are in millisatoshis (1 sat = 1000 msat).
+    Details of a failed LNURL-pay attempt on the pay phase.
     """
 
-    id: "str"
+    payment_hash: "str"
     """
-    The node's public key as a lowercase hex string (66 chars).
-    """
-
-    block_height: "int"
-    """
-    Latest block height the node has synced to.
+    Hex-encoded payment hash of the invoice the service returned.
     """
 
-    network: "str"
+    reason: "str"
     """
-    The Bitcoin network this node is running on (e.g. "bitcoin", "regtest").
-    """
-
-    version: "str"
-    """
-    CLN version string (e.g. "v24.11").
+    Human-readable reason the pay attempt failed.
     """
 
-    alias: "typing.Optional[str]"
-    """
-    Human-readable node alias, if set.
-    """
-
-    color: "str"
-    """
-    3-byte RGB color of the node, as a lowercase hex string (6 chars).
-    """
-
-    num_active_channels: "int"
-    """
-    Number of channels that are open and operational. These are the
-    channels that contribute to `channels_balance_msat`,
-    `max_payable_msat`, `total_channel_capacity_msat`, and
-    `total_inbound_liquidity_msat`.
-    """
-
-    num_pending_channels: "int"
-    """
-    Number of channels that are being opened but not yet confirmed.
-    Pending channels do not contribute to any balance or capacity
-    field on this snapshot; their funds show up only after they
-    transition to active.
-    """
-
-    num_inactive_channels: "int"
-    """
-    Number of channels that are open but the peer is offline.
-    Inactive channels hold balance but cannot be used for payments
-    until the peer reconnects; they do not contribute to
-    `max_payable_msat` or `total_inbound_liquidity_msat` (those are
-    computed from the live `spendable_msat` / `receivable_msat`
-    reported by CLN, which goes to zero when the peer is offline).
-    """
-
-    channels_balance_msat: "int"
-    """
-    Total our-side balance across all open channels, including amounts
-    that protocol reserves make unspendable.
-
-    This is the field a wallet's home screen should show as the
-    user's "Lightning balance" — it reflects what they own off-chain,
-    matching what they'd expect to see at a glance.
-
-    Do **not** use this to gate a send button: some of it is locked
-    in channel reserves. Use `max_payable_msat` for that.
-    """
-
-    max_payable_msat: "int"
-    """
-    Aggregate spendable amount across all open channels. Equal to
-    `channels_balance_msat - max_chan_reserve_msat`.
-
-    This is the field a send screen should gate against — it is what
-    the user can actually move right now over Lightning in total.
-
-    Caveat: a single Lightning payment is additionally bounded by
-    the largest channel's own `spendable_msat`. Reaching this full
-    aggregate amount in one payment requires multi-path-payment
-    support from the recipient and a working route.
-    """
-
-    total_channel_capacity_msat: "int"
-    """
-    Sum of all open channel capacities (your side + remote side).
-    """
-
-    max_chan_reserve_msat: "int"
-    """
-    Amount locked in protocol channel reserves, computed as
-    `channels_balance_msat - max_payable_msat`. These sats are yours
-    on paper but cannot be spent until the channel closes.
-    """
-
-    onchain_balance_msat: "int"
-    """
-    Confirmed on-chain balance available for spending or opening channels.
-    """
-
-    unconfirmed_onchain_balance_msat: "int"
-    """
-    On-chain balance from transactions that have not yet been confirmed.
-    """
-
-    immature_onchain_balance_msat: "int"
-    """
-    On-chain balance confirmed but not yet spendable (e.g. coinbase
-    outputs inside the 100-block maturation window).
-    """
-
-    pending_onchain_balance_msat: "int"
-    """
-    On-chain balance locked in channels that are being closed.
-    These funds will become available once the close is confirmed.
-    """
-
-    max_receivable_single_payment_msat: "int"
-    """
-    Largest single Lightning payment the node can receive without
-    splitting across channels. Bounded by the inbound capacity of
-    the largest open channel.
-    """
-
-    total_inbound_liquidity_msat: "int"
-    """
-    Total amount you can receive across all open channels combined.
-    """
-
-    connected_channel_peers: "typing.List[str]"
-    """
-    Lowercase hex public keys of peers we have at least one channel
-    with and are currently connected to. Peers we're connected to but
-    have no channel with are not represented here; for routing-node
-    use cases, query `list_peers()` directly.
-    """
-
-    utxos: "typing.List[FundOutput]"
-    """
-    Unspent on-chain outputs owned by the node's wallet. Excludes
-    spent outputs; includes confirmed, unconfirmed, immature, and
-    reserved UTXOs (callers can filter by `status` and `reserved`).
-    """
-
-    total_onchain_msat: "int"
-    """
-    All non-pending on-chain balance buckets summed:
-    `onchain_balance_msat + unconfirmed_onchain_balance_msat + immature_onchain_balance_msat`.
-    Excludes funds locked in closing channels (`pending_onchain_balance_msat`)
-    since those are not yet on-chain UTXOs.
-    """
-
-    total_balance_msat: "int"
-    """
-    Everything the user owns, summed: channel balance (including
-    protocol reserves) + all on-chain buckets + funds locked in
-    closing channels. The "total holdings" number a wallet home
-    screen typically shows.
-    """
-
-    spendable_balance_msat: "int"
-    """
-    What the user can spend *right now*:
-    `max_payable_msat + onchain_balance_msat`. Excludes reserves,
-    unconfirmed, immature, and pending amounts. The number a
-    send-money screen should gate against.
-    """
-
-    def __init__(self, *, id: "str", block_height: "int", network: "str", version: "str", alias: "typing.Optional[str]", color: "str", num_active_channels: "int", num_pending_channels: "int", num_inactive_channels: "int", channels_balance_msat: "int", max_payable_msat: "int", total_channel_capacity_msat: "int", max_chan_reserve_msat: "int", onchain_balance_msat: "int", unconfirmed_onchain_balance_msat: "int", immature_onchain_balance_msat: "int", pending_onchain_balance_msat: "int", max_receivable_single_payment_msat: "int", total_inbound_liquidity_msat: "int", connected_channel_peers: "typing.List[str]", utxos: "typing.List[FundOutput]", total_onchain_msat: "int", total_balance_msat: "int", spendable_balance_msat: "int"):
-        self.id = id
-        self.block_height = block_height
-        self.network = network
-        self.version = version
-        self.alias = alias
-        self.color = color
-        self.num_active_channels = num_active_channels
-        self.num_pending_channels = num_pending_channels
-        self.num_inactive_channels = num_inactive_channels
-        self.channels_balance_msat = channels_balance_msat
-        self.max_payable_msat = max_payable_msat
-        self.total_channel_capacity_msat = total_channel_capacity_msat
-        self.max_chan_reserve_msat = max_chan_reserve_msat
-        self.onchain_balance_msat = onchain_balance_msat
-        self.unconfirmed_onchain_balance_msat = unconfirmed_onchain_balance_msat
-        self.immature_onchain_balance_msat = immature_onchain_balance_msat
-        self.pending_onchain_balance_msat = pending_onchain_balance_msat
-        self.max_receivable_single_payment_msat = max_receivable_single_payment_msat
-        self.total_inbound_liquidity_msat = total_inbound_liquidity_msat
-        self.connected_channel_peers = connected_channel_peers
-        self.utxos = utxos
-        self.total_onchain_msat = total_onchain_msat
-        self.total_balance_msat = total_balance_msat
-        self.spendable_balance_msat = spendable_balance_msat
+    def __init__(self, *, payment_hash: "str", reason: "str"):
+        self.payment_hash = payment_hash
+        self.reason = reason
 
     def __str__(self):
-        return "NodeState(id={}, block_height={}, network={}, version={}, alias={}, color={}, num_active_channels={}, num_pending_channels={}, num_inactive_channels={}, channels_balance_msat={}, max_payable_msat={}, total_channel_capacity_msat={}, max_chan_reserve_msat={}, onchain_balance_msat={}, unconfirmed_onchain_balance_msat={}, immature_onchain_balance_msat={}, pending_onchain_balance_msat={}, max_receivable_single_payment_msat={}, total_inbound_liquidity_msat={}, connected_channel_peers={}, utxos={}, total_onchain_msat={}, total_balance_msat={}, spendable_balance_msat={})".format(self.id, self.block_height, self.network, self.version, self.alias, self.color, self.num_active_channels, self.num_pending_channels, self.num_inactive_channels, self.channels_balance_msat, self.max_payable_msat, self.total_channel_capacity_msat, self.max_chan_reserve_msat, self.onchain_balance_msat, self.unconfirmed_onchain_balance_msat, self.immature_onchain_balance_msat, self.pending_onchain_balance_msat, self.max_receivable_single_payment_msat, self.total_inbound_liquidity_msat, self.connected_channel_peers, self.utxos, self.total_onchain_msat, self.total_balance_msat, self.spendable_balance_msat)
+        return "LnUrlPayErrorData(payment_hash={}, reason={})".format(self.payment_hash, self.reason)
 
     def __eq__(self, other):
-        if self.id != other.id:
+        if self.payment_hash != other.payment_hash:
             return False
-        if self.block_height != other.block_height:
-            return False
-        if self.network != other.network:
-            return False
-        if self.version != other.version:
-            return False
-        if self.alias != other.alias:
-            return False
-        if self.color != other.color:
-            return False
-        if self.num_active_channels != other.num_active_channels:
-            return False
-        if self.num_pending_channels != other.num_pending_channels:
-            return False
-        if self.num_inactive_channels != other.num_inactive_channels:
-            return False
-        if self.channels_balance_msat != other.channels_balance_msat:
-            return False
-        if self.max_payable_msat != other.max_payable_msat:
-            return False
-        if self.total_channel_capacity_msat != other.total_channel_capacity_msat:
-            return False
-        if self.max_chan_reserve_msat != other.max_chan_reserve_msat:
-            return False
-        if self.onchain_balance_msat != other.onchain_balance_msat:
-            return False
-        if self.unconfirmed_onchain_balance_msat != other.unconfirmed_onchain_balance_msat:
-            return False
-        if self.immature_onchain_balance_msat != other.immature_onchain_balance_msat:
-            return False
-        if self.pending_onchain_balance_msat != other.pending_onchain_balance_msat:
-            return False
-        if self.max_receivable_single_payment_msat != other.max_receivable_single_payment_msat:
-            return False
-        if self.total_inbound_liquidity_msat != other.total_inbound_liquidity_msat:
-            return False
-        if self.connected_channel_peers != other.connected_channel_peers:
-            return False
-        if self.utxos != other.utxos:
-            return False
-        if self.total_onchain_msat != other.total_onchain_msat:
-            return False
-        if self.total_balance_msat != other.total_balance_msat:
-            return False
-        if self.spendable_balance_msat != other.spendable_balance_msat:
+        if self.reason != other.reason:
             return False
         return True
 
-class _UniffiConverterTypeNodeState(_UniffiConverterRustBuffer):
+class _UniffiConverterTypeLnUrlPayErrorData(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
-        return NodeState(
-            id=_UniffiConverterString.read(buf),
-            block_height=_UniffiConverterUInt32.read(buf),
-            network=_UniffiConverterString.read(buf),
-            version=_UniffiConverterString.read(buf),
-            alias=_UniffiConverterOptionalString.read(buf),
-            color=_UniffiConverterString.read(buf),
-            num_active_channels=_UniffiConverterUInt32.read(buf),
-            num_pending_channels=_UniffiConverterUInt32.read(buf),
-            num_inactive_channels=_UniffiConverterUInt32.read(buf),
-            channels_balance_msat=_UniffiConverterUInt64.read(buf),
-            max_payable_msat=_UniffiConverterUInt64.read(buf),
-            total_channel_capacity_msat=_UniffiConverterUInt64.read(buf),
-            max_chan_reserve_msat=_UniffiConverterUInt64.read(buf),
-            onchain_balance_msat=_UniffiConverterUInt64.read(buf),
-            unconfirmed_onchain_balance_msat=_UniffiConverterUInt64.read(buf),
-            immature_onchain_balance_msat=_UniffiConverterUInt64.read(buf),
-            pending_onchain_balance_msat=_UniffiConverterUInt64.read(buf),
-            max_receivable_single_payment_msat=_UniffiConverterUInt64.read(buf),
-            total_inbound_liquidity_msat=_UniffiConverterUInt64.read(buf),
-            connected_channel_peers=_UniffiConverterSequenceString.read(buf),
-            utxos=_UniffiConverterSequenceTypeFundOutput.read(buf),
-            total_onchain_msat=_UniffiConverterUInt64.read(buf),
-            total_balance_msat=_UniffiConverterUInt64.read(buf),
-            spendable_balance_msat=_UniffiConverterUInt64.read(buf),
+        return LnUrlPayErrorData(
+            payment_hash=_UniffiConverterString.read(buf),
+            reason=_UniffiConverterString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.id)
-        _UniffiConverterUInt32.check_lower(value.block_height)
-        _UniffiConverterString.check_lower(value.network)
-        _UniffiConverterString.check_lower(value.version)
-        _UniffiConverterOptionalString.check_lower(value.alias)
-        _UniffiConverterString.check_lower(value.color)
-        _UniffiConverterUInt32.check_lower(value.num_active_channels)
-        _UniffiConverterUInt32.check_lower(value.num_pending_channels)
-        _UniffiConverterUInt32.check_lower(value.num_inactive_channels)
-        _UniffiConverterUInt64.check_lower(value.channels_balance_msat)
-        _UniffiConverterUInt64.check_lower(value.max_payable_msat)
-        _UniffiConverterUInt64.check_lower(value.total_channel_capacity_msat)
-        _UniffiConverterUInt64.check_lower(value.max_chan_reserve_msat)
-        _UniffiConverterUInt64.check_lower(value.onchain_balance_msat)
-        _UniffiConverterUInt64.check_lower(value.unconfirmed_onchain_balance_msat)
-        _UniffiConverterUInt64.check_lower(value.immature_onchain_balance_msat)
-        _UniffiConverterUInt64.check_lower(value.pending_onchain_balance_msat)
-        _UniffiConverterUInt64.check_lower(value.max_receivable_single_payment_msat)
-        _UniffiConverterUInt64.check_lower(value.total_inbound_liquidity_msat)
-        _UniffiConverterSequenceString.check_lower(value.connected_channel_peers)
-        _UniffiConverterSequenceTypeFundOutput.check_lower(value.utxos)
-        _UniffiConverterUInt64.check_lower(value.total_onchain_msat)
-        _UniffiConverterUInt64.check_lower(value.total_balance_msat)
-        _UniffiConverterUInt64.check_lower(value.spendable_balance_msat)
+        _UniffiConverterString.check_lower(value.payment_hash)
+        _UniffiConverterString.check_lower(value.reason)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.id, buf)
-        _UniffiConverterUInt32.write(value.block_height, buf)
-        _UniffiConverterString.write(value.network, buf)
-        _UniffiConverterString.write(value.version, buf)
-        _UniffiConverterOptionalString.write(value.alias, buf)
-        _UniffiConverterString.write(value.color, buf)
-        _UniffiConverterUInt32.write(value.num_active_channels, buf)
-        _UniffiConverterUInt32.write(value.num_pending_channels, buf)
-        _UniffiConverterUInt32.write(value.num_inactive_channels, buf)
-        _UniffiConverterUInt64.write(value.channels_balance_msat, buf)
-        _UniffiConverterUInt64.write(value.max_payable_msat, buf)
-        _UniffiConverterUInt64.write(value.total_channel_capacity_msat, buf)
-        _UniffiConverterUInt64.write(value.max_chan_reserve_msat, buf)
-        _UniffiConverterUInt64.write(value.onchain_balance_msat, buf)
-        _UniffiConverterUInt64.write(value.unconfirmed_onchain_balance_msat, buf)
-        _UniffiConverterUInt64.write(value.immature_onchain_balance_msat, buf)
-        _UniffiConverterUInt64.write(value.pending_onchain_balance_msat, buf)
-        _UniffiConverterUInt64.write(value.max_receivable_single_payment_msat, buf)
-        _UniffiConverterUInt64.write(value.total_inbound_liquidity_msat, buf)
-        _UniffiConverterSequenceString.write(value.connected_channel_peers, buf)
-        _UniffiConverterSequenceTypeFundOutput.write(value.utxos, buf)
-        _UniffiConverterUInt64.write(value.total_onchain_msat, buf)
-        _UniffiConverterUInt64.write(value.total_balance_msat, buf)
-        _UniffiConverterUInt64.write(value.spendable_balance_msat, buf)
+        _UniffiConverterString.write(value.payment_hash, buf)
+        _UniffiConverterString.write(value.reason, buf)
+
+
+class LnUrlPayRequest:
+    """
+    Request to execute an LNURL-pay flow.
+
+    Combines the resolved service data with the user's chosen amount.
+    """
+
+    data: "LnUrlPayRequestData"
+    """
+    The resolved pay request data from `parse_input()`.
+    """
+
+    amount_msat: "int"
+    """
+    Amount to pay in millisatoshis.
+    """
+
+    comment: "typing.Optional[str]"
+    """
+    Optional comment to send with the payment.
+    """
+
+    validate_success_action_url: "typing.Optional[bool]"
+    """
+    When true (the default), a URL success action is rejected if its
+    domain differs from the callback's domain.
+
+    This is a wallet-side safety convention, not a LUD-09 requirement:
+    LUD-09 does not mandate same-domain URLs, but a divergent domain
+    can be used to phish users, so the SDK rejects it by default.
+    Set to `Some(false)` only if you have a specific reason to trust
+    cross-domain success-action URLs from this service.
+    """
+
+    def __init__(self, *, data: "LnUrlPayRequestData", amount_msat: "int", comment: "typing.Optional[str]", validate_success_action_url: "typing.Optional[bool]"):
+        self.data = data
+        self.amount_msat = amount_msat
+        self.comment = comment
+        self.validate_success_action_url = validate_success_action_url
+
+    def __str__(self):
+        return "LnUrlPayRequest(data={}, amount_msat={}, comment={}, validate_success_action_url={})".format(self.data, self.amount_msat, self.comment, self.validate_success_action_url)
+
+    def __eq__(self, other):
+        if self.data != other.data:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.comment != other.comment:
+            return False
+        if self.validate_success_action_url != other.validate_success_action_url:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlPayRequest(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlPayRequest(
+            data=_UniffiConverterTypeLnUrlPayRequestData.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+            comment=_UniffiConverterOptionalString.read(buf),
+            validate_success_action_url=_UniffiConverterOptionalBool.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeLnUrlPayRequestData.check_lower(value.data)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+        _UniffiConverterOptionalString.check_lower(value.comment)
+        _UniffiConverterOptionalBool.check_lower(value.validate_success_action_url)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeLnUrlPayRequestData.write(value.data, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
+        _UniffiConverterOptionalString.write(value.comment, buf)
+        _UniffiConverterOptionalBool.write(value.validate_success_action_url, buf)
+
+
+class LnUrlPayRequestData:
+    """
+    Data from an LNURL-pay endpoint (LUD-06).
+
+    Contains the service's accepted amount range and metadata.
+    Returned inside `InputType::LnUrlPay` after `parse_input` resolves
+    an LNURL or Lightning Address.
+    """
+
+    callback: "str"
+    """
+    The callback URL to request an invoice from.
+    """
+
+    min_sendable: "int"
+    """
+    Minimum amount the service accepts, in millisatoshis.
+    """
+
+    max_sendable: "int"
+    """
+    Maximum amount the service accepts, in millisatoshis.
+    """
+
+    metadata: "str"
+    """
+    Raw metadata JSON string (array of `["mime", "content"]` pairs).
+    """
+
+    comment_allowed: "int"
+    """
+    Maximum comment length the service accepts. 0 means no comments.
+    """
+
+    description: "str"
+    """
+    Human-readable description extracted from metadata.
+    """
+
+    lnurl: "str"
+    """
+    The original LNURL or lightning address that was resolved.
+    """
+
+    def __init__(self, *, callback: "str", min_sendable: "int", max_sendable: "int", metadata: "str", comment_allowed: "int", description: "str", lnurl: "str"):
+        self.callback = callback
+        self.min_sendable = min_sendable
+        self.max_sendable = max_sendable
+        self.metadata = metadata
+        self.comment_allowed = comment_allowed
+        self.description = description
+        self.lnurl = lnurl
+
+    def __str__(self):
+        return "LnUrlPayRequestData(callback={}, min_sendable={}, max_sendable={}, metadata={}, comment_allowed={}, description={}, lnurl={})".format(self.callback, self.min_sendable, self.max_sendable, self.metadata, self.comment_allowed, self.description, self.lnurl)
+
+    def __eq__(self, other):
+        if self.callback != other.callback:
+            return False
+        if self.min_sendable != other.min_sendable:
+            return False
+        if self.max_sendable != other.max_sendable:
+            return False
+        if self.metadata != other.metadata:
+            return False
+        if self.comment_allowed != other.comment_allowed:
+            return False
+        if self.description != other.description:
+            return False
+        if self.lnurl != other.lnurl:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlPayRequestData(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlPayRequestData(
+            callback=_UniffiConverterString.read(buf),
+            min_sendable=_UniffiConverterUInt64.read(buf),
+            max_sendable=_UniffiConverterUInt64.read(buf),
+            metadata=_UniffiConverterString.read(buf),
+            comment_allowed=_UniffiConverterUInt64.read(buf),
+            description=_UniffiConverterString.read(buf),
+            lnurl=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.callback)
+        _UniffiConverterUInt64.check_lower(value.min_sendable)
+        _UniffiConverterUInt64.check_lower(value.max_sendable)
+        _UniffiConverterString.check_lower(value.metadata)
+        _UniffiConverterUInt64.check_lower(value.comment_allowed)
+        _UniffiConverterString.check_lower(value.description)
+        _UniffiConverterString.check_lower(value.lnurl)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.callback, buf)
+        _UniffiConverterUInt64.write(value.min_sendable, buf)
+        _UniffiConverterUInt64.write(value.max_sendable, buf)
+        _UniffiConverterString.write(value.metadata, buf)
+        _UniffiConverterUInt64.write(value.comment_allowed, buf)
+        _UniffiConverterString.write(value.description, buf)
+        _UniffiConverterString.write(value.lnurl, buf)
+
+
+class LnUrlPaySuccessData:
+    """
+    Successful LNURL-pay result data.
+    """
+
+    payment_preimage: "str"
+    """
+    The payment preimage (proof of payment), hex-encoded.
+    """
+
+    success_action: "typing.Optional[SuccessActionProcessed]"
+    """
+    Optional success action from the service (LUD-09).
+    """
+
+    def __init__(self, *, payment_preimage: "str", success_action: "typing.Optional[SuccessActionProcessed]"):
+        self.payment_preimage = payment_preimage
+        self.success_action = success_action
+
+    def __str__(self):
+        return "LnUrlPaySuccessData(payment_preimage={}, success_action={})".format(self.payment_preimage, self.success_action)
+
+    def __eq__(self, other):
+        if self.payment_preimage != other.payment_preimage:
+            return False
+        if self.success_action != other.success_action:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlPaySuccessData(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlPaySuccessData(
+            payment_preimage=_UniffiConverterString.read(buf),
+            success_action=_UniffiConverterOptionalTypeSuccessActionProcessed.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.payment_preimage)
+        _UniffiConverterOptionalTypeSuccessActionProcessed.check_lower(value.success_action)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.payment_preimage, buf)
+        _UniffiConverterOptionalTypeSuccessActionProcessed.write(value.success_action, buf)
+
+
+class LnUrlWithdrawRequest:
+    """
+    Request to execute an LNURL-withdraw flow.
+
+    Combines the resolved service data with the user's chosen amount.
+    """
+
+    data: "LnUrlWithdrawRequestData"
+    """
+    The resolved withdraw request data from `parse_input()`.
+    """
+
+    amount_msat: "int"
+    """
+    Amount to withdraw in millisatoshis.
+    """
+
+    description: "typing.Optional[str]"
+    """
+    Optional description for the invoice (overrides default).
+    """
+
+    def __init__(self, *, data: "LnUrlWithdrawRequestData", amount_msat: "int", description: "typing.Optional[str]"):
+        self.data = data
+        self.amount_msat = amount_msat
+        self.description = description
+
+    def __str__(self):
+        return "LnUrlWithdrawRequest(data={}, amount_msat={}, description={})".format(self.data, self.amount_msat, self.description)
+
+    def __eq__(self, other):
+        if self.data != other.data:
+            return False
+        if self.amount_msat != other.amount_msat:
+            return False
+        if self.description != other.description:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlWithdrawRequest(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlWithdrawRequest(
+            data=_UniffiConverterTypeLnUrlWithdrawRequestData.read(buf),
+            amount_msat=_UniffiConverterUInt64.read(buf),
+            description=_UniffiConverterOptionalString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeLnUrlWithdrawRequestData.check_lower(value.data)
+        _UniffiConverterUInt64.check_lower(value.amount_msat)
+        _UniffiConverterOptionalString.check_lower(value.description)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeLnUrlWithdrawRequestData.write(value.data, buf)
+        _UniffiConverterUInt64.write(value.amount_msat, buf)
+        _UniffiConverterOptionalString.write(value.description, buf)
+
+
+class LnUrlWithdrawRequestData:
+    """
+    Data from an LNURL-withdraw endpoint (LUD-03).
+
+    Contains the service's accepted withdrawal range and session key.
+    Returned inside `InputType::LnUrlWithdraw` after `parse_input`
+    resolves an LNURL.
+    """
+
+    callback: "str"
+    """
+    The callback URL to submit the invoice to.
+    """
+
+    k1: "str"
+    """
+    Ephemeral secret linking this wallet session to the service.
+    """
+
+    default_description: "str"
+    """
+    Default description for the invoice.
+    """
+
+    min_withdrawable: "int"
+    """
+    Minimum withdrawable amount in millisatoshis.
+    """
+
+    max_withdrawable: "int"
+    """
+    Maximum withdrawable amount in millisatoshis.
+    """
+
+    lnurl: "str"
+    """
+    The original LNURL that was resolved.
+    """
+
+    def __init__(self, *, callback: "str", k1: "str", default_description: "str", min_withdrawable: "int", max_withdrawable: "int", lnurl: "str"):
+        self.callback = callback
+        self.k1 = k1
+        self.default_description = default_description
+        self.min_withdrawable = min_withdrawable
+        self.max_withdrawable = max_withdrawable
+        self.lnurl = lnurl
+
+    def __str__(self):
+        return "LnUrlWithdrawRequestData(callback={}, k1={}, default_description={}, min_withdrawable={}, max_withdrawable={}, lnurl={})".format(self.callback, self.k1, self.default_description, self.min_withdrawable, self.max_withdrawable, self.lnurl)
+
+    def __eq__(self, other):
+        if self.callback != other.callback:
+            return False
+        if self.k1 != other.k1:
+            return False
+        if self.default_description != other.default_description:
+            return False
+        if self.min_withdrawable != other.min_withdrawable:
+            return False
+        if self.max_withdrawable != other.max_withdrawable:
+            return False
+        if self.lnurl != other.lnurl:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlWithdrawRequestData(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlWithdrawRequestData(
+            callback=_UniffiConverterString.read(buf),
+            k1=_UniffiConverterString.read(buf),
+            default_description=_UniffiConverterString.read(buf),
+            min_withdrawable=_UniffiConverterUInt64.read(buf),
+            max_withdrawable=_UniffiConverterUInt64.read(buf),
+            lnurl=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.callback)
+        _UniffiConverterString.check_lower(value.k1)
+        _UniffiConverterString.check_lower(value.default_description)
+        _UniffiConverterUInt64.check_lower(value.min_withdrawable)
+        _UniffiConverterUInt64.check_lower(value.max_withdrawable)
+        _UniffiConverterString.check_lower(value.lnurl)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.callback, buf)
+        _UniffiConverterString.write(value.k1, buf)
+        _UniffiConverterString.write(value.default_description, buf)
+        _UniffiConverterUInt64.write(value.min_withdrawable, buf)
+        _UniffiConverterUInt64.write(value.max_withdrawable, buf)
+        _UniffiConverterString.write(value.lnurl, buf)
+
+
+class LnUrlWithdrawSuccessData:
+    """
+    Successful LNURL-withdraw result data.
+    """
+
+    invoice: "str"
+    """
+    The BOLT11 invoice that was submitted for withdrawal.
+    """
+
+    def __init__(self, *, invoice: "str"):
+        self.invoice = invoice
+
+    def __str__(self):
+        return "LnUrlWithdrawSuccessData(invoice={})".format(self.invoice)
+
+    def __eq__(self, other):
+        if self.invoice != other.invoice:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlWithdrawSuccessData(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlWithdrawSuccessData(
+            invoice=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.invoice)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.invoice, buf)
 
 
 class OnchainReceiveResponse:
@@ -2798,9 +2726,9 @@ class OnchainSendResponse:
     The raw signed transaction bytes.
     """
 
-    txid: "str"
+    txid: "bytes"
     """
-    The transaction id as lowercase hex (64 chars).
+    The transaction ID (32 bytes, reversed byte order as is standard).
     """
 
     psbt: "str"
@@ -2808,7 +2736,7 @@ class OnchainSendResponse:
     The transaction as a Partially Signed Bitcoin Transaction string.
     """
 
-    def __init__(self, *, tx: "bytes", txid: "str", psbt: "str"):
+    def __init__(self, *, tx: "bytes", txid: "bytes", psbt: "str"):
         self.tx = tx
         self.txid = txid
         self.psbt = psbt
@@ -2830,20 +2758,20 @@ class _UniffiConverterTypeOnchainSendResponse(_UniffiConverterRustBuffer):
     def read(buf):
         return OnchainSendResponse(
             tx=_UniffiConverterBytes.read(buf),
-            txid=_UniffiConverterString.read(buf),
+            txid=_UniffiConverterBytes.read(buf),
             psbt=_UniffiConverterString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
         _UniffiConverterBytes.check_lower(value.tx)
-        _UniffiConverterString.check_lower(value.txid)
+        _UniffiConverterBytes.check_lower(value.txid)
         _UniffiConverterString.check_lower(value.psbt)
 
     @staticmethod
     def write(value, buf):
         _UniffiConverterBytes.write(value.tx, buf)
-        _UniffiConverterString.write(value.txid, buf)
+        _UniffiConverterBytes.write(value.txid, buf)
         _UniffiConverterString.write(value.psbt, buf)
 
 
@@ -2857,14 +2785,14 @@ class ParsedInvoice:
     The original invoice string.
     """
 
-    payee_pubkey: "typing.Optional[str]"
+    payee_pubkey: "typing.Optional[bytes]"
     """
-    Recipient public key as lowercase hex (66 chars), recovered from the invoice signature.
+    33-byte recipient public key, recovered from the invoice signature.
     """
 
-    payment_hash: "str"
+    payment_hash: "bytes"
     """
-    Payment hash as lowercase hex (64 chars) identifying this payment.
+    32-byte payment hash identifying this payment.
     """
 
     description: "typing.Optional[str]"
@@ -2887,7 +2815,7 @@ class ParsedInvoice:
     Unix timestamp (seconds) when the invoice was created.
     """
 
-    def __init__(self, *, bolt11: "str", payee_pubkey: "typing.Optional[str]", payment_hash: "str", description: "typing.Optional[str]", amount_msat: "typing.Optional[int]", expiry: "int", timestamp: "int"):
+    def __init__(self, *, bolt11: "str", payee_pubkey: "typing.Optional[bytes]", payment_hash: "bytes", description: "typing.Optional[str]", amount_msat: "typing.Optional[int]", expiry: "int", timestamp: "int"):
         self.bolt11 = bolt11
         self.payee_pubkey = payee_pubkey
         self.payment_hash = payment_hash
@@ -2921,8 +2849,8 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
     def read(buf):
         return ParsedInvoice(
             bolt11=_UniffiConverterString.read(buf),
-            payee_pubkey=_UniffiConverterOptionalString.read(buf),
-            payment_hash=_UniffiConverterString.read(buf),
+            payee_pubkey=_UniffiConverterOptionalBytes.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             amount_msat=_UniffiConverterOptionalUInt64.read(buf),
             expiry=_UniffiConverterUInt64.read(buf),
@@ -2932,8 +2860,8 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
     @staticmethod
     def check_lower(value):
         _UniffiConverterString.check_lower(value.bolt11)
-        _UniffiConverterOptionalString.check_lower(value.payee_pubkey)
-        _UniffiConverterString.check_lower(value.payment_hash)
+        _UniffiConverterOptionalBytes.check_lower(value.payee_pubkey)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
         _UniffiConverterUInt64.check_lower(value.expiry)
@@ -2942,8 +2870,8 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterString.write(value.bolt11, buf)
-        _UniffiConverterOptionalString.write(value.payee_pubkey, buf)
-        _UniffiConverterString.write(value.payment_hash, buf)
+        _UniffiConverterOptionalBytes.write(value.payee_pubkey, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
         _UniffiConverterUInt64.write(value.expiry, buf)
@@ -2951,32 +2879,20 @@ class _UniffiConverterTypeParsedInvoice(_UniffiConverterRustBuffer):
 
 
 class Pay:
-    payment_hash: "str"
-    """
-    Payment hash as lowercase hex (64 chars).
-    """
-
+    payment_hash: "bytes"
     status: "PayStatus"
-    destination_pubkey: "typing.Optional[str]"
-    """
-    Recipient node pubkey as lowercase hex (66 chars), if known.
-    """
-
+    destination_pubkey: "typing.Optional[bytes]"
     amount_msat: "typing.Optional[int]"
     amount_sent_msat: "typing.Optional[int]"
     label: "typing.Optional[str]"
     bolt11: "typing.Optional[str]"
     description: "typing.Optional[str]"
     bolt12: "typing.Optional[str]"
-    preimage: "typing.Optional[str]"
-    """
-    Payment preimage as lowercase hex (64 chars), if the payment completed.
-    """
-
+    preimage: "typing.Optional[bytes]"
     created_at: "int"
     completed_at: "typing.Optional[int]"
     number_of_parts: "typing.Optional[int]"
-    def __init__(self, *, payment_hash: "str", status: "PayStatus", destination_pubkey: "typing.Optional[str]", amount_msat: "typing.Optional[int]", amount_sent_msat: "typing.Optional[int]", label: "typing.Optional[str]", bolt11: "typing.Optional[str]", description: "typing.Optional[str]", bolt12: "typing.Optional[str]", preimage: "typing.Optional[str]", created_at: "int", completed_at: "typing.Optional[int]", number_of_parts: "typing.Optional[int]"):
+    def __init__(self, *, payment_hash: "bytes", status: "PayStatus", destination_pubkey: "typing.Optional[bytes]", amount_msat: "typing.Optional[int]", amount_sent_msat: "typing.Optional[int]", label: "typing.Optional[str]", bolt11: "typing.Optional[str]", description: "typing.Optional[str]", bolt12: "typing.Optional[str]", preimage: "typing.Optional[bytes]", created_at: "int", completed_at: "typing.Optional[int]", number_of_parts: "typing.Optional[int]"):
         self.payment_hash = payment_hash
         self.status = status
         self.destination_pubkey = destination_pubkey
@@ -3027,16 +2943,16 @@ class _UniffiConverterTypePay(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return Pay(
-            payment_hash=_UniffiConverterString.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
             status=_UniffiConverterTypePayStatus.read(buf),
-            destination_pubkey=_UniffiConverterOptionalString.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
             amount_msat=_UniffiConverterOptionalUInt64.read(buf),
             amount_sent_msat=_UniffiConverterOptionalUInt64.read(buf),
             label=_UniffiConverterOptionalString.read(buf),
             bolt11=_UniffiConverterOptionalString.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             bolt12=_UniffiConverterOptionalString.read(buf),
-            preimage=_UniffiConverterOptionalString.read(buf),
+            preimage=_UniffiConverterOptionalBytes.read(buf),
             created_at=_UniffiConverterUInt64.read(buf),
             completed_at=_UniffiConverterOptionalUInt64.read(buf),
             number_of_parts=_UniffiConverterOptionalUInt64.read(buf),
@@ -3044,32 +2960,32 @@ class _UniffiConverterTypePay(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.payment_hash)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
         _UniffiConverterTypePayStatus.check_lower(value.status)
-        _UniffiConverterOptionalString.check_lower(value.destination_pubkey)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.amount_sent_msat)
         _UniffiConverterOptionalString.check_lower(value.label)
         _UniffiConverterOptionalString.check_lower(value.bolt11)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalString.check_lower(value.bolt12)
-        _UniffiConverterOptionalString.check_lower(value.preimage)
+        _UniffiConverterOptionalBytes.check_lower(value.preimage)
         _UniffiConverterUInt64.check_lower(value.created_at)
         _UniffiConverterOptionalUInt64.check_lower(value.completed_at)
         _UniffiConverterOptionalUInt64.check_lower(value.number_of_parts)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.payment_hash, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
         _UniffiConverterTypePayStatus.write(value.status, buf)
-        _UniffiConverterOptionalString.write(value.destination_pubkey, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.amount_sent_msat, buf)
         _UniffiConverterOptionalString.write(value.label, buf)
         _UniffiConverterOptionalString.write(value.bolt11, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalString.write(value.bolt12, buf)
-        _UniffiConverterOptionalString.write(value.preimage, buf)
+        _UniffiConverterOptionalBytes.write(value.preimage, buf)
         _UniffiConverterUInt64.write(value.created_at, buf)
         _UniffiConverterOptionalUInt64.write(value.completed_at, buf)
         _UniffiConverterOptionalUInt64.write(value.number_of_parts, buf)
@@ -3084,28 +3000,9 @@ class Payment:
     status: "PaymentStatus"
     description: "typing.Optional[str]"
     bolt11: "typing.Optional[str]"
-    preimage: "typing.Optional[str]"
-    """
-    Payment preimage as lowercase hex (64 chars), when known.
-    """
-
-    destination: "typing.Optional[str]"
-    """
-    Pubkey of the counterparty in the payment, as lowercase hex
-    (66 chars).
-
-    For `PaymentType::Sent`: the recipient node we paid (when CLN
-    reports it).
-
-    For `PaymentType::Received`: always `None`. Lightning's privacy
-    model does not reveal the sender's pubkey to the recipient — the
-    HTLC arrives via one of our channel peers, but that peer is
-    usually just a router, not the original payer. The only pubkey
-    derivable from a paid invoice is the *payee* (i.e. our own
-    node), which is uninteresting to display per-row.
-    """
-
-    def __init__(self, *, id: "str", payment_type: "PaymentType", payment_time: "int", amount_msat: "int", fee_msat: "int", status: "PaymentStatus", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", preimage: "typing.Optional[str]", destination: "typing.Optional[str]"):
+    preimage: "typing.Optional[bytes]"
+    destination: "typing.Optional[bytes]"
+    def __init__(self, *, id: "str", payment_type: "PaymentType", payment_time: "int", amount_msat: "int", fee_msat: "int", status: "PaymentStatus", description: "typing.Optional[str]", bolt11: "typing.Optional[str]", preimage: "typing.Optional[bytes]", destination: "typing.Optional[bytes]"):
         self.id = id
         self.payment_type = payment_type
         self.payment_time = payment_time
@@ -3155,8 +3052,8 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
             status=_UniffiConverterTypePaymentStatus.read(buf),
             description=_UniffiConverterOptionalString.read(buf),
             bolt11=_UniffiConverterOptionalString.read(buf),
-            preimage=_UniffiConverterOptionalString.read(buf),
-            destination=_UniffiConverterOptionalString.read(buf),
+            preimage=_UniffiConverterOptionalBytes.read(buf),
+            destination=_UniffiConverterOptionalBytes.read(buf),
         )
 
     @staticmethod
@@ -3169,8 +3066,8 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
         _UniffiConverterTypePaymentStatus.check_lower(value.status)
         _UniffiConverterOptionalString.check_lower(value.description)
         _UniffiConverterOptionalString.check_lower(value.bolt11)
-        _UniffiConverterOptionalString.check_lower(value.preimage)
-        _UniffiConverterOptionalString.check_lower(value.destination)
+        _UniffiConverterOptionalBytes.check_lower(value.preimage)
+        _UniffiConverterOptionalBytes.check_lower(value.destination)
 
     @staticmethod
     def write(value, buf):
@@ -3182,22 +3079,18 @@ class _UniffiConverterTypePayment(_UniffiConverterRustBuffer):
         _UniffiConverterTypePaymentStatus.write(value.status, buf)
         _UniffiConverterOptionalString.write(value.description, buf)
         _UniffiConverterOptionalString.write(value.bolt11, buf)
-        _UniffiConverterOptionalString.write(value.preimage, buf)
-        _UniffiConverterOptionalString.write(value.destination, buf)
+        _UniffiConverterOptionalBytes.write(value.preimage, buf)
+        _UniffiConverterOptionalBytes.write(value.destination, buf)
 
 
 class Peer:
-    id: "str"
-    """
-    Peer node public key as lowercase hex (66 chars).
-    """
-
+    id: "bytes"
     connected: "bool"
     num_channels: "typing.Optional[int]"
     netaddr: "typing.List[str]"
     remote_addr: "typing.Optional[str]"
     features: "typing.Optional[bytes]"
-    def __init__(self, *, id: "str", connected: "bool", num_channels: "typing.Optional[int]", netaddr: "typing.List[str]", remote_addr: "typing.Optional[str]", features: "typing.Optional[bytes]"):
+    def __init__(self, *, id: "bytes", connected: "bool", num_channels: "typing.Optional[int]", netaddr: "typing.List[str]", remote_addr: "typing.Optional[str]", features: "typing.Optional[bytes]"):
         self.id = id
         self.connected = connected
         self.num_channels = num_channels
@@ -3227,7 +3120,7 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return Peer(
-            id=_UniffiConverterString.read(buf),
+            id=_UniffiConverterBytes.read(buf),
             connected=_UniffiConverterBool.read(buf),
             num_channels=_UniffiConverterOptionalUInt32.read(buf),
             netaddr=_UniffiConverterSequenceString.read(buf),
@@ -3237,7 +3130,7 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.id)
+        _UniffiConverterBytes.check_lower(value.id)
         _UniffiConverterBool.check_lower(value.connected)
         _UniffiConverterOptionalUInt32.check_lower(value.num_channels)
         _UniffiConverterSequenceString.check_lower(value.netaddr)
@@ -3246,7 +3139,7 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.id, buf)
+        _UniffiConverterBytes.write(value.id, buf)
         _UniffiConverterBool.write(value.connected, buf)
         _UniffiConverterOptionalUInt32.write(value.num_channels, buf)
         _UniffiConverterSequenceString.write(value.netaddr, buf)
@@ -3255,43 +3148,18 @@ class _UniffiConverterTypePeer(_UniffiConverterRustBuffer):
 
 
 class PeerChannel:
-    peer_id: "str"
-    """
-    Peer node public key as lowercase hex (66 chars).
-    """
-
+    peer_id: "bytes"
     peer_connected: "bool"
     state: "ChannelState"
     short_channel_id: "typing.Optional[str]"
-    channel_id: "typing.Optional[str]"
-    """
-    Channel id as lowercase hex (64 chars).
-    """
-
-    funding_txid: "typing.Optional[str]"
-    """
-    Funding transaction id as lowercase hex (64 chars).
-    """
-
+    channel_id: "typing.Optional[bytes]"
+    funding_txid: "typing.Optional[bytes]"
     funding_outnum: "typing.Optional[int]"
     to_us_msat: "typing.Optional[int]"
     total_msat: "typing.Optional[int]"
     spendable_msat: "typing.Optional[int]"
     receivable_msat: "typing.Optional[int]"
-    closer: "typing.Optional[ChannelSide]"
-    """
-    Which side initiated the close, if the channel is closing or closed.
-    """
-
-    status: "typing.List[str]"
-    """
-    Human-readable status strings from CLN, ordered oldest to newest.
-    For a channel in `Onchain` state, the last entry indicates whether
-    our payout is still timelocked (`DELAYED_OUTPUT_TO_US`) or already
-    available in the on-chain balance.
-    """
-
-    def __init__(self, *, peer_id: "str", peer_connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[str]", funding_txid: "typing.Optional[str]", funding_outnum: "typing.Optional[int]", to_us_msat: "typing.Optional[int]", total_msat: "typing.Optional[int]", spendable_msat: "typing.Optional[int]", receivable_msat: "typing.Optional[int]", closer: "typing.Optional[ChannelSide]", status: "typing.List[str]"):
+    def __init__(self, *, peer_id: "bytes", peer_connected: "bool", state: "ChannelState", short_channel_id: "typing.Optional[str]", channel_id: "typing.Optional[bytes]", funding_txid: "typing.Optional[bytes]", funding_outnum: "typing.Optional[int]", to_us_msat: "typing.Optional[int]", total_msat: "typing.Optional[int]", spendable_msat: "typing.Optional[int]", receivable_msat: "typing.Optional[int]"):
         self.peer_id = peer_id
         self.peer_connected = peer_connected
         self.state = state
@@ -3303,11 +3171,9 @@ class PeerChannel:
         self.total_msat = total_msat
         self.spendable_msat = spendable_msat
         self.receivable_msat = receivable_msat
-        self.closer = closer
-        self.status = status
 
     def __str__(self):
-        return "PeerChannel(peer_id={}, peer_connected={}, state={}, short_channel_id={}, channel_id={}, funding_txid={}, funding_outnum={}, to_us_msat={}, total_msat={}, spendable_msat={}, receivable_msat={}, closer={}, status={})".format(self.peer_id, self.peer_connected, self.state, self.short_channel_id, self.channel_id, self.funding_txid, self.funding_outnum, self.to_us_msat, self.total_msat, self.spendable_msat, self.receivable_msat, self.closer, self.status)
+        return "PeerChannel(peer_id={}, peer_connected={}, state={}, short_channel_id={}, channel_id={}, funding_txid={}, funding_outnum={}, to_us_msat={}, total_msat={}, spendable_msat={}, receivable_msat={})".format(self.peer_id, self.peer_connected, self.state, self.short_channel_id, self.channel_id, self.funding_txid, self.funding_outnum, self.to_us_msat, self.total_msat, self.spendable_msat, self.receivable_msat)
 
     def __eq__(self, other):
         if self.peer_id != other.peer_id:
@@ -3332,62 +3198,52 @@ class PeerChannel:
             return False
         if self.receivable_msat != other.receivable_msat:
             return False
-        if self.closer != other.closer:
-            return False
-        if self.status != other.status:
-            return False
         return True
 
 class _UniffiConverterTypePeerChannel(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         return PeerChannel(
-            peer_id=_UniffiConverterString.read(buf),
+            peer_id=_UniffiConverterBytes.read(buf),
             peer_connected=_UniffiConverterBool.read(buf),
             state=_UniffiConverterTypeChannelState.read(buf),
             short_channel_id=_UniffiConverterOptionalString.read(buf),
-            channel_id=_UniffiConverterOptionalString.read(buf),
-            funding_txid=_UniffiConverterOptionalString.read(buf),
+            channel_id=_UniffiConverterOptionalBytes.read(buf),
+            funding_txid=_UniffiConverterOptionalBytes.read(buf),
             funding_outnum=_UniffiConverterOptionalUInt32.read(buf),
             to_us_msat=_UniffiConverterOptionalUInt64.read(buf),
             total_msat=_UniffiConverterOptionalUInt64.read(buf),
             spendable_msat=_UniffiConverterOptionalUInt64.read(buf),
             receivable_msat=_UniffiConverterOptionalUInt64.read(buf),
-            closer=_UniffiConverterOptionalTypeChannelSide.read(buf),
-            status=_UniffiConverterSequenceString.read(buf),
         )
 
     @staticmethod
     def check_lower(value):
-        _UniffiConverterString.check_lower(value.peer_id)
+        _UniffiConverterBytes.check_lower(value.peer_id)
         _UniffiConverterBool.check_lower(value.peer_connected)
         _UniffiConverterTypeChannelState.check_lower(value.state)
         _UniffiConverterOptionalString.check_lower(value.short_channel_id)
-        _UniffiConverterOptionalString.check_lower(value.channel_id)
-        _UniffiConverterOptionalString.check_lower(value.funding_txid)
+        _UniffiConverterOptionalBytes.check_lower(value.channel_id)
+        _UniffiConverterOptionalBytes.check_lower(value.funding_txid)
         _UniffiConverterOptionalUInt32.check_lower(value.funding_outnum)
         _UniffiConverterOptionalUInt64.check_lower(value.to_us_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.total_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.spendable_msat)
         _UniffiConverterOptionalUInt64.check_lower(value.receivable_msat)
-        _UniffiConverterOptionalTypeChannelSide.check_lower(value.closer)
-        _UniffiConverterSequenceString.check_lower(value.status)
 
     @staticmethod
     def write(value, buf):
-        _UniffiConverterString.write(value.peer_id, buf)
+        _UniffiConverterBytes.write(value.peer_id, buf)
         _UniffiConverterBool.write(value.peer_connected, buf)
         _UniffiConverterTypeChannelState.write(value.state, buf)
         _UniffiConverterOptionalString.write(value.short_channel_id, buf)
-        _UniffiConverterOptionalString.write(value.channel_id, buf)
-        _UniffiConverterOptionalString.write(value.funding_txid, buf)
+        _UniffiConverterOptionalBytes.write(value.channel_id, buf)
+        _UniffiConverterOptionalBytes.write(value.funding_txid, buf)
         _UniffiConverterOptionalUInt32.write(value.funding_outnum, buf)
         _UniffiConverterOptionalUInt64.write(value.to_us_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.total_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.spendable_msat, buf)
         _UniffiConverterOptionalUInt64.write(value.receivable_msat, buf)
-        _UniffiConverterOptionalTypeChannelSide.write(value.closer, buf)
-        _UniffiConverterSequenceString.write(value.status, buf)
 
 
 class ReceiveResponse:
@@ -3433,25 +3289,13 @@ class _UniffiConverterTypeReceiveResponse(_UniffiConverterRustBuffer):
 
 class SendResponse:
     status: "PayStatus"
-    preimage: "str"
-    """
-    Payment preimage (proof of payment) as lowercase hex (64 chars).
-    """
-
-    payment_hash: "str"
-    """
-    Payment hash as lowercase hex (64 chars).
-    """
-
-    destination_pubkey: "typing.Optional[str]"
-    """
-    Recipient node pubkey as lowercase hex (66 chars), if known.
-    """
-
+    preimage: "bytes"
+    payment_hash: "bytes"
+    destination_pubkey: "typing.Optional[bytes]"
     amount_msat: "int"
     amount_sent_msat: "int"
     parts: "int"
-    def __init__(self, *, status: "PayStatus", preimage: "str", payment_hash: "str", destination_pubkey: "typing.Optional[str]", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
+    def __init__(self, *, status: "PayStatus", preimage: "bytes", payment_hash: "bytes", destination_pubkey: "typing.Optional[bytes]", amount_msat: "int", amount_sent_msat: "int", parts: "int"):
         self.status = status
         self.preimage = preimage
         self.payment_hash = payment_hash
@@ -3485,9 +3329,9 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     def read(buf):
         return SendResponse(
             status=_UniffiConverterTypePayStatus.read(buf),
-            preimage=_UniffiConverterString.read(buf),
-            payment_hash=_UniffiConverterString.read(buf),
-            destination_pubkey=_UniffiConverterOptionalString.read(buf),
+            preimage=_UniffiConverterBytes.read(buf),
+            payment_hash=_UniffiConverterBytes.read(buf),
+            destination_pubkey=_UniffiConverterOptionalBytes.read(buf),
             amount_msat=_UniffiConverterUInt64.read(buf),
             amount_sent_msat=_UniffiConverterUInt64.read(buf),
             parts=_UniffiConverterUInt32.read(buf),
@@ -3496,9 +3340,9 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def check_lower(value):
         _UniffiConverterTypePayStatus.check_lower(value.status)
-        _UniffiConverterString.check_lower(value.preimage)
-        _UniffiConverterString.check_lower(value.payment_hash)
-        _UniffiConverterOptionalString.check_lower(value.destination_pubkey)
+        _UniffiConverterBytes.check_lower(value.preimage)
+        _UniffiConverterBytes.check_lower(value.payment_hash)
+        _UniffiConverterOptionalBytes.check_lower(value.destination_pubkey)
         _UniffiConverterUInt64.check_lower(value.amount_msat)
         _UniffiConverterUInt64.check_lower(value.amount_sent_msat)
         _UniffiConverterUInt32.check_lower(value.parts)
@@ -3506,54 +3350,12 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterTypePayStatus.write(value.status, buf)
-        _UniffiConverterString.write(value.preimage, buf)
-        _UniffiConverterString.write(value.payment_hash, buf)
-        _UniffiConverterOptionalString.write(value.destination_pubkey, buf)
+        _UniffiConverterBytes.write(value.preimage, buf)
+        _UniffiConverterBytes.write(value.payment_hash, buf)
+        _UniffiConverterOptionalBytes.write(value.destination_pubkey, buf)
         _UniffiConverterUInt64.write(value.amount_msat, buf)
         _UniffiConverterUInt64.write(value.amount_sent_msat, buf)
         _UniffiConverterUInt32.write(value.parts, buf)
-
-
-
-
-
-class ChannelSide(enum.Enum):
-    """
-    Which side of a channel performed a given action (e.g. initiated close).
-    """
-
-    LOCAL = 0
-    
-    REMOTE = 1
-    
-
-
-class _UniffiConverterTypeChannelSide(_UniffiConverterRustBuffer):
-    @staticmethod
-    def read(buf):
-        variant = buf.read_i32()
-        if variant == 1:
-            return ChannelSide.LOCAL
-        if variant == 2:
-            return ChannelSide.REMOTE
-        raise InternalError("Raw enum value doesn't match any cases")
-
-    @staticmethod
-    def check_lower(value):
-        if value == ChannelSide.LOCAL:
-            return
-        if value == ChannelSide.REMOTE:
-            return
-        raise ValueError(value)
-
-    @staticmethod
-    def write(value, buf):
-        if value == ChannelSide.LOCAL:
-            buf.write_i32(1)
-        if value == ChannelSide.REMOTE:
-            buf.write_i32(2)
-
-
 
 
 
@@ -3585,14 +3387,6 @@ class ChannelState(enum.Enum):
     DUALOPEND_OPEN_COMMITTED = 11
     
     DUALOPEND_OPEN_COMMIT_READY = 12
-    
-    UNKNOWN = 13
-    """
-    A state reported by the node that this SDK doesn't recognize.
-    Returned when CLN introduces a new channel state after this SDK
-    was built. Treated as neither open nor closing by balance math.
-    """
-
     
 
 
@@ -3626,8 +3420,6 @@ class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
             return ChannelState.DUALOPEND_OPEN_COMMITTED
         if variant == 13:
             return ChannelState.DUALOPEND_OPEN_COMMIT_READY
-        if variant == 14:
-            return ChannelState.UNKNOWN
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
@@ -3657,8 +3449,6 @@ class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
         if value == ChannelState.DUALOPEND_OPEN_COMMITTED:
             return
         if value == ChannelState.DUALOPEND_OPEN_COMMIT_READY:
-            return
-        if value == ChannelState.UNKNOWN:
             return
         raise ValueError(value)
 
@@ -3690,8 +3480,6 @@ class _UniffiConverterTypeChannelState(_UniffiConverterRustBuffer):
             buf.write_i32(12)
         if value == ChannelState.DUALOPEND_OPEN_COMMIT_READY:
             buf.write_i32(13)
-        if value == ChannelState.UNKNOWN:
-            buf.write_i32(14)
 
 
 
@@ -3889,7 +3677,9 @@ class _UniffiConverterTypeError(_UniffiConverterRustBuffer):
 
 class InputType:
     """
-    The result of parsing user input.
+    The result of `parse_input`: a fully-resolved input ready for the
+    caller's next action. LNURL bech32 strings and Lightning Addresses
+    are resolved over HTTP into typed pay or withdraw request data.
     """
 
     def __init__(self):
@@ -3898,7 +3688,7 @@ class InputType:
     # Each enum variant is a nested class of the enum itself.
     class BOLT11:
         """
-        A BOLT11 Lightning invoice.
+        A BOLT11 Lightning invoice. No HTTP was performed.
         """
 
         invoice: "ParsedInvoice"
@@ -3918,7 +3708,7 @@ class InputType:
     
     class NODE_ID:
         """
-        A Lightning node public key (66 hex characters, 33 bytes compressed).
+        A Lightning node public key. No HTTP was performed.
         """
 
         node_id: "str"
@@ -3936,6 +3726,46 @@ class InputType:
                 return False
             return True
     
+    class LN_URL_PAY:
+        """
+        An LNURL-pay endpoint with the service's parameters fetched.
+        """
+
+        data: "LnUrlPayRequestData"
+
+        def __init__(self,data: "LnUrlPayRequestData"):
+            self.data = data
+
+        def __str__(self):
+            return "InputType.LN_URL_PAY(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_LN_URL_PAY():
+                return False
+            if self.data != other.data:
+                return False
+            return True
+    
+    class LN_URL_WITHDRAW:
+        """
+        An LNURL-withdraw endpoint with the service's parameters fetched.
+        """
+
+        data: "LnUrlWithdrawRequestData"
+
+        def __init__(self,data: "LnUrlWithdrawRequestData"):
+            self.data = data
+
+        def __str__(self):
+            return "InputType.LN_URL_WITHDRAW(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_LN_URL_WITHDRAW():
+                return False
+            if self.data != other.data:
+                return False
+            return True
+    
     
 
     # For each variant, we have `is_NAME` and `is_name` methods for easily checking
@@ -3948,6 +3778,14 @@ class InputType:
         return isinstance(self, InputType.NODE_ID)
     def is_node_id(self) -> bool:
         return isinstance(self, InputType.NODE_ID)
+    def is_LN_URL_PAY(self) -> bool:
+        return isinstance(self, InputType.LN_URL_PAY)
+    def is_ln_url_pay(self) -> bool:
+        return isinstance(self, InputType.LN_URL_PAY)
+    def is_LN_URL_WITHDRAW(self) -> bool:
+        return isinstance(self, InputType.LN_URL_WITHDRAW)
+    def is_ln_url_withdraw(self) -> bool:
+        return isinstance(self, InputType.LN_URL_WITHDRAW)
     
 
 # Now, a little trick - we make each nested variant class be a subclass of the main
@@ -3955,6 +3793,8 @@ class InputType:
 # We might be able to do this a little more neatly with a metaclass, but this'll do.
 InputType.BOLT11 = type("InputType.BOLT11", (InputType.BOLT11, InputType,), {})  # type: ignore
 InputType.NODE_ID = type("InputType.NODE_ID", (InputType.NODE_ID, InputType,), {})  # type: ignore
+InputType.LN_URL_PAY = type("InputType.LN_URL_PAY", (InputType.LN_URL_PAY, InputType,), {})  # type: ignore
+InputType.LN_URL_WITHDRAW = type("InputType.LN_URL_WITHDRAW", (InputType.LN_URL_WITHDRAW, InputType,), {})  # type: ignore
 
 
 
@@ -3971,6 +3811,14 @@ class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
             return InputType.NODE_ID(
                 _UniffiConverterString.read(buf),
             )
+        if variant == 3:
+            return InputType.LN_URL_PAY(
+                _UniffiConverterTypeLnUrlPayRequestData.read(buf),
+            )
+        if variant == 4:
+            return InputType.LN_URL_WITHDRAW(
+                _UniffiConverterTypeLnUrlWithdrawRequestData.read(buf),
+            )
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
@@ -3980,6 +3828,12 @@ class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
             return
         if value.is_NODE_ID():
             _UniffiConverterString.check_lower(value.node_id)
+            return
+        if value.is_LN_URL_PAY():
+            _UniffiConverterTypeLnUrlPayRequestData.check_lower(value.data)
+            return
+        if value.is_LN_URL_WITHDRAW():
+            _UniffiConverterTypeLnUrlWithdrawRequestData.check_lower(value.data)
             return
         raise ValueError(value)
 
@@ -3991,6 +3845,12 @@ class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
         if value.is_NODE_ID():
             buf.write_i32(2)
             _UniffiConverterString.write(value.node_id, buf)
+        if value.is_LN_URL_PAY():
+            buf.write_i32(3)
+            _UniffiConverterTypeLnUrlPayRequestData.write(value.data, buf)
+        if value.is_LN_URL_WITHDRAW():
+            buf.write_i32(4)
+            _UniffiConverterTypeLnUrlWithdrawRequestData.write(value.data, buf)
 
 
 
@@ -4086,65 +3946,256 @@ class _UniffiConverterTypeListIndex(_UniffiConverterRustBuffer):
 
 
 
-class LogLevel(enum.Enum):
+class LnUrlPayResult:
     """
-    Log level for filtering messages.
+    Result of an LNURL-pay operation.
     """
 
-    ERROR = 0
+    def __init__(self):
+        raise RuntimeError("LnUrlPayResult cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class ENDPOINT_SUCCESS:
+        """
+        Payment succeeded.
+        """
+
+        data: "LnUrlPaySuccessData"
+
+        def __init__(self,data: "LnUrlPaySuccessData"):
+            self.data = data
+
+        def __str__(self):
+            return "LnUrlPayResult.ENDPOINT_SUCCESS(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_ENDPOINT_SUCCESS():
+                return False
+            if self.data != other.data:
+                return False
+            return True
     
-    WARN = 1
+    class ENDPOINT_ERROR:
+        """
+        The LNURL service returned an error before the invoice was paid.
+        """
+
+        data: "LnUrlErrorData"
+
+        def __init__(self,data: "LnUrlErrorData"):
+            self.data = data
+
+        def __str__(self):
+            return "LnUrlPayResult.ENDPOINT_ERROR(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_ENDPOINT_ERROR():
+                return False
+            if self.data != other.data:
+                return False
+            return True
     
-    INFO = 2
+    class PAY_ERROR:
+        """
+        The invoice was fetched successfully but paying it failed.
+        """
+
+        data: "LnUrlPayErrorData"
+
+        def __init__(self,data: "LnUrlPayErrorData"):
+            self.data = data
+
+        def __str__(self):
+            return "LnUrlPayResult.PAY_ERROR(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_PAY_ERROR():
+                return False
+            if self.data != other.data:
+                return False
+            return True
     
-    DEBUG = 3
-    
-    TRACE = 4
     
 
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_ENDPOINT_SUCCESS(self) -> bool:
+        return isinstance(self, LnUrlPayResult.ENDPOINT_SUCCESS)
+    def is_endpoint_success(self) -> bool:
+        return isinstance(self, LnUrlPayResult.ENDPOINT_SUCCESS)
+    def is_ENDPOINT_ERROR(self) -> bool:
+        return isinstance(self, LnUrlPayResult.ENDPOINT_ERROR)
+    def is_endpoint_error(self) -> bool:
+        return isinstance(self, LnUrlPayResult.ENDPOINT_ERROR)
+    def is_PAY_ERROR(self) -> bool:
+        return isinstance(self, LnUrlPayResult.PAY_ERROR)
+    def is_pay_error(self) -> bool:
+        return isinstance(self, LnUrlPayResult.PAY_ERROR)
+    
 
-class _UniffiConverterTypeLogLevel(_UniffiConverterRustBuffer):
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+LnUrlPayResult.ENDPOINT_SUCCESS = type("LnUrlPayResult.ENDPOINT_SUCCESS", (LnUrlPayResult.ENDPOINT_SUCCESS, LnUrlPayResult,), {})  # type: ignore
+LnUrlPayResult.ENDPOINT_ERROR = type("LnUrlPayResult.ENDPOINT_ERROR", (LnUrlPayResult.ENDPOINT_ERROR, LnUrlPayResult,), {})  # type: ignore
+LnUrlPayResult.PAY_ERROR = type("LnUrlPayResult.PAY_ERROR", (LnUrlPayResult.PAY_ERROR, LnUrlPayResult,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeLnUrlPayResult(_UniffiConverterRustBuffer):
     @staticmethod
     def read(buf):
         variant = buf.read_i32()
         if variant == 1:
-            return LogLevel.ERROR
+            return LnUrlPayResult.ENDPOINT_SUCCESS(
+                _UniffiConverterTypeLnUrlPaySuccessData.read(buf),
+            )
         if variant == 2:
-            return LogLevel.WARN
+            return LnUrlPayResult.ENDPOINT_ERROR(
+                _UniffiConverterTypeLnUrlErrorData.read(buf),
+            )
         if variant == 3:
-            return LogLevel.INFO
-        if variant == 4:
-            return LogLevel.DEBUG
-        if variant == 5:
-            return LogLevel.TRACE
+            return LnUrlPayResult.PAY_ERROR(
+                _UniffiConverterTypeLnUrlPayErrorData.read(buf),
+            )
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
     def check_lower(value):
-        if value == LogLevel.ERROR:
+        if value.is_ENDPOINT_SUCCESS():
+            _UniffiConverterTypeLnUrlPaySuccessData.check_lower(value.data)
             return
-        if value == LogLevel.WARN:
+        if value.is_ENDPOINT_ERROR():
+            _UniffiConverterTypeLnUrlErrorData.check_lower(value.data)
             return
-        if value == LogLevel.INFO:
-            return
-        if value == LogLevel.DEBUG:
-            return
-        if value == LogLevel.TRACE:
+        if value.is_PAY_ERROR():
+            _UniffiConverterTypeLnUrlPayErrorData.check_lower(value.data)
             return
         raise ValueError(value)
 
     @staticmethod
     def write(value, buf):
-        if value == LogLevel.ERROR:
+        if value.is_ENDPOINT_SUCCESS():
             buf.write_i32(1)
-        if value == LogLevel.WARN:
+            _UniffiConverterTypeLnUrlPaySuccessData.write(value.data, buf)
+        if value.is_ENDPOINT_ERROR():
             buf.write_i32(2)
-        if value == LogLevel.INFO:
+            _UniffiConverterTypeLnUrlErrorData.write(value.data, buf)
+        if value.is_PAY_ERROR():
             buf.write_i32(3)
-        if value == LogLevel.DEBUG:
-            buf.write_i32(4)
-        if value == LogLevel.TRACE:
-            buf.write_i32(5)
+            _UniffiConverterTypeLnUrlPayErrorData.write(value.data, buf)
+
+
+
+
+
+
+
+class LnUrlWithdrawResult:
+    """
+    Result of an LNURL-withdraw operation.
+    """
+
+    def __init__(self):
+        raise RuntimeError("LnUrlWithdrawResult cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class OK:
+        """
+        The service accepted our invoice and will pay it.
+        """
+
+        data: "LnUrlWithdrawSuccessData"
+
+        def __init__(self,data: "LnUrlWithdrawSuccessData"):
+            self.data = data
+
+        def __str__(self):
+            return "LnUrlWithdrawResult.OK(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_OK():
+                return False
+            if self.data != other.data:
+                return False
+            return True
+    
+    class ERROR_STATUS:
+        """
+        The LNURL service returned an error.
+        """
+
+        data: "LnUrlErrorData"
+
+        def __init__(self,data: "LnUrlErrorData"):
+            self.data = data
+
+        def __str__(self):
+            return "LnUrlWithdrawResult.ERROR_STATUS(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_ERROR_STATUS():
+                return False
+            if self.data != other.data:
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_OK(self) -> bool:
+        return isinstance(self, LnUrlWithdrawResult.OK)
+    def is_ok(self) -> bool:
+        return isinstance(self, LnUrlWithdrawResult.OK)
+    def is_ERROR_STATUS(self) -> bool:
+        return isinstance(self, LnUrlWithdrawResult.ERROR_STATUS)
+    def is_error_status(self) -> bool:
+        return isinstance(self, LnUrlWithdrawResult.ERROR_STATUS)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+LnUrlWithdrawResult.OK = type("LnUrlWithdrawResult.OK", (LnUrlWithdrawResult.OK, LnUrlWithdrawResult,), {})  # type: ignore
+LnUrlWithdrawResult.ERROR_STATUS = type("LnUrlWithdrawResult.ERROR_STATUS", (LnUrlWithdrawResult.ERROR_STATUS, LnUrlWithdrawResult,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeLnUrlWithdrawResult(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return LnUrlWithdrawResult.OK(
+                _UniffiConverterTypeLnUrlWithdrawSuccessData.read(buf),
+            )
+        if variant == 2:
+            return LnUrlWithdrawResult.ERROR_STATUS(
+                _UniffiConverterTypeLnUrlErrorData.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value.is_OK():
+            _UniffiConverterTypeLnUrlWithdrawSuccessData.check_lower(value.data)
+            return
+        if value.is_ERROR_STATUS():
+            _UniffiConverterTypeLnUrlErrorData.check_lower(value.data)
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value.is_OK():
+            buf.write_i32(1)
+            _UniffiConverterTypeLnUrlWithdrawSuccessData.write(value.data, buf)
+        if value.is_ERROR_STATUS():
+            buf.write_i32(2)
+            _UniffiConverterTypeLnUrlErrorData.write(value.data, buf)
 
 
 
@@ -4219,6 +4270,24 @@ class NodeEvent:
                 return False
             return True
     
+    class UNKNOWN:
+        """
+        An unknown event type was received. This can happen if the
+        server sends a new event type that this client doesn't know about.
+        """
+
+
+        def __init__(self,):
+            pass
+
+        def __str__(self):
+            return "NodeEvent.UNKNOWN()".format()
+
+        def __eq__(self, other):
+            if not other.is_UNKNOWN():
+                return False
+            return True
+    
     
 
     # For each variant, we have `is_NAME` and `is_name` methods for easily checking
@@ -4227,12 +4296,17 @@ class NodeEvent:
         return isinstance(self, NodeEvent.INVOICE_PAID)
     def is_invoice_paid(self) -> bool:
         return isinstance(self, NodeEvent.INVOICE_PAID)
+    def is_UNKNOWN(self) -> bool:
+        return isinstance(self, NodeEvent.UNKNOWN)
+    def is_unknown(self) -> bool:
+        return isinstance(self, NodeEvent.UNKNOWN)
     
 
 # Now, a little trick - we make each nested variant class be a subclass of the main
 # enum class, so that method calls and instance checks etc will work intuitively.
 # We might be able to do this a little more neatly with a metaclass, but this'll do.
 NodeEvent.INVOICE_PAID = type("NodeEvent.INVOICE_PAID", (NodeEvent.INVOICE_PAID, NodeEvent,), {})  # type: ignore
+NodeEvent.UNKNOWN = type("NodeEvent.UNKNOWN", (NodeEvent.UNKNOWN, NodeEvent,), {})  # type: ignore
 
 
 
@@ -4245,12 +4319,17 @@ class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
             return NodeEvent.INVOICE_PAID(
                 _UniffiConverterTypeInvoicePaidEvent.read(buf),
             )
+        if variant == 2:
+            return NodeEvent.UNKNOWN(
+            )
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
     def check_lower(value):
         if value.is_INVOICE_PAID():
             _UniffiConverterTypeInvoicePaidEvent.check_lower(value.details)
+            return
+        if value.is_UNKNOWN():
             return
         raise ValueError(value)
 
@@ -4259,6 +4338,8 @@ class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
         if value.is_INVOICE_PAID():
             buf.write_i32(1)
             _UniffiConverterTypeInvoicePaidEvent.write(value.details, buf)
+        if value.is_UNKNOWN():
+            buf.write_i32(2)
 
 
 
@@ -4487,122 +4568,165 @@ class _UniffiConverterTypePaymentTypeFilter(_UniffiConverterRustBuffer):
 
 
 
-class LogListener(typing.Protocol):
+
+class SuccessActionProcessed:
     """
-    Callback interface for receiving log messages.
+    A processed success action from an LNURL-pay callback.
 
-    `on_log` is invoked on the thread that emitted the log — which can
-    be any tokio worker or background thread inside the SDK. Keep the
-    implementation cheap and non-blocking; if you need UI updates,
-    hand the entry off to your app's main thread.
-    """
-
-    def on_log(self, entry: "LogEntry"):
-        raise NotImplementedError
-
-
-# Put all the bits inside a class to keep the top-level namespace clean
-class _UniffiTraitImplLogListener:
-    # For each method, generate a callback function to pass to Rust
-
-    @_UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0
-    def on_log(
-            uniffi_handle,
-            entry,
-            uniffi_out_return,
-            uniffi_call_status_ptr,
-        ):
-        uniffi_obj = _UniffiConverterTypeLogListener._handle_map.get(uniffi_handle)
-        def make_call():
-            args = (_UniffiConverterTypeLogEntry.lift(entry), )
-            method = uniffi_obj.on_log
-            return method(*args)
-
-        
-        write_return_value = lambda v: None
-        _uniffi_trait_interface_call(
-                uniffi_call_status_ptr.contents,
-                make_call,
-                write_return_value,
-        )
-
-    @_UNIFFI_CALLBACK_INTERFACE_FREE
-    def _uniffi_free(uniffi_handle):
-        _UniffiConverterTypeLogListener._handle_map.remove(uniffi_handle)
-
-    # Generate the FFI VTable.  This has a field for each callback interface method.
-    _uniffi_vtable = _UniffiVTableCallbackInterfaceLogListener(
-        on_log,
-        _uniffi_free
-    )
-    # Send Rust a pointer to the VTable.  Note: this means we need to keep the struct alive forever,
-    # or else bad things will happen when Rust tries to access it.
-    _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener(ctypes.byref(_uniffi_vtable))
-
-# The _UniffiConverter which transforms the Callbacks in to Handles to pass to Rust.
-_UniffiConverterTypeLogListener = _UniffiCallbackInterfaceFfiConverter()
-
-
-
-
-class NodeEventListener(typing.Protocol):
-    """
-    Callback interface for receiving node events.
-
-    `on_event` is invoked from the SDK's internal event-dispatch task.
-    Implementations should be cheap and non-blocking; to update UI,
-    dispatch to the main thread from inside the handler.
-
-    Installed via `NodeBuilder::with_event_listener(...)` so events
-    emitted during node bring-up are captured. The polling-style
-    `Node::stream_node_events()` API is still available for callers
-    that prefer to drive events themselves.
+    For Message and Url this is passed through as-is. For Aes the
+    ciphertext has been decrypted using the payment preimage.
     """
 
-    def on_event(self, event: "NodeEvent"):
-        raise NotImplementedError
+    def __init__(self):
+        raise RuntimeError("SuccessActionProcessed cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class MESSAGE:
+        """
+        Display a message to the user.
+        """
+
+        message: "str"
+
+        def __init__(self,message: "str"):
+            self.message = message
+
+        def __str__(self):
+            return "SuccessActionProcessed.MESSAGE(message={})".format(self.message)
+
+        def __eq__(self, other):
+            if not other.is_MESSAGE():
+                return False
+            if self.message != other.message:
+                return False
+            return True
+    
+    class URL:
+        """
+        Display a URL to the user.
+        """
+
+        description: "str"
+        url: "str"
+
+        def __init__(self,description: "str", url: "str"):
+            self.description = description
+            self.url = url
+
+        def __str__(self):
+            return "SuccessActionProcessed.URL(description={}, url={})".format(self.description, self.url)
+
+        def __eq__(self, other):
+            if not other.is_URL():
+                return False
+            if self.description != other.description:
+                return False
+            if self.url != other.url:
+                return False
+            return True
+    
+    class AES:
+        """
+        Decrypted AES payload (LUD-10).
+        """
+
+        description: "str"
+        plaintext: "str"
+
+        def __init__(self,description: "str", plaintext: "str"):
+            self.description = description
+            self.plaintext = plaintext
+
+        def __str__(self):
+            return "SuccessActionProcessed.AES(description={}, plaintext={})".format(self.description, self.plaintext)
+
+        def __eq__(self, other):
+            if not other.is_AES():
+                return False
+            if self.description != other.description:
+                return False
+            if self.plaintext != other.plaintext:
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_MESSAGE(self) -> bool:
+        return isinstance(self, SuccessActionProcessed.MESSAGE)
+    def is_message(self) -> bool:
+        return isinstance(self, SuccessActionProcessed.MESSAGE)
+    def is_URL(self) -> bool:
+        return isinstance(self, SuccessActionProcessed.URL)
+    def is_url(self) -> bool:
+        return isinstance(self, SuccessActionProcessed.URL)
+    def is_AES(self) -> bool:
+        return isinstance(self, SuccessActionProcessed.AES)
+    def is_aes(self) -> bool:
+        return isinstance(self, SuccessActionProcessed.AES)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+SuccessActionProcessed.MESSAGE = type("SuccessActionProcessed.MESSAGE", (SuccessActionProcessed.MESSAGE, SuccessActionProcessed,), {})  # type: ignore
+SuccessActionProcessed.URL = type("SuccessActionProcessed.URL", (SuccessActionProcessed.URL, SuccessActionProcessed,), {})  # type: ignore
+SuccessActionProcessed.AES = type("SuccessActionProcessed.AES", (SuccessActionProcessed.AES, SuccessActionProcessed,), {})  # type: ignore
 
 
-# Put all the bits inside a class to keep the top-level namespace clean
-class _UniffiTraitImplNodeEventListener:
-    # For each method, generate a callback function to pass to Rust
 
-    @_UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0
-    def on_event(
-            uniffi_handle,
-            event,
-            uniffi_out_return,
-            uniffi_call_status_ptr,
-        ):
-        uniffi_obj = _UniffiConverterTypeNodeEventListener._handle_map.get(uniffi_handle)
-        def make_call():
-            args = (_UniffiConverterTypeNodeEvent.lift(event), )
-            method = uniffi_obj.on_event
-            return method(*args)
 
-        
-        write_return_value = lambda v: None
-        _uniffi_trait_interface_call(
-                uniffi_call_status_ptr.contents,
-                make_call,
-                write_return_value,
-        )
+class _UniffiConverterTypeSuccessActionProcessed(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return SuccessActionProcessed.MESSAGE(
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 2:
+            return SuccessActionProcessed.URL(
+                _UniffiConverterString.read(buf),
+                _UniffiConverterString.read(buf),
+            )
+        if variant == 3:
+            return SuccessActionProcessed.AES(
+                _UniffiConverterString.read(buf),
+                _UniffiConverterString.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
 
-    @_UNIFFI_CALLBACK_INTERFACE_FREE
-    def _uniffi_free(uniffi_handle):
-        _UniffiConverterTypeNodeEventListener._handle_map.remove(uniffi_handle)
+    @staticmethod
+    def check_lower(value):
+        if value.is_MESSAGE():
+            _UniffiConverterString.check_lower(value.message)
+            return
+        if value.is_URL():
+            _UniffiConverterString.check_lower(value.description)
+            _UniffiConverterString.check_lower(value.url)
+            return
+        if value.is_AES():
+            _UniffiConverterString.check_lower(value.description)
+            _UniffiConverterString.check_lower(value.plaintext)
+            return
+        raise ValueError(value)
 
-    # Generate the FFI VTable.  This has a field for each callback interface method.
-    _uniffi_vtable = _UniffiVTableCallbackInterfaceNodeEventListener(
-        on_event,
-        _uniffi_free
-    )
-    # Send Rust a pointer to the VTable.  Note: this means we need to keep the struct alive forever,
-    # or else bad things will happen when Rust tries to access it.
-    _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener(ctypes.byref(_uniffi_vtable))
+    @staticmethod
+    def write(value, buf):
+        if value.is_MESSAGE():
+            buf.write_i32(1)
+            _UniffiConverterString.write(value.message, buf)
+        if value.is_URL():
+            buf.write_i32(2)
+            _UniffiConverterString.write(value.description, buf)
+            _UniffiConverterString.write(value.url, buf)
+        if value.is_AES():
+            buf.write_i32(3)
+            _UniffiConverterString.write(value.description, buf)
+            _UniffiConverterString.write(value.plaintext, buf)
 
-# The _UniffiConverter which transforms the Callbacks in to Handles to pass to Rust.
-_UniffiConverterTypeNodeEventListener = _UniffiCallbackInterfaceFfiConverter()
+
 
 
 
@@ -4741,33 +4865,6 @@ class _UniffiConverterOptionalBytes(_UniffiConverterRustBuffer):
 
 
 
-class _UniffiConverterOptionalTypeChannelSide(_UniffiConverterRustBuffer):
-    @classmethod
-    def check_lower(cls, value):
-        if value is not None:
-            _UniffiConverterTypeChannelSide.check_lower(value)
-
-    @classmethod
-    def write(cls, value, buf):
-        if value is None:
-            buf.write_u8(0)
-            return
-
-        buf.write_u8(1)
-        _UniffiConverterTypeChannelSide.write(value, buf)
-
-    @classmethod
-    def read(cls, buf):
-        flag = buf.read_u8()
-        if flag == 0:
-            return None
-        elif flag == 1:
-            return _UniffiConverterTypeChannelSide.read(buf)
-        else:
-            raise InternalError("Unexpected flag byte for optional type")
-
-
-
 class _UniffiConverterOptionalTypeListIndex(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -4844,6 +4941,33 @@ class _UniffiConverterOptionalTypePayStatus(_UniffiConverterRustBuffer):
             return None
         elif flag == 1:
             return _UniffiConverterTypePayStatus.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
+class _UniffiConverterOptionalTypeSuccessActionProcessed(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterTypeSuccessActionProcessed.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterTypeSuccessActionProcessed.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterTypeSuccessActionProcessed.read(buf)
         else:
             raise InternalError("Unexpected flag byte for optional type")
 
@@ -5213,8 +5337,6 @@ class CredentialsProtocol(typing.Protocol):
     background.
     """
 
-    def node_id(self, ):
-        raise NotImplementedError
     def save(self, ):
         raise NotImplementedError
 # Credentials is a Rust-only trait - it's a wrapper around a Rust implementation.
@@ -5257,15 +5379,6 @@ class Credentials():
         pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_credentials_load,
         _UniffiConverterBytes.lower(raw))
         return cls._make_instance_(pointer)
-
-
-
-    def node_id(self, ) -> "bytes":
-        return _UniffiConverterBytes.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_credentials_node_id,self._uniffi_clone_pointer(),)
-        )
-
-
 
 
 
@@ -5492,21 +5605,6 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
-    def generate_diagnostic_data(self, ):
-        """
-        Collect a diagnostic snapshot of the node and SDK state.
-
-        Returns a pretty-printed JSON string with shape:
-        `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
-        The `node` object contains one entry per CLN RPC (`getinfo`,
-        `listpeerchannels`, `listfunds`); each value is the serialized
-        response, or `{ "error": "..." }` if that RPC failed. Payment and
-        invoice history are deliberately excluded to avoid leaking
-        preimages, payment hashes, bolt11 strings, and labels into support
-        dumps. Intended for support tickets.
-        """
-
-        raise NotImplementedError
     def get_info(self, ):
         """
         Get information about the node.
@@ -5527,6 +5625,7 @@ class NodeProtocol(typing.Protocol):
         raise NotImplementedError
     def list_invoices(self, label: "typing.Optional[str]",invstring: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",offer_id: "typing.Optional[str]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]"):
         """
+        List all invoices (received payment requests).
         List invoices (received payment requests).
         All parameters are optional filters; pass None to fetch all.
         """
@@ -5568,12 +5667,31 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
-    def node_state(self, ):
+    def lnurl_pay(self, request: "LnUrlPayRequest"):
         """
-        Get a snapshot of the node's balances, capacity, and connectivity.
+        Execute an LNURL-pay flow (LUD-06).
 
-        Aggregates data from multiple RPCs into a single `NodeState`.
-        Queries the node live on each call — not cached.
+        Sends the chosen amount (and optional comment) to the service's
+        callback, receives and validates a BOLT11 invoice, pays it, and
+        processes any success action (LUD-09/10).
+
+        Call the top-level `parse_input` first to obtain the
+        `LnUrlPayRequestData`, then build an `LnUrlPayRequest` with the
+        user's chosen amount.
+        """
+
+        raise NotImplementedError
+    def lnurl_withdraw(self, request: "LnUrlWithdrawRequest"):
+        """
+        Execute an LNURL-withdraw flow (LUD-03).
+
+        Creates an invoice on this node for the requested amount, sends
+        it to the service's callback URL, and the service pays it
+        asynchronously.
+
+        Call the top-level `parse_input` first to obtain the
+        `LnUrlWithdrawRequestData`, then build an `LnUrlWithdrawRequest`
+        with the user's chosen amount.
         """
 
         raise NotImplementedError
@@ -5648,9 +5766,11 @@ class Node():
     """
 
     _pointer: ctypes.c_void_p
-    
-    def __init__(self, *args, **kwargs):
-        raise ValueError("This class has no default constructor")
+    def __init__(self, credentials: "Credentials"):
+        _UniffiConverterTypeCredentials.check_lower(credentials)
+        
+        self._pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_node_new,
+        _UniffiConverterTypeCredentials.lower(credentials))
 
     def __del__(self):
         # In case of partial initialization of instances.
@@ -5699,28 +5819,6 @@ class Node():
 
 
 
-    def generate_diagnostic_data(self, ) -> "str":
-        """
-        Collect a diagnostic snapshot of the node and SDK state.
-
-        Returns a pretty-printed JSON string with shape:
-        `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
-        The `node` object contains one entry per CLN RPC (`getinfo`,
-        `listpeerchannels`, `listfunds`); each value is the serialized
-        response, or `{ "error": "..." }` if that RPC failed. Payment and
-        invoice history are deliberately excluded to avoid leaking
-        preimages, payment hashes, bolt11 strings, and labels into support
-        dumps. Intended for support tickets.
-        """
-
-        return _UniffiConverterString.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_generate_diagnostic_data,self._uniffi_clone_pointer(),)
-        )
-
-
-
-
-
     def get_info(self, ) -> "GetInfoResponse":
         """
         Get information about the node.
@@ -5755,6 +5853,7 @@ class Node():
 
     def list_invoices(self, label: "typing.Optional[str]",invstring: "typing.Optional[str]",payment_hash: "typing.Optional[bytes]",offer_id: "typing.Optional[str]",index: "typing.Optional[ListIndex]",start: "typing.Optional[int]",limit: "typing.Optional[int]") -> "ListInvoicesResponse":
         """
+        List all invoices (received payment requests).
         List invoices (received payment requests).
         All parameters are optional filters; pass None to fetch all.
         """
@@ -5873,16 +5972,48 @@ class Node():
 
 
 
-    def node_state(self, ) -> "NodeState":
+    def lnurl_pay(self, request: "LnUrlPayRequest") -> "LnUrlPayResult":
         """
-        Get a snapshot of the node's balances, capacity, and connectivity.
+        Execute an LNURL-pay flow (LUD-06).
 
-        Aggregates data from multiple RPCs into a single `NodeState`.
-        Queries the node live on each call — not cached.
+        Sends the chosen amount (and optional comment) to the service's
+        callback, receives and validates a BOLT11 invoice, pays it, and
+        processes any success action (LUD-09/10).
+
+        Call the top-level `parse_input` first to obtain the
+        `LnUrlPayRequestData`, then build an `LnUrlPayRequest` with the
+        user's chosen amount.
         """
 
-        return _UniffiConverterTypeNodeState.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_node_state,self._uniffi_clone_pointer(),)
+        _UniffiConverterTypeLnUrlPayRequest.check_lower(request)
+        
+        return _UniffiConverterTypeLnUrlPayResult.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_pay,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeLnUrlPayRequest.lower(request))
+        )
+
+
+
+
+
+    def lnurl_withdraw(self, request: "LnUrlWithdrawRequest") -> "LnUrlWithdrawResult":
+        """
+        Execute an LNURL-withdraw flow (LUD-03).
+
+        Creates an invoice on this node for the requested amount, sends
+        it to the service's callback URL, and the service pays it
+        asynchronously.
+
+        Call the top-level `parse_input` first to obtain the
+        `LnUrlWithdrawRequestData`, then build an `LnUrlWithdrawRequest`
+        with the user's chosen amount.
+        """
+
+        _UniffiConverterTypeLnUrlWithdrawRequest.check_lower(request)
+        
+        return _UniffiConverterTypeLnUrlWithdrawResult.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_withdraw,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeLnUrlWithdrawRequest.lower(request))
         )
 
 
@@ -6041,246 +6172,6 @@ class _UniffiConverterTypeNode:
 
     @classmethod
     def write(cls, value: NodeProtocol, buf: _UniffiRustBuffer):
-        buf.write_u64(cls.lower(value))
-class NodeBuilderProtocol(typing.Protocol):
-    """
-    Configurable Node construction. See module docs.
-    """
-
-    def connect(self, credentials: "bytes",mnemonic: "typing.Optional[str]"):
-        """
-        Connect to an existing node using saved credentials and return
-        a connected Node with any configured modifiers applied.
-
-        If `mnemonic` is `Some(...)`, the SDK spawns a signer for the
-        connected Node. If `None`, the Node is signerless and signing
-        happens elsewhere (paired device, CLN node's local signer,
-        hardware signer).
-        """
-
-        raise NotImplementedError
-    def recover(self, mnemonic: "str"):
-        """
-        Recover credentials for an existing node and return a
-        connected Node with any configured modifiers applied.
-
-        `mnemonic` is required — recovery drives the signer to
-        authenticate.
-        """
-
-        raise NotImplementedError
-    def register(self, mnemonic: "str",invite_code: "typing.Optional[str]"):
-        """
-        Register a new Greenlight node and return a connected Node
-        with the SDK signer running and any configured modifiers
-        applied.
-
-        `mnemonic` is required — registration drives the signer to
-        sign the registration challenge, so the SDK must hold the
-        seed for this call.
-        """
-
-        raise NotImplementedError
-    def register_or_recover(self, mnemonic: "str",invite_code: "typing.Optional[str]"):
-        """
-        Try to recover; if the node doesn't exist, register a new one.
-
-        `mnemonic` is required — both recover and register drive the
-        signer.
-        """
-
-        raise NotImplementedError
-    def with_event_listener(self, listener: "NodeEventListener"):
-        """
-        Install a node event listener. Events fire from the moment the
-        gRPC stream is established by the build call (`register` /
-        `recover` / `connect` / …), so attach the listener via the
-        builder rather than after the fact to capture events from the
-        very first moment.
-
-        Returns the same builder for fluent chaining.
-        """
-
-        raise NotImplementedError
-# NodeBuilder is a Rust-only trait - it's a wrapper around a Rust implementation.
-class NodeBuilder():
-    """
-    Configurable Node construction. See module docs.
-    """
-
-    _pointer: ctypes.c_void_p
-    def __init__(self, config: "Config"):
-        """
-        Create a builder for a Node with `config`. No I/O happens
-        until you call `connect` / `register` / `recover` /
-        `register_or_recover`.
-        """
-
-        _UniffiConverterTypeConfig.check_lower(config)
-        
-        self._pointer = _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new,
-        _UniffiConverterTypeConfig.lower(config))
-
-    def __del__(self):
-        # In case of partial initialization of instances.
-        pointer = getattr(self, "_pointer", None)
-        if pointer is not None:
-            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_nodebuilder, pointer)
-
-    def _uniffi_clone_pointer(self):
-        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder, self._pointer)
-
-    # Used by alternative constructors or any methods which return this type.
-    @classmethod
-    def _make_instance_(cls, pointer):
-        # Lightly yucky way to bypass the usual __init__ logic
-        # and just create a new instance with the required pointer.
-        inst = cls.__new__(cls)
-        inst._pointer = pointer
-        return inst
-
-
-    def connect(self, credentials: "bytes",mnemonic: "typing.Optional[str]") -> "Node":
-        """
-        Connect to an existing node using saved credentials and return
-        a connected Node with any configured modifiers applied.
-
-        If `mnemonic` is `Some(...)`, the SDK spawns a signer for the
-        connected Node. If `None`, the Node is signerless and signing
-        happens elsewhere (paired device, CLN node's local signer,
-        hardware signer).
-        """
-
-        _UniffiConverterBytes.check_lower(credentials)
-        
-        _UniffiConverterOptionalString.check_lower(mnemonic)
-        
-        return _UniffiConverterTypeNode.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect,self._uniffi_clone_pointer(),
-        _UniffiConverterBytes.lower(credentials),
-        _UniffiConverterOptionalString.lower(mnemonic))
-        )
-
-
-
-
-
-    def recover(self, mnemonic: "str") -> "Node":
-        """
-        Recover credentials for an existing node and return a
-        connected Node with any configured modifiers applied.
-
-        `mnemonic` is required — recovery drives the signer to
-        authenticate.
-        """
-
-        _UniffiConverterString.check_lower(mnemonic)
-        
-        return _UniffiConverterTypeNode.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover,self._uniffi_clone_pointer(),
-        _UniffiConverterString.lower(mnemonic))
-        )
-
-
-
-
-
-    def register(self, mnemonic: "str",invite_code: "typing.Optional[str]") -> "Node":
-        """
-        Register a new Greenlight node and return a connected Node
-        with the SDK signer running and any configured modifiers
-        applied.
-
-        `mnemonic` is required — registration drives the signer to
-        sign the registration challenge, so the SDK must hold the
-        seed for this call.
-        """
-
-        _UniffiConverterString.check_lower(mnemonic)
-        
-        _UniffiConverterOptionalString.check_lower(invite_code)
-        
-        return _UniffiConverterTypeNode.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register,self._uniffi_clone_pointer(),
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterOptionalString.lower(invite_code))
-        )
-
-
-
-
-
-    def register_or_recover(self, mnemonic: "str",invite_code: "typing.Optional[str]") -> "Node":
-        """
-        Try to recover; if the node doesn't exist, register a new one.
-
-        `mnemonic` is required — both recover and register drive the
-        signer.
-        """
-
-        _UniffiConverterString.check_lower(mnemonic)
-        
-        _UniffiConverterOptionalString.check_lower(invite_code)
-        
-        return _UniffiConverterTypeNode.lift(
-            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover,self._uniffi_clone_pointer(),
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterOptionalString.lower(invite_code))
-        )
-
-
-
-
-
-    def with_event_listener(self, listener: "NodeEventListener") -> "NodeBuilder":
-        """
-        Install a node event listener. Events fire from the moment the
-        gRPC stream is established by the build call (`register` /
-        `recover` / `connect` / …), so attach the listener via the
-        builder rather than after the fact to capture events from the
-        very first moment.
-
-        Returns the same builder for fluent chaining.
-        """
-
-        _UniffiConverterTypeNodeEventListener.check_lower(listener)
-        
-        return _UniffiConverterTypeNodeBuilder.lift(
-            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener,self._uniffi_clone_pointer(),
-        _UniffiConverterTypeNodeEventListener.lower(listener))
-        )
-
-
-
-
-
-
-class _UniffiConverterTypeNodeBuilder:
-
-    @staticmethod
-    def lift(value: int):
-        return NodeBuilder._make_instance_(value)
-
-    @staticmethod
-    def check_lower(value: NodeBuilder):
-        if not isinstance(value, NodeBuilder):
-            raise TypeError("Expected NodeBuilder instance, {} found".format(type(value).__name__))
-
-    @staticmethod
-    def lower(value: NodeBuilderProtocol):
-        if not isinstance(value, NodeBuilder):
-            raise TypeError("Expected NodeBuilder instance, {} found".format(type(value).__name__))
-        return value._uniffi_clone_pointer()
-
-    @classmethod
-    def read(cls, buf: _UniffiRustBuffer):
-        ptr = buf.read_u64()
-        if ptr == 0:
-            raise InternalError("Raw pointer value was null")
-        return cls.lift(ptr)
-
-    @classmethod
-    def write(cls, value: NodeBuilderProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class NodeEventStreamProtocol(typing.Protocol):
     """
@@ -6610,62 +6501,178 @@ class _UniffiConverterTypeSigner:
     def write(cls, value: SignerProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 
-# Async support
+# Async support# RustFuturePoll values
+_UNIFFI_RUST_FUTURE_POLL_READY = 0
+_UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1
 
-def parse_input(input: "str") -> "InputType":
+# Stores futures for _uniffi_continuation_callback
+_UniffiContinuationHandleMap = _UniffiHandleMap()
+
+_UNIFFI_GLOBAL_EVENT_LOOP = None
+
+"""
+Set the event loop to use for async functions
+
+This is needed if some async functions run outside of the eventloop, for example:
+    - A non-eventloop thread is spawned, maybe from `EventLoop.run_in_executor` or maybe from the
+      Rust code spawning its own thread.
+    - The Rust code calls an async callback method from a sync callback function, using something
+      like `pollster` to block on the async call.
+
+In this case, we need an event loop to run the Python async function, but there's no eventloop set
+for the thread.  Use `uniffi_set_event_loop` to force an eventloop to be used in this case.
+"""
+def uniffi_set_event_loop(eventloop: asyncio.BaseEventLoop):
+    global _UNIFFI_GLOBAL_EVENT_LOOP
+    _UNIFFI_GLOBAL_EVENT_LOOP = eventloop
+
+def _uniffi_get_event_loop():
+    if _UNIFFI_GLOBAL_EVENT_LOOP is not None:
+        return _UNIFFI_GLOBAL_EVENT_LOOP
+    else:
+        return asyncio.get_running_loop()
+
+# Continuation callback for async functions
+# lift the return value or error and resolve the future, causing the async function to resume.
+@_UNIFFI_RUST_FUTURE_CONTINUATION_CALLBACK
+def _uniffi_continuation_callback(future_ptr, poll_code):
+    (eventloop, future) = _UniffiContinuationHandleMap.remove(future_ptr)
+    eventloop.call_soon_threadsafe(_uniffi_set_future_result, future, poll_code)
+
+def _uniffi_set_future_result(future, poll_code):
+    if not future.cancelled():
+        future.set_result(poll_code)
+
+async def _uniffi_rust_call_async(rust_future, ffi_poll, ffi_complete, ffi_free, lift_func, error_ffi_converter):
+    try:
+        eventloop = _uniffi_get_event_loop()
+
+        # Loop and poll until we see a _UNIFFI_RUST_FUTURE_POLL_READY value
+        while True:
+            future = eventloop.create_future()
+            ffi_poll(
+                rust_future,
+                _uniffi_continuation_callback,
+                _UniffiContinuationHandleMap.insert((eventloop, future)),
+            )
+            poll_code = await future
+            if poll_code == _UNIFFI_RUST_FUTURE_POLL_READY:
+                break
+
+        return lift_func(
+            _uniffi_rust_call_with_error(error_ffi_converter, ffi_complete, rust_future)
+        )
+    finally:
+        ffi_free(rust_future)
+
+def connect(mnemonic: "str",credentials: "bytes",config: "Config") -> "Node":
     """
-    Parse a string and identify whether it's a BOLT11 invoice or a node ID.
+    Connect to an existing Greenlight node using previously saved credentials.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
+    
+    _UniffiConverterBytes.check_lower(credentials)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_connect,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterBytes.lower(credentials),
+        _UniffiConverterTypeConfig.lower(config)))
+
+async def parse_input(input: "str") -> "InputType":
+
+    """
+    Parse and resolve any supported input in one async call.
+
+    For LNURL bech32 strings and Lightning Addresses this performs the
+    HTTP GET to the LNURL endpoint and returns typed pay or withdraw
+    request data. For BOLT11 invoices and node IDs it returns
+    immediately without I/O.
 
     Strips `lightning:` / `LIGHTNING:` prefixes automatically.
-    Works offline — no node connection needed.
     """
 
     _UniffiConverterString.check_lower(input)
     
-    return _UniffiConverterTypeInputType.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_parse_input,
-        _UniffiConverterString.lower(input)))
+    return await _uniffi_rust_call_async(
+        _UniffiLib.uniffi_glsdk_fn_func_parse_input(
+        _UniffiConverterString.lower(input)),
+        _UniffiLib.ffi_glsdk_rust_future_poll_rust_buffer,
+        _UniffiLib.ffi_glsdk_rust_future_complete_rust_buffer,
+        _UniffiLib.ffi_glsdk_rust_future_free_rust_buffer,
+        # lift function
+        _UniffiConverterTypeInputType.lift,
+        
+    # Error FFI converter
+_UniffiConverterTypeError,
 
+    )
 
-def set_log_level(level: "LogLevel") -> None:
+def recover(mnemonic: "str",config: "Config") -> "Node":
     """
-    Change the log filter at runtime without reinstalling the listener.
+    Recover credentials for an existing Greenlight node and return a connected Node.
+
+    The app should call `node.credentials()` to get the credential bytes
+    and persist them for future `connect()` calls.
     """
 
-    _UniffiConverterTypeLogLevel.check_lower(level)
+    _UniffiConverterString.check_lower(mnemonic)
     
-    _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_func_set_log_level,
-        _UniffiConverterTypeLogLevel.lower(level))
-
-
-def set_logger(level: "LogLevel",listener: "LogListener") -> None:
-    """
-    Set up SDK logging. Call once before any other SDK function.
-
-    The listener receives all log messages from the SDK and the
-    underlying Greenlight client library. Call once, as early as
-    possible, so early logs are captured. Returns an error if a logger
-    has already been installed in this process. To change the filter
-    after installation, use `set_log_level`.
-    """
-
-    _UniffiConverterTypeLogLevel.check_lower(level)
+    _UniffiConverterTypeConfig.check_lower(config)
     
-    _UniffiConverterTypeLogListener.check_lower(listener)
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_recover,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterTypeConfig.lower(config)))
+
+
+def register(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
+    """
+    Register a new Greenlight node and return a connected Node with signer running.
+
+    The app should call `node.credentials()` to get the credential bytes
+    and persist them for future `connect()` calls.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
     
-    _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_set_logger,
-        _UniffiConverterTypeLogLevel.lower(level),
-        _UniffiConverterTypeLogListener.lower(listener))
+    _UniffiConverterOptionalString.check_lower(invite_code)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code),
+        _UniffiConverterTypeConfig.lower(config)))
+
+
+def register_or_recover(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
+    """
+    Try to recover an existing node; if none exists, register a new one.
+    """
+
+    _UniffiConverterString.check_lower(mnemonic)
+    
+    _UniffiConverterOptionalString.check_lower(invite_code)
+    
+    _UniffiConverterTypeConfig.check_lower(config)
+    
+    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register_or_recover,
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code),
+        _UniffiConverterTypeConfig.lower(config)))
 
 
 __all__ = [
     "InternalError",
-    "ChannelSide",
     "ChannelState",
     "Error",
     "InputType",
     "InvoiceStatus",
     "ListIndex",
-    "LogLevel",
+    "LnUrlPayResult",
+    "LnUrlWithdrawResult",
     "Network",
     "NodeEvent",
     "OutputStatus",
@@ -6673,6 +6680,7 @@ __all__ = [
     "PaymentStatus",
     "PaymentType",
     "PaymentTypeFilter",
+    "SuccessActionProcessed",
     "FundChannel",
     "FundOutput",
     "GetInfoResponse",
@@ -6684,8 +6692,14 @@ __all__ = [
     "ListPaysResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
-    "LogEntry",
-    "NodeState",
+    "LnUrlErrorData",
+    "LnUrlPayErrorData",
+    "LnUrlPayRequest",
+    "LnUrlPayRequestData",
+    "LnUrlPaySuccessData",
+    "LnUrlWithdrawRequest",
+    "LnUrlWithdrawRequestData",
+    "LnUrlWithdrawSuccessData",
     "OnchainReceiveResponse",
     "OnchainSendResponse",
     "ParsedInvoice",
@@ -6695,19 +6709,18 @@ __all__ = [
     "PeerChannel",
     "ReceiveResponse",
     "SendResponse",
+    "connect",
     "parse_input",
-    "set_log_level",
-    "set_logger",
+    "recover",
+    "register",
+    "register_or_recover",
     "Config",
     "Credentials",
     "DeveloperCert",
     "Handle",
     "Node",
-    "NodeBuilder",
     "NodeEventStream",
     "Scheduler",
     "Signer",
-    "LogListener",
-    "NodeEventListener",
 ]
 

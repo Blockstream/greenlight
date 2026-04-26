@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Changed
+
+- `parse_input()` is now `async` and resolves LNURL bech32 strings and Lightning Addresses end-to-end over HTTP, returning typed pay or withdraw request data. BOLT11 invoices and node IDs still resolve without I/O.
+- `InputType` variants now: `Bolt11`, `NodeId`, `LnUrlPay`, `LnUrlWithdraw`. Replaces the previous `LnUrl` / `LnUrlAddress` intermediate-state variants.
+
+### Removed
+
+- `Node::resolve_lnurl()` and the `ResolvedLnUrl` enum. Use `parse_input()` to obtain `LnUrlPayRequestData` / `LnUrlWithdrawRequestData` directly, then call `Node::lnurl_pay()` / `Node::lnurl_withdraw()`.
+
 ## [0.2.0] - 2026-04-02
 
 ### Added
