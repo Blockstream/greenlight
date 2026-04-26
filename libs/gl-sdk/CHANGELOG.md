@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- `parse_input()` — synchronous, offline classification of user input. Recognises BOLT11 invoices, node IDs, LNURL bech32 strings (decoded to their underlying URL), and Lightning Addresses (returned as the unparsed `user@host` form). LNURL inputs are classified but not fetched; the cost contract is "no HTTP, no I/O." Use this for clipboard validation, invoice sanity checks, and any other path that must not touch the network.
+- `resolve_input()` — asynchronous, network-touching classification. Internally calls `parse_input()`, then for the LNURL / Lightning Address branches performs the HTTP GET to the service endpoint and returns typed pay or withdraw request data. BOLT11 invoices and node IDs pass through without I/O. Use this for the QR-scan flow that should proceed straight to a pay/withdraw screen.
+- `ParsedInput` enum (offline result): `Bolt11`, `NodeId`, `LnUrl { url }`, `LnUrlAddress { address }`.
+- `ResolvedInput` enum (resolved result): `Bolt11`, `NodeId`, `LnUrlPay { data }`, `LnUrlWithdraw { data }`.
+
+### Removed
+
+- `Node::resolve_lnurl()` and the `ResolvedLnUrl` enum. Use `parse_input()` (offline) or `resolve_input()` (HTTP) to obtain `LnUrlPayRequestData` / `LnUrlWithdrawRequestData`, then call `Node::lnurl_pay()` / `Node::lnurl_withdraw()`.
+
 ## [0.2.0] - 2026-04-02
 
 ### Added

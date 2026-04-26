@@ -8,6 +8,8 @@ Network topology:
     gl_sdk_node ── channel ── relay ── channel ── service_node (LNURL server)
 """
 
+import asyncio
+
 from gltesting.fixtures import *  # noqa: F401, F403
 from pyln.testing.utils import wait_for
 
@@ -62,57 +64,64 @@ def fund_and_connect(node_factory, bitcoind, lnurl_service):
     return relay
 
 
-def test_resolve_lnurl_pay(
-    scheduler, nobody_id, node_factory, bitcoind, lnurl_service
-):
-    """Resolve an LNURL-pay endpoint via the SDK."""
-    sdk_node, config = make_sdk_node(nobody_id, scheduler)
+def test_parse_input_lnurl_pay(lnurl_service):
+    """parse_input on an LNURL-pay URL returns LnUrlPay with fetched data."""
+    resolved = asyncio.run(glsdk.resolve_input(lnurl_service.pay_url))
 
-    try:
-        resolved = sdk_node.resolve_lnurl(lnurl_service.pay_url)
-
-        assert isinstance(resolved, glsdk.ResolvedLnUrl.PAY)
-        data = resolved.data
-        assert data.min_sendable == lnurl_service.min_sendable
-        assert data.max_sendable == lnurl_service.max_sendable
-        assert len(data.description) > 0
-        assert data.callback.startswith(lnurl_service.base_url)
-    finally:
-        sdk_node.disconnect()
+    assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
+    data = resolved.data
+    assert data.min_sendable == lnurl_service.min_sendable
+    assert data.max_sendable == lnurl_service.max_sendable
+    assert len(data.description) > 0
+    assert data.callback.startswith(lnurl_service.base_url)
+    assert data.lnurl == lnurl_service.pay_url
 
 
-def test_resolve_lnurl_withdraw(
-    scheduler, nobody_id, node_factory, bitcoind, lnurl_service
-):
-    """Resolve an LNURL-withdraw endpoint via the SDK."""
-    sdk_node, config = make_sdk_node(nobody_id, scheduler)
+def test_parse_input_lnurl_withdraw(lnurl_service):
+    """parse_input on an LNURL-withdraw URL returns LnUrlWithdraw with fetched data."""
+    resolved = asyncio.run(glsdk.resolve_input(lnurl_service.withdraw_url))
 
-    try:
-        resolved = sdk_node.resolve_lnurl(lnurl_service.withdraw_url)
-
-        assert isinstance(resolved, glsdk.ResolvedLnUrl.WITHDRAW)
-        data = resolved.data
-        assert data.min_withdrawable == lnurl_service.min_withdrawable
-        assert data.max_withdrawable == lnurl_service.max_withdrawable
-        assert len(data.k1) > 0
-    finally:
-        sdk_node.disconnect()
+    assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_WITHDRAW)
+    data = resolved.data
+    assert data.min_withdrawable == lnurl_service.min_withdrawable
+    assert data.max_withdrawable == lnurl_service.max_withdrawable
+    assert len(data.k1) > 0
+    assert data.lnurl == lnurl_service.withdraw_url
 
 
-def test_resolve_lightning_address_url(
-    scheduler, nobody_id, node_factory, bitcoind, lnurl_service
-):
-    """Resolve a Lightning Address well-known URL (LUD-16)."""
-    sdk_node, config = make_sdk_node(nobody_id, scheduler)
+def test_parse_input_lightning_address_url(lnurl_service):
+    """parse_input on a well-known LUD-16 URL returns LnUrlPay."""
+    resolved = asyncio.run(glsdk.resolve_input(lnurl_service.lightning_address_url))
 
-    try:
-        resolved = sdk_node.resolve_lnurl(lnurl_service.lightning_address_url)
+    assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
+    assert resolved.data.min_sendable == lnurl_service.min_sendable
+    assert resolved.data.lnurl == lnurl_service.lightning_address_url
 
-        assert isinstance(resolved, glsdk.ResolvedLnUrl.PAY)
-        data = resolved.data
-        assert data.min_sendable == lnurl_service.min_sendable
-    finally:
-        sdk_node.disconnect()
+
+def test_parse_input_bolt11_no_http(lnurl_service):
+    """parse_input on a BOLT11 invoice returns Bolt11 without touching HTTP."""
+    invoice = (
+        "lnbc100p1psj9jhxdqud3jxktt5w46x7unfv9kz6mn0v3jsnp4q0d3p2sfluzdx45t"
+        "qcsh2pu5qc7lgq0xs578ngs6s0s68ua4h7cvspp5q6rmq35js88zp5dvwrv9m459tn"
+        "k2zunwj5jalqtyxqulh0l5gflssp5nf55ny5gcrfl30xuhzj3nphgj27rstekmr9fw"
+        "3ny5989s300gyus9qyysgqcqpcrzjqw2sxwe993h5pcm4dxzpvttgza8zhkqxpgffc"
+        "rf5v25nwpr3cmfg7z54kuqq8rgqqqqqqqq2qqqqq9qq9qrzjqd0ylaqclj9424x9m8"
+        "h2vcukcgnm6s56xfgu3j78zyqzhgs4hlpzvznlugqq9vsqqqqqqqlgqqqqqeqq9qrz"
+        "jqwldmj9dha74df76zhx6l9we0vjdquygcdt3kssupehe64g6yyp5yz5rhuqqwccqq"
+        "yqqqqlgqqqqjcqq9qrzjqf9e58aguqr0rcun0ajlvmzq3ek63cw2w282gv3z5uupmu"
+        "wvgjtq2z55qsqqg6qqqyqqqrtnqqqzq3cqygrzjqvphmsywntrrhqjcraumvc4y6r8"
+        "v4z5v593trte429v4hredj7ms5z52usqq9ngqqqqqqqlgqqqqqqgq9qrzjq2v0vp62"
+        "g49p7569ev48cmulecsxe59lvaw3wlxm7r982zxa9zzj7z5l0cqqxusqqyqqqqlgqq"
+        "qqqzsqygarl9fh38s0gyuxjjgux34w75dnc6xp2l35j7es3jd4ugt3lu0xzre26yg5"
+        "m7ke54n2d5sym4xcmxtl8238xxvw5h5h5j5r6drg6k6zcqj0fcwg"
+    )
+    resolved = asyncio.run(glsdk.resolve_input(invoice))
+
+    assert isinstance(resolved, glsdk.ResolvedInput.BOLT11)
+    assert resolved.invoice.amount_msat == 10
+    # No callback recorded on the LNURL service since we never hit it.
+    assert len(lnurl_service.pay_callbacks) == 0
+    assert len(lnurl_service.withdraw_callbacks) == 0
 
 
 def test_lnurl_pay_end_to_end(
@@ -160,8 +169,8 @@ def test_lnurl_pay_end_to_end(
 
     try:
         # Resolve
-        resolved = sdk_node.resolve_lnurl(lnurl_service.pay_url)
-        assert isinstance(resolved, glsdk.ResolvedLnUrl.PAY)
+        resolved = asyncio.run(glsdk.resolve_input(lnurl_service.pay_url))
+        assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
         pay_data = resolved.data
 
         amount_msat = 50_000  # 50 sats
@@ -226,7 +235,8 @@ def test_lnurl_pay_with_message_success_action(
     sdk_node = glsdk.Node(glsdk.Credentials.load(creds_bytes))
 
     try:
-        resolved = sdk_node.resolve_lnurl(lnurl_service.pay_url)
+        resolved = asyncio.run(glsdk.resolve_input(lnurl_service.pay_url))
+        assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
         pay_data = resolved.data
 
         result = sdk_node.lnurl_pay(
