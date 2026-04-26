@@ -48,7 +48,7 @@ pub use crate::{
     lnurl::{
         LnUrlErrorData, LnUrlPayRequest, LnUrlPayRequestData, LnUrlPayResult,
         LnUrlPaySuccessData, LnUrlWithdrawRequest, LnUrlWithdrawRequestData,
-        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, ResolvedLnUrl, SuccessActionProcessed,
+        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, SuccessActionProcessed,
     },
     scheduler::Scheduler,
     signer::{Handle, Signer},
@@ -216,13 +216,17 @@ pub fn register_or_recover(
     }
 }
 
-/// Parse a string and identify whether it's a BOLT11 invoice or a node ID.
+/// Parse and resolve any supported input in one async call.
+///
+/// For LNURL bech32 strings and Lightning Addresses this performs the
+/// HTTP GET to the LNURL endpoint and returns typed pay or withdraw
+/// request data. For BOLT11 invoices and node IDs it returns
+/// immediately without I/O.
 ///
 /// Strips `lightning:` / `LIGHTNING:` prefixes automatically.
-/// Works offline — no node connection needed.
-#[uniffi::export]
-pub fn parse_input(input: String) -> Result<input::InputType, Error> {
-    input::parse_input(input)
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn parse_input(input: String) -> Result<input::InputType, Error> {
+    input::parse_input(input).await
 }
 
 #[derive(uniffi::Enum, Debug)]
