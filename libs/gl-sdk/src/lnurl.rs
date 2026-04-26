@@ -9,19 +9,11 @@ use gl_client::lnurl::models as wire;
 
 // ── Resolved endpoint data ──────────────────────────────────────────
 
-/// Result of resolving an LNURL or lightning address via HTTP.
-#[derive(Clone, uniffi::Enum)]
-pub enum ResolvedLnUrl {
-    /// The endpoint is an LNURL-pay service (LUD-06).
-    Pay { data: LnUrlPayRequestData },
-    /// The endpoint is an LNURL-withdraw service (LUD-03).
-    Withdraw { data: LnUrlWithdrawRequestData },
-}
-
 /// Data from an LNURL-pay endpoint (LUD-06).
 ///
 /// Contains the service's accepted amount range and metadata.
-/// Returned inside `ResolvedLnUrl::Pay` after resolving an LNURL.
+/// Returned inside `InputType::LnUrlPay` after `parse_input` resolves
+/// an LNURL or Lightning Address.
 #[derive(Clone, uniffi::Record)]
 pub struct LnUrlPayRequestData {
     /// The callback URL to request an invoice from.
@@ -43,7 +35,8 @@ pub struct LnUrlPayRequestData {
 /// Data from an LNURL-withdraw endpoint (LUD-03).
 ///
 /// Contains the service's accepted withdrawal range and session key.
-/// Returned inside `ResolvedLnUrl::Withdraw` after resolving an LNURL.
+/// Returned inside `InputType::LnUrlWithdraw` after `parse_input`
+/// resolves an LNURL.
 #[derive(Clone, uniffi::Record)]
 pub struct LnUrlWithdrawRequestData {
     /// The callback URL to submit the invoice to.
@@ -67,7 +60,7 @@ pub struct LnUrlWithdrawRequestData {
 /// Combines the resolved service data with the user's chosen amount.
 #[derive(Clone, uniffi::Record)]
 pub struct LnUrlPayRequest {
-    /// The resolved pay request data from `resolve_lnurl()`.
+    /// The resolved pay request data from `parse_input()`.
     pub data: LnUrlPayRequestData,
     /// Amount to pay in millisatoshis.
     pub amount_msat: u64,
@@ -89,7 +82,7 @@ pub struct LnUrlPayRequest {
 /// Combines the resolved service data with the user's chosen amount.
 #[derive(Clone, uniffi::Record)]
 pub struct LnUrlWithdrawRequest {
-    /// The resolved withdraw request data from `resolve_lnurl()`.
+    /// The resolved withdraw request data from `parse_input()`.
     pub data: LnUrlWithdrawRequestData,
     /// Amount to withdraw in millisatoshis.
     pub amount_msat: u64,
@@ -210,19 +203,6 @@ impl From<wire::ProcessedSuccessAction> for SuccessActionProcessed {
             } => SuccessActionProcessed::Aes {
                 description,
                 plaintext,
-            },
-        }
-    }
-}
-
-impl From<gl_client::lnurl::LnUrlResponse> for ResolvedLnUrl {
-    fn from(r: gl_client::lnurl::LnUrlResponse) -> Self {
-        match r {
-            gl_client::lnurl::LnUrlResponse::Pay(data) => ResolvedLnUrl::Pay {
-                data: data.into(),
-            },
-            gl_client::lnurl::LnUrlResponse::Withdraw(data) => ResolvedLnUrl::Withdraw {
-                data: data.into(),
             },
         }
     }

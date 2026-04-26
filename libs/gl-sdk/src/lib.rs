@@ -46,12 +46,12 @@ pub use crate::{
         OnchainSendResponse, OutputStatus, Pay, PayStatus, Payment, PaymentStatus, PaymentType,
         PaymentTypeFilter, Peer, PeerChannel, ReceiveResponse, SendResponse,
     },
-    input::{InputType, ParsedInvoice},
+    input::{ParsedInput, ParsedInvoice, ResolvedInput},
     logging::{LogEntry, LogLevel, LogListener},
     lnurl::{
         LnUrlErrorData, LnUrlPayRequest, LnUrlPayRequestData, LnUrlPayResult,
         LnUrlPaySuccessData, LnUrlWithdrawRequest, LnUrlWithdrawRequestData,
-        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, ResolvedLnUrl, SuccessActionProcessed,
+        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, SuccessActionProcessed,
     },
     node_builder::NodeBuilder,
     scheduler::Scheduler,
@@ -233,13 +233,35 @@ pub(crate) fn connect_signerless_internal(
     Ok(Arc::new(node))
 }
 
-/// Parse a string and identify whether it's a BOLT11 invoice or a node ID.
+/// Synchronously classify the input. **No HTTP, no I/O.**
+///
+/// Recognises BOLT11 invoices, node IDs, LNURL bech32 strings, and
+/// Lightning Addresses. Strips `lightning:` / `LIGHTNING:` prefixes
+/// automatically. LNURL inputs are decoded to their underlying URL
+/// but **not fetched** — the caller chooses whether to resolve
+/// further (via `resolve_input`) or to surface the URL to the user
+/// as-is.
+///
+/// Use this for offline operations like clipboard validation or
+/// invoice sanity checks. Use `resolve_input` for the QR-scan flow
+/// where you want the resolved pay/withdraw data in one call.
+#[uniffi::export]
+pub fn parse_input(input: String) -> Result<input::ParsedInput, Error> {
+    input::parse_input(input)
+}
+
+/// Asynchronously classify and resolve the input.
+///
+/// Internally calls `parse_input` for offline classification, then
+/// for LNURL bech32 strings and Lightning Addresses performs the
+/// HTTP GET to the LNURL endpoint and returns typed pay or withdraw
+/// request data. For BOLT11 invoices and node IDs it returns
+/// immediately without I/O.
 ///
 /// Strips `lightning:` / `LIGHTNING:` prefixes automatically.
-/// Works offline — no node connection needed.
-#[uniffi::export]
-pub fn parse_input(input: String) -> Result<input::InputType, Error> {
-    input::parse_input(input)
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn resolve_input(input: String) -> Result<input::ResolvedInput, Error> {
+    input::resolve_input(input).await
 }
 
 /// Set up SDK logging. Call once before any other SDK function.

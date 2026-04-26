@@ -649,62 +649,15 @@ impl Node {
 
     // ── LNURL methods ───────────────────────────────────────────
 
-    /// Resolve an LNURL or Lightning Address to its endpoint data.
-    ///
-    /// Performs the HTTP GET to the LNURL endpoint and returns the
-    /// typed request data. The result tells you whether this is a
-    /// pay or withdraw request, and includes the service's parameters.
-    ///
-    /// Accepts an LNURL bech32 string, a decoded URL (from
-    /// `parse_input()`), or a Lightning Address (`user@domain`).
-    pub fn resolve_lnurl(
-        &self,
-        input: String,
-    ) -> Result<crate::lnurl::ResolvedLnUrl, Error> {
-        use gl_client::lnurl::models::LnUrlHttpClearnetClient;
-        use gl_client::lnurl::LNURL;
-
-        let lnurl_client = LNURL::new(LnUrlHttpClearnetClient::new());
-        let trimmed = input.trim();
-
-        // Determine the URL to fetch
-        let url = if trimmed.contains('@') {
-            gl_client::lnurl::pay::parse_lightning_address(trimmed)
-                .map_err(|e| Error::Other(e.to_string()))?
-        } else if trimmed.to_uppercase().starts_with("LNURL1") {
-            gl_client::lnurl::utils::parse_lnurl(trimmed)
-                .map_err(|e| Error::Other(e.to_string()))?
-        } else {
-            // Assume it's already a decoded URL
-            trimmed.to_string()
-        };
-
-        let response = exec(lnurl_client.resolve(&url))
-            .map_err(|e| Error::Other(e.to_string()))?;
-
-        let mut resolved: crate::lnurl::ResolvedLnUrl = response.into();
-
-        // Preserve the original input as the lnurl field
-        match &mut resolved {
-            crate::lnurl::ResolvedLnUrl::Pay { data } => {
-                data.lnurl = trimmed.to_string();
-            }
-            crate::lnurl::ResolvedLnUrl::Withdraw { data } => {
-                data.lnurl = trimmed.to_string();
-            }
-        }
-
-        Ok(resolved)
-    }
-
     /// Execute an LNURL-pay flow (LUD-06).
     ///
     /// Sends the chosen amount (and optional comment) to the service's
     /// callback, receives and validates a BOLT11 invoice, pays it, and
     /// processes any success action (LUD-09/10).
     ///
-    /// Call `resolve_lnurl()` first to get the `LnUrlPayRequestData`,
-    /// then build an `LnUrlPayRequest` with the user's chosen amount.
+    /// Call the top-level `parse_input` first to obtain the
+    /// `LnUrlPayRequestData`, then build an `LnUrlPayRequest` with the
+    /// user's chosen amount.
     pub fn lnurl_pay(
         &self,
         request: crate::lnurl::LnUrlPayRequest,
@@ -803,8 +756,9 @@ impl Node {
     /// it to the service's callback URL, and the service pays it
     /// asynchronously.
     ///
-    /// Call `resolve_lnurl()` first to get the `LnUrlWithdrawRequestData`,
-    /// then build an `LnUrlWithdrawRequest` with the user's chosen amount.
+    /// Call the top-level `parse_input` first to obtain the
+    /// `LnUrlWithdrawRequestData`, then build an `LnUrlWithdrawRequest`
+    /// with the user's chosen amount.
     pub fn lnurl_withdraw(
         &self,
         request: crate::lnurl::LnUrlWithdrawRequest,

@@ -1,5 +1,6 @@
-// Instrumented tests for parse_input().
-// Tests BOLT11 invoice parsing, node ID parsing, and error cases.
+// Instrumented tests for the synchronous parse_input().
+// `parse_input` is offline — no HTTP, no I/O. LNURL HTTP resolution
+// is `resolveInput` and is covered by gl-testing integration tests.
 
 package com.blockstream.glsdk
 
@@ -22,6 +23,10 @@ class ParseInputTest {
         "d2q9qgsqqqyssqszpxzxt9uuqzymr7zxcdccj5g69s8q7zzjs7sgxn9ejhnvdh6gqjcy" +
         "22mss2yexunagm5r2gqczh8k24cwrqml3njskm548aruhpwssq9nvrvz"
 
+    // Bech32-encoded "https://service.com/lnurl"
+    private val lnurlBech32 =
+        "LNURL1DP68GURN8GHJ7CMFWP5X2UNSW4HXKTNRDAKJ7CTSDYHHVVF0D3H82UNV9UCSAXQZE2"
+
     // ============================================================
     // Node ID parsing
     // ============================================================
@@ -29,7 +34,7 @@ class ParseInputTest {
     @Test
     fun parse_valid_node_id() {
         val result = parseInput(validNodeId)
-        assertNotNull(result)
+        assertTrue("Expected NodeId, got $result", result is ParsedInput.NodeId)
     }
 
     @Test(expected = Exception::class)
@@ -49,19 +54,38 @@ class ParseInputTest {
     @Test
     fun parse_valid_bolt11() {
         val result = parseInput(bolt11Invoice)
-        assertNotNull(result)
+        assertTrue("Expected Bolt11, got $result", result is ParsedInput.Bolt11)
     }
 
     @Test
     fun parse_bolt11_with_lightning_prefix() {
         val result = parseInput("lightning:$bolt11Invoice")
-        assertNotNull(result)
+        assertTrue("Expected Bolt11, got $result", result is ParsedInput.Bolt11)
     }
 
     @Test
     fun parse_bolt11_with_uppercase_prefix() {
         val result = parseInput("LIGHTNING:$bolt11Invoice")
-        assertNotNull(result)
+        assertTrue("Expected Bolt11, got $result", result is ParsedInput.Bolt11)
+    }
+
+    // ============================================================
+    // LNURL bech32 / Lightning Address — offline classification
+    // ============================================================
+
+    @Test
+    fun parse_lnurl_bech32_decodes_url() {
+        val result = parseInput(lnurlBech32)
+        assertTrue("Expected LnUrl, got $result", result is ParsedInput.LnUrl)
+        val url = (result as ParsedInput.LnUrl).url
+        assertTrue("Expected decoded https URL, got $url", url.startsWith("https://"))
+    }
+
+    @Test
+    fun parse_lightning_address() {
+        val result = parseInput("user@example.com")
+        assertTrue("Expected LnUrlAddress, got $result", result is ParsedInput.LnUrlAddress)
+        assertEquals("user@example.com", (result as ParsedInput.LnUrlAddress).address)
     }
 
     // ============================================================
