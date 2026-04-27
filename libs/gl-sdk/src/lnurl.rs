@@ -9,6 +9,36 @@ use gl_client::lnurl::models as wire;
 
 // ── Resolved endpoint data ──────────────────────────────────────────
 
+/// Data from an LNURL-auth endpoint (LUD-04).
+///
+/// Returned inside `InputType::LnUrlAuth` after `parse_input` classifies
+/// a `tag=login` LNURL. Because the tag is carried in the URL query
+/// string, no HTTP fetch is needed for classification — the callback is
+/// only hit when the user approves the auth via `Node::lnurl_auth`.
+#[derive(Clone, uniffi::Record)]
+pub struct LnUrlAuthRequestData {
+    /// Hex-encoded 32-byte challenge from the service.
+    pub k1: String,
+    /// One of `register`, `login`, `link`, `auth`. None if the service
+    /// did not specify an `action` query parameter.
+    pub action: Option<String>,
+    /// Domain of the LNURL-auth service, to be shown to the user when
+    /// asking for auth confirmation per LUD-04.
+    pub domain: String,
+    /// Full URL of the LNURL-auth service including its query string.
+    /// Used internally as the callback target after signing.
+    pub url: String,
+}
+
+/// Result of an LNURL-auth callback (LUD-04).
+#[derive(Clone, uniffi::Enum)]
+pub enum LnUrlCallbackStatus {
+    /// The service accepted the signed challenge.
+    Ok,
+    /// The service rejected the signed challenge.
+    ErrorStatus { data: LnUrlErrorData },
+}
+
 /// Data from an LNURL-pay endpoint (LUD-06).
 ///
 /// Contains the service's accepted amount range and metadata.

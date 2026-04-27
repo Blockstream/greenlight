@@ -42,7 +42,13 @@ class Client:
 
         if secret is not None:
             self.log.debug("Initializing hsm_secret with provided secret")
-            assert len(secret) == 32
+            # gl-client's Signer accepts arbitrary-length seeds. We accept
+            # 32 bytes (legacy raw-secret callers) and 64 bytes (BIP39
+            # standard seeds, so tests can share a seed with gl-sdk's
+            # mnemonic-derived flow).
+            assert len(secret) in (32, 64), (
+                f"hsm_secret must be 32 or 64 bytes, got {len(secret)}"
+            )
             with (self.directory / "hsm_secret").open(mode="wb") as f:
                 f.write(secret)
 

@@ -7,10 +7,12 @@ use napi_derive::napi;
 use glsdk::{
     // Enum types for conversion
     ChannelState as GlChannelState,
+    Config as GlConfig,
     Credentials as GlCredentials,
     DeveloperCert as GlDeveloperCert,
     Handle as GlHandle,
     InputType as GlInputType,
+    LnUrlCallbackStatus as GlLnUrlCallbackStatus,
     Network as GlNetwork,
     Node as GlNode,
     NodeEvent as GlNodeEvent,
@@ -267,11 +269,11 @@ pub struct ParsedInvoice {
 }
 
 /// Parsed input. Discriminated by `type` field. Exactly one of the
-/// variant fields (`bolt11`, `node_id`, `lnurl_pay`, `lnurl_withdraw`)
-/// is populated based on the discriminant.
+/// variant fields (`bolt11`, `node_id`, `lnurl_pay`, `lnurl_withdraw`,
+/// `lnurl_auth`) is populated based on the discriminant.
 #[napi(object)]
 pub struct InputType {
-    /// "bolt11" | "node_id" | "lnurl_pay" | "lnurl_withdraw"
+    /// "bolt11" | "node_id" | "lnurl_pay" | "lnurl_withdraw" | "lnurl_auth"
     pub r#type: String,
     /// Present when type == "bolt11"
     pub bolt11: Option<ParsedInvoice>,
@@ -281,6 +283,29 @@ pub struct InputType {
     pub lnurl_pay: Option<LnUrlPayRequestData>,
     /// Present when type == "lnurl_withdraw"
     pub lnurl_withdraw: Option<LnUrlWithdrawRequestData>,
+    /// Present when type == "lnurl_auth"
+    pub lnurl_auth: Option<LnUrlAuthRequestData>,
+}
+
+#[napi(object)]
+pub struct LnUrlAuthRequestData {
+    /// Hex-encoded 32-byte challenge from the service.
+    pub k1: String,
+    /// One of "register" | "login" | "link" | "auth", or null.
+    pub action: Option<String>,
+    /// Domain of the service (for user-facing confirmation prompts).
+    pub domain: String,
+    /// Full URL of the LNURL-auth service.
+    pub url: String,
+}
+
+/// Result of an LNURL-auth callback (LUD-04). Discriminated by `type`.
+#[napi(object)]
+pub struct LnUrlCallbackStatus {
+    /// "ok" | "error"
+    pub r#type: String,
+    /// Present when type == "error"
+    pub error: Option<LnUrlErrorData>,
 }
 
 // ============================================================================
@@ -419,6 +444,11 @@ pub struct Signer {
 #[napi]
 pub struct Handle {
     inner: GlHandle,
+}
+
+#[napi]
+pub struct Config {
+    inner: std::sync::Arc<GlConfig>,
 }
 
 #[napi]
@@ -666,6 +696,111 @@ impl Node {
 
         Ok(Self { inner: std::sync::Arc::new(inner) })
     }
+}
+
+#[napi]
+impl Config {
+    /// Create a `Config` with default settings: BITCOIN network, no
+    /// developer certificate.
+    #[napi(constructor)]
+    pub fn new() -> Self {
+        Self { inner: std::sync::Arc::new(GlConfig::new()) }
+    }
+
+    /// Return a new Config with the given developer certificate.
+    #[napi]
+    pub fn with_developer_cert(&self, cert: &DeveloperCert) -> Config {
+        let updated = self.inner.with_developer_cert(&cert.inner);
+        // `Arc<GlConfig>` from gl-sdk → unwrap and re-wrap so napi
+        // owns its own Arc.
+        Self {
+            inner: std::sync::Arc::new((*updated).clone()),
+        }
+    }
+
+    /// Return a new Config with the given network ("bitcoin" |
+    /// "regtest").
+    #[napi]
+    pub fn with_network(&self, network: String) -> Result<Config> {
+        let gl_network = match network.to_lowercase().as_str() {
+            "bitcoin" => GlNetwork::BITCOIN,
+            "regtest" => GlNetwork::REGTEST,
+            _ => {
+                return Err(Error::from_reason(format!(
+                    "Invalid network: {}. Must be 'bitcoin' or 'regtest'",
+                    network
+                )))
+            }
+        };
+        let updated = self.inner.with_network(gl_network);
+        Ok(Self {
+            inner: std::sync::Arc::new((*updated).clone()),
+        })
+    }
+}
+
+/// Register a new Greenlight node and return a connected Node with
+/// the SDK signer running.
+#[napi]
+pub async fn register(
+    mnemonic: String,
+    invite_code: Option<String>,
+    config: &Config,
+) -> Result<Node> {
+    let cfg = config.inner.clone();
+    let arc = tokio::task::spawn_blocking(move || {
+        glsdk::register(mnemonic, invite_code, &cfg).map_err(|e| Error::from_reason(e.to_string()))
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))??;
+    Ok(Node { inner: arc })
+}
+
+/// Recover credentials for an existing Greenlight node and return a
+/// connected Node with the SDK signer running.
+#[napi]
+pub async fn recover(mnemonic: String, config: &Config) -> Result<Node> {
+    let cfg = config.inner.clone();
+    let arc = tokio::task::spawn_blocking(move || {
+        glsdk::recover(mnemonic, &cfg).map_err(|e| Error::from_reason(e.to_string()))
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))??;
+    Ok(Node { inner: arc })
+}
+
+/// Connect to an existing Greenlight node using saved credentials.
+#[napi]
+pub async fn connect(mnemonic: String, credentials: Buffer, config: &Config) -> Result<Node> {
+    let cfg = config.inner.clone();
+    let creds_bytes = credentials.to_vec();
+    let arc = tokio::task::spawn_blocking(move || {
+        glsdk::connect(mnemonic, creds_bytes, &cfg).map_err(|e| Error::from_reason(e.to_string()))
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))??;
+    Ok(Node { inner: arc })
+}
+
+/// Try to recover an existing node; if none exists, register a new one.
+#[napi]
+pub async fn register_or_recover(
+    mnemonic: String,
+    invite_code: Option<String>,
+    config: &Config,
+) -> Result<Node> {
+    let cfg = config.inner.clone();
+    let arc = tokio::task::spawn_blocking(move || {
+        glsdk::register_or_recover(mnemonic, invite_code, &cfg)
+            .map_err(|e| Error::from_reason(e.to_string()))
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))??;
+    Ok(Node { inner: arc })
+}
+
+#[napi]
+impl Node {
 
     /// Stop the node if it is currently running
     #[napi]
@@ -678,6 +813,26 @@ impl Node {
         })
         .await
         .map_err(|e| Error::from_reason(e.to_string()))?
+    }
+
+    /// Disconnect from the node and stop the SDK signer if running.
+    /// Also scrubs the LNURL-auth namespace key from memory. Safe to
+    /// call multiple times.
+    #[napi]
+    pub fn disconnect(&self) -> Result<()> {
+        self.inner
+            .disconnect()
+            .map_err(|e| Error::from_reason(e.to_string()))
+    }
+
+    /// Return the serialized credentials so the wallet can persist
+    /// them and reuse via `connect(mnemonic, credentials, config)`.
+    #[napi]
+    pub fn credentials(&self) -> Result<Buffer> {
+        self.inner
+            .credentials()
+            .map(Buffer::from)
+            .map_err(|e| Error::from_reason(e.to_string()))
     }
 
     /// Receive a payment (generate invoice with JIT channel support)
@@ -1038,6 +1193,31 @@ impl Node {
 
         Ok(napi_lnurl_withdraw_result_from_gl(result))
     }
+
+    /// Execute an LNURL-auth (LUD-04) callback.
+    ///
+    /// Uses the LNURL-auth namespace xpriv (`m/138'`) that the Node
+    /// derived once from the BIP39 seed at register/recover/connect
+    /// time. `Node` never re-touches the seed; the namespace xpriv is
+    /// scrubbed on disconnect/drop. Returns an error when the Node
+    /// was constructed without a mnemonic.
+    #[napi]
+    pub async fn lnurl_auth(
+        &self,
+        request: LnUrlAuthRequestData,
+    ) -> Result<LnUrlCallbackStatus> {
+        let inner = self.inner.clone();
+        let gl_request = gl_lnurl_auth_request_data_from_napi(request);
+        let status = tokio::task::spawn_blocking(move || {
+            inner
+                .lnurl_auth(gl_request)
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+
+        Ok(napi_lnurl_callback_status_from_gl(status))
+    }
 }
 
 // ============================================================================
@@ -1137,6 +1317,7 @@ fn napi_input_type_from_gl(input: GlInputType) -> InputType {
             node_id: None,
             lnurl_pay: None,
             lnurl_withdraw: None,
+            lnurl_auth: None,
         },
         GlInputType::NodeId { node_id } => InputType {
             r#type: "node_id".to_string(),
@@ -1144,6 +1325,7 @@ fn napi_input_type_from_gl(input: GlInputType) -> InputType {
             node_id: Some(node_id),
             lnurl_pay: None,
             lnurl_withdraw: None,
+            lnurl_auth: None,
         },
         GlInputType::LnUrlPay { data } => InputType {
             r#type: "lnurl_pay".to_string(),
@@ -1151,6 +1333,7 @@ fn napi_input_type_from_gl(input: GlInputType) -> InputType {
             node_id: None,
             lnurl_pay: Some(napi_pay_request_data_from_gl(data)),
             lnurl_withdraw: None,
+            lnurl_auth: None,
         },
         GlInputType::LnUrlWithdraw { data } => InputType {
             r#type: "lnurl_withdraw".to_string(),
@@ -1158,6 +1341,50 @@ fn napi_input_type_from_gl(input: GlInputType) -> InputType {
             node_id: None,
             lnurl_pay: None,
             lnurl_withdraw: Some(napi_withdraw_request_data_from_gl(data)),
+            lnurl_auth: None,
+        },
+        GlInputType::LnUrlAuth { data } => InputType {
+            r#type: "lnurl_auth".to_string(),
+            bolt11: None,
+            node_id: None,
+            lnurl_pay: None,
+            lnurl_withdraw: None,
+            lnurl_auth: Some(napi_lnurl_auth_request_data_from_gl(data)),
+        },
+    }
+}
+
+fn napi_lnurl_auth_request_data_from_gl(
+    data: glsdk::LnUrlAuthRequestData,
+) -> LnUrlAuthRequestData {
+    LnUrlAuthRequestData {
+        k1: data.k1,
+        action: data.action,
+        domain: data.domain,
+        url: data.url,
+    }
+}
+
+fn gl_lnurl_auth_request_data_from_napi(
+    data: LnUrlAuthRequestData,
+) -> glsdk::LnUrlAuthRequestData {
+    glsdk::LnUrlAuthRequestData {
+        k1: data.k1,
+        action: data.action,
+        domain: data.domain,
+        url: data.url,
+    }
+}
+
+fn napi_lnurl_callback_status_from_gl(status: GlLnUrlCallbackStatus) -> LnUrlCallbackStatus {
+    match status {
+        GlLnUrlCallbackStatus::Ok => LnUrlCallbackStatus {
+            r#type: "ok".to_string(),
+            error: None,
+        },
+        GlLnUrlCallbackStatus::ErrorStatus { data } => LnUrlCallbackStatus {
+            r#type: "error".to_string(),
+            error: Some(LnUrlErrorData { reason: data.reason }),
         },
     }
 }

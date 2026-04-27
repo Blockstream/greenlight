@@ -24,16 +24,13 @@ pub struct Node {
     /// installing a new one aborts the previous task. Aborted on Drop.
     event_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
     network: gl_client::bitcoin::Network,
-}
-
-impl Drop for Node {
-    fn drop(&mut self) {
-        if let Ok(mut guard) = self.event_task.lock() {
-            if let Some(handle) = guard.take() {
-                handle.abort();
-            }
-        }
-    }
+    /// LUD-05 namespace xpriv (`m/138'`) encoded as 78 bytes, derived
+    /// once from the BIP39 seed at register/recover/connect time.
+    /// `None` for nodes constructed directly from credentials without
+    /// a mnemonic — those cannot perform LNURL-auth. The
+    /// `Zeroizing` wrapper scrubs the bytes on drop, and `disconnect`
+    /// + `Drop for Node` take the Option to scrub eagerly.
+    lnurl_auth_xpriv: Mutex<Option<zeroize::Zeroizing<Vec<u8>>>>,
 }
 
 impl Node {
@@ -65,13 +62,9 @@ impl Node {
             disconnected: AtomicBool::new(false),
             event_task: Mutex::new(None),
             network: gl_client::bitcoin::Network::Bitcoin,
+            lnurl_auth_xpriv: Mutex::new(None),
         })
     }
-}
-
-#[uniffi::export]
-impl Node {
-
     /// Stop the node if it is currently running.
     pub fn stop(&self) -> Result<(), Error> {
         self.check_connected()?;
@@ -100,11 +93,17 @@ impl Node {
     /// Disconnects from the node and stops the signer if running.
     /// After disconnect, all RPC methods will return an error.
     /// Safe to call multiple times.
+    ///
+    /// Also scrubs the LNURL-auth namespace xpriv from memory; a
+    /// subsequent `lnurl_auth` call on a disconnected Node will
+    /// error rather than silently using stale key material.
     pub fn disconnect(&self) -> Result<(), Error> {
         self.disconnected.store(true, Ordering::Relaxed);
         if let Some(ref handle) = self.signer_handle {
             handle.try_stop();
         }
+        // Take the option, dropping the Zeroizing<Vec<u8>>: scrubs.
+        let _ = self.lnurl_auth_xpriv.lock().unwrap().take();
         Ok(())
     }
 
@@ -800,6 +799,44 @@ impl Node {
             }),
         }
     }
+
+    /// Execute an LNURL-auth callback (LUD-04).
+    ///
+    /// Derives the LUD-05 linking key for `request.domain` from the
+    /// node's LNURL-auth namespace xpriv (`m/138'`), signs the
+    /// service's `k1` challenge, and posts the signed callback.
+    ///
+    /// The namespace xpriv is derived once at register/recover/connect
+    /// time from the BIP39 seed and stored in `Zeroizing` on the
+    /// Node. Because `m/138'` is a hardened path, this stored key
+    /// material cannot be used to derive any other wallet key
+    /// (lightning channels, on-chain funds) — it is restricted to
+    /// LNURL-auth identities. It is scrubbed when the Node is
+    /// disconnected or dropped, after which `lnurl_auth` errors.
+    pub fn lnurl_auth(
+        &self,
+        request: crate::lnurl::LnUrlAuthRequestData,
+    ) -> Result<crate::lnurl::LnUrlCallbackStatus, Error> {
+        self.check_connected()?;
+        let guard = self.lnurl_auth_xpriv.lock().unwrap();
+        let xpriv = guard.as_deref().ok_or_else(|| {
+            Error::Other("LNURL-auth namespace key has been scrubbed".to_string())
+        })?;
+        exec(crate::auth::perform_lnurl_auth(xpriv, &request))
+    }
+}
+
+impl Drop for Node {
+    fn drop(&mut self) {
+        if let Ok(mut guard) = self.event_task.lock() {
+            if let Some(handle) = guard.take() {
+                handle.abort();
+            }
+        }
+        if let Ok(mut guard) = self.lnurl_auth_xpriv.lock() {
+            guard.take();
+        }
+    }
 }
 
 fn render_section<T: serde::Serialize>(result: Result<T, Error>) -> serde_json::Value {
@@ -967,12 +1004,18 @@ impl Node {
         Ok(())
     }
 
-    /// Internal constructor used by the high-level register/recover/connect functions.
-    /// Creates a Node with credentials and signer handle attached.
-    pub(crate) fn with_signer(
+    /// Canonical constructor.
+    ///
+    /// Crate-private — UniFFI consumers reach this via the top-level
+    /// `register` / `recover` / `connect` / `register_or_recover` free
+    /// functions. Those resolve the credentials, spawn the SDK
+    /// signer, and derive the LNURL-auth namespace xpriv from the
+    /// seed before calling here.
+    pub(crate) fn new(
         credentials: Credentials,
         handle: Handle,
         network: gl_client::bitcoin::Network,
+        lnurl_auth_xpriv: zeroize::Zeroizing<Vec<u8>>,
     ) -> Result<Self, Error> {
         let node_id = credentials
             .inner
@@ -992,6 +1035,7 @@ impl Node {
             disconnected: AtomicBool::new(false),
             event_task: Mutex::new(None),
             network,
+            lnurl_auth_xpriv: Mutex::new(Some(lnurl_auth_xpriv)),
         })
     }
 

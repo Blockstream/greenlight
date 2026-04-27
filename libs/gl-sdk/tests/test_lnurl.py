@@ -9,11 +9,28 @@ Network topology:
 """
 
 import asyncio
+import hashlib
+
+import pytest
 
 from gltesting.fixtures import *  # noqa: F401, F403
 from pyln.testing.utils import wait_for
 
 import glsdk
+
+
+def _bip39_seed(mnemonic: str) -> bytes:
+    """Derive the BIP39 seed bytes (no passphrase) from a mnemonic.
+
+    Matches `bip39::Mnemonic::to_seed_normalized("")` on the Rust side
+    used by `glsdk.register/recover/connect`. Lets us seed the
+    gl-client `clients.new(secret=...)` fixture with the same bytes
+    so credentials produced via that path authenticate with
+    `glsdk.connect(mnemonic, ...)`.
+    """
+    return hashlib.pbkdf2_hmac(
+        "sha512", mnemonic.encode("utf-8"), b"mnemonic", 2048, 64
+    )
 
 
 MNEMONIC = (
@@ -98,6 +115,74 @@ def test_parse_input_lightning_address_url(lnurl_service):
     assert resolved.data.lnurl == lnurl_service.lightning_address_url
 
 
+def test_parse_input_lnurl_auth_no_http(lnurl_service):
+    """parse_input on a tag=login URL classifies as LnUrlAuth without HTTP."""
+    auth_url = lnurl_service.auth_url(action="login")
+    resolved = asyncio.run(glsdk.parse_input(auth_url))
+
+    assert isinstance(resolved, glsdk.InputType.LN_URL_AUTH)
+    data = resolved.data
+    assert data.action == "login"
+    assert data.domain == lnurl_service.domain
+    assert data.url == auth_url
+    assert len(data.k1) == 64  # 32 bytes hex
+    # Server should not have logged a callback — classification is offline.
+    assert len(lnurl_service.auth_callbacks) == 0
+
+
+def test_lnurl_auth_end_to_end(scheduler, nobody_id, lnurl_service):
+    """Register an SDK node, parse an auth URL, sign + post, expect OK."""
+    sdk_node, config = make_sdk_node(nobody_id, scheduler)
+
+    try:
+        auth_url = lnurl_service.auth_url(action="login")
+        resolved = asyncio.run(glsdk.parse_input(auth_url))
+        assert isinstance(resolved, glsdk.InputType.LN_URL_AUTH)
+
+        result = sdk_node.lnurl_auth(resolved.data)
+
+        assert isinstance(result, glsdk.LnUrlCallbackStatus.OK)
+        assert len(lnurl_service.auth_callbacks) == 1
+        cb = lnurl_service.auth_callbacks[0]
+        assert cb["k1"] == resolved.data.k1
+        # 33-byte compressed pubkey hex = 66 chars; DER sig is 70-72 bytes.
+        assert len(cb["key"]) == 66
+        assert len(cb["sig"]) >= 140  # 70+ bytes hex
+
+
+def test_lnurl_auth_yields_stable_pubkey_per_domain(scheduler, nobody_id, lnurl_service):
+    """Two auth calls against the same service yield the same linking pubkey."""
+    sdk_node, _ = make_sdk_node(nobody_id, scheduler)
+
+    try:
+        for _ in range(2):
+            url = lnurl_service.auth_url(action="login")
+            resolved = asyncio.run(glsdk.parse_input(url))
+            result = sdk_node.lnurl_auth(resolved.data)
+            assert isinstance(result, glsdk.LnUrlCallbackStatus.OK)
+
+        first_key = lnurl_service.auth_callbacks[0]["key"]
+        second_key = lnurl_service.auth_callbacks[1]["key"]
+        assert first_key == second_key, (
+            "linking pubkey should be deterministic per (mnemonic, domain)"
+        )
+    finally:
+        sdk_node.disconnect()
+
+
+def test_lnurl_auth_after_disconnect_errors(scheduler, nobody_id, lnurl_service):
+    """Calling lnurl_auth after disconnect must error — namespace key scrubbed."""
+    sdk_node, _ = make_sdk_node(nobody_id, scheduler)
+    auth_url = lnurl_service.auth_url(action="login")
+    resolved = asyncio.run(glsdk.parse_input(auth_url))
+
+    sdk_node.disconnect()
+
+    with pytest.raises(glsdk.Error):
+        sdk_node.lnurl_auth(resolved.data)
+    assert len(lnurl_service.auth_callbacks) == 0
+
+
 def test_parse_input_bolt11_no_http(lnurl_service):
     """parse_input on a BOLT11 invoice returns Bolt11 without touching HTTP."""
     invoice = (
@@ -130,12 +215,16 @@ def test_lnurl_pay_end_to_end(
     """Full LNURL-pay flow: resolve → pay → verify.
 
     Uses a GL SDK node with outbound liquidity to pay an LNURL service.
+    Channel setup uses the low-level gl-client `clients` fixture
+    (gl-sdk doesn't expose `connect_peer`/`fund_channel`); afterwards
+    we hand over to the SDK-managed signer via `glsdk.connect`.
     """
-    # Use the low-level client to set up channels, since the SDK node
-    # doesn't expose connect_peer / fund_channel directly.
     relay = fund_and_connect(node_factory, bitcoind, lnurl_service)
 
-    c = clients.new()
+    # Seed the gl-client clients fixture with the BIP39 seed of MNEMONIC
+    # so its credentials authenticate with `glsdk.connect(MNEMONIC, ...)`
+    # later on.
+    c = clients.new(secret=_bip39_seed(MNEMONIC))
     c.register(configure=True)
     gl1 = c.node()
     s = c.signer().run_in_thread()
@@ -163,19 +252,23 @@ def test_lnurl_pay_end_to_end(
         )
     )
 
-    # Now build an SDK-level Node for LNURL operations
+    # Hand over to the SDK signer: stop the gl-client signer first so
+    # only one signer is connected to the Greenlight node, then open
+    # the SDK Node via `connect` using the same mnemonic.
     creds_bytes = c.creds().to_bytes()
-    sdk_node = glsdk.Node(glsdk.Credentials.load(creds_bytes))
+    s.shutdown()
+
+    dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
+    config = glsdk.Config().with_developer_cert(dev_cert)
+    sdk_node = glsdk.connect(MNEMONIC, creds_bytes, config)
 
     try:
-        # Resolve
         resolved = asyncio.run(glsdk.parse_input(lnurl_service.pay_url))
         assert isinstance(resolved, glsdk.InputType.LN_URL_PAY)
         pay_data = resolved.data
 
         amount_msat = 50_000  # 50 sats
 
-        # Pay
         result = sdk_node.lnurl_pay(
             glsdk.LnUrlPayRequest(
                 data=pay_data,
@@ -187,7 +280,6 @@ def test_lnurl_pay_end_to_end(
         assert isinstance(result, glsdk.LnUrlPayResult.ENDPOINT_SUCCESS)
         assert len(result.data.payment_preimage) == 64  # hex-encoded 32 bytes
 
-        # Verify the LNURL server saw the callback
         assert len(lnurl_service.pay_callbacks) == 1
         assert lnurl_service.pay_callbacks[0]["amount_msat"] == amount_msat
     finally:
@@ -205,7 +297,7 @@ def test_lnurl_pay_with_message_success_action(
 
     relay = fund_and_connect(node_factory, bitcoind, lnurl_service)
 
-    c = clients.new()
+    c = clients.new(secret=_bip39_seed(MNEMONIC))
     c.register(configure=True)
     gl1 = c.node()
     s = c.signer().run_in_thread()
@@ -232,7 +324,11 @@ def test_lnurl_pay_with_message_success_action(
     )
 
     creds_bytes = c.creds().to_bytes()
-    sdk_node = glsdk.Node(glsdk.Credentials.load(creds_bytes))
+    s.shutdown()
+
+    dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
+    config = glsdk.Config().with_developer_cert(dev_cert)
+    sdk_node = glsdk.connect(MNEMONIC, creds_bytes, config)
 
     try:
         resolved = asyncio.run(glsdk.parse_input(lnurl_service.pay_url))

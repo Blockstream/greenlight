@@ -86,46 +86,24 @@ gl-sdk-napi/
 **Streaming**: streamNodeEvents() runs as a background task — call startEventStream(node) without await so it listens for events concurrently while your app continues calling other node methods. When you call node.stop(), next() returns null and the loop exits cleanly.
 
 ```typescript
-import { Scheduler, Signer, Node, Credentials, OnchainReceiveResponse, NodeEvent, NodeEventStream } from '@greenlightcln/glsdk';
+import { Config, Node, NodeEvent, NodeEventStream, registerOrRecover } from '@greenlightcln/glsdk';
 
 type Network = 'bitcoin' | 'regtest';
 
 class GreenlightApp {
-  private credentials: Credentials | null = null;
-  private scheduler: Scheduler;
-  private signer: Signer;
+  private config: Config;
+  private mnemonic: string;
   private node: Node | null = null;
 
   constructor(phrase: string, network: Network) {
-    this.scheduler = new Scheduler(network);
-    this.signer = new Signer(phrase);
-    console.log(`✓ Signer created. Node ID: ${this.signer.nodeId().toString('hex')}`);
+    this.config = new Config().withNetwork(network);
+    this.mnemonic = phrase;
   }
 
-  async registerOrRecover(inviteCode?: string): Promise<void> {
-    try {
-      console.log('Attempting to register node...');
-      this.credentials = await this.scheduler.register(this.signer, inviteCode || '');
-      console.log('✓ Node registered successfully');
-    } catch (e: any) {
-      const match = e.message.match(/message: "([^"]+)"/);
-      console.error(`✗ Registration failed: ${match ? match[1] : e.message}`);
-      console.log('Attempting recovery...');
-      try {
-        this.credentials = await this.scheduler.recover(this.signer);
-        console.log('✓ Node recovered successfully');
-      } catch (recoverError) {
-        console.error('✗ Recovery failed:', recoverError);
-        throw recoverError;
-      }
-    }
-  }
-
-  createNode(): Node {
-    if (!this.credentials) { throw new Error('Must register/recover before creating node'); }
-    console.log('Creating node instance...');
-    this.node = new Node(this.credentials);
-    console.log('✓ Node created');
+  async registerOrRecover(inviteCode?: string): Promise<Node> {
+    console.log('Attempting register-or-recover...');
+    this.node = await registerOrRecover(this.mnemonic, inviteCode, this.config);
+    console.log('✓ Node ready');
     return this.node;
   }
 
