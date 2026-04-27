@@ -306,7 +306,7 @@ class TestNodeStateMethod:
     def test_node_state_returns_valid_snapshot(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
         state = node.node_state()
         assert isinstance(state, glsdk.NodeState)
         # Node id is a lowercase hex pubkey (33 bytes → 66 chars).
@@ -334,7 +334,7 @@ class TestGenerateDiagnosticData:
     ):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
 
         blob = node.generate_diagnostic_data()
         assert isinstance(blob, str)

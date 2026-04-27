@@ -73,7 +73,7 @@ class TestListInvoicesMethod:
     def test_list_invoices_empty(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
         result = node.list_invoices(
             label=None, invstring=None, payment_hash=None,
             offer_id=None, index=None, start=None, limit=None,
@@ -120,7 +120,7 @@ class TestListPaysMethod:
     def test_list_pays_empty(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
         result = node.list_pays(
             bolt11=None, payment_hash=None, status=None,
             index=None, start=None, limit=None,
@@ -242,7 +242,7 @@ class TestListPaymentsMethod:
     def test_list_payments_empty(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
         req = glsdk.ListPaymentsRequest(
             filters=None, from_timestamp=None, to_timestamp=None,
             include_failures=None, offset=None, limit=None,
@@ -259,7 +259,7 @@ class TestListInvoicesIntegration:
     def test_created_invoice_appears_in_list_invoices(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
 
         label = str(uuid.uuid4())
         node.receive(label=label, description="coffee", amount_msat=10_000_000)
@@ -283,7 +283,7 @@ class TestListInvoicesIntegration:
         inspection."""
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
 
         label = str(uuid.uuid4())
         node.receive(label=label, description="tea", amount_msat=5_000_000)
@@ -306,7 +306,7 @@ class TestListInvoicesIntegration:
     def test_type_filter_received_only(self, scheduler, nobody_id):
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.register_or_recover(MNEMONIC, None, config)
+        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
 
         label = str(uuid.uuid4())
         node.receive(label=label, description="tea", amount_msat=5_000_000)

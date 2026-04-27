@@ -503,15 +503,20 @@ impl NodeEventStream {
 
 #[napi]
 impl Node {
-    /// Create a new node connection
+    /// Create a signerless node from credentials.
+    ///
+    /// No SDK-side signer runs — signing happens elsewhere (paired
+    /// device, hardware signer, the CLN node's local signer). For
+    /// the SDK-as-signer model, use the `register` / `recover` /
+    /// `connect` free functions with a mnemonic.
     ///
     /// # Arguments
     /// * `credentials` - Device credentials
     #[napi(constructor)]
     pub fn new(credentials: &Credentials) -> Result<Self> {
-        // Constructor stays sync — connection is established lazily
+        // Connection is established lazily on first RPC.
         let inner =
-            GlNode::new(&credentials.inner).map_err(|e| Error::from_reason(e.to_string()))?;
+            GlNode::signerless(credentials.inner.clone()).map_err(|e| Error::from_reason(e.to_string()))?;
 
         Ok(Self { inner: std::sync::Arc::new(inner) })
     }
@@ -865,10 +870,6 @@ fn napi_node_event_from_gl(event: GlNodeEvent) -> NodeEvent {
                 label: details.label,
                 amount_msat: details.amount_msat as i64,
             }),
-        },
-        GlNodeEvent::Unknown => NodeEvent {
-            event_type: "unknown".to_string(),
-            invoice_paid: None,
         },
     }
 }

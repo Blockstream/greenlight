@@ -53,7 +53,7 @@ class LoggingTest {
         val config = Config()
         val mnemonic = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong"
         try {
-            registerOrRecover(mnemonic, null, config)
+            NodeBuilder(config).registerOrRecover(mnemonic, null)
         } catch (_: Exception) {
             // May fail on network / credentials — we only care that logs flowed.
         }

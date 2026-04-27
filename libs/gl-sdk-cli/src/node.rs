@@ -52,7 +52,9 @@ pub enum Command {
 
 pub fn handle(cmd: Command, data_dir: &DataDir) -> Result<()> {
     let creds = util::read_credentials(data_dir)?;
-    let node = glsdk::Node::new(&creds).map_err(|e| Error::Other(e.to_string()))?;
+    // CLI wraps an externally-running signer (the gl-client signer
+    // launched out-of-process); the SDK Node is signerless.
+    let node = glsdk::Node::signerless(creds).map_err(|e| Error::Other(e.to_string()))?;
 
     match cmd {
         Command::GetInfo => get_info(&node),

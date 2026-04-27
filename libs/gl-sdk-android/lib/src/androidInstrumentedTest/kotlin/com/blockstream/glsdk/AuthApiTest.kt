@@ -65,19 +65,19 @@ class AuthApiTest {
     @Test(expected = Exception.PhraseCorrupted::class)
     fun register_bad_mnemonic() {
         val config = Config()
-        register("not a valid mnemonic", null, config)
+        NodeBuilder(config).register("not a valid mnemonic", null)
     }
 
     @Test(expected = Exception.PhraseCorrupted::class)
     fun recover_bad_mnemonic() {
         val config = Config()
-        recover("not a valid mnemonic", config)
+        NodeBuilder(config).recover("not a valid mnemonic")
     }
 
     @Test(expected = Exception.PhraseCorrupted::class)
     fun connect_bad_mnemonic() {
         val config = Config()
-        connect("not a valid mnemonic", "fake-creds".toByteArray(), config)
+        NodeBuilder(config).connect("fake-creds".toByteArray(), "not a valid mnemonic")
     }
 
     // ============================================================
@@ -88,7 +88,7 @@ class AuthApiTest {
     @Test
     fun register_or_recover_returns_node() {
         val config = Config()
-        val node = registerOrRecover(testMnemonic, null, config)
+        val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
         assertNotNull(node)
         node.use { n ->
             val creds = n.credentials()
@@ -104,12 +104,12 @@ class AuthApiTest {
 
         // Register or recover to get credentials
         val savedCreds: ByteArray
-        registerOrRecover(testMnemonic, null, config).use { node ->
+        NodeBuilder(config).registerOrRecover(testMnemonic, null).use { node ->
             savedCreds = node.credentials()
         }
 
         // Connect with the saved credentials
-        connect(testMnemonic, savedCreds, config).use { node ->
+        NodeBuilder(config).connect(savedCreds, testMnemonic).use { node ->
             assertNotNull(node)
             val reconnectedCreds = node.credentials()
             assertTrue("Reconnected credentials should not be empty", reconnectedCreds.isNotEmpty())
@@ -124,7 +124,7 @@ class AuthApiTest {
     fun disconnect_is_idempotent() {
         val config = Config()
 
-        val node = registerOrRecover(testMnemonic, null, config)
+        val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
         // First disconnect
         node.disconnect()
         // Second disconnect should not throw
@@ -139,7 +139,7 @@ class AuthApiTest {
     @Test
     fun register_or_recover_and_create_invoice() {
         val config = Config()
-        registerOrRecover(testMnemonic, null, config).use { node ->
+        NodeBuilder(config).registerOrRecover(testMnemonic, null).use { node ->
             val addrResponse = node.onchainReceive()
             assertNotNull(addrResponse)
             println("Deposit funds to: $addrResponse")
