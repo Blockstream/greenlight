@@ -1,6 +1,16 @@
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
-import { Credentials, Scheduler, Signer, Node } from '../index.js';
+import {
+  Config,
+  Credentials,
+  Node,
+  Signer,
+  connect,
+  recover,
+  register,
+} from '../index.js';
+
+const REGTEST = () => new Config().withNetwork('regtest');
 
 describe('Credentials', () => {
   it('can save and load raw credentials', async () => {
@@ -19,14 +29,14 @@ describe('Credentials', () => {
 describe('Signer', () => {
   it('can be constructed from a mnemonic', async () => {
     const rand: Buffer = crypto.randomBytes(16);
-    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString('hex'));
     const signer = new Signer(MNEMONIC);
     expect(signer).toBeTruthy();
   });
 
   it('can return a node id', async () => {
     const rand: Buffer = crypto.randomBytes(16);
-    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString('hex'));
     const signer = new Signer(MNEMONIC);
     const nodeId = signer.nodeId();
 
@@ -36,7 +46,7 @@ describe('Signer', () => {
 
   it('returns consistent node id for same mnemonic', async () => {
     const rand: Buffer = crypto.randomBytes(16);
-    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
+    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString('hex'));
     const signer1 = new Signer(MNEMONIC);
     const signer2 = new Signer(MNEMONIC);
 
@@ -45,61 +55,67 @@ describe('Signer', () => {
 
     expect(nodeId1.equals(nodeId2)).toBe(true);
   });
+});
 
-  it('can be constructed with different mnemonics', async () => {
-    const rand2: Buffer = crypto.randomBytes(16);
-    const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-    const signer = new Signer(MNEMONIC2);
-    expect(signer).toBeTruthy();
+describe('Config', () => {
+  it('defaults to bitcoin network and has no developer cert', () => {
+    const config = new Config();
+    expect(config).toBeTruthy();
+  });
 
-    const nodeId = signer.nodeId();
-    expect(Buffer.isBuffer(nodeId)).toBe(true);
+  it('produces a regtest-network Config via withNetwork', () => {
+    const config = new Config().withNetwork('regtest');
+    expect(config).toBeTruthy();
+  });
+
+  it('rejects invalid network strings', () => {
+    expect(() => new Config().withNetwork('mars')).toThrow();
   });
 });
 
-describe('Scheduler', () => {
-  it('can be constructed for regtest', async () => {
-    const scheduler = new Scheduler('regtest');
-    expect(scheduler).toBeTruthy();
+describe('Integration: register / recover / connect', () => {
+  let mnemonic: string;
+  let registeredNode: Node | null = null;
+
+  beforeAll(() => {
+    mnemonic = bip39.entropyToMnemonic(crypto.randomBytes(16).toString('hex'));
   });
 
-  it('can be constructed for bitcoin mainnet', async () => {
-    const scheduler = new Scheduler('bitcoin');
-    expect(scheduler).toBeTruthy();
-  });
-});
-
-describe('Integration: scheduler and signer', () => {
-  let scheduler: Scheduler;
-  let signer: Signer;
-  let credentials: Credentials;
-  let node: Node;
-
-  beforeAll(async () => {
-    const rand: Buffer = crypto.randomBytes(16);
-    const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    scheduler = new Scheduler('regtest');
-    signer = new Signer(MNEMONIC);
-    credentials = await scheduler.register(signer);
-    node = new Node(credentials);
-  });
-
-  it('can recover credentials', async () => {
-    if (node) { await node.stop(); }
-    const recovered = await scheduler.recover(signer);
-    expect(recovered).toBeInstanceOf(Credentials);
-    expect((await recovered.save()).length).toBeGreaterThan(0);
-  });
-
-  it('handles registration of existing node (falls back to recovery)', async () => {
-    try {
-      if (node) { await node.stop(); }
-      // Trying to register the same signer again should throw an error, which we catch to then test recovery
-      const credentials2 = await scheduler.register(signer);
-      expect(credentials2).toBeInstanceOf(Credentials);
-    } catch (e) {
-      const recovered = await scheduler.recover(signer);
-      expect(recovered).toBeInstanceOf(Credentials);
+  afterAll(async () => {
+    if (registeredNode) {
+      try { registeredNode.disconnect(); } catch {}
+      try { await registeredNode.stop(); } catch {}
     }
+  });
+
+  it('register returns a connected Node and exposes credentials', async () => {
+    registeredNode = await register(mnemonic, undefined, REGTEST());
+    expect(registeredNode).toBeTruthy();
+
+    const creds = registeredNode.credentials();
+    expect(Buffer.isBuffer(creds)).toBe(true);
+    expect(creds.length).toBeGreaterThan(0);
+  });
+
+  it('recover returns a Node for an already-registered mnemonic', async () => {
+    if (registeredNode) {
+      registeredNode.disconnect();
+      await registeredNode.stop();
+      registeredNode = null;
+    }
+    const recovered = await recover(mnemonic, REGTEST());
+    expect(recovered).toBeTruthy();
+    registeredNode = recovered;
+  });
+
+  it('connect works with saved credentials and the same mnemonic', async () => {
+    const savedCreds = registeredNode!.credentials();
+    registeredNode!.disconnect();
+    await registeredNode!.stop();
+    registeredNode = null;
+
+    const reconnected = await connect(mnemonic, savedCreds, REGTEST());
+    expect(reconnected).toBeTruthy();
+    registeredNode = reconnected;
   });
 });

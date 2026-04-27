@@ -239,21 +239,3 @@ class TestDisconnectBlocksRpc:
         assert len(creds) > 0
 
 
-class TestLowLevelCredentials:
-    """Test that Node created via low-level API exposes credentials."""
-
-    def test_node_new_stores_credentials(self, scheduler, nobody_id):
-        """Node::new(creds) should allow calling node.credentials()."""
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-
-        # Register to get valid credentials
-        node1 = glsdk.register(MNEMONIC, None, config)
-        saved_creds = node1.credentials()
-        node1.disconnect()
-
-        # Create node via low-level API
-        creds_obj = glsdk.Credentials.load(saved_creds)
-        node2 = glsdk.Node(creds_obj)
-        roundtripped = node2.credentials()
-        assert len(roundtripped) > 0

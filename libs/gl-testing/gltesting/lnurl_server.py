@@ -26,6 +26,7 @@ class LnurlServer:
         GET  /.well-known/lnurlp/{username}  → LUD-16 (same payRequest)
         GET  /lnurlw                         → LUD-03 withdrawRequest response
         GET  /lnurlw/callback?k1=&pr=        → service pays the invoice
+        GET  /auth?tag=login&k1=&sig=&key=   → LUD-04 verify signature
     """
 
     def __init__(
@@ -71,9 +72,13 @@ class LnurlServer:
         # Each withdraw session issues a fresh k1 and remembers it until consumed
         self._pending_withdrawals: dict[str, dict] = {}
 
+        # LUD-04 auth challenges issued by `auth_url(...)`, indexed by k1
+        self._pending_auth: dict[str, dict] = {}
+
         # Logs of all incoming callback requests — tests inspect these
         self.pay_callbacks: list[dict] = []
         self.withdraw_callbacks: list[dict] = []
+        self.auth_callbacks: list[dict] = []
 
     # ── URLs ──────────────────────────────────────────────────
 
@@ -96,6 +101,20 @@ class LnurlServer:
     @property
     def withdraw_url(self) -> str:
         return f"{self.base_url}/lnurlw"
+
+    def auth_url(self, action: str | None = None) -> str:
+        """Issue a fresh LUD-04 auth challenge and return its full URL.
+
+        The k1 is generated here and remembered server-side so the
+        signed callback can be verified. `action` can be one of
+        register/login/link/auth (or None to omit).
+        """
+        k1 = secrets.token_hex(32)  # 32 bytes = 64 hex chars
+        self._pending_auth[k1] = {"used": False, "action": action}
+        url = f"{self.base_url}/auth?tag=login&k1={k1}"
+        if action is not None:
+            url += f"&action={action}"
+        return url
 
     # ── Lifecycle ────────────────────────────────────────────
 
@@ -188,6 +207,31 @@ class LnurlServer:
 
         return {"status": "OK"}
 
+    def handle_auth_callback(self, k1: str, sig_hex: str, key_hex: str) -> dict:
+        """Verify the LUD-04 ECDSA signature over k1 with the linking key."""
+        self.auth_callbacks.append({"k1": k1, "sig": sig_hex, "key": key_hex})
+
+        session = self._pending_auth.get(k1)
+        if session is None:
+            return {"status": "ERROR", "reason": f"unknown k1: {k1}"}
+        if session["used"]:
+            return {"status": "ERROR", "reason": "k1 already used"}
+
+        try:
+            from coincurve import PublicKey
+
+            key_bytes = bytes.fromhex(key_hex)
+            sig_der = bytes.fromhex(sig_hex)
+            challenge = bytes.fromhex(k1)
+            pubkey = PublicKey(key_bytes)
+            if not pubkey.verify(sig_der, challenge, hasher=None):
+                return {"status": "ERROR", "reason": "invalid signature"}
+        except Exception as e:
+            return {"status": "ERROR", "reason": f"verify failed: {e}"}
+
+        session["used"] = True
+        return {"status": "OK"}
+
 
 def _handler_factory(server: LnurlServer):
     """Build a BaseHTTPRequestHandler class bound to a specific server.
@@ -261,6 +305,18 @@ def _handler_factory(server: LnurlServer):
                         )
                         return
                     self._reply_json(200, server.handle_withdraw_callback(k1, pr))
+                    return
+
+                if path == "/auth":
+                    k1 = query.get("k1", [None])[0]
+                    sig = query.get("sig", [None])[0]
+                    key = query.get("key", [None])[0]
+                    if not k1 or not sig or not key:
+                        self._reply_json(
+                            200, {"status": "ERROR", "reason": "missing k1/sig/key"}
+                        )
+                        return
+                    self._reply_json(200, server.handle_auth_callback(k1, sig, key))
                     return
 
                 self.send_response(404)

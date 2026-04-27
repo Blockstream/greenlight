@@ -481,7 +481,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_credentials() != 39165:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_disconnect() != 43626:
+    if lib.uniffi_glsdk_checksum_method_node_disconnect() != 35611:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_get_info() != 39460:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -496,6 +496,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_method_node_list_peer_channels() != 35210:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_list_peers() != 29567:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_lnurl_auth() != 37374:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_lnurl_pay() != 61306:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -532,8 +534,6 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_constructor_credentials_load() != 25306:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_developercert_new() != 57793:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_constructor_node_new() != 7003:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_scheduler_new() != 15239:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -734,11 +734,6 @@ _UniffiLib.uniffi_glsdk_fn_free_node.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_free_node.restype = None
-_UniffiLib.uniffi_glsdk_fn_constructor_node_new.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_constructor_node_new.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_method_node_credentials.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -798,6 +793,12 @@ _UniffiLib.uniffi_glsdk_fn_method_node_list_peers.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_list_peers.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_auth.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_auth.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_lnurl_pay.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
@@ -1285,6 +1286,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_list_peer_channels.restype = ctypes
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_list_peers.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_auth.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_auth.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_pay.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_pay.restype = ctypes.c_uint16
@@ -1339,9 +1343,6 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.restype = ctypes.c
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.restype = ctypes.c_uint16
@@ -2157,6 +2158,84 @@ class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterSequenceTypePeer.write(value.peers, buf)
+
+
+class LnUrlAuthRequestData:
+    """
+    Data from an LNURL-auth endpoint (LUD-04).
+
+    Returned inside `InputType::LnUrlAuth` after `parse_input` classifies
+    a `tag=login` LNURL. Because the tag is carried in the URL query
+    string, no HTTP fetch is needed for classification — the callback is
+    only hit when the user approves the auth via `Node::lnurl_auth`.
+    """
+
+    k1: "str"
+    """
+    Hex-encoded 32-byte challenge from the service.
+    """
+
+    action: "typing.Optional[str]"
+    """
+    One of `register`, `login`, `link`, `auth`. None if the service
+    did not specify an `action` query parameter.
+    """
+
+    domain: "str"
+    """
+    Domain of the LNURL-auth service, to be shown to the user when
+    asking for auth confirmation per LUD-04.
+    """
+
+    url: "str"
+    """
+    Full URL of the LNURL-auth service including its query string.
+    Used internally as the callback target after signing.
+    """
+
+    def __init__(self, *, k1: "str", action: "typing.Optional[str]", domain: "str", url: "str"):
+        self.k1 = k1
+        self.action = action
+        self.domain = domain
+        self.url = url
+
+    def __str__(self):
+        return "LnUrlAuthRequestData(k1={}, action={}, domain={}, url={})".format(self.k1, self.action, self.domain, self.url)
+
+    def __eq__(self, other):
+        if self.k1 != other.k1:
+            return False
+        if self.action != other.action:
+            return False
+        if self.domain != other.domain:
+            return False
+        if self.url != other.url:
+            return False
+        return True
+
+class _UniffiConverterTypeLnUrlAuthRequestData(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LnUrlAuthRequestData(
+            k1=_UniffiConverterString.read(buf),
+            action=_UniffiConverterOptionalString.read(buf),
+            domain=_UniffiConverterString.read(buf),
+            url=_UniffiConverterString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.k1)
+        _UniffiConverterOptionalString.check_lower(value.action)
+        _UniffiConverterString.check_lower(value.domain)
+        _UniffiConverterString.check_lower(value.url)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.k1, buf)
+        _UniffiConverterOptionalString.write(value.action, buf)
+        _UniffiConverterString.write(value.domain, buf)
+        _UniffiConverterString.write(value.url, buf)
 
 
 class LnUrlErrorData:
@@ -3679,7 +3758,9 @@ class InputType:
     """
     The result of `parse_input`: a fully-resolved input ready for the
     caller's next action. LNURL bech32 strings and Lightning Addresses
-    are resolved over HTTP into typed pay or withdraw request data.
+    are resolved over HTTP into typed pay or withdraw request data;
+    LNURL-auth endpoints are classified from the URL query string
+    without an HTTP fetch.
     """
 
     def __init__(self):
@@ -3766,6 +3847,27 @@ class InputType:
                 return False
             return True
     
+    class LN_URL_AUTH:
+        """
+        An LNURL-auth (LUD-04) challenge. No HTTP was performed —
+        classification comes from the `tag=login` URL query parameter.
+        """
+
+        data: "LnUrlAuthRequestData"
+
+        def __init__(self,data: "LnUrlAuthRequestData"):
+            self.data = data
+
+        def __str__(self):
+            return "InputType.LN_URL_AUTH(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_LN_URL_AUTH():
+                return False
+            if self.data != other.data:
+                return False
+            return True
+    
     
 
     # For each variant, we have `is_NAME` and `is_name` methods for easily checking
@@ -3786,6 +3888,10 @@ class InputType:
         return isinstance(self, InputType.LN_URL_WITHDRAW)
     def is_ln_url_withdraw(self) -> bool:
         return isinstance(self, InputType.LN_URL_WITHDRAW)
+    def is_LN_URL_AUTH(self) -> bool:
+        return isinstance(self, InputType.LN_URL_AUTH)
+    def is_ln_url_auth(self) -> bool:
+        return isinstance(self, InputType.LN_URL_AUTH)
     
 
 # Now, a little trick - we make each nested variant class be a subclass of the main
@@ -3795,6 +3901,7 @@ InputType.BOLT11 = type("InputType.BOLT11", (InputType.BOLT11, InputType,), {}) 
 InputType.NODE_ID = type("InputType.NODE_ID", (InputType.NODE_ID, InputType,), {})  # type: ignore
 InputType.LN_URL_PAY = type("InputType.LN_URL_PAY", (InputType.LN_URL_PAY, InputType,), {})  # type: ignore
 InputType.LN_URL_WITHDRAW = type("InputType.LN_URL_WITHDRAW", (InputType.LN_URL_WITHDRAW, InputType,), {})  # type: ignore
+InputType.LN_URL_AUTH = type("InputType.LN_URL_AUTH", (InputType.LN_URL_AUTH, InputType,), {})  # type: ignore
 
 
 
@@ -3819,6 +3926,10 @@ class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
             return InputType.LN_URL_WITHDRAW(
                 _UniffiConverterTypeLnUrlWithdrawRequestData.read(buf),
             )
+        if variant == 5:
+            return InputType.LN_URL_AUTH(
+                _UniffiConverterTypeLnUrlAuthRequestData.read(buf),
+            )
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
@@ -3834,6 +3945,9 @@ class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
             return
         if value.is_LN_URL_WITHDRAW():
             _UniffiConverterTypeLnUrlWithdrawRequestData.check_lower(value.data)
+            return
+        if value.is_LN_URL_AUTH():
+            _UniffiConverterTypeLnUrlAuthRequestData.check_lower(value.data)
             return
         raise ValueError(value)
 
@@ -3851,6 +3965,9 @@ class _UniffiConverterTypeInputType(_UniffiConverterRustBuffer):
         if value.is_LN_URL_WITHDRAW():
             buf.write_i32(4)
             _UniffiConverterTypeLnUrlWithdrawRequestData.write(value.data, buf)
+        if value.is_LN_URL_AUTH():
+            buf.write_i32(5)
+            _UniffiConverterTypeLnUrlAuthRequestData.write(value.data, buf)
 
 
 
@@ -3939,6 +4056,111 @@ class _UniffiConverterTypeListIndex(_UniffiConverterRustBuffer):
             buf.write_i32(1)
         if value == ListIndex.UPDATED:
             buf.write_i32(2)
+
+
+
+
+
+
+
+class LnUrlCallbackStatus:
+    """
+    Result of an LNURL-auth callback (LUD-04).
+    """
+
+    def __init__(self):
+        raise RuntimeError("LnUrlCallbackStatus cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class OK:
+        """
+        The service accepted the signed challenge.
+        """
+
+
+        def __init__(self,):
+            pass
+
+        def __str__(self):
+            return "LnUrlCallbackStatus.OK()".format()
+
+        def __eq__(self, other):
+            if not other.is_OK():
+                return False
+            return True
+    
+    class ERROR_STATUS:
+        """
+        The service rejected the signed challenge.
+        """
+
+        data: "LnUrlErrorData"
+
+        def __init__(self,data: "LnUrlErrorData"):
+            self.data = data
+
+        def __str__(self):
+            return "LnUrlCallbackStatus.ERROR_STATUS(data={})".format(self.data)
+
+        def __eq__(self, other):
+            if not other.is_ERROR_STATUS():
+                return False
+            if self.data != other.data:
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_OK(self) -> bool:
+        return isinstance(self, LnUrlCallbackStatus.OK)
+    def is_ok(self) -> bool:
+        return isinstance(self, LnUrlCallbackStatus.OK)
+    def is_ERROR_STATUS(self) -> bool:
+        return isinstance(self, LnUrlCallbackStatus.ERROR_STATUS)
+    def is_error_status(self) -> bool:
+        return isinstance(self, LnUrlCallbackStatus.ERROR_STATUS)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+LnUrlCallbackStatus.OK = type("LnUrlCallbackStatus.OK", (LnUrlCallbackStatus.OK, LnUrlCallbackStatus,), {})  # type: ignore
+LnUrlCallbackStatus.ERROR_STATUS = type("LnUrlCallbackStatus.ERROR_STATUS", (LnUrlCallbackStatus.ERROR_STATUS, LnUrlCallbackStatus,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeLnUrlCallbackStatus(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return LnUrlCallbackStatus.OK(
+            )
+        if variant == 2:
+            return LnUrlCallbackStatus.ERROR_STATUS(
+                _UniffiConverterTypeLnUrlErrorData.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value.is_OK():
+            return
+        if value.is_ERROR_STATUS():
+            _UniffiConverterTypeLnUrlErrorData.check_lower(value.data)
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value.is_OK():
+            buf.write_i32(1)
+        if value.is_ERROR_STATUS():
+            buf.write_i32(2)
+            _UniffiConverterTypeLnUrlErrorData.write(value.data, buf)
 
 
 
@@ -5602,6 +5824,10 @@ class NodeProtocol(typing.Protocol):
         Disconnects from the node and stops the signer if running.
         After disconnect, all RPC methods will return an error.
         Safe to call multiple times.
+
+        Also scrubs the LNURL-auth namespace xpriv from memory; a
+        subsequent `lnurl_auth` call on a disconnected Node will
+        error rather than silently using stale key material.
         """
 
         raise NotImplementedError
@@ -5664,6 +5890,29 @@ class NodeProtocol(typing.Protocol):
 
         Returns information about all peers including their connection
         status.
+        """
+
+        raise NotImplementedError
+    def lnurl_auth(self, request: "LnUrlAuthRequestData"):
+        """
+        Execute an LNURL-auth callback (LUD-04).
+
+        Derives the LUD-05 linking key for `request.domain` from the
+        node's LNURL-auth namespace xpriv (`m/138'`), signs the
+        service's `k1` challenge, and posts the signed callback.
+
+        The namespace xpriv is derived once at register/recover/connect
+        time from the BIP39 seed and stored in `Zeroizing` on the
+        Node. Because `m/138'` is a hardened path, this stored key
+        material cannot be used to derive any other wallet key
+        (lightning channels, on-chain funds) — it is restricted to
+        LNURL-auth identities. It is scrubbed when the Node is
+        disconnected or dropped.
+
+        Returns an error when the Node was constructed directly from
+        credentials without a mnemonic (`Node::new(credentials)`) and
+        thus has no LNURL-auth namespace key, or when `disconnect()`
+        has already scrubbed the key.
         """
 
         raise NotImplementedError
@@ -5766,11 +6015,9 @@ class Node():
     """
 
     _pointer: ctypes.c_void_p
-    def __init__(self, credentials: "Credentials"):
-        _UniffiConverterTypeCredentials.check_lower(credentials)
-        
-        self._pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_node_new,
-        _UniffiConverterTypeCredentials.lower(credentials))
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
 
     def __del__(self):
         # In case of partial initialization of instances.
@@ -5810,6 +6057,10 @@ class Node():
         Disconnects from the node and stops the signer if running.
         After disconnect, all RPC methods will return an error.
         Safe to call multiple times.
+
+        Also scrubs the LNURL-auth namespace xpriv from memory; a
+        subsequent `lnurl_auth` call on a disconnected Node will
+        error rather than silently using stale key material.
         """
 
         _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_disconnect,self._uniffi_clone_pointer(),)
@@ -5966,6 +6217,39 @@ class Node():
 
         return _UniffiConverterTypeListPeersResponse.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_list_peers,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def lnurl_auth(self, request: "LnUrlAuthRequestData") -> "LnUrlCallbackStatus":
+        """
+        Execute an LNURL-auth callback (LUD-04).
+
+        Derives the LUD-05 linking key for `request.domain` from the
+        node's LNURL-auth namespace xpriv (`m/138'`), signs the
+        service's `k1` challenge, and posts the signed callback.
+
+        The namespace xpriv is derived once at register/recover/connect
+        time from the BIP39 seed and stored in `Zeroizing` on the
+        Node. Because `m/138'` is a hardened path, this stored key
+        material cannot be used to derive any other wallet key
+        (lightning channels, on-chain funds) — it is restricted to
+        LNURL-auth identities. It is scrubbed when the Node is
+        disconnected or dropped.
+
+        Returns an error when the Node was constructed directly from
+        credentials without a mnemonic (`Node::new(credentials)`) and
+        thus has no LNURL-auth namespace key, or when `disconnect()`
+        has already scrubbed the key.
+        """
+
+        _UniffiConverterTypeLnUrlAuthRequestData.check_lower(request)
+        
+        return _UniffiConverterTypeLnUrlCallbackStatus.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_lnurl_auth,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeLnUrlAuthRequestData.lower(request))
         )
 
 
@@ -6671,6 +6955,7 @@ __all__ = [
     "InputType",
     "InvoiceStatus",
     "ListIndex",
+    "LnUrlCallbackStatus",
     "LnUrlPayResult",
     "LnUrlWithdrawResult",
     "Network",
@@ -6692,6 +6977,7 @@ __all__ = [
     "ListPaysResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
+    "LnUrlAuthRequestData",
     "LnUrlErrorData",
     "LnUrlPayErrorData",
     "LnUrlPayRequest",
