@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
-import { Credentials, Scheduler, Signer, Node, Handle } from '../index.js';
+import { Config, Credentials, Scheduler, Node, register, connect } from '../index.js';
 
 export const lspInfo = () => ({
   rpcSocket:     process.env.LSP_RPC_SOCKET!,
@@ -35,15 +35,31 @@ export async function fundWallet(node: Node, amountSats = 100_000_000): Promise<
   throw new Error('fundNode timed out waiting for node to detect funds');
 }
 
-export async function getGLNode(scheduler: Scheduler, connectToLSP: boolean = true): Promise<{ node: Node; handle: Handle }> {
+/** A fully-connected SDK node with the SDK signer running. The SDK
+ *  manages the signer internally; call `node.disconnect()` to stop
+ *  it. The `mnemonic` is returned so callers that need cryptographic
+ *  derivations (e.g. LNURL-auth happens internally on Node, but tests
+ *  may want to assert against the same seed) can re-use it. */
+export interface SdkNode {
+  node: Node;
+  mnemonic: string;
+}
+
+export async function getGLNode(
+  _scheduler: Scheduler,
+  connectToLSP: boolean = true,
+): Promise<SdkNode> {
   const mnemonic = bip39.entropyToMnemonic(crypto.randomBytes(16).toString('hex'));
-  const secret = bip39.mnemonicToSeedSync(mnemonic);
-  const signer = new Signer(mnemonic);
-  let credentials: Credentials;
+  const config = new Config().withNetwork('regtest');
+
   if (connectToLSP) {
     const testSetupServerUrl = process.env.TEST_SETUP_SERVER_URL!;
     if (!testSetupServerUrl) throw new Error('TEST_SETUP_SERVER_URL not set');
 
+    // Test-setup server registers a node with the same seed and links
+    // it to the LSP. We then `connect` from the JS side using the
+    // mnemonic that derives that same seed.
+    const secret = bip39.mnemonicToSeedSync(mnemonic);
     const res = await fetch(`${testSetupServerUrl}/connect-to-lsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,11 +67,13 @@ export async function getGLNode(scheduler: Scheduler, connectToLSP: boolean = tr
     });
     if (!res.ok) throw new Error(`Failed to connect node to LSP: ${await res.text()}`);
     const { creds_path } = await res.json();
-    credentials = await Credentials.load(fs.readFileSync(creds_path));
-  } else {
-    credentials = await scheduler.register(signer);
+    const credsBytes = fs.readFileSync(creds_path);
+    const node = await connect(mnemonic, credsBytes, config);
+    return { node, mnemonic };
   }
-  return { node: new Node(credentials), handle: await signer.start() };
+
+  const node = await register(mnemonic, undefined, config);
+  return { node, mnemonic };
 }
 
 export async function getLspInvoice(amountMsat: number = 0): Promise<string> {
@@ -79,3 +97,7 @@ export async function getBitcoinAddress(): Promise<string> {
   const resJson = await res.json();
   return resJson.address;
 }
+
+// Re-export `Credentials` so tests that need to load credentials
+// directly (without going through register/connect) keep compiling.
+export { Credentials };

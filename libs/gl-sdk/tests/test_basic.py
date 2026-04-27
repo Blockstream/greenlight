@@ -48,13 +48,15 @@ def test_credentials_multiple_loads():
     assert all(isinstance(c, glsdk.Credentials) for c in [creds1, creds2, creds3])
 
 
-def test_node_creation_fails_with_empty_creds():
-    """Test that creating a Node with empty credentials fails as expected."""
-    creds = glsdk.Credentials.load(b"")
-
-    # Node creation should fail with these invalid credentials
+def test_connect_fails_with_empty_creds():
+    """Connecting with empty credentials must error."""
+    config = glsdk.Config()
+    mnemonic = (
+        "abandon abandon abandon abandon abandon abandon "
+        "abandon abandon abandon abandon abandon about"
+    )
     with pytest.raises(glsdk.Error):
-        node = glsdk.Node(creds)
+        glsdk.connect(mnemonic, b"", config)
 
 
 def test_developer_cert_construction():

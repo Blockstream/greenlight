@@ -5,7 +5,7 @@
 // returning a fully-typed `InputType` ready for the caller's next
 // action (display the invoice, build a pay/withdraw request, etc.).
 
-use crate::lnurl::{LnUrlPayRequestData, LnUrlWithdrawRequestData};
+use crate::lnurl::{LnUrlAuthRequestData, LnUrlPayRequestData, LnUrlWithdrawRequestData};
 use crate::Error;
 
 /// Parsed BOLT11 invoice with extracted fields.
@@ -29,7 +29,9 @@ pub struct ParsedInvoice {
 
 /// The result of `parse_input`: a fully-resolved input ready for the
 /// caller's next action. LNURL bech32 strings and Lightning Addresses
-/// are resolved over HTTP into typed pay or withdraw request data.
+/// are resolved over HTTP into typed pay or withdraw request data;
+/// LNURL-auth endpoints are classified from the URL query string
+/// without an HTTP fetch.
 #[derive(Clone, uniffi::Enum)]
 pub enum InputType {
     /// A BOLT11 Lightning invoice. No HTTP was performed.
@@ -40,6 +42,9 @@ pub enum InputType {
     LnUrlPay { data: LnUrlPayRequestData },
     /// An LNURL-withdraw endpoint with the service's parameters fetched.
     LnUrlWithdraw { data: LnUrlWithdrawRequestData },
+    /// An LNURL-auth (LUD-04) challenge. No HTTP was performed —
+    /// classification comes from the `tag=login` URL query parameter.
+    LnUrlAuth { data: LnUrlAuthRequestData },
 }
 
 /// Classify the input string offline before deciding whether to make
@@ -116,6 +121,14 @@ async fn resolve_lnurl_endpoint(url: &str, original: &str) -> Result<InputType, 
     use gl_client::lnurl::models::LnUrlHttpClearnetClient;
     use gl_client::lnurl::{LnUrlResponse, LNURL};
 
+    // LUD-04 endpoints carry tag=login in the URL query string. We can
+    // classify them without an HTTP fetch — the callback is hit later
+    // by Node::lnurl_auth once the user approves.
+    if let Some(auth) = try_parse_lnurl_auth(url)? {
+        return Ok(InputType::LnUrlAuth { data: auth });
+    }
+    let _ = original; // reserved for future provenance fields
+
     let client = LNURL::new(LnUrlHttpClearnetClient::new());
     let response = client
         .resolve(url)
@@ -134,6 +147,61 @@ async fn resolve_lnurl_endpoint(url: &str, original: &str) -> Result<InputType, 
             InputType::LnUrlWithdraw { data }
         }
     })
+}
+
+/// Detect and parse an LNURL-auth endpoint (LUD-04) from a URL.
+///
+/// Returns `Ok(Some(_))` when the URL has `tag=login`, `Ok(None)` when
+/// the URL is for a different LNURL flow, and `Err` when the URL is
+/// malformed or the LUD-04 fields fail validation.
+fn try_parse_lnurl_auth(raw_url: &str) -> Result<Option<LnUrlAuthRequestData>, Error> {
+    let parsed =
+        url::Url::parse(raw_url).map_err(|e| Error::Other(format!("Invalid LNURL URL: {e}")))?;
+
+    let mut tag = None;
+    let mut k1 = None;
+    let mut action = None;
+    for (key, value) in parsed.query_pairs() {
+        match key.as_ref() {
+            "tag" => tag = Some(value.into_owned()),
+            "k1" => k1 = Some(value.into_owned()),
+            "action" => action = Some(value.into_owned()),
+            _ => {}
+        }
+    }
+
+    if tag.as_deref() != Some("login") {
+        return Ok(None);
+    }
+
+    let k1 = k1.ok_or_else(|| Error::Other("LNURL-auth URL missing k1".to_string()))?;
+    let k1_bytes =
+        hex::decode(&k1).map_err(|e| Error::Other(format!("LNURL-auth k1 not hex: {e}")))?;
+    if k1_bytes.len() != 32 {
+        return Err(Error::Other(
+            "LNURL-auth k1 must be 32 bytes".to_string(),
+        ));
+    }
+
+    if let Some(a) = action.as_deref() {
+        if !["register", "login", "link", "auth"].contains(&a) {
+            return Err(Error::Other(format!(
+                "LNURL-auth action '{a}' is not one of register/login/link/auth"
+            )));
+        }
+    }
+
+    let domain = parsed
+        .domain()
+        .ok_or_else(|| Error::Other("LNURL-auth URL has no domain".to_string()))?
+        .to_string();
+
+    Ok(Some(LnUrlAuthRequestData {
+        k1,
+        action,
+        domain,
+        url: raw_url.to_string(),
+    }))
 }
 
 /// Try parsing as an LNURL bech32 string (LUD-01).
@@ -252,6 +320,7 @@ mod tests {
             InputType::NodeId { .. } => "NodeId",
             InputType::LnUrlPay { .. } => "LnUrlPay",
             InputType::LnUrlWithdraw { .. } => "LnUrlWithdraw",
+            InputType::LnUrlAuth { .. } => "LnUrlAuth",
         }
     }
 
@@ -309,6 +378,56 @@ mod tests {
             "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string()
         ))
         .is_err());
+    }
+
+    // 32 zero bytes hex-encoded — a syntactically valid k1.
+    const ZERO_K1: &str =
+        "0000000000000000000000000000000000000000000000000000000000000000";
+
+    #[test]
+    fn test_try_parse_lnurl_auth_classifies_login_url_without_http() {
+        let url = format!("https://service.example.com/auth?tag=login&k1={ZERO_K1}");
+        let parsed = try_parse_lnurl_auth(&url).unwrap().expect("expected Some");
+        assert_eq!(parsed.k1, ZERO_K1);
+        assert_eq!(parsed.domain, "service.example.com");
+        assert!(parsed.action.is_none());
+        assert_eq!(parsed.url, url);
+    }
+
+    #[test]
+    fn test_try_parse_lnurl_auth_captures_action() {
+        let url = format!("https://x.com/a?tag=login&k1={ZERO_K1}&action=register");
+        let parsed = try_parse_lnurl_auth(&url).unwrap().expect("expected Some");
+        assert_eq!(parsed.action.as_deref(), Some("register"));
+    }
+
+    #[test]
+    fn test_try_parse_lnurl_auth_returns_none_for_non_login_tag() {
+        let url = format!("https://x.com/p?tag=payRequest&k1={ZERO_K1}");
+        assert!(try_parse_lnurl_auth(&url).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_try_parse_lnurl_auth_returns_none_when_no_tag() {
+        assert!(try_parse_lnurl_auth("https://x.com/something")
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn test_try_parse_lnurl_auth_rejects_missing_k1() {
+        assert!(try_parse_lnurl_auth("https://x.com/a?tag=login").is_err());
+    }
+
+    #[test]
+    fn test_try_parse_lnurl_auth_rejects_short_k1() {
+        assert!(try_parse_lnurl_auth("https://x.com/a?tag=login&k1=deadbeef").is_err());
+    }
+
+    #[test]
+    fn test_try_parse_lnurl_auth_rejects_unknown_action() {
+        let url = format!("https://x.com/a?tag=login&k1={ZERO_K1}&action=bogus");
+        assert!(try_parse_lnurl_auth(&url).is_err());
     }
 
     #[test]

@@ -24,6 +24,7 @@ pub enum Error {
     Other(String),
 }
 
+mod auth;
 mod config;
 mod credentials;
 mod input;
@@ -46,9 +47,10 @@ pub use crate::{
     },
     input::{InputType, ParsedInvoice},
     lnurl::{
-        LnUrlErrorData, LnUrlPayRequest, LnUrlPayRequestData, LnUrlPayResult,
-        LnUrlPaySuccessData, LnUrlWithdrawRequest, LnUrlWithdrawRequestData,
-        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, SuccessActionProcessed,
+        LnUrlAuthRequestData, LnUrlCallbackStatus, LnUrlErrorData, LnUrlPayRequest,
+        LnUrlPayRequestData, LnUrlPayResult, LnUrlPaySuccessData, LnUrlWithdrawRequest,
+        LnUrlWithdrawRequestData, LnUrlWithdrawResult, LnUrlWithdrawSuccessData,
+        SuccessActionProcessed,
     },
     scheduler::Scheduler,
     signer::{Handle, Signer},
@@ -70,6 +72,13 @@ fn schedule_node(
 
     let network = config.network;
     let nobody = config.nobody();
+
+    // Derive the LNURL-auth namespace xpriv (m/138') from the seed
+    // once, before the seed is moved into the Signer. The xpriv is
+    // wrapped in Zeroizing so it scrubs when the Node is dropped or
+    // disconnected.
+    let lnurl_auth_xpriv =
+        zeroize::Zeroizing::new(auth::derive_lnurl_auth_namespace_xpriv(&seed)?);
 
     let seed_for_async = seed.clone();
     let credentials = util::exec(async move {
@@ -108,7 +117,7 @@ fn schedule_node(
             .map_err(|e| Error::Other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
-    let node = node::Node::with_signer(credentials, handle, network)?;
+    let node = node::Node::new(credentials, handle, network, lnurl_auth_xpriv)?;
     Ok(Arc::new(node))
 }
 
@@ -193,12 +202,15 @@ pub fn connect(
     let network = config.network;
     let creds = credentials::Credentials::load(credentials)?;
 
+    let lnurl_auth_xpriv =
+        zeroize::Zeroizing::new(auth::derive_lnurl_auth_namespace_xpriv(&seed)?);
+
     let authenticated_signer =
         gl_client::signer::Signer::new(seed, network, creds.inner.clone())
             .map_err(|e| Error::Other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
-    let node = node::Node::with_signer(creds, handle, network)?;
+    let node = node::Node::new(creds, handle, network, lnurl_auth_xpriv)?;
     Ok(Arc::new(node))
 }
 
@@ -228,6 +240,7 @@ pub fn register_or_recover(
 pub async fn parse_input(input: String) -> Result<input::InputType, Error> {
     input::parse_input(input).await
 }
+
 
 #[derive(uniffi::Enum, Debug)]
 pub enum Network {

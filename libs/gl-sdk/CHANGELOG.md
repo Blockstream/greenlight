@@ -6,10 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- `Node::lnurl_auth(request)` implementing LNURL-auth (LUD-04 / LUD-05). Derives the per-domain linking key on-the-fly from a hardened `m/138'` xpriv that the Node derives once from the BIP39 seed at register/recover/connect time. The seed itself is never retained on `Node`; the stored namespace xpriv lives in `Zeroizing` and is scrubbed on `disconnect()` or `Drop`. `m/138'` is hardened, so the stored material cannot be used to derive any other wallet key (lightning channels, on-chain funds) — the blast radius is restricted to LNURL-auth identities.
+- LUD-05 derivation uses the 32-byte private key at `m/138'/0` as the HMAC key, matching the mainstream wallet convention (Phoenix, Mutiny, Zeus, BlueWallet) for cross-wallet identity portability at LNURL-auth services.
+- `InputType::LnUrlAuth { data: LnUrlAuthRequestData }` returned by `parse_input` when the URL carries `tag=login`. Detection is offline — no HTTP fetch is made for classification.
+- `LnUrlCallbackStatus` and `LnUrlAuthRequestData` types.
+
 ### Changed
 
 - `parse_input()` is now `async` and resolves LNURL bech32 strings and Lightning Addresses end-to-end over HTTP, returning typed pay or withdraw request data. BOLT11 invoices and node IDs still resolve without I/O.
-- `InputType` variants now: `Bolt11`, `NodeId`, `LnUrlPay`, `LnUrlWithdraw`. Replaces the previous `LnUrl` / `LnUrlAddress` intermediate-state variants.
+- `InputType` variants now: `Bolt11`, `NodeId`, `LnUrlPay`, `LnUrlWithdraw`, `LnUrlAuth`. Replaces the previous `LnUrl` / `LnUrlAddress` intermediate-state variants.
 
 ### Removed
 

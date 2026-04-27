@@ -1,9 +1,9 @@
-import { Handle, Node, Scheduler } from '../index.js';
-import { getGLNode, fundWallet, getLspInvoice } from './test.helper';
+import { Node, Scheduler } from '../index.js';
+import { getGLNode, fundWallet, getLspInvoice, SdkNode } from './test.helper';
 
 describe('Node', () => {
   let scheduler: Scheduler = new Scheduler('regtest');
-  let glNodes: Array<{ node: Node; handle: Handle }> = [];
+  let glNodes: SdkNode[] = [];
   let node: Node;
 
   beforeEach(async () => {
@@ -12,9 +12,9 @@ describe('Node', () => {
   });
 
   afterEach(async () => {
-    for (const { node: n, handle: h } of glNodes) {
-      h.stop();
-      await n.stop();
+    for (const { node: n } of glNodes) {
+      try { n.disconnect(); } catch {}
+      try { await n.stop(); } catch {}
     }
     glNodes = [];
   });
@@ -110,7 +110,7 @@ describe('Node', () => {
   describe('calls onchainSend', () => {
     it('can send specific amount on-chain', async () => {
       await fundWallet(node, 500_000_000);
-      const extraGLNode = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
+      const extraGLNode = await getGLNode(scheduler, true);
       glNodes.push(extraGLNode);
       const destAddress = (await extraGLNode.node.onchainReceive()).bech32;
       const response = await node.onchainSend(destAddress, '10000sat');
@@ -119,7 +119,7 @@ describe('Node', () => {
 
     it('can attempt to send all funds on-chain', async () => {
       await fundWallet(node, 500_000_000);
-      const extraGLNode = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
+      const extraGLNode = await getGLNode(scheduler, true);
       glNodes.push(extraGLNode);
       const destAddress = (await extraGLNode.node.onchainReceive()).bech32;
       const response = await node.onchainSend(destAddress, 'all');
@@ -129,7 +129,7 @@ describe('Node', () => {
 
   describe('calls receive', () => {
     it('can create invoice with amount', async () => {
-      const extraGLNode = await getGLNode(scheduler, true) as { node: Node; handle: Handle };
+      const extraGLNode = await getGLNode(scheduler, true);
       glNodes.push(extraGLNode);
       const label = `test-${Date.now()}`;
       const description = 'Test payment';
