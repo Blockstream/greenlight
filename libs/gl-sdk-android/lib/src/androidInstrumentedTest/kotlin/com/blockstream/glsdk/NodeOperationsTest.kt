@@ -27,7 +27,7 @@ class NodeOperationsTest {
     fun test_onchain_receive_and_invoice() {
         val config = Config()
 
-        val node = registerOrRecover(mnemonic = testMnemonic, inviteCode = null, config = config)
+        val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
 
         node.use { n ->
             // Get an on-chain address to fund the node
@@ -47,7 +47,7 @@ class NodeOperationsTest {
     @Test
     fun test_node_state_returns_valid_snapshot() {
         val config = Config()
-        val node = registerOrRecover(mnemonic = testMnemonic, inviteCode = null, config = config)
+        val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
         node.use { n ->
             val state = n.nodeState()
             assertTrue(state.id.isNotEmpty())

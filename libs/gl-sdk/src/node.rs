@@ -18,12 +18,33 @@ pub struct Node {
     stored_credentials: Option<Credentials>,
     signer_handle: Option<Handle>,
     disconnected: AtomicBool,
+    /// Background task that tails the gRPC event stream and dispatches
+    /// events to the installed listener. A single listener per node;
+    /// installing a new one aborts the previous task. Aborted on Drop.
+    event_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
-#[uniffi::export]
+impl Drop for Node {
+    fn drop(&mut self) {
+        if let Ok(mut guard) = self.event_task.lock() {
+            if let Some(handle) = guard.take() {
+                handle.abort();
+            }
+        }
+    }
+}
+
 impl Node {
-    #[uniffi::constructor()]
-    pub fn new(credentials: &Credentials) -> Result<Self, Error> {
+    /// Construct a signerless Node — credentials only, no SDK-side
+    /// signer running. The actual signing happens elsewhere (a paired
+    /// device, a hardware signer, the CLN node's local signer).
+    /// Operations that require signing fall through to the node side.
+    ///
+    /// **Not a UniFFI export.** UniFFI consumers reach this via
+    /// `NodeBuilder::connect(credentials, None)` (mnemonic omitted).
+    /// Sibling Rust crates (e.g. `gl-sdk-napi`) call this directly
+    /// when wrapping signerless flows into their own bindings.
+    pub fn signerless(credentials: Credentials) -> Result<Self, Error> {
         let node_id = credentials
             .inner
             .node_id()
@@ -37,11 +58,16 @@ impl Node {
             inner,
             cln_client,
             gl_client,
-            stored_credentials: Some(credentials.clone()),
+            stored_credentials: Some(credentials),
             signer_handle: None,
             disconnected: AtomicBool::new(false),
+            event_task: Mutex::new(None),
         })
     }
+}
+
+#[uniffi::export]
+impl Node {
 
     /// Stop the node if it is currently running.
     pub fn stop(&self) -> Result<(), Error> {
@@ -652,6 +678,54 @@ fn build_diagnostic_json(
 
 // Not exported through uniffi
 impl Node {
+    /// Install a listener that receives real-time node events.
+    ///
+    /// Spawns a background task that tails the gRPC event stream and
+    /// invokes `listener.on_event(...)` for every event. Each `Node`
+    /// holds at most one listener — calling again replaces it. The task
+    /// stops when the stream ends, errors, or the `Node` is dropped.
+    ///
+    /// Crate-private — installed via `NodeBuilder::with_event_listener`
+    /// at construction time so events emitted during node bring-up
+    /// aren't missed.
+    pub(crate) fn set_event_listener(
+        &self,
+        listener: std::sync::Arc<dyn NodeEventListener>,
+    ) -> Result<(), Error> {
+        self.check_connected()?;
+        let mut gl_client = exec(self.get_gl_client())?.clone();
+        let req = glpb::NodeEventsRequest {};
+        let stream = exec(gl_client.stream_node_events(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+
+        let mut guard = self
+            .event_task
+            .lock()
+            .map_err(|e| Error::Other(e.to_string()))?;
+        if let Some(prev) = guard.take() {
+            prev.abort();
+        }
+
+        let task = crate::util::get_runtime().spawn(async move {
+            let mut stream = stream;
+            loop {
+                match stream.message().await {
+                    Ok(Some(raw)) => {
+                        if let Some(event) = node_event_from_pb(raw) {
+                            listener.on_event(event);
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(e) if e.code() == tonic::Code::Unknown => break,
+                    Err(_) => break,
+                }
+            }
+        });
+        *guard = Some(task);
+        Ok(())
+    }
+
     fn check_connected(&self) -> Result<(), Error> {
         if self.disconnected.load(Ordering::Relaxed) {
             return Err(Error::Other("Node is disconnected".to_string()));
@@ -681,6 +755,7 @@ impl Node {
             stored_credentials: Some(credentials),
             signer_handle: Some(handle),
             disconnected: AtomicBool::new(false),
+            event_task: Mutex::new(None),
         })
     }
 
@@ -1568,6 +1643,21 @@ pub struct NodeState {
 // NodeEvent streaming types
 // ============================================================
 
+/// Callback interface for receiving node events.
+///
+/// `on_event` is invoked from the SDK's internal event-dispatch task.
+/// Implementations should be cheap and non-blocking; to update UI,
+/// dispatch to the main thread from inside the handler.
+///
+/// Installed via `NodeBuilder::with_event_listener(...)` so events
+/// emitted during node bring-up are captured. The polling-style
+/// `Node::stream_node_events()` API is still available for callers
+/// that prefer to drive events themselves.
+#[uniffi::export(callback_interface)]
+pub trait NodeEventListener: Send + Sync {
+    fn on_event(&self, event: NodeEvent);
+}
+
 /// A stream of node events. Call `next()` to receive the next event.
 ///
 /// The stream is backed by a gRPC streaming connection to the node.
@@ -1588,11 +1678,22 @@ impl NodeEventStream {
     /// the connection is lost.
     pub fn next(&self) -> Result<Option<NodeEvent>, Error> {
         let mut stream = self.inner.lock().map_err(|e| Error::Other(e.to_string()))?;
-        match exec(stream.message()) {
-            Ok(Some(event)) => Ok(Some(event.into())),
-            Ok(None) => Ok(None),
-            Err(e) if e.code() == tonic::Code::Unknown => Ok(None),
-            Err(e) => Err(Error::Rpc(e.to_string())),
+        // Loop over wire events, skipping any the SDK doesn't recognise,
+        // until we either decode a known event, the stream ends, or it
+        // errors. The public `NodeEvent` enum is a closed set —
+        // unknown server-side events are silently dropped here.
+        loop {
+            match exec(stream.message()) {
+                Ok(Some(raw)) => {
+                    if let Some(event) = node_event_from_pb(raw) {
+                        return Ok(Some(event));
+                    }
+                    // Unknown event — fall through to next iteration.
+                }
+                Ok(None) => return Ok(None),
+                Err(e) if e.code() == tonic::Code::Unknown => return Ok(None),
+                Err(e) => return Err(Error::Rpc(e.to_string())),
+            }
         }
     }
 }
@@ -1602,9 +1703,6 @@ impl NodeEventStream {
 pub enum NodeEvent {
     /// An invoice was paid.
     InvoicePaid { details: InvoicePaidEvent },
-    /// An unknown event type was received. This can happen if the
-    /// server sends a new event type that this client doesn't know about.
-    Unknown,
 }
 
 /// Details of a paid invoice.
@@ -1622,20 +1720,24 @@ pub struct InvoicePaidEvent {
     pub amount_msat: u64,
 }
 
-impl From<glpb::NodeEvent> for NodeEvent {
-    fn from(other: glpb::NodeEvent) -> Self {
-        match other.event {
-            Some(glpb::node_event::Event::InvoicePaid(paid)) => NodeEvent::InvoicePaid {
-                details: InvoicePaidEvent {
-                    payment_hash: hex::encode(&paid.payment_hash),
-                    bolt11: paid.bolt11,
-                    preimage: hex::encode(&paid.preimage),
-                    label: paid.label,
-                    amount_msat: paid.amount_msat,
-                },
+/// Convert a wire-level `glpb::NodeEvent` into the typed SDK enum.
+///
+/// Returns `None` for events the SDK doesn't recognise (e.g. a future
+/// server-side event type added after the client was built). Callers
+/// silently skip `None` so unknown events never reach the foreign
+/// bindings — the public `NodeEvent` is a closed set.
+fn node_event_from_pb(other: glpb::NodeEvent) -> Option<NodeEvent> {
+    match other.event {
+        Some(glpb::node_event::Event::InvoicePaid(paid)) => Some(NodeEvent::InvoicePaid {
+            details: InvoicePaidEvent {
+                payment_hash: hex::encode(&paid.payment_hash),
+                bolt11: paid.bolt11,
+                preimage: hex::encode(&paid.preimage),
+                label: paid.label,
+                amount_msat: paid.amount_msat,
             },
-            None => NodeEvent::Unknown,
-        }
+        }),
+        None => None,
     }
 }
 

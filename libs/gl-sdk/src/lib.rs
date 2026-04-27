@@ -29,6 +29,7 @@ mod credentials;
 mod input;
 mod logging;
 mod node;
+mod node_builder;
 mod scheduler;
 mod signer;
 mod util;
@@ -40,12 +41,13 @@ pub use crate::{
         ChannelState, FundChannel, FundOutput, GetInfoResponse, Invoice, InvoicePaidEvent,
         InvoiceStatus, ListFundsResponse, ListIndex, ListInvoicesResponse,
         ListPaymentsRequest, ListPeerChannelsResponse, ListPaysResponse, ListPeersResponse,
-        Node, NodeEvent, NodeEventStream, NodeState, OnchainReceiveResponse, OnchainSendResponse,
-        OutputStatus, Pay, PayStatus, Payment, PaymentStatus, PaymentType, PaymentTypeFilter,
-        Peer, PeerChannel, ReceiveResponse, SendResponse,
+        Node, NodeEvent, NodeEventListener, NodeEventStream, NodeState, OnchainReceiveResponse,
+        OnchainSendResponse, OutputStatus, Pay, PayStatus, Payment, PaymentStatus, PaymentType,
+        PaymentTypeFilter, Peer, PeerChannel, ReceiveResponse, SendResponse,
     },
     input::{InputType, ParsedInvoice},
     logging::{LogEntry, LogLevel, LogListener},
+    node_builder::NodeBuilder,
     scheduler::Scheduler,
     signer::{Handle, Signer},
 };
@@ -149,36 +151,9 @@ fn parse_mnemonic(mnemonic: &str) -> Result<Vec<u8>, Error> {
     Ok(phrase.to_seed_normalized("").to_vec())
 }
 
-/// Register a new Greenlight node and return a connected Node with signer running.
-///
-/// The app should call `node.credentials()` to get the credential bytes
-/// and persist them for future `connect()` calls.
-#[uniffi::export]
-pub fn register(
-    mnemonic: String,
-    invite_code: Option<String>,
-    config: &config::Config,
-) -> Result<std::sync::Arc<node::Node>, Error> {
-    let seed = parse_mnemonic(&mnemonic)?;
-    schedule_node(seed, config, SchedulerAction::Register { invite_code })
-}
-
-/// Recover credentials for an existing Greenlight node and return a connected Node.
-///
-/// The app should call `node.credentials()` to get the credential bytes
-/// and persist them for future `connect()` calls.
-#[uniffi::export]
-pub fn recover(
-    mnemonic: String,
-    config: &config::Config,
-) -> Result<std::sync::Arc<node::Node>, Error> {
-    let seed = parse_mnemonic(&mnemonic)?;
-    schedule_node(seed, config, SchedulerAction::Recover)
-}
-
-/// Connect to an existing Greenlight node using previously saved credentials.
-#[uniffi::export]
-pub fn connect(
+/// Crate-internal: connect using saved credentials. The builder
+/// (`NodeBuilder::connect`) is the public entry point.
+pub(crate) fn connect_internal(
     mnemonic: String,
     credentials: Vec<u8>,
     config: &config::Config,
@@ -198,18 +173,58 @@ pub fn connect(
     Ok(Arc::new(node))
 }
 
-/// Try to recover an existing node; if none exists, register a new one.
-#[uniffi::export]
-pub fn register_or_recover(
+/// Crate-internal: register a fresh node. The builder
+/// (`NodeBuilder::register`) is the public entry point.
+pub(crate) fn register_internal(
     mnemonic: String,
     invite_code: Option<String>,
     config: &config::Config,
 ) -> Result<std::sync::Arc<node::Node>, Error> {
-    match recover(mnemonic.clone(), config) {
+    let seed = parse_mnemonic(&mnemonic)?;
+    schedule_node(seed, config, SchedulerAction::Register { invite_code })
+}
+
+/// Crate-internal: recover an existing node. The builder
+/// (`NodeBuilder::recover`) is the public entry point.
+pub(crate) fn recover_internal(
+    mnemonic: String,
+    config: &config::Config,
+) -> Result<std::sync::Arc<node::Node>, Error> {
+    let seed = parse_mnemonic(&mnemonic)?;
+    schedule_node(seed, config, SchedulerAction::Recover)
+}
+
+/// Crate-internal: register-or-recover. The builder
+/// (`NodeBuilder::register_or_recover`) is the public entry point.
+pub(crate) fn register_or_recover_internal(
+    mnemonic: String,
+    invite_code: Option<String>,
+    config: &config::Config,
+) -> Result<std::sync::Arc<node::Node>, Error> {
+    match recover_internal(mnemonic.clone(), config) {
         Ok(node) => Ok(node),
-        Err(Error::NoSuchNode(_)) => register(mnemonic, invite_code, config),
+        Err(Error::NoSuchNode(_)) => register_internal(mnemonic, invite_code, config),
         Err(e) => Err(e),
     }
+}
+
+/// Crate-internal: connect signerless — credentials only, no
+/// SDK-side signer spawned. Used by `NodeBuilder::connect` when no
+/// mnemonic is set.
+///
+/// Signing-required RPCs (`pay`, `receive` JIT-channel, etc.) rely
+/// on a signer running elsewhere — typically the CLN node's local
+/// signer or a paired device. This is the supported model for
+/// signerless clients (browser extensions, paired devices, hardware
+/// signers held outside the SDK process).
+pub(crate) fn connect_signerless_internal(
+    credentials: Vec<u8>,
+    _config: &config::Config,
+) -> Result<std::sync::Arc<node::Node>, Error> {
+    use std::sync::Arc;
+    let creds = credentials::Credentials::load(credentials)?;
+    let node = node::Node::signerless(creds)?;
+    Ok(Arc::new(node))
 }
 
 /// Parse a string and identify whether it's a BOLT11 invoice or a node ID.

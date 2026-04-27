@@ -50,7 +50,11 @@ publish_snapshot_to_maven:
     - job: build_kotlin
       artifacts: true
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH'
       when: manual
   script:
     - cd libs/gl-sdk-android
@@ -64,6 +68,12 @@ publish_snapshot_to_maven:
     - NEXT_PATCH=$((PATCH + 1))
     - NEXT_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}"
     - SNAPSHOT_VERSION="${NEXT_VERSION}-SNAPSHOT"
-    - echo "Publishing snapshot version ${SNAPSHOT_VERSION} (base=${BASE_VERSION})"
-    - ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION} publish --no-daemon
+    - SNAPSHOT_VERSION_COMMIT="${NEXT_VERSION}-${GIT_COMMIT}-SNAPSHOT"
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "master" ]; then
+        echo "Publishing snapshot versions ${SNAPSHOT_VERSION}"
+        ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION} publish --no-daemon
+      fi
+      echo "Publishing snapshot version ${SNAPSHOT_VERSION_COMMIT}"
+      ./gradlew -PlibraryVersion=${SNAPSHOT_VERSION_COMMIT} publish --no-daemon
   allow_failure: true

@@ -323,8 +323,6 @@ pub enum NodeEventOutput {
         label: String,
         amount_msat: u64,
     },
-    #[serde(rename = "unknown")]
-    Unknown,
 }
 
 impl From<glsdk::NodeEvent> for NodeEventOutput {
@@ -337,7 +335,6 @@ impl From<glsdk::NodeEvent> for NodeEventOutput {
                 label: details.label,
                 amount_msat: details.amount_msat,
             },
-            glsdk::NodeEvent::Unknown => NodeEventOutput::Unknown,
         }
     }
 }

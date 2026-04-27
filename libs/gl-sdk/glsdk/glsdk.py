@@ -460,15 +460,7 @@ def _uniffi_check_contract_api_version(lib):
         raise InternalError("UniFFI contract version mismatch: try cleaning and rebuilding your project")
 
 def _uniffi_check_api_checksums(lib):
-    if lib.uniffi_glsdk_checksum_func_connect() != 43555:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_parse_input() != 12312:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_recover() != 39257:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_register() != 39628:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_register_or_recover() != 65070:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_set_log_level() != 52328:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -518,6 +510,16 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_stream_node_events() != 5933:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_connect() != 47474:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_recover() != 46087:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_register() != 49580:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover() != 5543:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener() != 56760:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
@@ -538,7 +540,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_developercert_new() != 57793:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_constructor_node_new() != 7003:
+    if lib.uniffi_glsdk_checksum_constructor_nodebuilder_new() != 34740:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_scheduler_new() != 15239:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -547,6 +549,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_loglistener_on_log() != 34844:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event() != 17790:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -657,9 +661,17 @@ _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_Un
 _UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
+_UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
 class _UniffiVTableCallbackInterfaceLogListener(ctypes.Structure):
     _fields_ = [
         ("on_log", _UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0),
+        ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
+    ]
+class _UniffiVTableCallbackInterfaceNodeEventListener(ctypes.Structure):
+    _fields_ = [
+        ("on_event", _UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0),
         ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
     ]
 _UniffiLib.uniffi_glsdk_fn_clone_config.argtypes = (
@@ -754,11 +766,6 @@ _UniffiLib.uniffi_glsdk_fn_free_node.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_free_node.restype = None
-_UniffiLib.uniffi_glsdk_fn_constructor_node_new.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_constructor_node_new.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_method_node_credentials.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -865,6 +872,54 @@ _UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_nodebuilder.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_nodebuilder.restype = None
+_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_uint64,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_nodeeventstream.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -954,38 +1009,15 @@ _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.argtypes = (
     ctypes.POINTER(_UniffiVTableCallbackInterfaceLogListener),
 )
 _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.restype = None
-_UniffiLib.uniffi_glsdk_fn_func_connect.argtypes = (
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
+_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener.argtypes = (
+    ctypes.POINTER(_UniffiVTableCallbackInterfaceNodeEventListener),
 )
-_UniffiLib.uniffi_glsdk_fn_func_connect.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener.restype = None
 _UniffiLib.uniffi_glsdk_fn_func_parse_input.argtypes = (
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_func_parse_input.restype = _UniffiRustBuffer
-_UniffiLib.uniffi_glsdk_fn_func_recover.argtypes = (
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_func_recover.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_func_register.argtypes = (
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_func_register.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.argtypes = (
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_func_set_log_level.argtypes = (
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1265,21 +1297,9 @@ _UniffiLib.ffi_glsdk_rust_future_complete_void.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.ffi_glsdk_rust_future_complete_void.restype = None
-_UniffiLib.uniffi_glsdk_checksum_func_connect.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_connect.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_parse_input.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_parse_input.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_recover.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_recover.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_register.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_register.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_set_log_level.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_set_log_level.restype = ctypes.c_uint16
@@ -1352,6 +1372,21 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_stop.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_connect.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_connect.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.restype = ctypes.c_uint16
@@ -1382,9 +1417,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.restype = ctypes.c
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.argtypes = (
+_UniffiLib.uniffi_glsdk_checksum_constructor_nodebuilder_new.argtypes = (
 )
-_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_nodebuilder_new.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.restype = ctypes.c_uint16
@@ -1397,6 +1432,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.restype = ctyp
 _UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event.restype = ctypes.c_uint16
 _UniffiLib.ffi_glsdk_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_glsdk_uniffi_contract_version.restype = ctypes.c_uint32
@@ -1536,6 +1574,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -4179,24 +4219,6 @@ class NodeEvent:
                 return False
             return True
     
-    class UNKNOWN:
-        """
-        An unknown event type was received. This can happen if the
-        server sends a new event type that this client doesn't know about.
-        """
-
-
-        def __init__(self,):
-            pass
-
-        def __str__(self):
-            return "NodeEvent.UNKNOWN()".format()
-
-        def __eq__(self, other):
-            if not other.is_UNKNOWN():
-                return False
-            return True
-    
     
 
     # For each variant, we have `is_NAME` and `is_name` methods for easily checking
@@ -4205,17 +4227,12 @@ class NodeEvent:
         return isinstance(self, NodeEvent.INVOICE_PAID)
     def is_invoice_paid(self) -> bool:
         return isinstance(self, NodeEvent.INVOICE_PAID)
-    def is_UNKNOWN(self) -> bool:
-        return isinstance(self, NodeEvent.UNKNOWN)
-    def is_unknown(self) -> bool:
-        return isinstance(self, NodeEvent.UNKNOWN)
     
 
 # Now, a little trick - we make each nested variant class be a subclass of the main
 # enum class, so that method calls and instance checks etc will work intuitively.
 # We might be able to do this a little more neatly with a metaclass, but this'll do.
 NodeEvent.INVOICE_PAID = type("NodeEvent.INVOICE_PAID", (NodeEvent.INVOICE_PAID, NodeEvent,), {})  # type: ignore
-NodeEvent.UNKNOWN = type("NodeEvent.UNKNOWN", (NodeEvent.UNKNOWN, NodeEvent,), {})  # type: ignore
 
 
 
@@ -4228,17 +4245,12 @@ class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
             return NodeEvent.INVOICE_PAID(
                 _UniffiConverterTypeInvoicePaidEvent.read(buf),
             )
-        if variant == 2:
-            return NodeEvent.UNKNOWN(
-            )
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
     def check_lower(value):
         if value.is_INVOICE_PAID():
             _UniffiConverterTypeInvoicePaidEvent.check_lower(value.details)
-            return
-        if value.is_UNKNOWN():
             return
         raise ValueError(value)
 
@@ -4247,8 +4259,6 @@ class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
         if value.is_INVOICE_PAID():
             buf.write_i32(1)
             _UniffiConverterTypeInvoicePaidEvent.write(value.details, buf)
-        if value.is_UNKNOWN():
-            buf.write_i32(2)
 
 
 
@@ -4531,6 +4541,68 @@ class _UniffiTraitImplLogListener:
 
 # The _UniffiConverter which transforms the Callbacks in to Handles to pass to Rust.
 _UniffiConverterTypeLogListener = _UniffiCallbackInterfaceFfiConverter()
+
+
+
+
+class NodeEventListener(typing.Protocol):
+    """
+    Callback interface for receiving node events.
+
+    `on_event` is invoked from the SDK's internal event-dispatch task.
+    Implementations should be cheap and non-blocking; to update UI,
+    dispatch to the main thread from inside the handler.
+
+    Installed via `NodeBuilder::with_event_listener(...)` so events
+    emitted during node bring-up are captured. The polling-style
+    `Node::stream_node_events()` API is still available for callers
+    that prefer to drive events themselves.
+    """
+
+    def on_event(self, event: "NodeEvent"):
+        raise NotImplementedError
+
+
+# Put all the bits inside a class to keep the top-level namespace clean
+class _UniffiTraitImplNodeEventListener:
+    # For each method, generate a callback function to pass to Rust
+
+    @_UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0
+    def on_event(
+            uniffi_handle,
+            event,
+            uniffi_out_return,
+            uniffi_call_status_ptr,
+        ):
+        uniffi_obj = _UniffiConverterTypeNodeEventListener._handle_map.get(uniffi_handle)
+        def make_call():
+            args = (_UniffiConverterTypeNodeEvent.lift(event), )
+            method = uniffi_obj.on_event
+            return method(*args)
+
+        
+        write_return_value = lambda v: None
+        _uniffi_trait_interface_call(
+                uniffi_call_status_ptr.contents,
+                make_call,
+                write_return_value,
+        )
+
+    @_UNIFFI_CALLBACK_INTERFACE_FREE
+    def _uniffi_free(uniffi_handle):
+        _UniffiConverterTypeNodeEventListener._handle_map.remove(uniffi_handle)
+
+    # Generate the FFI VTable.  This has a field for each callback interface method.
+    _uniffi_vtable = _UniffiVTableCallbackInterfaceNodeEventListener(
+        on_event,
+        _uniffi_free
+    )
+    # Send Rust a pointer to the VTable.  Note: this means we need to keep the struct alive forever,
+    # or else bad things will happen when Rust tries to access it.
+    _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener(ctypes.byref(_uniffi_vtable))
+
+# The _UniffiConverter which transforms the Callbacks in to Handles to pass to Rust.
+_UniffiConverterTypeNodeEventListener = _UniffiCallbackInterfaceFfiConverter()
 
 
 
@@ -5576,11 +5648,9 @@ class Node():
     """
 
     _pointer: ctypes.c_void_p
-    def __init__(self, credentials: "Credentials"):
-        _UniffiConverterTypeCredentials.check_lower(credentials)
-        
-        self._pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_node_new,
-        _UniffiConverterTypeCredentials.lower(credentials))
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
 
     def __del__(self):
         # In case of partial initialization of instances.
@@ -5972,6 +6042,246 @@ class _UniffiConverterTypeNode:
     @classmethod
     def write(cls, value: NodeProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
+class NodeBuilderProtocol(typing.Protocol):
+    """
+    Configurable Node construction. See module docs.
+    """
+
+    def connect(self, credentials: "bytes",mnemonic: "typing.Optional[str]"):
+        """
+        Connect to an existing node using saved credentials and return
+        a connected Node with any configured modifiers applied.
+
+        If `mnemonic` is `Some(...)`, the SDK spawns a signer for the
+        connected Node. If `None`, the Node is signerless and signing
+        happens elsewhere (paired device, CLN node's local signer,
+        hardware signer).
+        """
+
+        raise NotImplementedError
+    def recover(self, mnemonic: "str"):
+        """
+        Recover credentials for an existing node and return a
+        connected Node with any configured modifiers applied.
+
+        `mnemonic` is required — recovery drives the signer to
+        authenticate.
+        """
+
+        raise NotImplementedError
+    def register(self, mnemonic: "str",invite_code: "typing.Optional[str]"):
+        """
+        Register a new Greenlight node and return a connected Node
+        with the SDK signer running and any configured modifiers
+        applied.
+
+        `mnemonic` is required — registration drives the signer to
+        sign the registration challenge, so the SDK must hold the
+        seed for this call.
+        """
+
+        raise NotImplementedError
+    def register_or_recover(self, mnemonic: "str",invite_code: "typing.Optional[str]"):
+        """
+        Try to recover; if the node doesn't exist, register a new one.
+
+        `mnemonic` is required — both recover and register drive the
+        signer.
+        """
+
+        raise NotImplementedError
+    def with_event_listener(self, listener: "NodeEventListener"):
+        """
+        Install a node event listener. Events fire from the moment the
+        gRPC stream is established by the build call (`register` /
+        `recover` / `connect` / …), so attach the listener via the
+        builder rather than after the fact to capture events from the
+        very first moment.
+
+        Returns the same builder for fluent chaining.
+        """
+
+        raise NotImplementedError
+# NodeBuilder is a Rust-only trait - it's a wrapper around a Rust implementation.
+class NodeBuilder():
+    """
+    Configurable Node construction. See module docs.
+    """
+
+    _pointer: ctypes.c_void_p
+    def __init__(self, config: "Config"):
+        """
+        Create a builder for a Node with `config`. No I/O happens
+        until you call `connect` / `register` / `recover` /
+        `register_or_recover`.
+        """
+
+        _UniffiConverterTypeConfig.check_lower(config)
+        
+        self._pointer = _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new,
+        _UniffiConverterTypeConfig.lower(config))
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_nodebuilder, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+    def connect(self, credentials: "bytes",mnemonic: "typing.Optional[str]") -> "Node":
+        """
+        Connect to an existing node using saved credentials and return
+        a connected Node with any configured modifiers applied.
+
+        If `mnemonic` is `Some(...)`, the SDK spawns a signer for the
+        connected Node. If `None`, the Node is signerless and signing
+        happens elsewhere (paired device, CLN node's local signer,
+        hardware signer).
+        """
+
+        _UniffiConverterBytes.check_lower(credentials)
+        
+        _UniffiConverterOptionalString.check_lower(mnemonic)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect,self._uniffi_clone_pointer(),
+        _UniffiConverterBytes.lower(credentials),
+        _UniffiConverterOptionalString.lower(mnemonic))
+        )
+
+
+
+
+
+    def recover(self, mnemonic: "str") -> "Node":
+        """
+        Recover credentials for an existing node and return a
+        connected Node with any configured modifiers applied.
+
+        `mnemonic` is required — recovery drives the signer to
+        authenticate.
+        """
+
+        _UniffiConverterString.check_lower(mnemonic)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(mnemonic))
+        )
+
+
+
+
+
+    def register(self, mnemonic: "str",invite_code: "typing.Optional[str]") -> "Node":
+        """
+        Register a new Greenlight node and return a connected Node
+        with the SDK signer running and any configured modifiers
+        applied.
+
+        `mnemonic` is required — registration drives the signer to
+        sign the registration challenge, so the SDK must hold the
+        seed for this call.
+        """
+
+        _UniffiConverterString.check_lower(mnemonic)
+        
+        _UniffiConverterOptionalString.check_lower(invite_code)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code))
+        )
+
+
+
+
+
+    def register_or_recover(self, mnemonic: "str",invite_code: "typing.Optional[str]") -> "Node":
+        """
+        Try to recover; if the node doesn't exist, register a new one.
+
+        `mnemonic` is required — both recover and register drive the
+        signer.
+        """
+
+        _UniffiConverterString.check_lower(mnemonic)
+        
+        _UniffiConverterOptionalString.check_lower(invite_code)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code))
+        )
+
+
+
+
+
+    def with_event_listener(self, listener: "NodeEventListener") -> "NodeBuilder":
+        """
+        Install a node event listener. Events fire from the moment the
+        gRPC stream is established by the build call (`register` /
+        `recover` / `connect` / …), so attach the listener via the
+        builder rather than after the fact to capture events from the
+        very first moment.
+
+        Returns the same builder for fluent chaining.
+        """
+
+        _UniffiConverterTypeNodeEventListener.check_lower(listener)
+        
+        return _UniffiConverterTypeNodeBuilder.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeNodeEventListener.lower(listener))
+        )
+
+
+
+
+
+
+class _UniffiConverterTypeNodeBuilder:
+
+    @staticmethod
+    def lift(value: int):
+        return NodeBuilder._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: NodeBuilder):
+        if not isinstance(value, NodeBuilder):
+            raise TypeError("Expected NodeBuilder instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: NodeBuilderProtocol):
+        if not isinstance(value, NodeBuilder):
+            raise TypeError("Expected NodeBuilder instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: NodeBuilderProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
 class NodeEventStreamProtocol(typing.Protocol):
     """
     A stream of node events. Call `next()` to receive the next event.
@@ -6302,23 +6612,6 @@ class _UniffiConverterTypeSigner:
 
 # Async support
 
-def connect(mnemonic: "str",credentials: "bytes",config: "Config") -> "Node":
-    """
-    Connect to an existing Greenlight node using previously saved credentials.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterBytes.check_lower(credentials)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_connect,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterBytes.lower(credentials),
-        _UniffiConverterTypeConfig.lower(config)))
-
-
 def parse_input(input: "str") -> "InputType":
     """
     Parse a string and identify whether it's a BOLT11 invoice or a node ID.
@@ -6331,60 +6624,6 @@ def parse_input(input: "str") -> "InputType":
     
     return _UniffiConverterTypeInputType.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_parse_input,
         _UniffiConverterString.lower(input)))
-
-
-def recover(mnemonic: "str",config: "Config") -> "Node":
-    """
-    Recover credentials for an existing Greenlight node and return a connected Node.
-
-    The app should call `node.credentials()` to get the credential bytes
-    and persist them for future `connect()` calls.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_recover,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterTypeConfig.lower(config)))
-
-
-def register(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
-    """
-    Register a new Greenlight node and return a connected Node with signer running.
-
-    The app should call `node.credentials()` to get the credential bytes
-    and persist them for future `connect()` calls.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterOptionalString.check_lower(invite_code)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterOptionalString.lower(invite_code),
-        _UniffiConverterTypeConfig.lower(config)))
-
-
-def register_or_recover(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
-    """
-    Try to recover an existing node; if none exists, register a new one.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterOptionalString.check_lower(invite_code)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register_or_recover,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterOptionalString.lower(invite_code),
-        _UniffiConverterTypeConfig.lower(config)))
 
 
 def set_log_level(level: "LogLevel") -> None:
@@ -6456,11 +6695,7 @@ __all__ = [
     "PeerChannel",
     "ReceiveResponse",
     "SendResponse",
-    "connect",
     "parse_input",
-    "recover",
-    "register",
-    "register_or_recover",
     "set_log_level",
     "set_logger",
     "Config",
@@ -6468,9 +6703,11 @@ __all__ = [
     "DeveloperCert",
     "Handle",
     "Node",
+    "NodeBuilder",
     "NodeEventStream",
     "Scheduler",
     "Signer",
     "LogListener",
+    "NodeEventListener",
 ]
 
