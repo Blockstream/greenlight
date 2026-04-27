@@ -470,6 +470,10 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_register_or_recover() != 65070:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_set_log_level() != 52328:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_func_set_logger() != 10523:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_developer_cert() != 64194:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_network() != 35643:
@@ -484,7 +488,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_disconnect() != 43626:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data() != 41140:
+    if lib.uniffi_glsdk_checksum_method_node_generate_diagnostic_data() != 10944:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_get_info() != 39460:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -541,6 +545,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_constructor_signer_new() != 62159:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_loglistener_on_log() != 34844:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -648,6 +654,14 @@ class _UniffiForeignFutureStructVoid(ctypes.Structure):
     ]
 _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiForeignFutureStructVoid,
 )
+_UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+class _UniffiVTableCallbackInterfaceLogListener(ctypes.Structure):
+    _fields_ = [
+        ("on_log", _UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0),
+        ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
+    ]
 _UniffiLib.uniffi_glsdk_fn_clone_config.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -936,6 +950,10 @@ _UniffiLib.uniffi_glsdk_fn_method_signer_start.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_signer_start.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.argtypes = (
+    ctypes.POINTER(_UniffiVTableCallbackInterfaceLogListener),
+)
+_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.restype = None
 _UniffiLib.uniffi_glsdk_fn_func_connect.argtypes = (
     _UniffiRustBuffer,
     _UniffiRustBuffer,
@@ -968,6 +986,17 @@ _UniffiLib.uniffi_glsdk_fn_func_register_or_recover.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_func_register_or_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_func_set_log_level.argtypes = (
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_set_log_level.restype = None
+_UniffiLib.uniffi_glsdk_fn_func_set_logger.argtypes = (
+    _UniffiRustBuffer,
+    ctypes.c_uint64,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_func_set_logger.restype = None
 _UniffiLib.ffi_glsdk_rustbuffer_alloc.argtypes = (
     ctypes.c_uint64,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1251,6 +1280,12 @@ _UniffiLib.uniffi_glsdk_checksum_func_register.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_set_log_level.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_set_log_level.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_func_set_logger.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_func_set_logger.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.restype = ctypes.c_uint16
@@ -1359,6 +1394,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new.restype = ctypes.c_uint1
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.restype = ctypes.c_uint16
 _UniffiLib.ffi_glsdk_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_glsdk_uniffi_contract_version.restype = ctypes.c_uint32
@@ -1367,7 +1405,38 @@ _uniffi_check_contract_api_version(_UniffiLib)
 # _uniffi_check_api_checksums(_UniffiLib)
 
 # Public interface members begin here.
+# Magic number for the Rust proxy to call using the same mechanism as every other method,
+# to free the callback once it's dropped by Rust.
+_UNIFFI_IDX_CALLBACK_FREE = 0
+# Return codes for callback calls
+_UNIFFI_CALLBACK_SUCCESS = 0
+_UNIFFI_CALLBACK_ERROR = 1
+_UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
 
+class _UniffiCallbackInterfaceFfiConverter:
+    _handle_map = _UniffiHandleMap()
+
+    @classmethod
+    def lift(cls, handle):
+        return cls._handle_map.get(handle)
+
+    @classmethod
+    def read(cls, buf):
+        handle = buf.read_u64()
+        cls.lift(handle)
+
+    @classmethod
+    def check_lower(cls, cb):
+        pass
+
+    @classmethod
+    def lower(cls, cb):
+        handle = cls._handle_map.insert(cb)
+        return handle
+
+    @classmethod
+    def write(cls, cb, buf):
+        buf.write_u64(cls.lower(cb))
 
 class _UniffiConverterUInt32(_UniffiConverterPrimitiveInt):
     CLASS_NAME = "u32"
@@ -2215,6 +2284,79 @@ class _UniffiConverterTypeListPeersResponse(_UniffiConverterRustBuffer):
     @staticmethod
     def write(value, buf):
         _UniffiConverterSequenceTypePeer.write(value.peers, buf)
+
+
+class LogEntry:
+    """
+    A single log message from the SDK.
+    """
+
+    level: "LogLevel"
+    message: "str"
+    target: "str"
+    """
+    The module that produced this log (e.g. "gl_client::scheduler").
+    """
+
+    file: "typing.Optional[str]"
+    """
+    Source file path, if the log macro recorded one.
+    """
+
+    line: "typing.Optional[int]"
+    """
+    Source line number, if the log macro recorded one.
+    """
+
+    def __init__(self, *, level: "LogLevel", message: "str", target: "str", file: "typing.Optional[str]", line: "typing.Optional[int]"):
+        self.level = level
+        self.message = message
+        self.target = target
+        self.file = file
+        self.line = line
+
+    def __str__(self):
+        return "LogEntry(level={}, message={}, target={}, file={}, line={})".format(self.level, self.message, self.target, self.file, self.line)
+
+    def __eq__(self, other):
+        if self.level != other.level:
+            return False
+        if self.message != other.message:
+            return False
+        if self.target != other.target:
+            return False
+        if self.file != other.file:
+            return False
+        if self.line != other.line:
+            return False
+        return True
+
+class _UniffiConverterTypeLogEntry(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return LogEntry(
+            level=_UniffiConverterTypeLogLevel.read(buf),
+            message=_UniffiConverterString.read(buf),
+            target=_UniffiConverterString.read(buf),
+            file=_UniffiConverterOptionalString.read(buf),
+            line=_UniffiConverterOptionalUInt32.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeLogLevel.check_lower(value.level)
+        _UniffiConverterString.check_lower(value.message)
+        _UniffiConverterString.check_lower(value.target)
+        _UniffiConverterOptionalString.check_lower(value.file)
+        _UniffiConverterOptionalUInt32.check_lower(value.line)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeLogLevel.write(value.level, buf)
+        _UniffiConverterString.write(value.message, buf)
+        _UniffiConverterString.write(value.target, buf)
+        _UniffiConverterOptionalString.write(value.file, buf)
+        _UniffiConverterOptionalUInt32.write(value.line, buf)
 
 
 class NodeState:
@@ -3904,6 +4046,72 @@ class _UniffiConverterTypeListIndex(_UniffiConverterRustBuffer):
 
 
 
+class LogLevel(enum.Enum):
+    """
+    Log level for filtering messages.
+    """
+
+    ERROR = 0
+    
+    WARN = 1
+    
+    INFO = 2
+    
+    DEBUG = 3
+    
+    TRACE = 4
+    
+
+
+class _UniffiConverterTypeLogLevel(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return LogLevel.ERROR
+        if variant == 2:
+            return LogLevel.WARN
+        if variant == 3:
+            return LogLevel.INFO
+        if variant == 4:
+            return LogLevel.DEBUG
+        if variant == 5:
+            return LogLevel.TRACE
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == LogLevel.ERROR:
+            return
+        if value == LogLevel.WARN:
+            return
+        if value == LogLevel.INFO:
+            return
+        if value == LogLevel.DEBUG:
+            return
+        if value == LogLevel.TRACE:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == LogLevel.ERROR:
+            buf.write_i32(1)
+        if value == LogLevel.WARN:
+            buf.write_i32(2)
+        if value == LogLevel.INFO:
+            buf.write_i32(3)
+        if value == LogLevel.DEBUG:
+            buf.write_i32(4)
+        if value == LogLevel.TRACE:
+            buf.write_i32(5)
+
+
+
+
+
+
+
 class Network(enum.Enum):
     BITCOIN = 0
     
@@ -4265,6 +4473,64 @@ class _UniffiConverterTypePaymentTypeFilter(_UniffiConverterRustBuffer):
             buf.write_i32(2)
 
 
+
+
+
+
+class LogListener(typing.Protocol):
+    """
+    Callback interface for receiving log messages.
+
+    `on_log` is invoked on the thread that emitted the log — which can
+    be any tokio worker or background thread inside the SDK. Keep the
+    implementation cheap and non-blocking; if you need UI updates,
+    hand the entry off to your app's main thread.
+    """
+
+    def on_log(self, entry: "LogEntry"):
+        raise NotImplementedError
+
+
+# Put all the bits inside a class to keep the top-level namespace clean
+class _UniffiTraitImplLogListener:
+    # For each method, generate a callback function to pass to Rust
+
+    @_UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0
+    def on_log(
+            uniffi_handle,
+            entry,
+            uniffi_out_return,
+            uniffi_call_status_ptr,
+        ):
+        uniffi_obj = _UniffiConverterTypeLogListener._handle_map.get(uniffi_handle)
+        def make_call():
+            args = (_UniffiConverterTypeLogEntry.lift(entry), )
+            method = uniffi_obj.on_log
+            return method(*args)
+
+        
+        write_return_value = lambda v: None
+        _uniffi_trait_interface_call(
+                uniffi_call_status_ptr.contents,
+                make_call,
+                write_return_value,
+        )
+
+    @_UNIFFI_CALLBACK_INTERFACE_FREE
+    def _uniffi_free(uniffi_handle):
+        _UniffiConverterTypeLogListener._handle_map.remove(uniffi_handle)
+
+    # Generate the FFI VTable.  This has a field for each callback interface method.
+    _uniffi_vtable = _UniffiVTableCallbackInterfaceLogListener(
+        on_log,
+        _uniffi_free
+    )
+    # Send Rust a pointer to the VTable.  Note: this means we need to keep the struct alive forever,
+    # or else bad things will happen when Rust tries to access it.
+    _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener(ctypes.byref(_uniffi_vtable))
+
+# The _UniffiConverter which transforms the Callbacks in to Handles to pass to Rust.
+_UniffiConverterTypeLogListener = _UniffiCallbackInterfaceFfiConverter()
 
 
 
@@ -5161,9 +5427,11 @@ class NodeProtocol(typing.Protocol):
         Returns a pretty-printed JSON string with shape:
         `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
         The `node` object contains one entry per CLN RPC (`getinfo`,
-        `listpeerchannels`, `listfunds`, `listpays`, `listinvoices`); each
-        value is the serialized response, or `{ "error": "..." }` if that
-        RPC failed. Intended for support tickets.
+        `listpeerchannels`, `listfunds`); each value is the serialized
+        response, or `{ "error": "..." }` if that RPC failed. Payment and
+        invoice history are deliberately excluded to avoid leaking
+        preimages, payment hashes, bolt11 strings, and labels into support
+        dumps. Intended for support tickets.
         """
 
         raise NotImplementedError
@@ -5368,9 +5636,11 @@ class Node():
         Returns a pretty-printed JSON string with shape:
         `{ "timestamp": <unix-secs>, "node": { ... }, "sdk": { "version": ..., "node_state": ... } }`.
         The `node` object contains one entry per CLN RPC (`getinfo`,
-        `listpeerchannels`, `listfunds`, `listpays`, `listinvoices`); each
-        value is the serialized response, or `{ "error": "..." }` if that
-        RPC failed. Intended for support tickets.
+        `listpeerchannels`, `listfunds`); each value is the serialized
+        response, or `{ "error": "..." }` if that RPC failed. Payment and
+        invoice history are deliberately excluded to avoid leaking
+        preimages, payment hashes, bolt11 strings, and labels into support
+        dumps. Intended for support tickets.
         """
 
         return _UniffiConverterString.lift(
@@ -6117,6 +6387,37 @@ def register_or_recover(mnemonic: "str",invite_code: "typing.Optional[str]",conf
         _UniffiConverterTypeConfig.lower(config)))
 
 
+def set_log_level(level: "LogLevel") -> None:
+    """
+    Change the log filter at runtime without reinstalling the listener.
+    """
+
+    _UniffiConverterTypeLogLevel.check_lower(level)
+    
+    _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_func_set_log_level,
+        _UniffiConverterTypeLogLevel.lower(level))
+
+
+def set_logger(level: "LogLevel",listener: "LogListener") -> None:
+    """
+    Set up SDK logging. Call once before any other SDK function.
+
+    The listener receives all log messages from the SDK and the
+    underlying Greenlight client library. Call once, as early as
+    possible, so early logs are captured. Returns an error if a logger
+    has already been installed in this process. To change the filter
+    after installation, use `set_log_level`.
+    """
+
+    _UniffiConverterTypeLogLevel.check_lower(level)
+    
+    _UniffiConverterTypeLogListener.check_lower(listener)
+    
+    _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_set_logger,
+        _UniffiConverterTypeLogLevel.lower(level),
+        _UniffiConverterTypeLogListener.lower(listener))
+
+
 __all__ = [
     "InternalError",
     "ChannelSide",
@@ -6125,6 +6426,7 @@ __all__ = [
     "InputType",
     "InvoiceStatus",
     "ListIndex",
+    "LogLevel",
     "Network",
     "NodeEvent",
     "OutputStatus",
@@ -6143,6 +6445,7 @@ __all__ = [
     "ListPaysResponse",
     "ListPeerChannelsResponse",
     "ListPeersResponse",
+    "LogEntry",
     "NodeState",
     "OnchainReceiveResponse",
     "OnchainSendResponse",
@@ -6158,6 +6461,8 @@ __all__ = [
     "recover",
     "register",
     "register_or_recover",
+    "set_log_level",
+    "set_logger",
     "Config",
     "Credentials",
     "DeveloperCert",
@@ -6166,5 +6471,6 @@ __all__ = [
     "NodeEventStream",
     "Scheduler",
     "Signer",
+    "LogListener",
 ]
 

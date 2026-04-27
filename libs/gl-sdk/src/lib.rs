@@ -27,6 +27,7 @@ pub enum Error {
 mod config;
 mod credentials;
 mod input;
+mod logging;
 mod node;
 mod scheduler;
 mod signer;
@@ -44,6 +45,7 @@ pub use crate::{
         Peer, PeerChannel, ReceiveResponse, SendResponse,
     },
     input::{InputType, ParsedInvoice},
+    logging::{LogEntry, LogLevel, LogListener},
     scheduler::Scheduler,
     signer::{Handle, Signer},
 };
@@ -217,6 +219,27 @@ pub fn register_or_recover(
 #[uniffi::export]
 pub fn parse_input(input: String) -> Result<input::InputType, Error> {
     input::parse_input(input)
+}
+
+/// Set up SDK logging. Call once before any other SDK function.
+///
+/// The listener receives all log messages from the SDK and the
+/// underlying Greenlight client library. Call once, as early as
+/// possible, so early logs are captured. Returns an error if a logger
+/// has already been installed in this process. To change the filter
+/// after installation, use `set_log_level`.
+#[uniffi::export]
+pub fn set_logger(
+    level: logging::LogLevel,
+    listener: Box<dyn logging::LogListener>,
+) -> Result<(), Error> {
+    logging::set_logger(level, listener)
+}
+
+/// Change the log filter at runtime without reinstalling the listener.
+#[uniffi::export]
+pub fn set_log_level(level: logging::LogLevel) {
+    logging::set_log_level(level)
 }
 
 #[derive(uniffi::Enum, Debug)]
