@@ -1,18 +1,27 @@
 use super::models::WithdrawRequestResponse;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use log::debug;
 use reqwest::Url;
 use serde_json::{to_value, Map, Value};
 
-pub fn build_withdraw_request_callback_url(
-    lnurl_pay_request_response: &WithdrawRequestResponse,
-    invoice: String,
-) -> Result<String> {
-    let mut url = Url::parse(&lnurl_pay_request_response.callback)?;
-    url.query_pairs_mut()
-        .append_pair("k1", &lnurl_pay_request_response.k1)
-        .append_pair("pr", &invoice);
+impl WithdrawRequestResponse {
+    /// Build the callback URL for submitting an invoice to the service.
+    ///
+    /// Appends `k1` and `pr` (the BOLT11 invoice) as query parameters.
+    pub fn build_callback_url(&self, invoice: &str) -> Result<String> {
+        build_withdraw_callback_url(&self.callback, &self.k1, invoice)
+    }
+}
 
+/// Build a withdraw callback URL from its individual components.
+///
+/// Appends `k1` and `pr` (the BOLT11 invoice) as query parameters
+/// to the callback base URL.
+pub fn build_withdraw_callback_url(callback: &str, k1: &str, invoice: &str) -> Result<String> {
+    let mut url = Url::parse(callback)?;
+    url.query_pairs_mut()
+        .append_pair("k1", k1)
+        .append_pair("pr", invoice);
     Ok(url.to_string())
 }
 
@@ -24,17 +33,18 @@ fn convert_value_field_from_str_to_u64(
         Some(field_value) => match field_value.as_str() {
             Some(field_value_str) => {
                 let converted_field_value = field_value_str.parse::<u64>()?;
-
-                //overwrites old type value
                 value.insert(
                     String::from(field_name),
                     to_value(converted_field_value).unwrap(),
                 );
-                return Ok(());
+                Ok(())
             }
-            None => return Err(anyhow!("Failed to convert {} into a str", field_name)),
+            None => Err(anyhow::anyhow!(
+                "Failed to convert {} into a str",
+                field_name
+            )),
         },
-        None => return Err(anyhow!("Failed to find {} in map", field_name)),
+        None => Err(anyhow::anyhow!("Failed to find {} in map", field_name)),
     }
 }
 
@@ -56,7 +66,7 @@ pub fn parse_withdraw_request_response_from_url(url: &str) -> Option<WithdrawReq
         match serde_json::from_value(Value::Object(query_params)) {
             Ok(w) => {
                 return w;
-            },
+            }
             Err(e) => {
                 debug!("{:?}", e);
                 return None;
@@ -73,25 +83,25 @@ mod test {
 
     #[test]
     fn test_build_withdraw_request_callback_url() -> Result<()> {
+        let resp = WithdrawRequestResponse {
+            tag: String::from("withdraw"),
+            callback: String::from("https://cipherpunk.com/"),
+            k1: String::from("unique"),
+            default_description: String::from(""),
+            min_withdrawable: 2,
+            max_withdrawable: 300,
+        };
 
-        let k1 =  String::from("unique");
-        let invoice = String::from("invoice");
-
-        let built_withdraw_request_callback_url = build_withdraw_request_callback_url(&WithdrawRequestResponse { 
-            tag: String::from("withdraw"), 
-            callback: String::from("https://cipherpunk.com/"), 
-            k1: k1.clone(), 
-            default_description: String::from(""), 
-            min_withdrawable: 2, 
-            max_withdrawable: 300, 
-        }, invoice.clone());
-
-        let url = Url::parse(&built_withdraw_request_callback_url.unwrap())?;
+        let url_str = resp.build_callback_url("invoice")?;
+        let url = Url::parse(&url_str)?;
         let query_pairs = url.query_pairs().collect::<Value>();
         let query_params: &Map<String, Value> = query_pairs.as_object().unwrap();
-        
-       assert_eq!(query_params.get("k1").unwrap().as_str().unwrap(), k1);
-       assert_eq!(query_params.get("pr").unwrap().as_str().unwrap(), invoice);
+
+        assert_eq!(query_params.get("k1").unwrap().as_str().unwrap(), "unique");
+        assert_eq!(
+            query_params.get("pr").unwrap().as_str().unwrap(),
+            "invoice"
+        );
 
         Ok(())
     }

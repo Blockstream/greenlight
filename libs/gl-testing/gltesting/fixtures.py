@@ -25,6 +25,7 @@ from gltesting.network import node_factory
 from pyln.testing.fixtures import directory as str_directory
 from decimal import Decimal
 from gltesting.grpcweb import GrpcWebProxy, NodeHandler
+from gltesting.lnurl_server import LnurlServer
 from clnvm import ClnVersionManager
 
 
@@ -233,6 +234,26 @@ def node_grpc_web_proxy(scheduler):
     yield p
 
     p.stop()
+
+
+@pytest.fixture
+def lnurl_service(node_factory):
+    """A CLN-backed LNURL service.
+
+    Spins up a dedicated CLN node and an HTTP server that exposes
+    LNURL-pay, LNURL-withdraw and Lightning Address endpoints backed
+    by that node. Tests can then open channels to/from this node and
+    exercise the full LNURL flow end-to-end.
+
+    Returns an `LnurlServer` instance. Use `.cln_rpc` to access the
+    backing CLN node's RPC; `.pay_url`, `.withdraw_url` and
+    `.lightning_address` to get the endpoints.
+    """
+    cln_node = node_factory.get_node(options={"disable-plugin": "cln-grpc"})
+    server = LnurlServer(cln_node)
+    server.start()
+    yield server
+    server.stop()
 
 
 @pytest.fixture

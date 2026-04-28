@@ -10,11 +10,14 @@ use glsdk::{
     Credentials as GlCredentials,
     DeveloperCert as GlDeveloperCert,
     Handle as GlHandle,
+    ParsedInput as GlParsedInput,
+    ResolvedInput as GlResolvedInput,
     Network as GlNetwork,
     Node as GlNode,
     NodeEvent as GlNodeEvent,
     NodeEventStream as GlNodeEventStream,
     OutputStatus as GlOutputStatus,
+    ParsedInvoice as GlParsedInvoice,
     Scheduler as GlScheduler,
     Signer as GlSigner,
 };
@@ -244,6 +247,167 @@ pub struct FundChannel {
     pub short_channel_id: Option<String>,
     /// Channel id as lowercase hex (64 chars)
     pub channel_id: Option<String>,
+}
+
+// ============================================================================
+// Input Parsing Types
+// ============================================================================
+
+#[napi(object)]
+pub struct ParsedInvoice {
+    pub bolt11: String,
+    pub payee_pubkey: Option<Buffer>,
+    pub payment_hash: Buffer,
+    pub description: Option<String>,
+    /// Amount in millisatoshis (i64 for JS), `None` for any-amount invoices.
+    pub amount_msat: Option<i64>,
+    /// Seconds from creation until the invoice expires.
+    pub expiry: i64,
+    /// Unix timestamp (seconds) when the invoice was created.
+    pub timestamp: i64,
+}
+
+/// Result of `parseInput` — offline classification, no HTTP.
+/// Discriminated by `type`. LNURL bech32 strings come back as their
+/// decoded URL; Lightning Addresses as the unparsed `user@host` form.
+#[napi(object)]
+pub struct ParsedInput {
+    /// "bolt11" | "node_id" | "lnurl" | "lnurl_address"
+    pub r#type: String,
+    /// Present when type == "bolt11"
+    pub bolt11: Option<ParsedInvoice>,
+    /// Present when type == "node_id"
+    pub node_id: Option<String>,
+    /// Present when type == "lnurl" — the decoded URL of the LNURL.
+    pub lnurl: Option<String>,
+    /// Present when type == "lnurl_address" — `user@host` form.
+    pub lnurl_address: Option<String>,
+}
+
+/// Result of `resolveInput` — fully-resolved, may have performed HTTP.
+/// Discriminated by `type`. Exactly one of the variant fields
+/// (`bolt11`, `node_id`, `lnurl_pay`, `lnurl_withdraw`) is populated.
+#[napi(object)]
+pub struct ResolvedInput {
+    /// "bolt11" | "node_id" | "lnurl_pay" | "lnurl_withdraw"
+    pub r#type: String,
+    /// Present when type == "bolt11"
+    pub bolt11: Option<ParsedInvoice>,
+    /// Present when type == "node_id"
+    pub node_id: Option<String>,
+    /// Present when type == "lnurl_pay"
+    pub lnurl_pay: Option<LnUrlPayRequestData>,
+    /// Present when type == "lnurl_withdraw"
+    pub lnurl_withdraw: Option<LnUrlWithdrawRequestData>,
+}
+
+// ============================================================================
+// LNURL Types
+// ============================================================================
+
+#[napi(object)]
+pub struct LnUrlPayRequestData {
+    pub callback: String,
+    /// Minimum amount in millisatoshis (i64 for JS)
+    pub min_sendable: i64,
+    /// Maximum amount in millisatoshis (i64 for JS)
+    pub max_sendable: i64,
+    pub metadata: String,
+    pub comment_allowed: i64,
+    pub description: String,
+    pub lnurl: String,
+}
+
+#[napi(object)]
+pub struct LnUrlWithdrawRequestData {
+    pub callback: String,
+    pub k1: String,
+    pub default_description: String,
+    /// Minimum withdrawable in millisatoshis (i64 for JS)
+    pub min_withdrawable: i64,
+    /// Maximum withdrawable in millisatoshis (i64 for JS)
+    pub max_withdrawable: i64,
+    pub lnurl: String,
+}
+
+#[napi(object)]
+pub struct LnUrlPayRequest {
+    pub data: LnUrlPayRequestData,
+    /// Amount in millisatoshis (i64 for JS)
+    pub amount_msat: i64,
+    pub comment: Option<String>,
+    /// When true (the default), a URL success action is rejected if its
+    /// domain differs from the callback's domain.
+    pub validate_success_action_url: Option<bool>,
+}
+
+#[napi(object)]
+pub struct LnUrlWithdrawRequest {
+    pub data: LnUrlWithdrawRequestData,
+    /// Amount in millisatoshis (i64 for JS)
+    pub amount_msat: i64,
+    pub description: Option<String>,
+}
+
+#[napi(object)]
+pub struct LnUrlPaySuccessData {
+    pub payment_preimage: String,
+    pub success_action: Option<SuccessActionProcessed>,
+}
+
+#[napi(object)]
+pub struct LnUrlErrorData {
+    pub reason: String,
+}
+
+#[napi(object)]
+pub struct LnUrlPayErrorData {
+    pub payment_hash: String,
+    pub reason: String,
+}
+
+/// Result of an LNURL-pay operation. Discriminated by `type` field.
+#[napi(object)]
+pub struct LnUrlPayResult {
+    /// "success", "error", or "pay_error"
+    pub r#type: String,
+    /// Present when type == "success"
+    pub success: Option<LnUrlPaySuccessData>,
+    /// Present when type == "error" (LNURL service rejected the request)
+    pub error: Option<LnUrlErrorData>,
+    /// Present when type == "pay_error" (invoice fetched but paying it failed)
+    pub pay_error: Option<LnUrlPayErrorData>,
+}
+
+#[napi(object)]
+pub struct LnUrlWithdrawSuccessData {
+    pub invoice: String,
+}
+
+/// Result of an LNURL-withdraw operation. Discriminated by `type` field.
+#[napi(object)]
+pub struct LnUrlWithdrawResult {
+    /// "ok" or "error"
+    pub r#type: String,
+    /// Present when type == "ok"
+    pub ok: Option<LnUrlWithdrawSuccessData>,
+    /// Present when type == "error"
+    pub error: Option<LnUrlErrorData>,
+}
+
+/// Processed success action. Discriminated by `type` field.
+#[napi(object)]
+pub struct SuccessActionProcessed {
+    /// "message", "url", or "aes"
+    pub r#type: String,
+    /// Present for "message" type
+    pub message: Option<String>,
+    /// Present for "url" type
+    pub description: Option<String>,
+    /// Present for "url" type
+    pub url: Option<String>,
+    /// Present for "aes" type (decrypted plaintext)
+    pub plaintext: Option<String>,
 }
 
 // ============================================================================
@@ -852,6 +1016,46 @@ impl Node {
                 .collect(),
         })
     }
+
+    // ── LNURL methods ───────────────────────────────────────────
+
+    /// Execute an LNURL-pay flow.
+    ///
+    /// Build the request from `LnUrlPayRequestData` (obtained out of
+    /// band) and a chosen amount.
+    #[napi]
+    pub async fn lnurl_pay(&self, request: LnUrlPayRequest) -> Result<LnUrlPayResult> {
+        let inner = self.inner.clone();
+        let gl_request = gl_lnurl_pay_request_from_napi(request);
+        let result = tokio::task::spawn_blocking(move || {
+            inner
+                .lnurl_pay(gl_request)
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+
+        Ok(napi_lnurl_pay_result_from_gl(result))
+    }
+
+    /// Execute an LNURL-withdraw flow.
+    ///
+    /// Build the request from `LnUrlWithdrawRequestData` (obtained out
+    /// of band) and a chosen amount.
+    #[napi]
+    pub async fn lnurl_withdraw(&self, request: LnUrlWithdrawRequest) -> Result<LnUrlWithdrawResult> {
+        let inner = self.inner.clone();
+        let gl_request = gl_lnurl_withdraw_request_from_napi(request);
+        let result = tokio::task::spawn_blocking(move || {
+            inner
+                .lnurl_withdraw(gl_request)
+                .map_err(|e| Error::from_reason(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))??;
+
+        Ok(napi_lnurl_withdraw_result_from_gl(result))
+    }
 }
 
 // ============================================================================
@@ -899,5 +1103,264 @@ fn output_status_to_string(status: &GlOutputStatus) -> String {
         GlOutputStatus::Confirmed => "confirmed".to_string(),
         GlOutputStatus::Spent => "spent".to_string(),
         GlOutputStatus::Immature => "immature".to_string(),
+    }
+}
+
+// ============================================================================
+// Input Parsing Conversion Helpers
+// ============================================================================
+
+fn napi_parsed_invoice_from_gl(invoice: GlParsedInvoice) -> ParsedInvoice {
+    ParsedInvoice {
+        bolt11: invoice.bolt11,
+        payee_pubkey: invoice.payee_pubkey.map(Buffer::from),
+        payment_hash: Buffer::from(invoice.payment_hash),
+        description: invoice.description,
+        amount_msat: invoice.amount_msat.map(|v| v as i64),
+        expiry: invoice.expiry as i64,
+        timestamp: invoice.timestamp as i64,
+    }
+}
+
+fn napi_pay_request_data_from_gl(data: glsdk::LnUrlPayRequestData) -> LnUrlPayRequestData {
+    LnUrlPayRequestData {
+        callback: data.callback,
+        min_sendable: data.min_sendable as i64,
+        max_sendable: data.max_sendable as i64,
+        metadata: data.metadata,
+        comment_allowed: data.comment_allowed as i64,
+        description: data.description,
+        lnurl: data.lnurl,
+    }
+}
+
+fn napi_withdraw_request_data_from_gl(
+    data: glsdk::LnUrlWithdrawRequestData,
+) -> LnUrlWithdrawRequestData {
+    LnUrlWithdrawRequestData {
+        callback: data.callback,
+        k1: data.k1,
+        default_description: data.default_description,
+        min_withdrawable: data.min_withdrawable as i64,
+        max_withdrawable: data.max_withdrawable as i64,
+        lnurl: data.lnurl,
+    }
+}
+
+fn napi_parsed_input_from_gl(input: GlParsedInput) -> ParsedInput {
+    match input {
+        GlParsedInput::Bolt11 { invoice } => ParsedInput {
+            r#type: "bolt11".to_string(),
+            bolt11: Some(napi_parsed_invoice_from_gl(invoice)),
+            node_id: None,
+            lnurl: None,
+            lnurl_address: None,
+        },
+        GlParsedInput::NodeId { node_id } => ParsedInput {
+            r#type: "node_id".to_string(),
+            bolt11: None,
+            node_id: Some(node_id),
+            lnurl: None,
+            lnurl_address: None,
+        },
+        GlParsedInput::LnUrl { url } => ParsedInput {
+            r#type: "lnurl".to_string(),
+            bolt11: None,
+            node_id: None,
+            lnurl: Some(url),
+            lnurl_address: None,
+        },
+        GlParsedInput::LnUrlAddress { address } => ParsedInput {
+            r#type: "lnurl_address".to_string(),
+            bolt11: None,
+            node_id: None,
+            lnurl: None,
+            lnurl_address: Some(address),
+        },
+    }
+}
+
+fn napi_resolved_input_from_gl(input: GlResolvedInput) -> ResolvedInput {
+    match input {
+        GlResolvedInput::Bolt11 { invoice } => ResolvedInput {
+            r#type: "bolt11".to_string(),
+            bolt11: Some(napi_parsed_invoice_from_gl(invoice)),
+            node_id: None,
+            lnurl_pay: None,
+            lnurl_withdraw: None,
+        },
+        GlResolvedInput::NodeId { node_id } => ResolvedInput {
+            r#type: "node_id".to_string(),
+            bolt11: None,
+            node_id: Some(node_id),
+            lnurl_pay: None,
+            lnurl_withdraw: None,
+        },
+        GlResolvedInput::LnUrlPay { data } => ResolvedInput {
+            r#type: "lnurl_pay".to_string(),
+            bolt11: None,
+            node_id: None,
+            lnurl_pay: Some(napi_pay_request_data_from_gl(data)),
+            lnurl_withdraw: None,
+        },
+        GlResolvedInput::LnUrlWithdraw { data } => ResolvedInput {
+            r#type: "lnurl_withdraw".to_string(),
+            bolt11: None,
+            node_id: None,
+            lnurl_pay: None,
+            lnurl_withdraw: Some(napi_withdraw_request_data_from_gl(data)),
+        },
+    }
+}
+
+/// Synchronously classify the input. **No HTTP, no I/O.**
+///
+/// Recognises BOLT11 invoices, node IDs, LNURL bech32 strings, and
+/// Lightning Addresses. Strips `lightning:` / `LIGHTNING:` prefixes
+/// automatically. LNURL inputs are decoded to their underlying URL
+/// but **not fetched** — call `resolveInput` for that.
+#[napi]
+pub fn parse_input(input: String) -> Result<ParsedInput> {
+    let parsed =
+        glsdk::parse_input(input).map_err(|e| Error::from_reason(e.to_string()))?;
+    Ok(napi_parsed_input_from_gl(parsed))
+}
+
+/// Asynchronously classify and resolve the input.
+///
+/// Internally calls `parseInput`. For LNURL bech32 strings and
+/// Lightning Addresses performs the HTTP GET to the endpoint and
+/// returns typed pay or withdraw request data. For BOLT11 invoices
+/// and node IDs returns immediately without I/O.
+#[napi]
+pub async fn resolve_input(input: String) -> Result<ResolvedInput> {
+    let resolved = glsdk::resolve_input(input)
+        .await
+        .map_err(|e| Error::from_reason(e.to_string()))?;
+    Ok(napi_resolved_input_from_gl(resolved))
+}
+
+// ============================================================================
+// LNURL Conversion Helpers
+// ============================================================================
+
+fn gl_pay_request_data_from_napi(data: LnUrlPayRequestData) -> glsdk::LnUrlPayRequestData {
+    glsdk::LnUrlPayRequestData {
+        callback: data.callback,
+        min_sendable: data.min_sendable as u64,
+        max_sendable: data.max_sendable as u64,
+        metadata: data.metadata,
+        comment_allowed: data.comment_allowed as u64,
+        description: data.description,
+        lnurl: data.lnurl,
+    }
+}
+
+fn gl_withdraw_request_data_from_napi(
+    data: LnUrlWithdrawRequestData,
+) -> glsdk::LnUrlWithdrawRequestData {
+    glsdk::LnUrlWithdrawRequestData {
+        callback: data.callback,
+        k1: data.k1,
+        default_description: data.default_description,
+        min_withdrawable: data.min_withdrawable as u64,
+        max_withdrawable: data.max_withdrawable as u64,
+        lnurl: data.lnurl,
+    }
+}
+
+fn gl_lnurl_pay_request_from_napi(req: LnUrlPayRequest) -> glsdk::LnUrlPayRequest {
+    glsdk::LnUrlPayRequest {
+        data: gl_pay_request_data_from_napi(req.data),
+        amount_msat: req.amount_msat as u64,
+        comment: req.comment,
+        validate_success_action_url: req.validate_success_action_url,
+    }
+}
+
+fn gl_lnurl_withdraw_request_from_napi(req: LnUrlWithdrawRequest) -> glsdk::LnUrlWithdrawRequest {
+    glsdk::LnUrlWithdrawRequest {
+        data: gl_withdraw_request_data_from_napi(req.data),
+        amount_msat: req.amount_msat as u64,
+        description: req.description,
+    }
+}
+
+fn napi_success_action_from_gl(action: glsdk::SuccessActionProcessed) -> SuccessActionProcessed {
+    match action {
+        glsdk::SuccessActionProcessed::Message { message } => SuccessActionProcessed {
+            r#type: "message".to_string(),
+            message: Some(message),
+            description: None,
+            url: None,
+            plaintext: None,
+        },
+        glsdk::SuccessActionProcessed::Url { description, url } => SuccessActionProcessed {
+            r#type: "url".to_string(),
+            message: None,
+            description: Some(description),
+            url: Some(url),
+            plaintext: None,
+        },
+        glsdk::SuccessActionProcessed::Aes {
+            description,
+            plaintext,
+        } => SuccessActionProcessed {
+            r#type: "aes".to_string(),
+            message: None,
+            description: Some(description),
+            url: None,
+            plaintext: Some(plaintext),
+        },
+    }
+}
+
+fn napi_lnurl_pay_result_from_gl(result: glsdk::LnUrlPayResult) -> LnUrlPayResult {
+    match result {
+        glsdk::LnUrlPayResult::EndpointSuccess { data } => LnUrlPayResult {
+            r#type: "success".to_string(),
+            success: Some(LnUrlPaySuccessData {
+                payment_preimage: data.payment_preimage,
+                success_action: data.success_action.map(napi_success_action_from_gl),
+            }),
+            error: None,
+            pay_error: None,
+        },
+        glsdk::LnUrlPayResult::EndpointError { data } => LnUrlPayResult {
+            r#type: "error".to_string(),
+            success: None,
+            error: Some(LnUrlErrorData {
+                reason: data.reason,
+            }),
+            pay_error: None,
+        },
+        glsdk::LnUrlPayResult::PayError { data } => LnUrlPayResult {
+            r#type: "pay_error".to_string(),
+            success: None,
+            error: None,
+            pay_error: Some(LnUrlPayErrorData {
+                payment_hash: data.payment_hash,
+                reason: data.reason,
+            }),
+        },
+    }
+}
+
+fn napi_lnurl_withdraw_result_from_gl(result: glsdk::LnUrlWithdrawResult) -> LnUrlWithdrawResult {
+    match result {
+        glsdk::LnUrlWithdrawResult::Ok { data } => LnUrlWithdrawResult {
+            r#type: "ok".to_string(),
+            ok: Some(LnUrlWithdrawSuccessData {
+                invoice: data.invoice,
+            }),
+            error: None,
+        },
+        glsdk::LnUrlWithdrawResult::ErrorStatus { data } => LnUrlWithdrawResult {
+            r#type: "error".to_string(),
+            ok: None,
+            error: Some(LnUrlErrorData {
+                reason: data.reason,
+            }),
+        },
     }
 }

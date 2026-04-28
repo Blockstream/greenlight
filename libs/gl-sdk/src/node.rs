@@ -1,6 +1,7 @@
 use crate::{credentials::Credentials, signer::Handle, util::exec, Error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use gl_client::credentials::NodeIdProvider;
+use gl_client::lnurl::models::LnUrlHttpClient as _;
 use gl_client::node::{Client as GlClient, ClnClient, Node as ClientNode};
 use gl_client::pb::{self as glpb, cln as clnpb};
 use lightning_invoice::Bolt11Invoice;
@@ -22,6 +23,7 @@ pub struct Node {
     /// events to the installed listener. A single listener per node;
     /// installing a new one aborts the previous task. Aborted on Drop.
     event_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
+    network: gl_client::bitcoin::Network,
 }
 
 impl Drop for Node {
@@ -62,6 +64,7 @@ impl Node {
             signer_handle: None,
             disconnected: AtomicBool::new(false),
             event_task: Mutex::new(None),
+            network: gl_client::bitcoin::Network::Bitcoin,
         })
     }
 }
@@ -643,6 +646,160 @@ impl Node {
             node_state,
         )
     }
+
+    // ── LNURL methods ───────────────────────────────────────────
+
+    /// Execute an LNURL-pay flow (LUD-06).
+    ///
+    /// Sends the chosen amount (and optional comment) to the service's
+    /// callback, receives and validates a BOLT11 invoice, pays it, and
+    /// processes any success action (LUD-09/10).
+    ///
+    /// Call the top-level `parse_input` first to obtain the
+    /// `LnUrlPayRequestData`, then build an `LnUrlPayRequest` with the
+    /// user's chosen amount.
+    pub fn lnurl_pay(
+        &self,
+        request: crate::lnurl::LnUrlPayRequest,
+    ) -> Result<crate::lnurl::LnUrlPayResult, Error> {
+        self.check_connected()?;
+        validate_lnurl_pay_input(&request)?;
+
+        let http_client = gl_client::lnurl::models::LnUrlHttpClearnetClient::new();
+
+        // Phase 1: Get invoice from service callback
+        let comment = request.comment.as_deref();
+        let (invoice_str, success_action) = match exec(
+            gl_client::lnurl::pay::fetch_invoice(
+                &http_client,
+                &request.data.callback,
+                request.amount_msat,
+                comment,
+            ),
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                let msg = e.to_string();
+                let reason = msg
+                    .strip_prefix(gl_client::lnurl::pay::LNURL_SERVICE_ERROR_PREFIX)
+                    .unwrap_or(&msg)
+                    .to_string();
+                return Ok(crate::lnurl::LnUrlPayResult::EndpointError {
+                    data: crate::lnurl::LnUrlErrorData { reason },
+                });
+            }
+        };
+
+        if let Some(reason) = invoice_network_mismatch(&invoice_str, self.network) {
+            return Ok(crate::lnurl::LnUrlPayResult::EndpointError {
+                data: crate::lnurl::LnUrlErrorData { reason },
+            });
+        }
+
+        // Phase 2: Pay the invoice
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+        let pay_response = match exec(cln_client.pay(clnpb::PayRequest {
+            bolt11: invoice_str.clone(),
+            ..Default::default()
+        })) {
+            Ok(r) => r.into_inner(),
+            Err(e) => {
+                let payment_hash = invoice_str
+                    .parse::<Bolt11Invoice>()
+                    .ok()
+                    .map(|inv| inv.payment_hash().to_string())
+                    .unwrap_or_default();
+                return Ok(crate::lnurl::LnUrlPayResult::PayError {
+                    data: crate::lnurl::LnUrlPayErrorData {
+                        payment_hash,
+                        reason: e.to_string(),
+                    },
+                });
+            }
+        };
+
+        // Phase 3: Process success action if present
+        let validate_url = request.validate_success_action_url.unwrap_or(true);
+        let processed_action = match success_action {
+            Some(action) => {
+                let processed = action
+                    .process(&pay_response.payment_preimage)
+                    .map_err(|e| Error::Other(e.to_string()))?;
+                if validate_url {
+                    if let gl_client::lnurl::models::ProcessedSuccessAction::Url {
+                        url, ..
+                    } = &processed
+                    {
+                        if let Some(reason) =
+                            url_action_domain_mismatch(&request.data.callback, url)
+                        {
+                            return Err(Error::Other(reason));
+                        }
+                    }
+                }
+                Some(processed.into())
+            }
+            None => None,
+        };
+
+        Ok(crate::lnurl::LnUrlPayResult::EndpointSuccess {
+            data: crate::lnurl::LnUrlPaySuccessData {
+                payment_preimage: hex::encode(&pay_response.payment_preimage),
+                success_action: processed_action,
+            },
+        })
+    }
+
+    /// Execute an LNURL-withdraw flow (LUD-03).
+    ///
+    /// Creates an invoice on this node for the requested amount, sends
+    /// it to the service's callback URL, and the service pays it
+    /// asynchronously.
+    ///
+    /// Call the top-level `parse_input` first to obtain the
+    /// `LnUrlWithdrawRequestData`, then build an `LnUrlWithdrawRequest`
+    /// with the user's chosen amount.
+    pub fn lnurl_withdraw(
+        &self,
+        request: crate::lnurl::LnUrlWithdrawRequest,
+    ) -> Result<crate::lnurl::LnUrlWithdrawResult, Error> {
+        self.check_connected()?;
+
+        let http_client = gl_client::lnurl::models::LnUrlHttpClearnetClient::new();
+
+        // Step 1: Create an invoice on our node
+        let description = request
+            .description
+            .unwrap_or(request.data.default_description.clone());
+
+        let invoice_response = self.receive(
+            format!("lnurl-withdraw-{}", request.data.k1),
+            description,
+            Some(request.amount_msat),
+        )?;
+
+        // Step 2: Build callback URL and submit invoice to service
+        let callback_url = gl_client::lnurl::withdraw::build_withdraw_callback_url(
+            &request.data.callback,
+            &request.data.k1,
+            &invoice_response.bolt11,
+        )
+        .map_err(|e| Error::Other(e.to_string()))?;
+
+        // Step 3: Send invoice to service
+        match exec(http_client.send_invoice_for_withdraw_request(&callback_url)) {
+            Ok(_) => Ok(crate::lnurl::LnUrlWithdrawResult::Ok {
+                data: crate::lnurl::LnUrlWithdrawSuccessData {
+                    invoice: invoice_response.bolt11,
+                },
+            }),
+            Err(e) => Ok(crate::lnurl::LnUrlWithdrawResult::ErrorStatus {
+                data: crate::lnurl::LnUrlErrorData {
+                    reason: e.to_string(),
+                },
+            }),
+        }
+    }
 }
 
 fn render_section<T: serde::Serialize>(result: Result<T, Error>) -> serde_json::Value {
@@ -674,6 +831,83 @@ fn build_diagnostic_json(
         }
     });
     serde_json::to_string_pretty(&envelope).map_err(|e| Error::Other(e.to_string()))
+}
+
+/// Returns a human-readable reason if the invoice's BOLT-11 currency
+/// prefix does not match the node's configured network.
+///
+/// Not a LUD-06 requirement; this is a wallet-side safety check that
+/// prevents attempting to pay e.g. a testnet invoice from a mainnet
+/// wallet. The payment would fail at the node layer regardless, but
+/// this surfaces a clean error earlier.
+fn invoice_network_mismatch(
+    invoice_str: &str,
+    node_network: gl_client::bitcoin::Network,
+) -> Option<String> {
+    use lightning_invoice::Currency;
+    let invoice = invoice_str.parse::<Bolt11Invoice>().ok()?;
+    let expected = match node_network {
+        gl_client::bitcoin::Network::Bitcoin => Currency::Bitcoin,
+        gl_client::bitcoin::Network::Testnet => Currency::BitcoinTestnet,
+        gl_client::bitcoin::Network::Signet => Currency::Signet,
+        gl_client::bitcoin::Network::Regtest => Currency::Regtest,
+        _ => return None,
+    };
+    if invoice.currency() == expected {
+        None
+    } else {
+        Some(format!(
+            "invoice is for {:?}, but this node is on {:?}",
+            invoice.currency(),
+            node_network
+        ))
+    }
+}
+
+fn url_action_domain_mismatch(callback_url: &str, action_url: &str) -> Option<String> {
+    let cb = url::Url::parse(callback_url).ok()?;
+    let action = url::Url::parse(action_url).ok()?;
+    let cb_domain = cb.domain()?;
+    let action_domain = action.domain()?;
+    if cb_domain == action_domain {
+        None
+    } else {
+        Some(format!(
+            "success action URL domain ({}) does not match the callback domain ({})",
+            action_domain, cb_domain
+        ))
+    }
+}
+
+fn validate_lnurl_pay_input(request: &crate::lnurl::LnUrlPayRequest) -> Result<(), Error> {
+    let data = &request.data;
+    if request.amount_msat < data.min_sendable {
+        return Err(Error::Other(format!(
+            "amount_msat {} is below the service's min_sendable ({})",
+            request.amount_msat, data.min_sendable
+        )));
+    }
+    if request.amount_msat > data.max_sendable {
+        return Err(Error::Other(format!(
+            "amount_msat {} is above the service's max_sendable ({})",
+            request.amount_msat, data.max_sendable
+        )));
+    }
+    if let Some(comment) = request.comment.as_deref() {
+        if data.comment_allowed == 0 && !comment.is_empty() {
+            return Err(Error::Other(
+                "this LNURL service does not accept comments".to_string(),
+            ));
+        }
+        if (comment.len() as u64) > data.comment_allowed {
+            return Err(Error::Other(format!(
+                "comment length {} exceeds the service's comment_allowed ({})",
+                comment.len(),
+                data.comment_allowed
+            )));
+        }
+    }
+    Ok(())
 }
 
 // Not exported through uniffi
@@ -738,6 +972,7 @@ impl Node {
     pub(crate) fn with_signer(
         credentials: Credentials,
         handle: Handle,
+        network: gl_client::bitcoin::Network,
     ) -> Result<Self, Error> {
         let node_id = credentials
             .inner
@@ -756,6 +991,7 @@ impl Node {
             signer_handle: Some(handle),
             disconnected: AtomicBool::new(false),
             event_task: Mutex::new(None),
+            network,
         })
     }
 
