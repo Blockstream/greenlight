@@ -15,7 +15,7 @@ use log::{trace, warn};
 use serde::de::{self, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -529,6 +529,22 @@ impl State {
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         State { values }
+    }
+
+    pub(crate) fn recoverable_channel_keys(&self) -> BTreeSet<String> {
+        self.values
+            .iter()
+            .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
+            .filter(|(key, _)| key.starts_with(&format!("{CHANNEL_PREFIX}/")))
+            .filter(|(_, value)| {
+                value
+                    .value
+                    .get("channel_setup")
+                    .map(|setup| !setup.is_null())
+                    .unwrap_or(false)
+            })
+            .map(|(key, _)| key.clone())
+            .collect()
     }
 }
 

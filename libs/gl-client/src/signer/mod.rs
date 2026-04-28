@@ -31,13 +31,14 @@ use ring::digest::{digest, SHA256};
 use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
 use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::transport::{Endpoint, Uri};
+use tonic::transport::{Channel, Endpoint, Uri};
 use tonic::{Code, Request};
 use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
 use vls_protocol::serde_bolt::Octets;
@@ -47,6 +48,7 @@ use vls_protocol_signer::handler::Handler;
 
 mod approver;
 mod auth;
+mod backup;
 pub mod model;
 mod report;
 mod resolve;
@@ -84,6 +86,28 @@ pub struct StateSignatureOverrideConfig {
 pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
+    pub backup: Option<SignerBackupConfig>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignerBackupConfig {
+    pub path: PathBuf,
+    pub strategy: SignerBackupStrategy,
+}
+
+impl SignerBackupConfig {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: path.into(),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SignerBackupStrategy {
+    NewChannelsOnly,
 }
 
 #[derive(Debug, Default)]
@@ -116,6 +140,7 @@ pub struct Signer {
 
     network: Network,
     state: Arc<Mutex<crate::persist::State>>,
+    backup: Option<SignerBackupConfig>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -179,6 +204,7 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
+        let backup = config.backup.clone();
         let (state_signature_override_enabled, state_signature_override_note) =
             match config.state_signature_override {
                 Some(override_config) => {
@@ -323,6 +349,7 @@ impl Signer {
             init,
             network,
             state: persister.state(),
+            backup,
         })
     }
 
@@ -658,7 +685,8 @@ impl Signer {
             .keep_alive_while_idle(true)
             .connect_lazy();
 
-        let mut client = NodeClient::new(c);
+        let mut client = NodeClient::new(c.clone());
+        let mut peerlist_client = self.backup_peerlist_client(c)?;
 
         let mut stream = client
             .stream_hsm_requests(Request::new(Empty::default()))
@@ -683,7 +711,10 @@ impl Signer {
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
 
-            match self.process_request(req.clone()).await {
+            match self
+                .process_request(req.clone(), peerlist_client.as_mut())
+                .await
+            {
                 Ok(response) => {
                     trace!("Sending response {}", hex::encode(&response.raw));
                     client
@@ -722,6 +753,23 @@ impl Signer {
         }
     }
 
+    fn backup_peerlist_client(&self, channel: Channel) -> Result<Option<node::ClnClient>, Error> {
+        if self.backup.is_none() {
+            return Ok(None);
+        }
+
+        let private_key = self
+            .tls
+            .private_key
+            .clone()
+            .ok_or_else(|| Error::Other(anyhow!("missing TLS private key for CLN auth")))?;
+        let auth = node::service::AuthLayer::new(private_key, self.master_rune.to_base64())
+            .map_err(Error::Other)?;
+        let service = tower::ServiceBuilder::new().layer(auth).service(channel);
+
+        Ok(Some(node::ClnClient::new(service)))
+    }
+
     fn authenticate_request(
         &self,
         msg: &vls_protocol::msgs::Message,
@@ -739,7 +787,11 @@ impl Signer {
         Ok(())
     }
 
-    async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
+    async fn process_request(
+        &self,
+        req: HsmRequest,
+        mut node_client: Option<&mut crate::node::ClnClient>,
+    ) -> Result<HsmResponse, Error> {
         debug!("Processing request {:?}", req);
         let req = req;
 
@@ -758,7 +810,7 @@ impl Signer {
         // including the initial VLS state created during Signer::new().
         let prestate_sketch = incoming_state.sketch();
 
-        let prestate_log = {
+        let (prestate_log, pre_backup_state) = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
@@ -773,9 +825,11 @@ impl Signer {
                 );
             }
             trace!("Processing request {}", hex::encode(&req.raw));
-            serde_json::to_string(&*state).map_err(|e| {
+            let pre_backup_state = state.clone();
+            let prestate_log = serde_json::to_string(&*state).map_err(|e| {
                 Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
-            })?
+            })?;
+            (prestate_log, pre_backup_state)
         };
 
         // The first two bytes represent the message type. Check that
@@ -905,7 +959,10 @@ impl Signer {
             }
         };
 
-        let signer_state: Vec<crate::pb::SignerStateEntry> = {
+        let (signer_state, pending_backup): (
+            Vec<crate::pb::SignerStateEntry>,
+            Option<(SignerBackupConfig, crate::persist::State)>,
+        ) = {
             debug!("Serializing state changes to report to node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!(
@@ -918,6 +975,11 @@ impl Signer {
                     self.sign_state_payload(key, version, value)
                 })
                 .map_err(|e| Error::Other(anyhow!("Failed to sign signer state entries: {e}")))?;
+            let final_state = state.clone();
+            let pending_backup = self.backup.as_ref().and_then(|config| {
+                backup::should_snapshot(config.strategy, &pre_backup_state, &final_state)
+                    .then(|| (config.clone(), final_state.omit_tombstones()))
+            });
             let full_wire_bytes = {
                 let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
                 signer_state_response_wire_bytes(&full_entries)
@@ -933,14 +995,40 @@ impl Signer {
                 full_wire_bytes,
                 saved_percent
             );
-            diff_entries
+            (diff_entries, pending_backup)
         };
+        if let Some((backup_config, backup_state)) = pending_backup {
+            let peerlist = match node_client.as_mut() {
+                Some(client) => Self::fetch_backup_peerlist(*client).await?,
+                None => {
+                    return Err(Error::Other(anyhow!(
+                        "backup snapshot is due but no node client is available to refresh peerlist"
+                    )))
+                }
+            };
+            backup::write_snapshot(&backup_config, &self.id, backup_state, peerlist)
+                .map_err(|e| Error::Other(anyhow!("failed to write signer backup: {e}")))?;
+        }
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
             signer_state,
             error: "".to_owned(),
         })
+    }
+
+    async fn fetch_backup_peerlist(
+        client: &mut crate::node::ClnClient,
+    ) -> Result<Vec<backup::PeerlistEntry>, Error> {
+        let response = client
+            .list_datastore(Request::new(crate::pb::cln::ListdatastoreRequest {
+                key: vec!["greenlight".to_string(), "peerlist".to_string()],
+            }))
+            .await
+            .map_err(|e| Error::Other(anyhow!("failed to refresh backup peerlist: {e}")))?;
+
+        backup::parse_peerlist(&response.into_inner().datastore)
+            .map_err(|e| Error::Other(anyhow!("failed to parse backup peerlist: {e}")))
     }
 
     pub fn node_id(&self) -> Vec<u8> {
@@ -1602,6 +1690,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: None,
+                backup: None,
             },
         )
         .unwrap()
@@ -1615,6 +1704,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: Some(test_override_config(note)),
+                backup: None,
             },
         )
         .unwrap()
@@ -1655,7 +1745,7 @@ mod tests {
                 raw: msg,
                 signer_state: vec![],
                 requests: Vec::new(),
-            },)
+            }, None)
             .await
             .is_err());
     }
@@ -1678,7 +1768,7 @@ mod tests {
                     raw: vec![],
                     signer_state: vec![],
                     requests: Vec::new(),
-                },)
+                }, None)
                 .await
                 .unwrap_err()
                 .to_string(),
@@ -1707,7 +1797,7 @@ mod tests {
             signer_state: vec![mk_state_entry(&key, 1, json!({"v": 1}))],
             requests: vec![],
         };
-        let response = signer.process_request(req).await.unwrap();
+        let response = signer.process_request(req, None).await.unwrap();
         let repaired = response
             .signer_state
             .iter()
@@ -1728,7 +1818,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            })
+            }, None)
             .await
             .unwrap_err()
             .to_string();
@@ -1745,7 +1835,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![mk_state_entry("state/test", 1, json!({"v": 1}))],
                 requests: vec![],
-            })
+            }, None)
             .await
             .unwrap_err()
             .to_string();
@@ -1764,7 +1854,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            })
+            }, None)
             .await
             .unwrap_err()
             .to_string();
@@ -1786,7 +1876,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            })
+            }, None)
             .await;
         assert!(res.is_ok());
     }
@@ -1804,7 +1894,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid, missing],
                 requests: vec![],
-            })
+            }, None)
             .await;
         assert!(res.is_ok());
     }
@@ -1822,7 +1912,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid1],
             requests: vec![],
-            })
+            }, None)
             .await
             .unwrap();
         let snapshot1: Vec<SignerStateEntry> = {
@@ -1841,7 +1931,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid2],
                 requests: vec![],
-            })
+            }, None)
             .await;
         assert!(res2.is_ok());
 
@@ -1865,7 +1955,7 @@ mod tests {
                     raw: heartbeat_raw(),
                     signer_state: vec![mk_state_entry(key, 1, json!({"v": request_id}))],
                     requests: vec![],
-                })
+                }, None)
                 .await
                 .unwrap();
             let snapshot: Vec<SignerStateEntry> = {
@@ -1890,7 +1980,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid],
                 requests: vec![],
-            })
+            }, None)
             .await
             .unwrap();
 
@@ -1923,7 +2013,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![valid.clone(), invalid],
                 requests: vec![],
-            })
+            }, None)
             .await
             .unwrap();
 
@@ -1951,6 +2041,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: StateSignatureMode::Off,
                 state_signature_override: Some(test_override_config(Some("test"))),
+                backup: None,
             },
         );
         let err = signer.err().unwrap().to_string();
@@ -1969,6 +2060,7 @@ mod tests {
                     ack: "WRONG".to_string(),
                     note: None,
                 }),
+                backup: None,
             },
         );
         let err = signer.err().unwrap().to_string();
@@ -1991,7 +2083,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            })
+            }, None)
             .await
             .unwrap_err()
             .to_string();
