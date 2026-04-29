@@ -36,6 +36,50 @@ struct BackupSnapshot {
     peerlist: Vec<PeerlistEntry>,
 }
 
+#[derive(Default)]
+pub(crate) struct BackupRuntime {
+    updates_since_backup: u32,
+    snapshot_pending: bool,
+    last_backed_state: Option<State>,
+}
+
+impl BackupRuntime {
+    pub(crate) fn observe(
+        &mut self,
+        strategy: SignerBackupStrategy,
+        before: &State,
+        after: &State,
+    ) -> bool {
+        if should_snapshot_new_channels(before, after) {
+            self.snapshot_pending = true;
+        }
+
+        if let SignerBackupStrategy::Periodic { updates } = strategy {
+            if has_recoverable_state_update(before, after) {
+                self.updates_since_backup = self.updates_since_backup.saturating_add(1);
+                if updates > 0 && self.updates_since_backup >= updates {
+                    self.snapshot_pending = true;
+                }
+            }
+        }
+
+        self.snapshot_pending && self.has_unbacked_recoverable_state(after)
+    }
+
+    pub(crate) fn snapshot_succeeded(&mut self, state: &State) {
+        self.updates_since_backup = 0;
+        self.snapshot_pending = false;
+        self.last_backed_state = Some(state.clone());
+    }
+
+    fn has_unbacked_recoverable_state(&self, state: &State) -> bool {
+        self.last_backed_state
+            .as_ref()
+            .map(|last| has_recoverable_state_update(last, state))
+            .unwrap_or(true)
+    }
+}
+
 pub(crate) fn should_snapshot_new_channels(before: &State, after: &State) -> bool {
     let before_channels = before.recoverable_channel_keys();
     after
@@ -44,14 +88,8 @@ pub(crate) fn should_snapshot_new_channels(before: &State, after: &State) -> boo
         .any(|key| !before_channels.contains(key))
 }
 
-pub(crate) fn should_snapshot(
-    strategy: SignerBackupStrategy,
-    before: &State,
-    after: &State,
-) -> bool {
-    match strategy {
-        SignerBackupStrategy::NewChannelsOnly => should_snapshot_new_channels(before, after),
-    }
+fn has_recoverable_state_update(before: &State, after: &State) -> bool {
+    !before.diff_state(after).recoverable_channel_keys().is_empty()
 }
 
 pub(crate) fn parse_peerlist(
@@ -207,6 +245,67 @@ mod tests {
     }
 
     #[test]
+    fn runtime_retries_new_channel_snapshot_until_success() {
+        let stub = state(json!({
+            "channels/a": [0, channel(serde_json::Value::Null)]
+        }));
+        let ready = state(json!({
+            "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
+        }));
+        let mut runtime = BackupRuntime::default();
+
+        assert!(runtime.observe(SignerBackupStrategy::NewChannelsOnly, &stub, &ready));
+        assert!(runtime.observe(SignerBackupStrategy::NewChannelsOnly, &ready, &ready));
+
+        runtime.snapshot_succeeded(&ready);
+
+        assert!(!runtime.observe(SignerBackupStrategy::NewChannelsOnly, &ready, &ready));
+    }
+
+    #[test]
+    fn periodic_trigger_counts_recoverable_channel_updates() {
+        let ready = state(json!({
+            "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
+        }));
+        let updated_once = state(json!({
+            "channels/a": [2, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
+        }));
+        let updated_twice = state(json!({
+            "channels/a": [3, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
+        }));
+        let mut runtime = BackupRuntime::default();
+        let strategy = SignerBackupStrategy::Periodic { updates: 2 };
+        runtime.snapshot_succeeded(&ready);
+
+        assert!(!runtime.observe(strategy, &ready, &updated_once));
+        assert!(runtime.observe(strategy, &updated_once, &updated_twice));
+        assert!(runtime.observe(strategy, &updated_twice, &updated_twice));
+
+        runtime.snapshot_succeeded(&updated_twice);
+
+        assert!(!runtime.observe(strategy, &updated_twice, &updated_twice));
+    }
+
+    #[test]
+    fn periodic_trigger_writes_new_channels_immediately() {
+        let ready = state(json!({
+            "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
+        }));
+        let second_ready = state(json!({
+            "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))],
+            "channels/b": [1, channel(json!({ "funding_outpoint": { "txid": "11", "vout": 1 } }))]
+        }));
+        let mut runtime = BackupRuntime::default();
+        runtime.snapshot_succeeded(&ready);
+
+        assert!(runtime.observe(
+            SignerBackupStrategy::Periodic { updates: 100 },
+            &ready,
+            &second_ready
+        ));
+    }
+
+    #[test]
     fn parse_peerlist_normalizes_valid_entries() {
         let raw = r#"{"id":"02aa","direction":"out","addr":"127.0.0.1:9735","features":"abcd"}"#;
         let peers = parse_peerlist(&[peer_entry(
@@ -302,5 +401,18 @@ mod tests {
         let state = state(json!({}));
 
         assert!(write_snapshot(&config, &[2u8; 33], state, vec![]).is_err());
+    }
+
+    #[test]
+    fn write_snapshot_serializes_periodic_strategy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        let config = SignerBackupConfig::periodic(path.clone(), 5).unwrap();
+
+        write_snapshot(&config, &[2u8; 33], state(json!({})), vec![]).unwrap();
+
+        let written: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(written["strategy"]["periodic"]["updates"], 5);
     }
 }
