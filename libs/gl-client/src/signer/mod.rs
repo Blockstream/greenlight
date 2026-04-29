@@ -102,12 +102,38 @@ impl SignerBackupConfig {
             strategy: SignerBackupStrategy::NewChannelsOnly,
         }
     }
+
+    pub fn periodic(path: impl Into<PathBuf>, updates: u32) -> Result<Self> {
+        let config = Self {
+            path: path.into(),
+            strategy: SignerBackupStrategy::Periodic { updates },
+        };
+        config.validate()?;
+        Ok(config)
+    }
+
+    fn validate(&self) -> Result<()> {
+        self.strategy.validate()
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SignerBackupStrategy {
     NewChannelsOnly,
+    Periodic { updates: u32 },
+}
+
+impl SignerBackupStrategy {
+    fn validate(&self) -> Result<()> {
+        match self {
+            SignerBackupStrategy::NewChannelsOnly => Ok(()),
+            SignerBackupStrategy::Periodic { updates: 0 } => {
+                Err(anyhow!("periodic signer backup updates must be greater than zero"))
+            }
+            SignerBackupStrategy::Periodic { .. } => Ok(()),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -141,6 +167,7 @@ pub struct Signer {
     network: Network,
     state: Arc<Mutex<crate::persist::State>>,
     backup: Option<SignerBackupConfig>,
+    backup_runtime: Arc<Mutex<backup::BackupRuntime>>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -204,6 +231,9 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
+        if let Some(backup) = &config.backup {
+            backup.validate()?;
+        }
         let backup = config.backup.clone();
         let (state_signature_override_enabled, state_signature_override_note) =
             match config.state_signature_override {
@@ -350,6 +380,7 @@ impl Signer {
             network,
             state: persister.state(),
             backup,
+            backup_runtime: Arc::new(Mutex::new(backup::BackupRuntime::default())),
         })
     }
 
@@ -686,7 +717,7 @@ impl Signer {
             .connect_lazy();
 
         let mut client = NodeClient::new(c.clone());
-        let mut peerlist_client = self.backup_peerlist_client(c)?;
+        let mut peerlist_client = self.backup_peerlist_client(c);
 
         let mut stream = client
             .stream_hsm_requests(Request::new(Empty::default()))
@@ -753,21 +784,25 @@ impl Signer {
         }
     }
 
-    fn backup_peerlist_client(&self, channel: Channel) -> Result<Option<node::ClnClient>, Error> {
+    fn backup_peerlist_client(&self, channel: Channel) -> Option<node::ClnClient> {
         if self.backup.is_none() {
-            return Ok(None);
+            return None;
         }
 
-        let private_key = self
-            .tls
-            .private_key
-            .clone()
-            .ok_or_else(|| Error::Other(anyhow!("missing TLS private key for CLN auth")))?;
-        let auth = node::service::AuthLayer::new(private_key, self.master_rune.to_base64())
-            .map_err(Error::Other)?;
+        let Some(private_key) = self.tls.private_key.clone() else {
+            warn!("Signer backup enabled but missing TLS private key for CLN auth");
+            return None;
+        };
+        let auth = match node::service::AuthLayer::new(private_key, self.master_rune.to_base64()) {
+            Ok(auth) => auth,
+            Err(e) => {
+                warn!("Signer backup peerlist client setup failed: {e}");
+                return None;
+            }
+        };
         let service = tower::ServiceBuilder::new().layer(auth).service(channel);
 
-        Ok(Some(node::ClnClient::new(service)))
+        Some(node::ClnClient::new(service))
     }
 
     fn authenticate_request(
@@ -977,7 +1012,15 @@ impl Signer {
                 .map_err(|e| Error::Other(anyhow!("Failed to sign signer state entries: {e}")))?;
             let final_state = state.clone();
             let pending_backup = self.backup.as_ref().and_then(|config| {
-                backup::should_snapshot(config.strategy, &pre_backup_state, &final_state)
+                let mut runtime = match self.backup_runtime.lock() {
+                    Ok(runtime) => runtime,
+                    Err(e) => {
+                        error!("Signer backup runtime lock failed; skipping backup snapshot: {e}");
+                        return None;
+                    }
+                };
+                runtime
+                    .observe(config.strategy, &pre_backup_state, &final_state)
                     .then(|| (config.clone(), final_state.omit_tombstones()))
             });
             let full_wire_bytes = {
@@ -998,16 +1041,33 @@ impl Signer {
             (diff_entries, pending_backup)
         };
         if let Some((backup_config, backup_state)) = pending_backup {
-            let peerlist = match node_client.as_mut() {
-                Some(client) => Self::fetch_backup_peerlist(*client).await?,
-                None => {
-                    return Err(Error::Other(anyhow!(
-                        "backup snapshot is due but no node client is available to refresh peerlist"
-                    )))
-                }
+            let backup_result = match node_client.as_mut() {
+                Some(client) => match Self::fetch_backup_peerlist(*client).await {
+                    Ok(peerlist) => backup::write_snapshot(
+                        &backup_config,
+                        &self.id,
+                        backup_state.clone(),
+                        peerlist,
+                    )
+                    .map_err(|e| Error::Other(anyhow!("failed to write signer backup: {e}"))),
+                    Err(e) => Err(e),
+                },
+                None => Err(Error::Other(anyhow!(
+                    "backup snapshot is due but no node client is available to refresh peerlist"
+                ))),
             };
-            backup::write_snapshot(&backup_config, &self.id, backup_state, peerlist)
-                .map_err(|e| Error::Other(anyhow!("failed to write signer backup: {e}")))?;
+
+            match backup_result {
+                Ok(()) => match self.backup_runtime.lock() {
+                    Ok(mut runtime) => runtime.snapshot_succeeded(&backup_state),
+                    Err(e) => {
+                        error!("Signer backup runtime lock failed after successful snapshot: {e}")
+                    }
+                },
+                Err(e) => {
+                    error!("Signer backup failed; continuing without backup snapshot: {e}");
+                }
+            }
         }
         Ok(HsmResponse {
             raw: response.as_vec(),
@@ -1721,6 +1781,31 @@ mod tests {
             value: serde_json::to_vec(&value).unwrap(),
             signature: vec![],
         }
+    }
+
+    #[test]
+    fn periodic_backup_rejects_zero_updates() {
+        assert!(SignerBackupConfig::periodic("backup.json", 0).is_err());
+
+        let signer = Signer::new_with_config(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: StateSignatureMode::Soft,
+                state_signature_override: None,
+                backup: Some(SignerBackupConfig {
+                    path: PathBuf::from("backup.json"),
+                    strategy: SignerBackupStrategy::Periodic { updates: 0 },
+                }),
+            },
+        );
+
+        assert!(signer
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("periodic signer backup updates must be greater than zero"));
     }
 
     /// We should not sign messages that we get from the node, since
