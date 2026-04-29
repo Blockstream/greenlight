@@ -2,6 +2,8 @@ use super::{SignerBackupConfig, SignerBackupStrategy};
 use crate::persist::State;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use std::fs;
 use std::io::Write;
 use std::path::Path;
 
@@ -9,7 +11,7 @@ const BACKUP_VERSION: u32 = 1;
 const PEERLIST_PREFIX: [&str; 2] = ["greenlight", "peerlist"];
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct PeerlistEntry {
+pub struct PeerlistEntry {
     pub peer_id: String,
     pub addr: String,
     pub direction: String,
@@ -26,14 +28,139 @@ struct PeerRecord {
     features: String,
 }
 
-#[derive(Serialize)]
-struct BackupSnapshot {
-    version: u32,
-    created_at: String,
-    node_id: String,
-    strategy: SignerBackupStrategy,
-    state: State,
-    peerlist: Vec<PeerlistEntry>,
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SignerBackupSnapshot {
+    pub version: u32,
+    pub created_at: String,
+    pub node_id: String,
+    pub strategy: SignerBackupStrategy,
+    pub state: State,
+    pub peerlist: Vec<PeerlistEntry>,
+}
+
+impl SignerBackupSnapshot {
+    pub fn read(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+        let bytes = fs::read(path)
+            .with_context(|| format!("reading signer backup {}", path.display()))?;
+        let snapshot: Self = serde_json::from_slice(&bytes)
+            .with_context(|| format!("parsing signer backup {}", path.display()))?;
+        snapshot.validate()?;
+        Ok(snapshot)
+    }
+
+    pub fn recovery_data(&self) -> Result<Vec<RecoverableChannel>> {
+        self.validate()?;
+
+        let peers: BTreeMap<&str, &PeerlistEntry> = self
+            .peerlist
+            .iter()
+            .map(|peer| (peer.peer_id.as_str(), peer))
+            .collect();
+
+        self.state
+            .omit_tombstones()
+            .recoverable_channel_values()
+            .into_iter()
+            .map(|(channel_key, value)| {
+                let peer_id = peer_id_from_channel_key(&channel_key)?;
+                let entry: ChannelEntry = serde_json::from_value(value)
+                    .with_context(|| format!("parsing recoverable channel {}", channel_key))?;
+                let setup = entry.channel_setup.ok_or_else(|| {
+                    anyhow!("recoverable channel {} is missing channel_setup", channel_key)
+                })?;
+                let peer_addr = peers
+                    .get(peer_id.as_str())
+                    .and_then(|peer| (!peer.addr.is_empty()).then(|| peer.addr.clone()));
+                let mut warnings = Vec::new();
+                if peer_addr.is_none() {
+                    warnings.push("missing_peer_addr".to_string());
+                }
+
+                Ok(RecoverableChannel {
+                    channel_key,
+                    peer_id,
+                    peer_addr,
+                    complete: warnings.is_empty(),
+                    warnings,
+                    funding_outpoint: setup.funding_outpoint,
+                    funding_sats: setup.channel_value_sat,
+                    remote_basepoints: setup.counterparty_points,
+                    opener: if setup.is_outbound {
+                        RecoverableChannelOpener::Local
+                    } else {
+                        RecoverableChannelOpener::Remote
+                    },
+                    remote_to_self_delay: setup.counterparty_selected_contest_delay,
+                    commitment_type: setup.commitment_type,
+                })
+            })
+            .collect()
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.version != BACKUP_VERSION {
+            return Err(anyhow!(
+                "unsupported signer backup version {}; expected {}",
+                self.version,
+                BACKUP_VERSION
+            ));
+        }
+
+        self.strategy.validate()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoverableChannel {
+    pub channel_key: String,
+    pub peer_id: String,
+    pub peer_addr: Option<String>,
+    pub complete: bool,
+    pub warnings: Vec<String>,
+    pub funding_outpoint: RecoverableFundingOutpoint,
+    pub funding_sats: u64,
+    pub remote_basepoints: RecoverableBasepoints,
+    pub opener: RecoverableChannelOpener,
+    pub remote_to_self_delay: u64,
+    pub commitment_type: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoverableFundingOutpoint {
+    pub txid: String,
+    pub vout: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoverableBasepoints {
+    pub delayed_payment_basepoint: String,
+    pub funding_pubkey: String,
+    pub htlc_basepoint: String,
+    pub payment_point: String,
+    pub revocation_basepoint: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecoverableChannelOpener {
+    Local,
+    Remote,
+}
+
+#[derive(Deserialize)]
+struct ChannelEntry {
+    channel_setup: Option<ChannelSetup>,
+}
+
+#[derive(Deserialize)]
+struct ChannelSetup {
+    channel_value_sat: u64,
+    commitment_type: String,
+    counterparty_points: RecoverableBasepoints,
+    counterparty_selected_contest_delay: u64,
+    funding_outpoint: RecoverableFundingOutpoint,
+    is_outbound: bool,
 }
 
 #[derive(Default)]
@@ -109,7 +236,7 @@ pub(crate) fn write_snapshot(
     state: State,
     peerlist: Vec<PeerlistEntry>,
 ) -> Result<()> {
-    let snapshot = BackupSnapshot {
+    let snapshot = SignerBackupSnapshot {
         version: BACKUP_VERSION,
         created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         node_id: hex::encode(node_id),
@@ -144,6 +271,26 @@ fn backup_dir(path: &Path) -> &Path {
     path.parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."))
+}
+
+fn peer_id_from_channel_key(channel_key: &str) -> Result<String> {
+    let encoded = channel_key
+        .strip_prefix("channels/")
+        .ok_or_else(|| anyhow!("invalid channel key prefix: {}", channel_key))?;
+    let raw = hex::decode(encoded)
+        .with_context(|| format!("decoding channel key {}", channel_key))?;
+    let channel_id = raw
+        .get(33..)
+        .ok_or_else(|| anyhow!("channel key {} is missing node id prefix", channel_key))?;
+
+    if channel_id.len() < 41 {
+        return Err(anyhow!(
+            "channel key {} does not contain a CLN-style peer id",
+            channel_key
+        ));
+    }
+
+    Ok(hex::encode(&channel_id[..33]))
 }
 
 fn parse_peerlist_entry(entry: &crate::pb::cln::ListdatastoreDatastore) -> Result<PeerlistEntry> {
@@ -218,6 +365,51 @@ mod tests {
             hex: None,
             string: string.map(str::to_owned),
         }
+    }
+
+    fn peer_id(byte: u8) -> String {
+        let mut bytes = vec![byte; 33];
+        bytes[0] = 2;
+        hex::encode(bytes)
+    }
+
+    fn channel_key(peer_id: &str, oid: u64) -> String {
+        let mut raw = vec![3u8; 33];
+        raw.extend(hex::decode(peer_id).unwrap());
+        raw.extend(oid.to_le_bytes());
+        format!("channels/{}", hex::encode(raw))
+    }
+
+    fn recovery_setup(txid: &str, vout: u32, sats: u64, is_outbound: bool) -> serde_json::Value {
+        json!({
+            "channel_value_sat": sats,
+            "commitment_type": "AnchorsZeroFeeHtlc",
+            "counterparty_points": {
+                "delayed_payment_basepoint": "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "funding_pubkey": "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "htlc_basepoint": "02cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                "payment_point": "02dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                "revocation_basepoint": "02eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            },
+            "counterparty_selected_contest_delay": 144,
+            "counterparty_shutdown_script": null,
+            "funding_outpoint": {
+                "txid": txid,
+                "vout": vout
+            },
+            "holder_selected_contest_delay": 144,
+            "holder_shutdown_script": null,
+            "is_outbound": is_outbound,
+            "push_value_msat": 0
+        })
+    }
+
+    fn write_json(path: &Path, value: serde_json::Value) {
+        std::fs::write(path, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+    }
+
+    fn read_backup_err(path: &Path) -> String {
+        SignerBackupSnapshot::read(path).err().unwrap().to_string()
     }
 
     #[test]
@@ -395,6 +587,153 @@ mod tests {
     }
 
     #[test]
+    fn read_snapshot_accepts_v1_new_channels_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        let config = SignerBackupConfig::new(path.clone());
+
+        write_snapshot(&config, &[2u8; 33], state(json!({})), vec![]).unwrap();
+
+        let snapshot = SignerBackupSnapshot::read(&path).unwrap();
+        assert_eq!(snapshot.version, 1);
+        assert_eq!(snapshot.strategy, SignerBackupStrategy::NewChannelsOnly);
+        assert_eq!(snapshot.node_id, hex::encode([2u8; 33]));
+    }
+
+    #[test]
+    fn read_snapshot_rejects_unsupported_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        write_json(
+            &path,
+            json!({
+                "version": 2,
+                "created_at": "2026-04-29T00:00:00Z",
+                "node_id": hex::encode([2u8; 33]),
+                "strategy": "new_channels_only",
+                "state": { "values": {} },
+                "peerlist": []
+            }),
+        );
+
+        let err = read_backup_err(&path);
+        assert!(err.contains("unsupported signer backup version 2"));
+    }
+
+    #[test]
+    fn read_snapshot_rejects_malformed_json_and_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let malformed_json = dir.path().join("malformed.json");
+        let malformed_state = dir.path().join("malformed-state.json");
+        std::fs::write(&malformed_json, b"not-json").unwrap();
+        write_json(
+            &malformed_state,
+            json!({
+                "version": 1,
+                "created_at": "2026-04-29T00:00:00Z",
+                "node_id": hex::encode([2u8; 33]),
+                "strategy": "new_channels_only",
+                "state": { "values": { "channels/a": "not-a-state-entry" } },
+                "peerlist": []
+            }),
+        );
+
+        assert!(read_backup_err(&malformed_json).contains("parsing signer backup"));
+        assert!(read_backup_err(&malformed_state).contains("parsing signer backup"));
+    }
+
+    #[test]
+    fn recovery_data_extracts_channels_and_joins_peer_addresses() {
+        let peer_a = peer_id(0xaa);
+        let peer_b = peer_id(0xbb);
+        let channel_a = channel_key(&peer_a, 1);
+        let channel_b = channel_key(&peer_a, 2);
+        let channel_missing_addr = channel_key(&peer_b, 3);
+        let stub = channel_key(&peer_a, 4);
+        let tombstone = channel_key(&peer_a, 5);
+        let state = state(json!({
+            channel_a.clone(): [1, channel(recovery_setup("00", 0, 1000, true))],
+            channel_b.clone(): [1, channel(recovery_setup("11", 1, 2000, false))],
+            channel_missing_addr.clone(): [1, channel(recovery_setup("22", 2, 3000, false))],
+            stub: [1, channel(serde_json::Value::Null)],
+            tombstone: [u64::MAX, null]
+        }));
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state,
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer_a.clone(),
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let inventory = snapshot.recovery_data().unwrap();
+
+        assert_eq!(inventory.len(), 3);
+        let first = inventory
+            .iter()
+            .find(|channel| channel.channel_key == channel_a)
+            .unwrap();
+        assert!(first.complete);
+        assert_eq!(first.peer_id, peer_a);
+        assert_eq!(first.peer_addr.as_deref(), Some("127.0.0.1:9735"));
+        assert_eq!(first.funding_outpoint.txid, "00");
+        assert_eq!(first.funding_outpoint.vout, 0);
+        assert_eq!(first.funding_sats, 1000);
+        assert_eq!(first.opener, RecoverableChannelOpener::Local);
+        assert_eq!(first.remote_to_self_delay, 144);
+        assert_eq!(first.commitment_type, "AnchorsZeroFeeHtlc");
+        assert_eq!(
+            first.remote_basepoints.funding_pubkey,
+            "02bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        );
+
+        let second = inventory
+            .iter()
+            .find(|channel| channel.channel_key == channel_b)
+            .unwrap();
+        assert_eq!(second.peer_addr.as_deref(), Some("127.0.0.1:9735"));
+        assert_eq!(second.opener, RecoverableChannelOpener::Remote);
+
+        let missing_addr = inventory
+            .iter()
+            .find(|channel| channel.channel_key == channel_missing_addr)
+            .unwrap();
+        assert!(!missing_addr.complete);
+        assert_eq!(missing_addr.peer_addr, None);
+        assert_eq!(missing_addr.warnings, vec!["missing_peer_addr".to_string()]);
+    }
+
+    #[test]
+    fn recovery_data_rejects_malformed_channel_json() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 1);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key: [1, channel(json!({ "channel_value_sat": 1000 }))]
+            })),
+            peerlist: vec![],
+        };
+
+        assert!(snapshot
+            .recovery_data()
+            .unwrap_err()
+            .to_string()
+            .contains("parsing recoverable channel"));
+    }
+
+    #[test]
     fn write_snapshot_fails_when_parent_is_missing() {
         let dir = tempfile::tempdir().unwrap();
         let config = SignerBackupConfig::new(dir.path().join("missing").join("backup.json"));
@@ -414,5 +753,11 @@ mod tests {
         let written: serde_json::Value =
             serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
         assert_eq!(written["strategy"]["periodic"]["updates"], 5);
+
+        let snapshot = SignerBackupSnapshot::read(dir.path().join("backup.json")).unwrap();
+        assert_eq!(
+            snapshot.strategy,
+            SignerBackupStrategy::Periodic { updates: 5 }
+        );
     }
 }

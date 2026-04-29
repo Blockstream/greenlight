@@ -546,6 +546,22 @@ impl State {
             .map(|(key, _)| key.clone())
             .collect()
     }
+
+    pub(crate) fn recoverable_channel_values(&self) -> Vec<(String, serde_json::Value)> {
+        self.values
+            .iter()
+            .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
+            .filter(|(key, _)| key.starts_with(&format!("{CHANNEL_PREFIX}/")))
+            .filter(|(_, value)| {
+                value
+                    .value
+                    .get("channel_setup")
+                    .map(|setup| !setup.is_null())
+                    .unwrap_or(false)
+            })
+            .map(|(key, value)| (key.clone(), value.value.clone()))
+            .collect()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]

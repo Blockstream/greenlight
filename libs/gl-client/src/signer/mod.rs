@@ -49,6 +49,10 @@ use vls_protocol_signer::handler::Handler;
 mod approver;
 mod auth;
 mod backup;
+pub use backup::{
+    PeerlistEntry, RecoverableBasepoints, RecoverableChannel, RecoverableChannelOpener,
+    RecoverableFundingOutpoint, SignerBackupSnapshot,
+};
 pub mod model;
 mod report;
 mod resolve;
@@ -117,7 +121,7 @@ impl SignerBackupConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SignerBackupStrategy {
     NewChannelsOnly,
