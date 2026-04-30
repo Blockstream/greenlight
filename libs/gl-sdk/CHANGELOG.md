@@ -6,16 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.2.1] - 2026-04-30
+
 ### Added
 
 - `parse_input()` — synchronous, offline classification of user input. Recognises BOLT11 invoices, node IDs, LNURL bech32 strings (decoded to their underlying URL), and Lightning Addresses (returned as the unparsed `user@host` form). LNURL inputs are classified but not fetched; the cost contract is "no HTTP, no I/O." Use this for clipboard validation, invoice sanity checks, and any other path that must not touch the network.
 - `resolve_input()` — asynchronous, network-touching classification. Internally calls `parse_input()`, then for the LNURL / Lightning Address branches performs the HTTP GET to the service endpoint and returns typed pay or withdraw request data. BOLT11 invoices and node IDs pass through without I/O. Use this for the QR-scan flow that should proceed straight to a pay/withdraw screen.
 - `ParsedInput` enum (offline result): `Bolt11`, `NodeId`, `LnUrl { url }`, `LnUrlAddress { address }`.
 - `ResolvedInput` enum (resolved result): `Bolt11`, `NodeId`, `LnUrlPay { data }`, `LnUrlWithdraw { data }`.
+- Builder-style `Node` creation with signerless mode as default
+- `NodeState` snapshot with hex identifiers
+- `LogListener` for foreign-binding log capture
+- `generate_diagnostic_data()` for support dumps
 
 ### Removed
 
 - `Node::resolve_lnurl()` and the `ResolvedLnUrl` enum. Use `parse_input()` (offline) or `resolve_input()` (HTTP) to obtain `LnUrlPayRequestData` / `LnUrlWithdrawRequestData`, then call `Node::lnurl_pay()` / `Node::lnurl_withdraw()`.
+
+### Fixed
+
+- Hardened LNURL-pay against real-world services
+- Excluded unpaid invoices from `list_payments`
+- `list_payments` fixes for edge cases
 
 ## [0.2.0] - 2026-04-02
 
@@ -50,5 +62,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Updated gl-client dependency to support CLN v25.12 signer.
 
+[0.2.1]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.2.0...gl-sdk-v0.2.1
 [0.2.0]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.1.1...gl-sdk-v0.2.0
 [0.1.1]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-v0.1.1

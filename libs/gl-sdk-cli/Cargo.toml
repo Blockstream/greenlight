@@ -1,6 +1,6 @@
 [package]
 name = "gl-sdk-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "CLI wrapper for gl-sdk"
 

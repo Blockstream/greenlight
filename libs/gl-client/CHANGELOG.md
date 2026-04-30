@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.4.1] - 2026-04-30
+
+### Added
+
+- New `lnurl` module with full LNURL protocol support (LUD-01/03/06/09/10/16)
+- `lnurl::pay::fetch_invoice()` free function for LNURL-pay invoice retrieval
+- `lnurl::withdraw::build_withdraw_callback_url()` free function for LNURL-withdraw
+- LNURL model types: `LnUrlPayRequestData`, `LnUrlWithdrawRequestData`, `LnUrlHttpClient` trait, `LnUrlHttpClearnetClient`
+- Lightning Address parsing via `lnurl::pay::parse_lightning_address()`
+- LNURL bech32 decoding via `lnurl::utils::parse_lnurl()`
+
+### Fixed
+
+- Use `webpki-roots` for LNURL TLS to support cross-platform builds (no dependency on system CA store)
+- Hardened LNURL-pay against real-world service quirks
+- Case-insensitive comparison for BOLT11 invoice strings in signer
+
 ## [0.4.0] - 2026-04-02
 
 ### Added
@@ -38,4 +55,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Addressed a deprecation warning in gl-testing regarding `PROTOCOL_TLS` being renamed to `PROTOCOL_TLS_SERVER`
 - Fixed initial VLS state not being persisted to the tower (nodelet)
 
+[0.4.1]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.4.0...gl-client-v0.4.1
 [0.4.0]: https://github.com/Blockstream/greenlight/compare/gl-client-0.3.2...gl-client-v0.4.0
