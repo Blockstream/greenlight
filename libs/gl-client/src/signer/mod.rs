@@ -51,7 +51,9 @@ mod auth;
 mod backup;
 pub use backup::{
     PeerlistEntry, RecoverableBasepoints, RecoverableChannel, RecoverableChannelOpener,
-    RecoverableFundingOutpoint, SignerBackupSnapshot,
+    RecoverableFundingOutpoint, CLNBackup, CLNBackupChannel,
+    CLNBackupOptions, RecoverchannelRequest, RecoverchannelSkippedChannel,
+    SignerBackupSnapshot,
 };
 pub mod model;
 mod report;
