@@ -18,7 +18,10 @@ const CLN_CHANNEL_KEY_LEN: usize = PEER_ID_LEN + CLN_DBID_LEN;
 const VLS_CHANNEL_KEY_LEN: usize = NODE_ID_LEN + CLN_CHANNEL_KEY_LEN;
 const TXID_LEN: usize = 32;
 const PUBKEY_LEN: usize = 33;
-const SHACHAIN_OMITTED_WARNING: &str = "shachain_tlv_omitted";
+const SHACHAIN_SECRET_LEN: usize = 32;
+const SHACHAIN_EMPTY_INDEX: u64 = 1 << 48;
+const SHACHAIN_MAX_ENTRIES: usize = 49;
+const SHACHAIN_MISSING_WARNING: &str = "shachain_tlv_missing";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PeerlistEntry {
@@ -116,6 +119,7 @@ impl SignerBackupSnapshot {
         options: CLNBackupOptions,
     ) -> Result<CLNBackup> {
         let recovery_data = self.recovery_data()?;
+        let shachains = self.recoverable_channel_shachains()?;
         let total_channels = recovery_data.len();
         let mut request = RecoverchannelRequest { scb: vec![] };
         let mut channels = Vec::new();
@@ -139,7 +143,13 @@ impl SignerBackupSnapshot {
                 ));
             }
 
-            let encoded = encode_recoverchannel_scb(&channel).map_err(|e| {
+            let old_secrets = shachains
+                .get(&channel.channel_key)
+                .ok_or_else(|| {
+                    anyhow!("missing shachain state for channel {}", channel.channel_key)
+                })?
+                .as_deref();
+            let encoded = encode_recoverchannel_scb(&channel, old_secrets).map_err(|e| {
                 anyhow!(
                     "encoding recoverchannel SCB for {}: {}",
                     channel.channel_key,
@@ -155,7 +165,7 @@ impl SignerBackupSnapshot {
                 cln_dbid: encoded.cln_dbid,
                 channel_id: encoded.channel_id,
                 scb: encoded.scb,
-                warnings: vec![SHACHAIN_OMITTED_WARNING.to_string()],
+                warnings: encoded.warnings,
             });
         }
 
@@ -185,6 +195,31 @@ impl SignerBackupSnapshot {
         }
 
         self.strategy.validate()
+    }
+
+    fn recoverable_channel_shachains(
+        &self,
+    ) -> Result<BTreeMap<String, Option<Vec<CounterpartySecret>>>> {
+        self.state
+            .omit_tombstones()
+            .recoverable_channel_values()
+            .into_iter()
+            .map(|(channel_key, value)| {
+                let entry: ClnChannelEntry = serde_json::from_value(value).with_context(|| {
+                    format!(
+                        "parsing CLN shachain state for recoverable channel {}",
+                        channel_key
+                    )
+                })?;
+                Ok((
+                    channel_key,
+                    entry
+                        .enforcement_state
+                        .and_then(|state| state.counterparty_secrets)
+                        .map(|secrets| secrets.old_secrets),
+                ))
+            })
+            .collect()
     }
 }
 
@@ -268,6 +303,24 @@ pub struct RecoverchannelSkippedChannel {
 struct ChannelEntry {
     channel_setup: Option<ChannelSetup>,
 }
+
+#[derive(Deserialize)]
+struct ClnChannelEntry {
+    enforcement_state: Option<ChannelEnforcementState>,
+}
+
+#[derive(Deserialize)]
+struct ChannelEnforcementState {
+    counterparty_secrets: Option<CounterpartySecrets>,
+}
+
+#[derive(Deserialize)]
+struct CounterpartySecrets {
+    old_secrets: Vec<CounterpartySecret>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+struct CounterpartySecret(Vec<u8>, u64);
 
 #[derive(Deserialize)]
 struct ChannelSetup {
@@ -413,6 +466,7 @@ struct EncodedRecoverchannelScb {
     cln_dbid: u64,
     channel_id: String,
     scb: String,
+    warnings: Vec<String>,
 }
 
 struct ClnChannelKey {
@@ -420,7 +474,10 @@ struct ClnChannelKey {
     dbid: u64,
 }
 
-fn encode_recoverchannel_scb(channel: &RecoverableChannel) -> Result<EncodedRecoverchannelScb> {
+fn encode_recoverchannel_scb(
+    channel: &RecoverableChannel,
+    old_secrets: Option<&[CounterpartySecret]>,
+) -> Result<EncodedRecoverchannelScb> {
     let channel_key = decode_cln_channel_key(&channel.channel_key)?;
     let expected_peer_id = decode_hex_array::<PEER_ID_LEN>("peer_id", &channel.peer_id)?;
     if channel_key.peer_id != expected_peer_id {
@@ -440,7 +497,7 @@ fn encode_recoverchannel_scb(channel: &RecoverableChannel) -> Result<EncodedReco
             .ok_or_else(|| anyhow!("missing peer address"))?,
     )?;
     let channel_type = encode_channel_type(&channel.commitment_type)?;
-    let tlvs = encode_scb_tlvs(channel)?;
+    let (tlvs, warnings) = encode_scb_tlvs(channel, old_secrets)?;
 
     let mut scb = Vec::new();
     put_u64(&mut scb, channel_key.dbid);
@@ -459,6 +516,7 @@ fn encode_recoverchannel_scb(channel: &RecoverableChannel) -> Result<EncodedReco
         cln_dbid: channel_key.dbid,
         channel_id: hex::encode(channel_id),
         scb: hex::encode(scb),
+        warnings,
     })
 }
 
@@ -520,8 +578,21 @@ fn encode_channel_type(commitment_type: &str) -> Result<Vec<u8>> {
     ))
 }
 
-fn encode_scb_tlvs(channel: &RecoverableChannel) -> Result<Vec<u8>> {
+fn encode_scb_tlvs(
+    channel: &RecoverableChannel,
+    old_secrets: Option<&[CounterpartySecret]>,
+) -> Result<(Vec<u8>, Vec<String>)> {
     let mut tlvs = Vec::new();
+    let mut warnings = Vec::new();
+
+    match old_secrets {
+        Some(old_secrets) => {
+            if let Some(shachain) = encode_shachain(old_secrets)? {
+                put_tlv(&mut tlvs, 1, &shachain);
+            }
+        }
+        None => warnings.push(SHACHAIN_MISSING_WARNING.to_string()),
+    }
 
     let mut basepoints = Vec::new();
     basepoints.extend(decode_hex_array::<PUBKEY_LEN>(
@@ -558,7 +629,97 @@ fn encode_scb_tlvs(channel: &RecoverableChannel) -> Result<Vec<u8>> {
     put_u16(&mut delay, remote_to_self_delay);
     put_tlv(&mut tlvs, 7, &delay);
 
-    Ok(tlvs)
+    Ok((tlvs, warnings))
+}
+
+fn encode_shachain(old_secrets: &[CounterpartySecret]) -> Result<Option<Vec<u8>>> {
+    if old_secrets.len() > SHACHAIN_MAX_ENTRIES {
+        return Err(anyhow!(
+            "shachain has {} entries, maximum is {}",
+            old_secrets.len(),
+            SHACHAIN_MAX_ENTRIES
+        ));
+    }
+
+    let mut known = Vec::new();
+    let mut trailing_dummy_start = None;
+
+    for (position, secret) in old_secrets.iter().enumerate() {
+        if is_dummy_shachain_secret(secret) {
+            trailing_dummy_start = Some(position);
+            break;
+        }
+
+        if secret.0.len() != SHACHAIN_SECRET_LEN {
+            return Err(anyhow!(
+                "shachain secret at position {} must be {} bytes, got {}",
+                position,
+                SHACHAIN_SECRET_LEN,
+                secret.0.len()
+            ));
+        }
+
+        let expected_position = shachain_position(secret.1)?;
+        if expected_position != position {
+            return Err(anyhow!(
+                "shachain secret index {} belongs at position {}, found at position {}",
+                secret.1,
+                expected_position,
+                position
+            ));
+        }
+
+        known.push(secret);
+    }
+
+    if let Some(start) = trailing_dummy_start {
+        for (position, secret) in old_secrets.iter().enumerate().skip(start) {
+            if !is_dummy_shachain_secret(secret) {
+                return Err(anyhow!(
+                    "missing shachain position {} before real secret at position {}",
+                    start,
+                    position
+                ));
+            }
+        }
+    }
+
+    if known.is_empty() {
+        return Ok(None);
+    }
+
+    let min_index = known
+        .iter()
+        .map(|secret| secret.1)
+        .min()
+        .expect("known is not empty");
+    let mut shachain = Vec::new();
+    put_u64(&mut shachain, min_index);
+    put_u32(&mut shachain, known.len().try_into()?);
+    for secret in known {
+        put_u64(&mut shachain, secret.1);
+        shachain.extend(&secret.0);
+    }
+
+    Ok(Some(shachain))
+}
+
+fn is_dummy_shachain_secret(secret: &CounterpartySecret) -> bool {
+    secret.1 == SHACHAIN_EMPTY_INDEX && secret.0.iter().all(|byte| *byte == 0)
+}
+
+fn shachain_position(index: u64) -> Result<usize> {
+    if index >= SHACHAIN_EMPTY_INDEX {
+        return Err(anyhow!("invalid shachain index {}", index));
+    }
+
+    for position in 0..48 {
+        if index & (1u64 << position) == (1u64 << position) {
+            return Ok(position);
+        }
+    }
+
+    Ok(48)
 }
 
 fn encode_wireaddr(addr: &str) -> Result<Vec<u8>> {
@@ -752,13 +913,40 @@ mod tests {
     }
 
     fn channel(setup: serde_json::Value) -> serde_json::Value {
+        channel_with_enforcement(setup, json!({}))
+    }
+
+    fn channel_with_enforcement(
+        setup: serde_json::Value,
+        enforcement_state: serde_json::Value,
+    ) -> serde_json::Value {
         json!({
             "channel_setup": setup,
             "channel_value_satoshis": 1000,
             "id": null,
-            "enforcement_state": {},
+            "enforcement_state": enforcement_state,
             "blockheight": null
         })
+    }
+
+    fn enforcement_with_old_secrets(old_secrets: serde_json::Value) -> serde_json::Value {
+        json!({
+            "counterparty_secrets": {
+                "old_secrets": old_secrets
+            }
+        })
+    }
+
+    fn old_secret(byte: u8, index: u64) -> serde_json::Value {
+        json!([vec![byte; SHACHAIN_SECRET_LEN], index])
+    }
+
+    fn malformed_old_secret(secret: Vec<u8>, index: u64) -> serde_json::Value {
+        json!([secret, index])
+    }
+
+    fn dummy_old_secret() -> serde_json::Value {
+        json!([vec![0u8; SHACHAIN_SECRET_LEN], SHACHAIN_EMPTY_INDEX])
     }
 
     fn peer_entry(
@@ -819,6 +1007,17 @@ mod tests {
         let mut bytes: [u8; 32] = hex::decode(txid).unwrap().try_into().unwrap();
         bytes.reverse();
         bytes
+    }
+
+    fn scb_tlvs(scb: &[u8]) -> &[u8] {
+        let channel_type_len = u16::from_be_bytes(scb[124..126].try_into().unwrap()) as usize;
+        let tlv_len_offset = 126 + channel_type_len;
+        let tlv_len =
+            u32::from_be_bytes(scb[tlv_len_offset..tlv_len_offset + 4].try_into().unwrap())
+                as usize;
+        let tlvs = &scb[tlv_len_offset + 4..];
+        assert_eq!(tlvs.len(), tlv_len);
+        tlvs
     }
 
     fn write_json(path: &Path, value: serde_json::Value) {
@@ -1210,7 +1409,10 @@ mod tests {
         assert_eq!(export.skipped_channels, 1);
         assert_eq!(export.channels[0].channel_key, channel_a);
         assert_eq!(export.channels[0].cln_dbid, 1);
-        assert_eq!(export.channels[0].warnings, vec![SHACHAIN_OMITTED_WARNING]);
+        assert_eq!(
+            export.channels[0].warnings,
+            vec![SHACHAIN_MISSING_WARNING.to_string()]
+        );
         assert_eq!(export.skipped[0].channel_key, channel_b);
         assert_eq!(export.skipped[0].warnings, vec!["missing_peer_addr"]);
     }
@@ -1281,12 +1483,7 @@ mod tests {
 
         let channel_type_len = u16::from_be_bytes(scb[124..126].try_into().unwrap()) as usize;
         assert!(channel_type_len > 0);
-        let tlv_len_offset = 126 + channel_type_len;
-        let tlv_len =
-            u32::from_be_bytes(scb[tlv_len_offset..tlv_len_offset + 4].try_into().unwrap())
-                as usize;
-        let tlvs = &scb[tlv_len_offset + 4..];
-        assert_eq!(tlvs.len(), tlv_len);
+        let tlvs = scb_tlvs(&scb);
         assert_eq!(tlvs[0], 3);
         assert_eq!(tlvs[1], 132);
         assert_eq!(
@@ -1296,6 +1493,232 @@ mod tests {
         );
         assert!(tlvs.windows(3).any(|window| window == [5, 1, 0]));
         assert!(tlvs.windows(4).any(|window| window == [7, 2, 0, 144]));
+    }
+
+    #[test]
+    fn to_cln_backup_encodes_shachain_tlv_when_secrets_are_present() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 42);
+        let first_index = SHACHAIN_EMPTY_INDEX - 1;
+        let second_index = SHACHAIN_EMPTY_INDEX - 2;
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key.clone(): [1, channel_with_enforcement(
+                    recovery_setup(full_txid(), 0, 1_000_000, true),
+                    enforcement_with_old_secrets(json!([
+                        old_secret(0x11, first_index),
+                        old_secret(0x22, second_index)
+                    ]))
+                )]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer,
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
+        let scb = hex::decode(&export.request.scb[0]).unwrap();
+        let tlvs = scb_tlvs(&scb);
+
+        assert!(export.channels[0].warnings.is_empty());
+        assert_eq!(tlvs[0], 1);
+        assert_eq!(tlvs[1], 92);
+        let shachain = &tlvs[2..94];
+        assert_eq!(
+            u64::from_be_bytes(shachain[0..8].try_into().unwrap()),
+            second_index
+        );
+        assert_eq!(u32::from_be_bytes(shachain[8..12].try_into().unwrap()), 2);
+        assert_eq!(
+            u64::from_be_bytes(shachain[12..20].try_into().unwrap()),
+            first_index
+        );
+        assert_eq!(&shachain[20..52], &[0x11; SHACHAIN_SECRET_LEN]);
+        assert_eq!(
+            u64::from_be_bytes(shachain[52..60].try_into().unwrap()),
+            second_index
+        );
+        assert_eq!(&shachain[60..92], &[0x22; SHACHAIN_SECRET_LEN]);
+        assert_eq!(tlvs[94], 3);
+    }
+
+    #[test]
+    fn to_cln_backup_omits_empty_shachain_without_warning() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 42);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key: [1, channel_with_enforcement(
+                    recovery_setup(full_txid(), 0, 1_000_000, true),
+                    enforcement_with_old_secrets(json!([]))
+                )]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer,
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
+        let scb = hex::decode(&export.request.scb[0]).unwrap();
+        let tlvs = scb_tlvs(&scb);
+
+        assert!(export.channels[0].warnings.is_empty());
+        assert_eq!(tlvs[0], 3);
+    }
+
+    #[test]
+    fn to_cln_backup_warns_when_counterparty_secrets_are_missing() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 42);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key: [1, channel_with_enforcement(
+                    recovery_setup(full_txid(), 0, 1_000_000, true),
+                    json!({ "counterparty_secrets": null })
+                )]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer,
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
+
+        assert_eq!(
+            export.channels[0].warnings,
+            vec![SHACHAIN_MISSING_WARNING.to_string()]
+        );
+    }
+
+    #[test]
+    fn to_cln_backup_ignores_trailing_dummy_shachain_entries() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 42);
+        let first_index = SHACHAIN_EMPTY_INDEX - 1;
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key: [1, channel_with_enforcement(
+                    recovery_setup(full_txid(), 0, 1_000_000, true),
+                    enforcement_with_old_secrets(json!([
+                        old_secret(0x11, first_index),
+                        dummy_old_secret(),
+                        dummy_old_secret()
+                    ]))
+                )]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer,
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
+        let scb = hex::decode(&export.request.scb[0]).unwrap();
+        let tlvs = scb_tlvs(&scb);
+
+        assert!(export.channels[0].warnings.is_empty());
+        assert_eq!(tlvs[0], 1);
+        assert_eq!(tlvs[1], 52);
+        let shachain = &tlvs[2..54];
+        assert_eq!(u32::from_be_bytes(shachain[8..12].try_into().unwrap()), 1);
+        assert_eq!(tlvs[54], 3);
+    }
+
+    #[test]
+    fn to_cln_backup_rejects_malformed_shachain_entries() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 42);
+
+        for (old_secrets, expected) in [
+            (
+                json!([malformed_old_secret(
+                    vec![0x11; SHACHAIN_SECRET_LEN - 1],
+                    SHACHAIN_EMPTY_INDEX - 1
+                )]),
+                "must be 32 bytes",
+            ),
+            (
+                json!([old_secret(0x22, SHACHAIN_EMPTY_INDEX - 2)]),
+                "belongs at position",
+            ),
+            (
+                json!([
+                    old_secret(0x11, SHACHAIN_EMPTY_INDEX - 1),
+                    dummy_old_secret(),
+                    old_secret(0x22, SHACHAIN_EMPTY_INDEX - 2)
+                ]),
+                "missing shachain position",
+            ),
+            (
+                json!([malformed_old_secret(
+                    vec![0x11; SHACHAIN_SECRET_LEN],
+                    SHACHAIN_EMPTY_INDEX
+                )]),
+                "invalid shachain index",
+            ),
+        ] {
+            let snapshot = SignerBackupSnapshot {
+                version: BACKUP_VERSION,
+                created_at: "2026-04-29T00:00:00Z".to_string(),
+                node_id: hex::encode([2u8; 33]),
+                strategy: SignerBackupStrategy::NewChannelsOnly,
+                state: state(json!({
+                    channel_key.clone(): [1, channel_with_enforcement(
+                        recovery_setup(full_txid(), 0, 1_000_000, true),
+                        enforcement_with_old_secrets(old_secrets)
+                    )]
+                })),
+                peerlist: vec![PeerlistEntry {
+                    peer_id: peer.clone(),
+                    addr: "127.0.0.1:9735".to_string(),
+                    direction: "out".to_string(),
+                    features: "".to_string(),
+                    generation: Some(1),
+                    raw_datastore_string: "{}".to_string(),
+                }],
+            };
+
+            let err = snapshot
+                .to_cln_backup(CLNBackupOptions::default())
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains(expected), "{err}");
+        }
     }
 
     #[test]
