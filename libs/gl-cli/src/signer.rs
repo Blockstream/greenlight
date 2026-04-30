@@ -4,8 +4,8 @@ use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
 use gl_client::signer::{
     RecoverableChannel, CLNBackup, CLNBackupOptions, Signer,
-    SignerBackupSnapshot, SignerBackupStrategy, SignerConfig, StateSignatureMode,
-    StateSignatureOverrideConfig,
+    SignerBackupConfig, SignerBackupSnapshot, SignerBackupStrategy, SignerConfig,
+    StateSignatureMode, StateSignatureOverrideConfig,
 };
 use lightning_signer::bitcoin::Network;
 use serde::Serialize;
@@ -42,6 +42,12 @@ impl From<StateSignatureModeArg> for StateSignatureMode {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum BackupStrategyArg {
+    NewChannelsOnly,
+    Periodic,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum BackupInspectFormat {
     Json,
     Text,
@@ -74,6 +80,12 @@ pub enum Command {
         state_override: Option<String>,
         #[arg(long = "state-override-note")]
         state_override_note: Option<String>,
+        #[arg(long = "backup-path")]
+        backup_path: Option<PathBuf>,
+        #[arg(long = "backup-strategy", value_enum)]
+        backup_strategy: Option<BackupStrategyArg>,
+        #[arg(long = "backup-periodic-updates")]
+        backup_periodic_updates: Option<u32>,
     },
     /// Inspects a local signer backup file
     InspectBackup {
@@ -103,12 +115,18 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             state_signature_mode,
             state_override,
             state_override_note,
+            backup_path,
+            backup_strategy,
+            backup_periodic_updates,
         } => {
             run_handler(
                 config,
                 state_signature_mode,
                 state_override,
                 state_override_note,
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
             )
             .await
         }
@@ -300,6 +318,9 @@ async fn run_handler<P: AsRef<Path>>(
     state_signature_mode: StateSignatureModeArg,
     state_override: Option<String>,
     state_override_note: Option<String>,
+    backup_path: Option<PathBuf>,
+    backup_strategy: Option<BackupStrategyArg>,
+    backup_periodic_updates: Option<u32>,
 ) -> Result<()> {
     // Check if we can find a seed file, if we can not find one, we need to register first.
     let seed_path = config.data_dir.as_ref().join(SEED_FILE_NAME);
@@ -338,6 +359,7 @@ async fn run_handler<P: AsRef<Path>>(
             note: state_override_note,
         }
     });
+    let backup = backup_config_from_args(backup_path, backup_strategy, backup_periodic_updates)?;
 
     let signer = Signer::new_with_config(
         seed,
@@ -346,7 +368,7 @@ async fn run_handler<P: AsRef<Path>>(
         SignerConfig {
             state_signature_mode: state_signature_mode.into(),
             state_signature_override,
-            backup: None,
+            backup,
         },
     )
     .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
@@ -364,15 +386,53 @@ async fn run_handler<P: AsRef<Path>>(
     Ok(())
 }
 
+fn backup_config_from_args(
+    backup_path: Option<PathBuf>,
+    backup_strategy: Option<BackupStrategyArg>,
+    backup_periodic_updates: Option<u32>,
+) -> Result<Option<SignerBackupConfig>> {
+    let Some(path) = backup_path else {
+        if backup_strategy.is_some() {
+            return Err(Error::custom("--backup-strategy requires --backup-path"));
+        }
+        if backup_periodic_updates.is_some() {
+            return Err(Error::custom(
+                "--backup-periodic-updates requires --backup-path",
+            ));
+        }
+        return Ok(None);
+    };
+
+    match backup_strategy.unwrap_or(BackupStrategyArg::NewChannelsOnly) {
+        BackupStrategyArg::NewChannelsOnly => {
+            if backup_periodic_updates.is_some() {
+                return Err(Error::custom(
+                    "--backup-periodic-updates requires --backup-strategy periodic",
+                ));
+            }
+            Ok(Some(SignerBackupConfig::new(path)))
+        }
+        BackupStrategyArg::Periodic => {
+            let updates = backup_periodic_updates.ok_or_else(|| {
+                Error::custom("--backup-periodic-updates is required for periodic backup strategy")
+            })?;
+            SignerBackupConfig::periodic(path, updates)
+                .map(Some)
+                .map_err(Error::custom)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        convert_backup_output, format_backup_report_text, inspect_backup_report,
-        BackupConvertFormat, BackupInspectFormat, Command, StateSignatureModeArg,
+        backup_config_from_args, convert_backup_output, format_backup_report_text,
+        inspect_backup_report, BackupConvertFormat, BackupInspectFormat, BackupStrategyArg,
+        Command, SignerBackupStrategy, StateSignatureModeArg,
     };
     use clap::{Parser, Subcommand};
     use serde_json::json;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     #[derive(Parser, Debug)]
     struct TestCli {
@@ -394,10 +454,16 @@ mod tests {
                 state_signature_mode,
                 state_override,
                 state_override_note,
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
             } => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
                 assert!(state_override.is_none());
                 assert!(state_override_note.is_none());
+                assert!(backup_path.is_none());
+                assert!(backup_strategy.is_none());
+                assert!(backup_periodic_updates.is_none());
             }
             _ => panic!("expected run command"),
         }
@@ -411,10 +477,16 @@ mod tests {
                 state_signature_mode,
                 state_override,
                 state_override_note,
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
             } => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Soft);
                 assert!(state_override.is_none());
                 assert!(state_override_note.is_none());
+                assert!(backup_path.is_none());
+                assert!(backup_strategy.is_none());
+                assert!(backup_periodic_updates.is_none());
             }
             _ => panic!("expected run command"),
         }
@@ -435,10 +507,16 @@ mod tests {
                 state_signature_mode,
                 state_override,
                 state_override_note,
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
             }) => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Off);
                 assert!(state_override.is_none());
                 assert!(state_override_note.is_none());
+                assert!(backup_path.is_none());
+                assert!(backup_strategy.is_none());
+                assert!(backup_periodic_updates.is_none());
             }
             _ => panic!("expected signer run"),
         }
@@ -461,6 +539,9 @@ mod tests {
                 state_signature_mode,
                 state_override,
                 state_override_note,
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
             } => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
                 assert_eq!(
@@ -468,9 +549,156 @@ mod tests {
                     Some("I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE")
                 );
                 assert_eq!(state_override_note.as_deref(), Some("debug session"));
+                assert!(backup_path.is_none());
+                assert!(backup_strategy.is_none());
+                assert!(backup_periodic_updates.is_none());
             }
             _ => panic!("expected run command"),
         }
+    }
+
+    #[test]
+    fn parse_run_backup_path_defaults_to_new_channels_only() {
+        let cli = TestCli::parse_from(["test", "run", "--backup-path", "backup.json"]);
+        match cli.cmd {
+            Command::Run {
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
+                ..
+            } => {
+                assert_eq!(backup_path.as_deref(), Some(Path::new("backup.json")));
+                assert!(backup_strategy.is_none());
+                assert!(backup_periodic_updates.is_none());
+            }
+            _ => panic!("expected run command"),
+        }
+    }
+
+    #[test]
+    fn parse_run_backup_new_channels_strategy() {
+        let cli = TestCli::parse_from([
+            "test",
+            "run",
+            "--backup-path",
+            "backup.json",
+            "--backup-strategy",
+            "new-channels-only",
+        ]);
+        match cli.cmd {
+            Command::Run {
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
+                ..
+            } => {
+                assert_eq!(backup_path.as_deref(), Some(Path::new("backup.json")));
+                assert_eq!(backup_strategy, Some(BackupStrategyArg::NewChannelsOnly));
+                assert!(backup_periodic_updates.is_none());
+            }
+            _ => panic!("expected run command"),
+        }
+    }
+
+    #[test]
+    fn parse_run_backup_periodic_strategy() {
+        let cli = TestCli::parse_from([
+            "test",
+            "run",
+            "--backup-path",
+            "backup.json",
+            "--backup-strategy",
+            "periodic",
+            "--backup-periodic-updates",
+            "10",
+        ]);
+        match cli.cmd {
+            Command::Run {
+                backup_path,
+                backup_strategy,
+                backup_periodic_updates,
+                ..
+            } => {
+                assert_eq!(backup_path.as_deref(), Some(Path::new("backup.json")));
+                assert_eq!(backup_strategy, Some(BackupStrategyArg::Periodic));
+                assert_eq!(backup_periodic_updates, Some(10));
+            }
+            _ => panic!("expected run command"),
+        }
+    }
+
+    #[test]
+    fn parse_run_backup_rejects_invalid_strategy() {
+        assert!(TestCli::try_parse_from([
+            "test",
+            "run",
+            "--backup-path",
+            "backup.json",
+            "--backup-strategy",
+            "always",
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn backup_config_from_args_validates_backup_flags() {
+        assert!(backup_config_from_args(None, None, None).unwrap().is_none());
+
+        let config =
+            backup_config_from_args(Some(PathBuf::from("backup.json")), None, None).unwrap();
+        let config = config.unwrap();
+        assert_eq!(config.path, PathBuf::from("backup.json"));
+        assert_eq!(config.strategy, SignerBackupStrategy::NewChannelsOnly);
+
+        let config = backup_config_from_args(
+            Some(PathBuf::from("backup.json")),
+            Some(BackupStrategyArg::Periodic),
+            Some(10),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(config.strategy, SignerBackupStrategy::Periodic { updates: 10 });
+    }
+
+    #[test]
+    fn backup_config_from_args_rejects_invalid_backup_flags() {
+        let strategy_without_path =
+            backup_config_from_args(None, Some(BackupStrategyArg::Periodic), None)
+                .unwrap_err()
+                .to_string();
+        assert!(strategy_without_path.contains("--backup-strategy requires --backup-path"));
+
+        let updates_without_path = backup_config_from_args(None, None, Some(10))
+            .unwrap_err()
+            .to_string();
+        assert!(updates_without_path.contains("--backup-periodic-updates requires --backup-path"));
+
+        let periodic_without_updates = backup_config_from_args(
+            Some(PathBuf::from("backup.json")),
+            Some(BackupStrategyArg::Periodic),
+            None,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(periodic_without_updates.contains("--backup-periodic-updates is required"));
+
+        let updates_with_new_channels = backup_config_from_args(
+            Some(PathBuf::from("backup.json")),
+            Some(BackupStrategyArg::NewChannelsOnly),
+            Some(10),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(updates_with_new_channels.contains("--backup-strategy periodic"));
+
+        let zero_updates = backup_config_from_args(
+            Some(PathBuf::from("backup.json")),
+            Some(BackupStrategyArg::Periodic),
+            Some(0),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(zero_updates.contains("periodic signer backup updates must be greater than zero"));
     }
 
     #[test]
