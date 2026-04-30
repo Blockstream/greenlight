@@ -13,6 +13,7 @@ name = "glsdk"
 [dependencies]
 anyhow = "1"
 bip39 = "2.2.0"
+bitcoin = { version = "0.32", features = ["base64"] }
 gl-client = { version = "0.4.0", path = "../gl-client" }
 hex = "0.4"
 log = "0.4"

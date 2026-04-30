@@ -768,7 +768,7 @@ impl Node {
         let inner = self.inner.clone();
         let response = tokio::task::spawn_blocking(move || {
             inner
-                .onchain_send(destination, amount_or_all)
+                .onchain_send(destination, amount_or_all, None, None)
                 .map_err(|e| Error::from_reason(e.to_string()))
         })
         .await

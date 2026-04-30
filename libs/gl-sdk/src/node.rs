@@ -1,4 +1,5 @@
 use crate::{credentials::Credentials, signer::Handle, util::exec, Error};
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use gl_client::credentials::NodeIdProvider;
 use gl_client::lnurl::models::LnUrlHttpClient as _;
@@ -178,6 +179,14 @@ impl Node {
     ///   - `"50000"` or `"50000sat"` — 50,000 satoshis
     ///   - `"50000msat"` — 50,000 millisatoshis
     ///   - `"all"` — sweep the entire on-chain balance
+    /// * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+    ///   Pass `None` to let the node pick. Pass the value from a prior
+    ///   `prepare_onchain_send` to reproduce the previewed fee.
+    /// * `utxos` — Optional pinned input set. Pass the `utxos` returned
+    ///   by `prepare_onchain_send` (together with the same
+    ///   `sat_per_vbyte`) to broadcast a transaction with the exact
+    ///   inputs and fee shown in the preview. Pass `None` to let the
+    ///   node coin-select.
     ///
     /// Returns the raw transaction, txid, and PSBT once broadcast.
     /// The transaction is broadcast immediately — this is not a dry run.
@@ -185,50 +194,386 @@ impl Node {
         &self,
         destination: String,
         amount_or_all: String,
+        sat_per_vbyte: Option<u32>,
+        utxos: Option<Vec<Outpoint>>,
     ) -> Result<OnchainSendResponse, Error> {
         self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
-        // Decode what the user intends to do. Either we have `all`,
-        // or we have an amount that we can parse.
-        let (num, suffix): (String, String) = amount_or_all.chars().partition(|c| c.is_digit(10));
-
-        let num = if num.len() > 0 {
-            num.parse::<u64>().unwrap()
-        } else {
-            0
-        };
-        let satoshi = match (num, suffix.as_ref()) {
-            (n, "") | (n, "sat") => clnpb::AmountOrAll {
-                // No value suffix, interpret as satoshis. This is an
-                // onchain RPC method, hence the sat denomination by
-                // default.
-                value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
-                    msat: n * 1000,
-                })),
-            },
-            (n, "msat") => clnpb::AmountOrAll {
-                value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
-                    msat: n,
-                })),
-            },
-            (0, "all") => clnpb::AmountOrAll {
-                value: Some(clnpb::amount_or_all::Value::All(true)),
-            },
-            (_, _) => return Err(Error::Argument("amount_or_all".to_owned(), amount_or_all)),
-        };
+        let satoshi = parse_amount_or_all(&amount_or_all)?;
 
         let req = clnpb::WithdrawRequest {
-            destination: destination,
+            destination,
             minconf: None,
-            feerate: None,
+            feerate: sat_per_vbyte.map(feerate_perkw_from_sat_per_vbyte),
             satoshi: Some(satoshi),
-            utxos: vec![],
+            utxos: utxos
+                .unwrap_or_default()
+                .into_iter()
+                .map(outpoint_to_pb)
+                .collect::<Result<Vec<_>, _>>()?,
         };
 
         exec(cln_client.withdraw(req))
             .map_err(|e| Error::Rpc(e.to_string()))
             .map(|r| r.into_inner().into())
+    }
+
+    /// Preview an on-chain send without broadcasting or reserving UTXOs.
+    ///
+    /// Runs CLN's coin selection at the given fee rate and returns the
+    /// inputs that would be spent, the fee, and the amount the recipient
+    /// would receive. Safe to call repeatedly (e.g. while the user
+    /// adjusts a fee slider) — nothing is locked.
+    ///
+    /// To broadcast with the previewed values, pass the returned
+    /// `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+    /// inputs at the same fee rate yield the same fee.
+    ///
+    /// **Use this for "Send Max" UIs.** `recipient_sat` is the only
+    /// authoritative post-fee amount the destination will receive
+    /// for a sweep. `NodeState.onchain_balance_msat` includes the
+    /// emergency reserve and the fee — neither of which leaves the
+    /// wallet with the recipient. For the entry-point button label
+    /// (a pre-fee approximation that updates without an RPC), use
+    /// `OnchainBalanceState::Available.withdrawable_sat`.
+    ///
+    /// # Arguments
+    /// * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+    /// * `amount_or_all` — Amount to send. Accepts:
+    ///   - `"50000"` or `"50000sat"` — 50,000 satoshis
+    ///   - `"50000msat"` — 50,000 millisatoshis
+    ///   - `"all"` — sweep the entire on-chain balance
+    /// * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+    ///   `None` to use the node's "normal" priority feerate; the
+    ///   effective rate CLN picked is reported back in the result's
+    ///   `sat_per_vbyte` field, which can be passed to `onchain_send`
+    ///   to reproduce it.
+    pub fn prepare_onchain_send(
+        &self,
+        destination: String,
+        amount_or_all: String,
+        sat_per_vbyte: Option<u32>,
+    ) -> Result<PreparedOnchainSend, Error> {
+        self.check_connected()?;
+        let cln_client = exec(self.get_cln_client())?.clone();
+
+        let satoshi = parse_amount_or_all(&amount_or_all)?;
+        let is_sweep = matches!(satoshi.value, Some(clnpb::amount_or_all::Value::All(true)));
+
+        // `startweight` must cover everything CLN does NOT add itself
+        // during fundpsbt: the base tx overhead and the destination
+        // output. CLN accumulates per-input spend weights and the
+        // change output weight on top of this. See
+        // lightning/plugins/spender/multiwithdraw.c:339 for the
+        // canonical formula CLN uses for its own withdraw plugin.
+        let startweight = BASE_TX_CORE_WEIGHT + output_weight_for_address(&destination);
+
+        let feerate = match sat_per_vbyte {
+            Some(rate) => feerate_perkw_from_sat_per_vbyte(rate),
+            None => clnpb::Feerate {
+                style: Some(clnpb::feerate::Style::Normal(true)),
+            },
+        };
+
+        let req = clnpb::FundpsbtRequest {
+            satoshi: Some(satoshi),
+            feerate: Some(feerate),
+            startweight,
+            // `reserve = 0` is the whole point: CLN runs coin selection
+            // and returns the would-be inputs but does not lock them.
+            reserve: Some(0),
+            minconf: None,
+            locktime: None,
+            min_witness_weight: None,
+            // For non-sweep sends any leftover after the requested
+            // amount + fee becomes change. For sweeps there is no
+            // requested amount so the leftover is the recipient amount
+            // and CLN reports it via `excess_msat`.
+            excess_as_change: Some(!is_sweep),
+            nonwrapped: None,
+            opening_anchor_channel: None,
+        };
+
+        // Run fund_psbt and feerates concurrently. The latter is used
+        // only to validate the requested rate against the network's
+        // relay floor — without this check, a too-low `sat_per_vbyte`
+        // produces a confusing post-broadcast `min relay fee not met`
+        // failure instead of a clean pre-confirmation error.
+        let (fund_res, feerates_res) = exec(async {
+            let mut c_fund = cln_client.clone();
+            let mut c_rates = cln_client.clone();
+            tokio::join!(
+                c_fund.fund_psbt(req),
+                c_rates.feerates(clnpb::FeeratesRequest {
+                    style: clnpb::feerates_request::FeeratesStyle::Perkw as i32,
+                }),
+            )
+        });
+
+        // Reject below-relay rates up front when the caller specified
+        // one. If `feerates` itself failed, skip the check — a stale
+        // bitcoind connection shouldn't block a prepare.
+        if let (Some(rate), Ok(rates)) = (sat_per_vbyte, feerates_res.as_ref())
+            && let Some(perkw) = rates.get_ref().perkw.as_ref()
+        {
+            let min_sat_per_vbyte =
+                sat_per_vbyte_from_perkw(perkw.min_acceptable).max(1);
+            if (rate as u64) < min_sat_per_vbyte {
+                return Err(Error::Argument(
+                    "sat_per_vbyte".to_owned(),
+                    format!(
+                        "{} sat/vbyte is below the network minimum of {} sat/vbyte",
+                        rate, min_sat_per_vbyte
+                    ),
+                ));
+            }
+        }
+
+        let res = fund_res
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+
+        // CLN only emits the `reservations` array when `reserve > 0`
+        // (see lightning/wallet/reservation.c:421 — `if (reserve)`).
+        // We deliberately pass `reserve=0` to avoid locking UTXOs, so
+        // we extract the chosen inputs from the returned PSBT instead.
+        let psbt = bitcoin::Psbt::from_str(&res.psbt)
+            .map_err(|e| Error::Rpc(format!("invalid psbt from fund_psbt: {}", e)))?;
+        let utxos: Vec<Outpoint> = psbt
+            .unsigned_tx
+            .input
+            .iter()
+            .map(|tx_in| Outpoint {
+                txid: tx_in.previous_output.txid.to_string(),
+                vout: tx_in.previous_output.vout,
+            })
+            .collect();
+
+        // BIP-141: feerate_per_kw is sats per 1000 weight units, so
+        // fee_sat = weight_wu × feerate_per_kw / 1000. The proto-level
+        // `estimated_final_weight` already includes the destination
+        // output we declared via `startweight`, plus any change output.
+        let fee_sat: u64 =
+            (res.estimated_final_weight as u64 * res.feerate_per_kw as u64) / 1000;
+
+        // Sum input values directly from the PSBT. Each PSBT input
+        // carries its prevout amount in `witness_utxo` (segwit) or
+        // `non_witness_utxo` (legacy). This is the one source of truth
+        // and works for sweeps that include an emergency-reserve
+        // change output (anchor-channel wallets) — see
+        // lightning/wallet/reservation.c:443 `change_for_emergency`,
+        // which carves out `emergency_sat` even from `satoshi=All`.
+        let mut total_input_sat: u64 = 0;
+        for (i, input) in psbt.inputs.iter().enumerate() {
+            let value = if let Some(ref txout) = input.witness_utxo {
+                txout.value
+            } else if let Some(ref tx) = input.non_witness_utxo {
+                let vout = psbt.unsigned_tx.input[i].previous_output.vout as usize;
+                tx.output
+                    .get(vout)
+                    .map(|o| o.value)
+                    .ok_or_else(|| {
+                        Error::Rpc("psbt non_witness_utxo missing vout".to_owned())
+                    })?
+            } else {
+                return Err(Error::Rpc(format!(
+                    "psbt input {} has no witness_utxo or non_witness_utxo",
+                    i
+                )));
+            };
+            total_input_sat = total_input_sat.saturating_add(value.to_sat());
+        }
+
+        let recipient_sat: u64 = if is_sweep {
+            // For `satoshi=All` CLN reports the post-fee, post-emergency
+            // leftover via `excess_msat`; that's what the recipient
+            // receives. Any difference between `total_input_sat` and
+            // `recipient_sat + fee_sat` is the emergency-reserve change
+            // CLN keeps in the wallet for anchor channels.
+            res.excess_msat.as_ref().map(|a| a.msat).unwrap_or(0) / 1000
+        } else {
+            match parse_amount_or_all(&amount_or_all)?.value {
+                Some(clnpb::amount_or_all::Value::Amount(a)) => a.msat / 1000,
+                _ => 0,
+            }
+        };
+
+        // Round up so passing this back to `onchain_send` produces a
+        // feerate at least as high as the previewed one; that way the
+        // broadcast fee is never below what the user agreed to.
+        let effective_sat_per_vbyte: u32 =
+            (res.feerate_per_kw as u64).div_ceil(250) as u32;
+
+        Ok(PreparedOnchainSend {
+            utxos,
+            total_input_sat,
+            fee_sat,
+            recipient_sat,
+            sat_per_vbyte: effective_sat_per_vbyte,
+        })
+    }
+
+    /// Classify the on-chain wallet for the withdraw entry-point UI.
+    ///
+    /// Runs three RPCs concurrently:
+    /// * `list_funds` — current confirmed/unconfirmed/immature on-chain
+    ///   balances.
+    /// * `list_peer_channels` — pending channel-close payouts that
+    ///   haven't yet hit the wallet.
+    /// * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+    ///   non-locking probe whose response tells us **exactly** how
+    ///   much CLN will carve as the anchor-channel emergency reserve
+    ///   for this specific node, no client-side guessing required.
+    ///   The carved amount is computed from the response as
+    ///   `total_inputs − excess − fee`, which is identical to what
+    ///   CLN would carve on a real broadcast.
+    ///
+    /// Cheaper to call than `node_state()` and answers a different
+    /// question. Wallets typically call it once per render of the
+    /// home screen.
+    ///
+    /// For the *exact* post-fee recipient amount of a withdraw, use
+    /// `prepare_onchain_send`; the `withdrawable_sat` returned here
+    /// is a pre-fee, reserve-aware figure for the entry-point label.
+    pub fn onchain_balance_state(&self) -> Result<OnchainBalanceState, Error> {
+        self.check_connected()?;
+        let cln_client = exec(self.get_cln_client())?.clone();
+
+        // Run the three RPCs concurrently. The probe is allowed to
+        // fail (e.g. empty wallet, insufficient funds for any spend);
+        // we treat that as "no reserve applicable" and let the rest
+        // of the classification proceed.
+        let (funds_res, channels_res, probe_res) = exec(async {
+            let mut c_funds = cln_client.clone();
+            let mut c_channels = cln_client.clone();
+            let mut c_probe = cln_client.clone();
+            let probe_req = clnpb::FundpsbtRequest {
+                satoshi: Some(clnpb::AmountOrAll {
+                    value: Some(clnpb::amount_or_all::Value::All(true)),
+                }),
+                feerate: Some(clnpb::Feerate {
+                    style: Some(clnpb::feerate::Style::Normal(true)),
+                }),
+                // Assume a P2WPKH destination for the probe — we don't
+                // have a real address here. The output type only
+                // affects fee estimation by a handful of weight units;
+                // it does not affect the carved emergency reserve.
+                startweight: BASE_TX_CORE_WEIGHT + 124,
+                reserve: Some(0),
+                minconf: None,
+                locktime: None,
+                min_witness_weight: None,
+                excess_as_change: Some(false),
+                nonwrapped: None,
+                opening_anchor_channel: None,
+            };
+            tokio::join!(
+                c_funds.list_funds(clnpb::ListfundsRequest { spent: None }),
+                c_channels.list_peer_channels(clnpb::ListpeerchannelsRequest { id: None }),
+                c_probe.fund_psbt(probe_req),
+            )
+        });
+
+        let funds: ListFundsResponse = funds_res
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner()
+            .into();
+        let channels: ListPeerChannelsResponse = channels_res
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner()
+            .into();
+
+        let mut confirmed_sat: u64 = 0;
+        let mut unconfirmed_sat: u64 = 0;
+        let mut immature_sat: u64 = 0;
+        for output in &funds.outputs {
+            if output.reserved {
+                continue;
+            }
+            let value_sat = output.amount_msat / 1000;
+            match output.status {
+                OutputStatus::Confirmed => confirmed_sat += value_sat,
+                OutputStatus::Unconfirmed => unconfirmed_sat += value_sat,
+                OutputStatus::Immature => immature_sat += value_sat,
+                OutputStatus::Spent => {}
+            }
+        }
+
+        let mut pending_close_sat: u64 = 0;
+        for ch in &channels.channels {
+            if channel_payout_still_pending(ch) {
+                pending_close_sat += ch.to_us_msat.unwrap_or(0) / 1000;
+            }
+        }
+
+        // Derive the actual emergency reserve from the probe. CLN's
+        // `change_for_emergency` runs server-side in the same
+        // `fund_psbt` call we just made; the difference between the
+        // input total and (recipient + fee) is exactly what would be
+        // carved as change on a real sweep.
+        let reserve_sat = match probe_res {
+            Ok(resp) => {
+                let resp = resp.into_inner();
+                // CLN-managed UTXOs are always segwit, so each PSBT
+                // input carries `witness_utxo` with the prevout
+                // amount. Sum to get total input value.
+                let total_input_sat = bitcoin::Psbt::from_str(&resp.psbt)
+                    .ok()
+                    .map(|p| {
+                        p.inputs
+                            .iter()
+                            .filter_map(|i| {
+                                i.witness_utxo.as_ref().map(|t| t.value.to_sat())
+                            })
+                            .sum::<u64>()
+                    })
+                    .unwrap_or(0);
+                let excess_sat = resp
+                    .excess_msat
+                    .as_ref()
+                    .map(|a| a.msat / 1000)
+                    .unwrap_or(0);
+                let fee_sat = (resp.estimated_final_weight as u64
+                    * resp.feerate_per_kw as u64)
+                    / 1000;
+                total_input_sat
+                    .saturating_sub(excess_sat)
+                    .saturating_sub(fee_sat)
+            }
+            // `fund_psbt` errors are expected on empty wallets or when
+            // every UTXO is dust-uneconomic at the chosen feerate;
+            // treat as "no reserve applicable."
+            Err(_) => 0,
+        };
+
+        Ok(classify_onchain_balance(
+            confirmed_sat,
+            reserve_sat,
+            unconfirmed_sat,
+            immature_sat,
+            pending_close_sat,
+        ))
+    }
+
+    /// On-chain fee rates, in sats per virtual byte, at several
+    /// confirmation targets.
+    ///
+    /// Sourced from the connected node's view of the network — no
+    /// 3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+    /// `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+    /// broadcast time and should be the lower bound of any slider.
+    pub fn onchain_fee_rates(&self) -> Result<OnchainFeeRates, Error> {
+        self.check_connected()?;
+        let mut cln_client = exec(self.get_cln_client())?.clone();
+
+        let req = clnpb::FeeratesRequest {
+            style: clnpb::feerates_request::FeeratesStyle::Perkw as i32,
+        };
+        let res = exec(cln_client.feerates(req))
+            .map_err(|e| Error::Rpc(e.to_string()))?
+            .into_inner();
+        Ok(compute_fee_rates(res.perkw.as_ref()))
     }
 
     /// Generate a fresh on-chain Bitcoin address for receiving funds.
@@ -376,6 +721,7 @@ impl Node {
                 connected_channel_peer_set.insert(ch.peer_id.clone());
             }
         }
+
         let connected_channel_peers: Vec<String> =
             connected_channel_peer_set.into_iter().collect();
 
@@ -1013,6 +1359,207 @@ impl Node {
     }
 }
 
+/// A specific on-chain output, identified by its outpoint.
+#[derive(Clone, uniffi::Record)]
+pub struct Outpoint {
+    /// Transaction id as lowercase hex (64 chars).
+    pub txid: String,
+    /// Output index within that transaction.
+    pub vout: u32,
+}
+
+/// On-chain fee rates in sats per virtual byte at various
+/// confirmation targets, derived from the connected node's view of
+/// network mempool conditions. Use as the basis for a fee-picker UI.
+#[derive(Clone, uniffi::Record)]
+pub struct OnchainFeeRates {
+    /// Target the next block (~10 min).
+    pub next_block_sat_per_vbyte: u64,
+    /// ~30 minute confirmation target (3 blocks).
+    pub half_hour_sat_per_vbyte: u64,
+    /// ~1 hour confirmation target (6 blocks).
+    pub hour_sat_per_vbyte: u64,
+    /// ~1 day confirmation target (144 blocks). Suitable for
+    /// non-urgent sweeps.
+    pub day_sat_per_vbyte: u64,
+    /// Network minimum relay fee. Anything below this will be
+    /// rejected by mempool policy at broadcast time. Use as the
+    /// lower bound of any user-facing fee slider.
+    pub minimum_relay_sat_per_vbyte: u64,
+}
+
+/// Convert sat/kw to sat/vbyte, rounding up so we never undershoot
+/// the relay floor when the caller submits the value back.
+fn sat_per_vbyte_from_perkw(perkw: u32) -> u64 {
+    (perkw as u64).div_ceil(250)
+}
+
+/// Pick the smallest-blockcount estimate that is `≥ target_blocks`.
+/// If none exists (the longest estimate is shorter than `target_blocks`),
+/// fall back to the longest estimate available. Returns the rate in
+/// sat per kilo-weight (perkw).
+fn pick_perkw_for_target(
+    estimates: &[clnpb::FeeratesPerkwEstimates],
+    target_blocks: u32,
+) -> Option<u32> {
+    let above = estimates
+        .iter()
+        .filter(|e| e.blockcount >= target_blocks)
+        .min_by_key(|e| e.blockcount)
+        .map(|e| e.feerate);
+    above.or_else(|| {
+        estimates
+            .iter()
+            .max_by_key(|e| e.blockcount)
+            .map(|e| e.feerate)
+    })
+}
+
+/// Map CLN's perkw feerates into an `OnchainFeeRates` (sat/vbyte)
+/// for the standard 5-bucket fee-picker UI. Rounds up at the
+/// boundary so values produced here are never below the network's
+/// relay floor when the caller submits them.
+fn compute_fee_rates(perkw: Option<&clnpb::FeeratesPerkw>) -> OnchainFeeRates {
+    // Universal fallback when the node hasn't reported feerates yet
+    // (e.g. just after startup, no connection to bitcoind).
+    const FALLBACK_SAT_PER_VBYTE: u64 = 1;
+
+    let Some(p) = perkw else {
+        return OnchainFeeRates {
+            next_block_sat_per_vbyte: FALLBACK_SAT_PER_VBYTE,
+            half_hour_sat_per_vbyte: FALLBACK_SAT_PER_VBYTE,
+            hour_sat_per_vbyte: FALLBACK_SAT_PER_VBYTE,
+            day_sat_per_vbyte: FALLBACK_SAT_PER_VBYTE,
+            minimum_relay_sat_per_vbyte: FALLBACK_SAT_PER_VBYTE,
+        };
+    };
+
+    let minimum_relay_sat_per_vbyte =
+        sat_per_vbyte_from_perkw(p.min_acceptable).max(FALLBACK_SAT_PER_VBYTE);
+
+    let bucket = |target_blocks: u32| -> u64 {
+        pick_perkw_for_target(&p.estimates, target_blocks)
+            .map(sat_per_vbyte_from_perkw)
+            .unwrap_or(minimum_relay_sat_per_vbyte)
+            .max(minimum_relay_sat_per_vbyte)
+    };
+
+    OnchainFeeRates {
+        next_block_sat_per_vbyte: bucket(1),
+        half_hour_sat_per_vbyte: bucket(3),
+        hour_sat_per_vbyte: bucket(6),
+        day_sat_per_vbyte: bucket(144),
+        minimum_relay_sat_per_vbyte,
+    }
+}
+
+/// Classifies the on-chain wallet into discrete cases that a wallet
+/// UI can switch on to render the correct entry-point for the
+/// withdraw flow. Derived purely from `NodeState` — no RPC.
+#[derive(Clone, uniffi::Enum)]
+pub enum OnchainBalanceState {
+    /// No funds on-chain in any form (confirmed, unconfirmed,
+    /// immature, or pending channel-close payouts are all zero).
+    /// Don't render a withdraw entry point.
+    Unavailable,
+
+    /// Funds are spendable now. Render the withdraw entry point
+    /// enabled with `withdrawable_sat` as the headline.
+    Available {
+        /// `onchain_balance_sat - emergency_reserve_sat`. Use as
+        /// the displayed amount on the entry point.
+        withdrawable_sat: u64,
+        /// Held back by CLN for anchor-channel safety; cannot be
+        /// withdrawn without closing channels first.
+        emergency_reserve_sat: u64,
+        /// Inbound on-chain funds not yet confirmed. Informational
+        /// only — not part of `withdrawable_sat`.
+        unconfirmed_sat: u64,
+    },
+
+    /// On-chain funds exist but are entirely locked as the
+    /// anchor-channel emergency reserve. Render the entry point
+    /// disabled with an explainer (e.g. "close channels to free
+    /// these funds").
+    ReserveOnly { reserve_sat: u64 },
+
+    /// Inbound on-chain funds are awaiting confirmation. Render a
+    /// "pending" indicator instead of an enabled withdraw button.
+    PendingConfirmation { unconfirmed_sat: u64 },
+
+    /// Funds exist as CSV-timelocked outputs from a recent channel
+    /// close and can't be spent until the relative locktime
+    /// expires. Render the entry point disabled with a
+    /// "channel closing" explainer.
+    Immature { immature_sat: u64 },
+}
+
+/// Pure variant classifier. Given the five sat-denominated balance
+/// figures, decide which `OnchainBalanceState` variant applies. The
+/// public method `Node::onchain_balance_state` gathers the figures
+/// from CLN and calls this.
+fn classify_onchain_balance(
+    confirmed_sat: u64,
+    reserve_sat: u64,
+    unconfirmed_sat: u64,
+    immature_sat: u64,
+    pending_close_sat: u64,
+) -> OnchainBalanceState {
+    let withdrawable_sat = confirmed_sat.saturating_sub(reserve_sat);
+
+    if confirmed_sat == 0
+        && unconfirmed_sat == 0
+        && immature_sat == 0
+        && pending_close_sat == 0
+    {
+        return OnchainBalanceState::Unavailable;
+    }
+    if withdrawable_sat > ONCHAIN_DUST_THRESHOLD_SAT {
+        return OnchainBalanceState::Available {
+            withdrawable_sat,
+            emergency_reserve_sat: reserve_sat,
+            unconfirmed_sat,
+        };
+    }
+    if confirmed_sat > 0 && reserve_sat > 0 {
+        return OnchainBalanceState::ReserveOnly { reserve_sat };
+    }
+    if unconfirmed_sat > 0 {
+        return OnchainBalanceState::PendingConfirmation { unconfirmed_sat };
+    }
+    OnchainBalanceState::Immature { immature_sat }
+}
+
+/// Preview of an on-chain send: the inputs CLN would select at the
+/// given fee rate, the resulting fee, and the amount the recipient
+/// would receive. Inputs are NOT reserved — the wallet is free to
+/// spend them via other paths until `onchain_send` actually broadcasts.
+///
+/// Pass `utxos` and `sat_per_vbyte` back to `onchain_send` to broadcast
+/// with identical inputs and fee.
+///
+/// Amounts are in satoshis: on-chain transactions cannot carry sub-sat
+/// precision, so msat denomination would be misleading here.
+#[derive(uniffi::Record)]
+pub struct PreparedOnchainSend {
+    /// UTXOs that would be spent, in selection order.
+    pub utxos: Vec<Outpoint>,
+    /// Sum of all input UTXO values, in satoshis.
+    pub total_input_sat: u64,
+    /// Fee that would be paid, in satoshis.
+    pub fee_sat: u64,
+    /// Amount the recipient would receive, in satoshis.
+    /// For a sweep ("all") this equals `total_input_sat - fee_sat`.
+    /// For a fixed amount this equals the requested amount.
+    pub recipient_sat: u64,
+    /// Effective fee rate (sat per virtual byte) the node used to
+    /// compute this preview. Equal to the caller's `sat_per_vbyte` if
+    /// one was supplied; otherwise the rate the node picked at
+    /// "normal" priority. Pass this back to `onchain_send` to
+    /// reproduce the previewed fee.
+    pub sat_per_vbyte: u32,
+}
+
 /// Result of an on-chain send. The transaction has already been broadcast.
 #[derive(uniffi::Record)]
 pub struct OnchainSendResponse {
@@ -1022,6 +1569,98 @@ pub struct OnchainSendResponse {
     pub txid: String,
     /// The transaction as a Partially Signed Bitcoin Transaction string.
     pub psbt: String,
+}
+
+/// Parse an `amount_or_all` argument into the protobuf `AmountOrAll`.
+/// Accepts `"all"`, `"<n>"`, `"<n>sat"`, or `"<n>msat"`.
+fn parse_amount_or_all(amount_or_all: &str) -> Result<clnpb::AmountOrAll, Error> {
+    let (num, suffix): (String, String) =
+        amount_or_all.chars().partition(|c| c.is_ascii_digit());
+
+    let num = if num.is_empty() {
+        0
+    } else {
+        num.parse::<u64>()
+            .map_err(|_| Error::Argument("amount_or_all".to_owned(), amount_or_all.to_owned()))?
+    };
+
+    match (num, suffix.as_str()) {
+        (n, "") | (n, "sat") => Ok(clnpb::AmountOrAll {
+            value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                msat: n * 1000,
+            })),
+        }),
+        (n, "msat") => Ok(clnpb::AmountOrAll {
+            value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: n })),
+        }),
+        (0, "all") => Ok(clnpb::AmountOrAll {
+            value: Some(clnpb::amount_or_all::Value::All(true)),
+        }),
+        _ => Err(Error::Argument(
+            "amount_or_all".to_owned(),
+            amount_or_all.to_owned(),
+        )),
+    }
+}
+
+/// Build a CLN `Feerate` from a sat/vbyte value. CLN measures rates
+/// in sat per 1000 weight units, and 1 vbyte = 4 weight units, so
+/// `sat/kw = sat/vbyte × 250`.
+fn feerate_perkw_from_sat_per_vbyte(sat_per_vbyte: u32) -> clnpb::Feerate {
+    clnpb::Feerate {
+        style: Some(clnpb::feerate::Style::Perkw(sat_per_vbyte * 250)),
+    }
+}
+
+/// Convert a public `Outpoint` (hex txid) into the protobuf form
+/// (raw txid bytes) used by CLN's `WithdrawRequest`.
+fn outpoint_to_pb(o: Outpoint) -> Result<clnpb::Outpoint, Error> {
+    let txid = hex::decode(&o.txid)
+        .map_err(|_| Error::Argument("utxos.txid".to_owned(), o.txid.clone()))?;
+    Ok(clnpb::Outpoint {
+        txid,
+        outnum: o.vout,
+    })
+}
+
+/// Base transaction overhead in BIP-141 weight units, for a typical
+/// segwit transaction with 1–252 inputs and 1–252 outputs:
+/// `(version=4 + input_count_varint=1 + output_count_varint=1 +
+/// locktime=4) × 4 + segwit_marker_flag=2 = 42 wu`. This is the
+/// `bitcoin_tx_core_weight(1, 1)` value from CLN
+/// (`lightning/bitcoin/tx.c:849`). At 253+ inputs/outputs the varints
+/// grow to 3 bytes (8 wu more), which is rare enough to ignore.
+const BASE_TX_CORE_WEIGHT: u32 = 42;
+
+/// Conservative dust gate for the on-chain entry-point: highest dust
+/// threshold across common output types at Bitcoin Core's default
+/// `DUST_RELAY_TX_FEE = 3000` (sat/kvB). P2PKH is 546 sat, P2WPKH
+/// 294 sat, P2TR/P2WSH 330 sat. Using 546 means `Available` implies
+/// the user can plausibly send to any common address type.
+/// Source: Bitcoin Core `policy/policy.cpp::GetDustThreshold` and
+/// `bitcoin::Script::minimal_non_dust` at the default relay fee.
+const ONCHAIN_DUST_THRESHOLD_SAT: u64 = 546;
+
+/// Serialized weight (BIP-141 weight units) of a single output paying
+/// to the given address. Used (with `BASE_TX_CORE_WEIGHT`) as
+/// `startweight` for `FundPsbt`, which only accounts for inputs and
+/// change on top of what the caller declares.
+///
+/// Output bytes = 8 (value) + varint(script_len) + script_pubkey.
+/// All standard scripts are < 253 bytes so the varint is 1 byte. The
+/// total is then × 4 since outputs are non-witness data.
+///
+/// Falls back to 172 wu for unparseable inputs so the fee is over-
+/// rather than under-estimated.
+fn output_weight_for_address(addr: &str) -> u32 {
+    match bitcoin::Address::from_str(addr) {
+        Ok(a) => {
+            let spk_len = a.assume_checked().script_pubkey().len();
+            let varint_len = if spk_len < 0xfd { 1 } else { 3 };
+            ((8 + varint_len + spk_len) * 4) as u32
+        }
+        Err(_) => 172,
+    }
 }
 
 impl From<clnpb::WithdrawResponse> for OnchainSendResponse {
@@ -1977,3 +2616,287 @@ fn node_event_from_pb(other: glpb::NodeEvent) -> Option<NodeEvent> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_amount_or_all_handles_all_variants() {
+        let all = parse_amount_or_all("all").unwrap();
+        assert!(matches!(all.value, Some(clnpb::amount_or_all::Value::All(true))));
+
+        let plain = parse_amount_or_all("50000").unwrap();
+        assert!(matches!(
+            plain.value,
+            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: 50_000_000 }))
+        ));
+
+        let sat = parse_amount_or_all("50000sat").unwrap();
+        assert!(matches!(
+            sat.value,
+            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: 50_000_000 }))
+        ));
+
+        let msat = parse_amount_or_all("50000msat").unwrap();
+        assert!(matches!(
+            msat.value,
+            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: 50_000 }))
+        ));
+
+        assert!(parse_amount_or_all("notanumber").is_err());
+        assert!(parse_amount_or_all("50000btc").is_err());
+    }
+
+    #[test]
+    fn classify_onchain_balance_unavailable_when_empty() {
+        assert!(matches!(
+            classify_onchain_balance(0, 0, 0, 0, 0),
+            OnchainBalanceState::Unavailable
+        ));
+    }
+
+    #[test]
+    fn classify_onchain_balance_available_with_room_above_dust() {
+        // confirmed=100k, reserve=25k, unconfirmed=5k → Available
+        match classify_onchain_balance(100_000, 25_000, 5_000, 0, 0) {
+            OnchainBalanceState::Available {
+                withdrawable_sat,
+                emergency_reserve_sat,
+                unconfirmed_sat,
+            } => {
+                assert_eq!(withdrawable_sat, 75_000);
+                assert_eq!(emergency_reserve_sat, 25_000);
+                assert_eq!(unconfirmed_sat, 5_000);
+            }
+            other => panic!("expected Available, got {:?}", std::mem::discriminant(&other)),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_reserve_only_when_balance_equals_reserve() {
+        // 25k confirmed, 25k reserve → withdrawable = 0
+        match classify_onchain_balance(25_000, 25_000, 0, 0, 0) {
+            OnchainBalanceState::ReserveOnly { reserve_sat } => {
+                assert_eq!(reserve_sat, 25_000);
+            }
+            other => panic!(
+                "expected ReserveOnly, got {:?}",
+                std::mem::discriminant(&other)
+            ),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_pending_when_only_unconfirmed() {
+        match classify_onchain_balance(0, 0, 50_000, 0, 0) {
+            OnchainBalanceState::PendingConfirmation { unconfirmed_sat } => {
+                assert_eq!(unconfirmed_sat, 50_000);
+            }
+            other => panic!(
+                "expected PendingConfirmation, got {:?}",
+                std::mem::discriminant(&other)
+            ),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_immature_when_only_immature() {
+        match classify_onchain_balance(0, 0, 0, 100_000, 0) {
+            OnchainBalanceState::Immature { immature_sat } => {
+                assert_eq!(immature_sat, 100_000);
+            }
+            other => panic!("expected Immature, got {:?}", std::mem::discriminant(&other)),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_real_wallet_small_onchain_with_active_channels() {
+        // Captured from a live mainnet wallet: 2 active channels,
+        // ~1,228 sat confirmed on-chain, 25,000 sat reserve carved
+        // (anchor-channel default). Withdrawable = 0 → ReserveOnly.
+        match classify_onchain_balance(1_228, 25_000, 0, 0, 0) {
+            OnchainBalanceState::ReserveOnly { reserve_sat } => {
+                assert_eq!(reserve_sat, 25_000);
+            }
+            other => panic!(
+                "expected ReserveOnly, got {:?}",
+                std::mem::discriminant(&other)
+            ),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_real_wallet_onchain_just_above_reserve() {
+        // Same wallet after a top-up: 28,228 sat confirmed, 25k
+        // reserve → withdrawable = 3,228, well above the dust gate
+        // → Available.
+        match classify_onchain_balance(28_228, 25_000, 0, 0, 0) {
+            OnchainBalanceState::Available {
+                withdrawable_sat,
+                emergency_reserve_sat,
+                unconfirmed_sat,
+            } => {
+                assert_eq!(withdrawable_sat, 3_228);
+                assert_eq!(emergency_reserve_sat, 25_000);
+                assert_eq!(unconfirmed_sat, 0);
+            }
+            other => panic!(
+                "expected Available, got {:?}",
+                std::mem::discriminant(&other)
+            ),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_dust_only_above_reserve_is_not_available() {
+        // Withdrawable would be 100 sat — below the 546 dust gate.
+        // Falls through Available; lands on ReserveOnly.
+        match classify_onchain_balance(25_100, 25_000, 0, 0, 0) {
+            OnchainBalanceState::ReserveOnly { reserve_sat } => {
+                assert_eq!(reserve_sat, 25_000);
+            }
+            other => panic!(
+                "expected ReserveOnly, got {:?}",
+                std::mem::discriminant(&other)
+            ),
+        }
+    }
+
+    #[test]
+    fn classify_onchain_balance_real_user_no_anchor_no_reserve() {
+        // The user-reported case: 28,228 sat on-chain, channels open
+        // but NOT anchor type, so probe returns 0 reserve. The
+        // entry-point should show Available with the full balance.
+        match classify_onchain_balance(28_228, 0, 0, 0, 0) {
+            OnchainBalanceState::Available {
+                withdrawable_sat,
+                emergency_reserve_sat,
+                unconfirmed_sat,
+            } => {
+                assert_eq!(withdrawable_sat, 28_228);
+                assert_eq!(emergency_reserve_sat, 0);
+                assert_eq!(unconfirmed_sat, 0);
+            }
+            other => panic!(
+                "expected Available, got {:?}",
+                std::mem::discriminant(&other)
+            ),
+        }
+    }
+
+    fn perkw_with(estimates: Vec<(u32, u32)>, min_acceptable: u32) -> clnpb::FeeratesPerkw {
+        clnpb::FeeratesPerkw {
+            min_acceptable,
+            max_acceptable: 0,
+            opening: None,
+            mutual_close: None,
+            unilateral_close: None,
+            unilateral_anchor_close: None,
+            delayed_to_us: None,
+            htlc_resolution: None,
+            penalty: None,
+            estimates: estimates
+                .into_iter()
+                .map(|(blockcount, feerate)| clnpb::FeeratesPerkwEstimates {
+                    blockcount,
+                    feerate,
+                    smoothed_feerate: feerate,
+                })
+                .collect(),
+            floor: None,
+        }
+    }
+
+    #[test]
+    fn fee_rates_maps_perkw_to_buckets() {
+        // Typical CLN response with estimates at 2/6/12/144 blocks.
+        // perkw values: 1 sat/vbyte = 250, 5 sat/vbyte = 1250.
+        let perkw = perkw_with(
+            vec![(2, 5000), (6, 2000), (12, 1500), (144, 500)],
+            253, // min_acceptable just over 1 sat/vbyte
+        );
+        let r = compute_fee_rates(Some(&perkw));
+        // 5000 perkw = 20 sat/vbyte (next-block target picks blockcount=2)
+        assert_eq!(r.next_block_sat_per_vbyte, 20);
+        // half_hour target is 3 blocks; smallest estimate ≥3 is 6 → 2000 perkw = 8 sat/vbyte
+        assert_eq!(r.half_hour_sat_per_vbyte, 8);
+        // hour target is 6 blocks → 2000 perkw = 8 sat/vbyte
+        assert_eq!(r.hour_sat_per_vbyte, 8);
+        // day target is 144 blocks → 500 perkw = 2 sat/vbyte
+        assert_eq!(r.day_sat_per_vbyte, 2);
+        // min_acceptable 253 perkw rounds up to 2 sat/vbyte
+        assert_eq!(r.minimum_relay_sat_per_vbyte, 2);
+    }
+
+    #[test]
+    fn fee_rates_fall_back_to_minimum_when_no_estimates() {
+        let perkw = perkw_with(vec![], 750); // min ~3 sat/vbyte
+        let r = compute_fee_rates(Some(&perkw));
+        assert_eq!(r.minimum_relay_sat_per_vbyte, 3);
+        // Empty estimates → all buckets fall back to minimum
+        assert_eq!(r.next_block_sat_per_vbyte, 3);
+        assert_eq!(r.half_hour_sat_per_vbyte, 3);
+        assert_eq!(r.hour_sat_per_vbyte, 3);
+        assert_eq!(r.day_sat_per_vbyte, 3);
+    }
+
+    #[test]
+    fn fee_rates_no_perkw_at_all_returns_safe_floor() {
+        let r = compute_fee_rates(None);
+        assert_eq!(r.minimum_relay_sat_per_vbyte, 1);
+        assert_eq!(r.next_block_sat_per_vbyte, 1);
+        assert_eq!(r.day_sat_per_vbyte, 1);
+    }
+
+    #[test]
+    fn fee_rates_buckets_never_below_minimum() {
+        // 144-block estimate below min_acceptable — bucket must be
+        // clamped to minimum so we never recommend below network relay.
+        let perkw = perkw_with(
+            vec![(2, 1500), (144, 250)], // 144→1 sat/vbyte, but min=1000 perkw = 4 sat/vbyte
+            1000,
+        );
+        let r = compute_fee_rates(Some(&perkw));
+        assert_eq!(r.minimum_relay_sat_per_vbyte, 4);
+        // Even though the 144-block estimate is 1 sat/vbyte, we clamp up.
+        assert_eq!(r.day_sat_per_vbyte, 4);
+    }
+
+    #[test]
+    fn fee_rates_target_above_all_estimates_uses_largest() {
+        // Only short-target estimates; day(144) should fall back to
+        // the longest estimate available.
+        let perkw = perkw_with(vec![(2, 5000), (6, 2500)], 250);
+        let r = compute_fee_rates(Some(&perkw));
+        // Longest available estimate is 6 blocks → 2500 perkw = 10 sat/vbyte
+        assert_eq!(r.day_sat_per_vbyte, 10);
+    }
+
+    #[test]
+    fn output_weight_for_address_per_script_type() {
+        // P2WPKH — script_pubkey is 22 bytes, output = (8+1+22)*4 = 124
+        // BIP-173 test vector.
+        assert_eq!(
+            output_weight_for_address("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"),
+            124
+        );
+
+        // P2TR — script_pubkey is 34 bytes, output = (8+1+34)*4 = 172
+        // BIP-341 test vector.
+        assert_eq!(
+            output_weight_for_address(
+                "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0"
+            ),
+            172
+        );
+
+        // P2SH — script_pubkey is 23 bytes, output = (8+1+23)*4 = 128
+        assert_eq!(output_weight_for_address("3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"), 128);
+
+        // P2PKH — script_pubkey is 25 bytes, output = (8+1+25)*4 = 136
+        assert_eq!(output_weight_for_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"), 136);
+
+        // Garbage falls back to the conservative 172 wu.
+        assert_eq!(output_weight_for_address("not-an-address"), 172);
+    }
+}
