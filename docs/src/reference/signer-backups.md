@@ -72,8 +72,13 @@ The output is a CLN `recoverchannel` request body containing `scb` entries:
 }
 ```
 
+When VLS counterparty revocation secrets are present in the backup, the
+converted CLN SCB entries include the shachain TLV. If that signer state is
+absent, conversion still emits CLN recovery input without the shachain TLV.
+
 Pass the generated `scb` array to CLN's `recoverchannel` RPC. The exact command
-depends on the CLN RPC client you are using.
+depends on the CLN RPC client you are using. Greenlight does not execute
+recovery; `convert-backup` only prepares CLN recovery input.
 
 If the backup contains incomplete channels and you still want to export the
 complete ones, use:
@@ -89,5 +94,6 @@ glcli signer convert-backup \
 
 - CLN conversion assumes current v1 channels where the channel id is derived
   from the funding outpoint.
-- The CLN shachain TLV is currently omitted.
+- The CLN shachain TLV is included only when VLS counterparty revocation
+  secrets are present in the backup.
 - Missing peer addresses make affected channels incomplete.

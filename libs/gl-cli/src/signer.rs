@@ -853,6 +853,39 @@ mod tests {
     }
 
     #[test]
+    fn inspect_backup_report_does_not_expose_counterparty_secrets() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        let peer = peer_id(0xaa);
+        write_json(
+            &path,
+            backup_json(
+                json!({
+                    channel_key(&peer, 1): [1, channel_with_enforcement(
+                        recovery_setup("00", 0, 1000, true),
+                        json!({
+                            "counterparty_secrets": {
+                                "old_secrets": [
+                                    [vec![0x11; 32], (1u64 << 48) - 1]
+                                ]
+                            }
+                        })
+                    )]
+                }),
+                json!([peerlist_entry(&peer, "127.0.0.1:9735")]),
+                json!("new_channels_only"),
+            ),
+        );
+
+        let report = inspect_backup_report(&path).unwrap();
+        let serialized = serde_json::to_string(&report).unwrap();
+
+        assert_eq!(report.total_channels, 1);
+        assert!(!serialized.contains("counterparty_secrets"));
+        assert!(!serialized.contains("old_secrets"));
+    }
+
+    #[test]
     fn inspect_backup_report_accepts_periodic_strategy() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("backup.json");
@@ -1062,11 +1095,19 @@ mod tests {
     }
 
     fn channel(channel_setup: serde_json::Value) -> serde_json::Value {
+        channel_with_enforcement(channel_setup, json!({}))
+    }
+
+    fn channel_with_enforcement(
+        channel_setup: serde_json::Value,
+        enforcement_state: serde_json::Value,
+    ) -> serde_json::Value {
         json!({
             "channel_setup": channel_setup,
             "id": {
                 "id": "00"
-            }
+            },
+            "enforcement_state": enforcement_state
         })
     }
 
