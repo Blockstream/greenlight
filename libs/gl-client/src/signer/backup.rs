@@ -3,12 +3,22 @@ use crate::persist::State;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 use std::fs;
 use std::io::Write;
+use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
 
 const BACKUP_VERSION: u32 = 1;
 const PEERLIST_PREFIX: [&str; 2] = ["greenlight", "peerlist"];
+const NODE_ID_LEN: usize = 33;
+const PEER_ID_LEN: usize = 33;
+const CLN_DBID_LEN: usize = 8;
+const CLN_CHANNEL_KEY_LEN: usize = PEER_ID_LEN + CLN_DBID_LEN;
+const VLS_CHANNEL_KEY_LEN: usize = NODE_ID_LEN + CLN_CHANNEL_KEY_LEN;
+const TXID_LEN: usize = 32;
+const PUBKEY_LEN: usize = 33;
+const SHACHAIN_OMITTED_WARNING: &str = "shachain_tlv_omitted";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PeerlistEntry {
@@ -98,6 +108,73 @@ impl SignerBackupSnapshot {
             .collect()
     }
 
+    /// Converts the snapshot's recoverable channels into a CLN-compatible backup format suitable for `recoverchannel` import.
+    /// If `options.skip_incomplete` is true, channels with missing peer addresses will be skipped and
+    /// included in the `skipped` list with warnings instead of causing an error.
+    pub fn to_cln_backup(
+        &self,
+        options: CLNBackupOptions,
+    ) -> Result<CLNBackup> {
+        let recovery_data = self.recovery_data()?;
+        let total_channels = recovery_data.len();
+        let mut request = RecoverchannelRequest { scb: vec![] };
+        let mut channels = Vec::new();
+        let mut skipped = Vec::new();
+
+        for channel in recovery_data {
+            if !channel.complete {
+                if options.skip_incomplete {
+                    skipped.push(RecoverchannelSkippedChannel {
+                        channel_key: channel.channel_key,
+                        peer_id: channel.peer_id,
+                        warnings: channel.warnings,
+                    });
+                    continue;
+                }
+
+                return Err(anyhow!(
+                    "channel {} is incomplete: {}",
+                    channel.channel_key,
+                    channel.warnings.join(",")
+                ));
+            }
+
+            let encoded = encode_recoverchannel_scb(&channel).map_err(|e| {
+                anyhow!(
+                    "encoding recoverchannel SCB for {}: {}",
+                    channel.channel_key,
+                    e
+                )
+            })?;
+            request.scb.push(encoded.scb.clone());
+            channels.push(CLNBackupChannel {
+                channel_key: channel.channel_key,
+                peer_id: channel.peer_id,
+                peer_addr: channel.peer_addr.expect("complete channel has peer_addr"),
+                funding_outpoint: channel.funding_outpoint,
+                cln_dbid: encoded.cln_dbid,
+                channel_id: encoded.channel_id,
+                scb: encoded.scb,
+                warnings: vec![SHACHAIN_OMITTED_WARNING.to_string()],
+            });
+        }
+
+        if request.scb.is_empty() {
+            return Err(anyhow!(
+                "no complete recoverable channels available for recoverchannel export"
+            ));
+        }
+
+        Ok(CLNBackup {
+            request,
+            total_channels,
+            exported_channels: channels.len(),
+            skipped_channels: skipped.len(),
+            channels,
+            skipped,
+        })
+    }
+
     fn validate(&self) -> Result<()> {
         if self.version != BACKUP_VERSION {
             return Err(anyhow!(
@@ -146,6 +223,45 @@ pub struct RecoverableBasepoints {
 pub enum RecoverableChannelOpener {
     Local,
     Remote,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CLNBackupOptions {
+    pub skip_incomplete: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoverchannelRequest {
+    pub scb: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CLNBackup {
+    pub request: RecoverchannelRequest,
+    pub total_channels: usize,
+    pub exported_channels: usize,
+    pub skipped_channels: usize,
+    pub channels: Vec<CLNBackupChannel>,
+    pub skipped: Vec<RecoverchannelSkippedChannel>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CLNBackupChannel {
+    pub channel_key: String,
+    pub peer_id: String,
+    pub peer_addr: String,
+    pub funding_outpoint: RecoverableFundingOutpoint,
+    pub cln_dbid: u64,
+    pub channel_id: String,
+    pub scb: String,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoverchannelSkippedChannel {
+    pub channel_key: String,
+    pub peer_id: String,
+    pub warnings: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -293,6 +409,297 @@ fn peer_id_from_channel_key(channel_key: &str) -> Result<String> {
     Ok(hex::encode(&channel_id[..33]))
 }
 
+struct EncodedRecoverchannelScb {
+    cln_dbid: u64,
+    channel_id: String,
+    scb: String,
+}
+
+struct ClnChannelKey {
+    peer_id: [u8; PEER_ID_LEN],
+    dbid: u64,
+}
+
+fn encode_recoverchannel_scb(channel: &RecoverableChannel) -> Result<EncodedRecoverchannelScb> {
+    let channel_key = decode_cln_channel_key(&channel.channel_key)?;
+    let expected_peer_id = decode_hex_array::<PEER_ID_LEN>("peer_id", &channel.peer_id)?;
+    if channel_key.peer_id != expected_peer_id {
+        return Err(anyhow!(
+            "channel key peer id {} does not match channel peer id {}",
+            hex::encode(channel_key.peer_id),
+            channel.peer_id
+        ));
+    }
+
+    let txid = decode_txid_for_cln_wire(&channel.funding_outpoint.txid)?;
+    let channel_id = derive_v1_channel_id(txid, channel.funding_outpoint.vout);
+    let wireaddr = encode_wireaddr(
+        channel
+            .peer_addr
+            .as_deref()
+            .ok_or_else(|| anyhow!("missing peer address"))?,
+    )?;
+    let channel_type = encode_channel_type(&channel.commitment_type)?;
+    let tlvs = encode_scb_tlvs(channel)?;
+
+    let mut scb = Vec::new();
+    put_u64(&mut scb, channel_key.dbid);
+    scb.extend(channel_id);
+    scb.extend(channel_key.peer_id);
+    scb.extend(wireaddr);
+    scb.extend(txid);
+    put_u32(&mut scb, channel.funding_outpoint.vout);
+    put_u64(&mut scb, channel.funding_sats);
+    put_u16(&mut scb, channel_type.len().try_into()?);
+    scb.extend(channel_type);
+    put_u32(&mut scb, tlvs.len().try_into()?);
+    scb.extend(tlvs);
+
+    Ok(EncodedRecoverchannelScb {
+        cln_dbid: channel_key.dbid,
+        channel_id: hex::encode(channel_id),
+        scb: hex::encode(scb),
+    })
+}
+
+fn decode_cln_channel_key(channel_key: &str) -> Result<ClnChannelKey> {
+    let encoded = channel_key
+        .strip_prefix("channels/")
+        .ok_or_else(|| anyhow!("invalid channel key prefix: {}", channel_key))?;
+    let raw = hex::decode(encoded)
+        .with_context(|| format!("decoding channel key {}", channel_key))?;
+
+    if raw.len() != VLS_CHANNEL_KEY_LEN {
+        return Err(anyhow!(
+            "channel key {} is not a CLN-style VLS channel key: expected {} bytes, got {}",
+            channel_key,
+            VLS_CHANNEL_KEY_LEN,
+            raw.len()
+        ));
+    }
+
+    let peer_id = raw[NODE_ID_LEN..NODE_ID_LEN + PEER_ID_LEN]
+        .try_into()
+        .expect("slice length checked");
+    let dbid = u64::from_le_bytes(
+        raw[NODE_ID_LEN + PEER_ID_LEN..]
+            .try_into()
+            .expect("slice length checked"),
+    );
+
+    Ok(ClnChannelKey { peer_id, dbid })
+}
+
+fn decode_txid_for_cln_wire(txid: &str) -> Result<[u8; TXID_LEN]> {
+    let mut bytes = decode_hex_array::<TXID_LEN>("funding txid", txid)?;
+    bytes.reverse();
+    Ok(bytes)
+}
+
+fn derive_v1_channel_id(txid: [u8; TXID_LEN], vout: u32) -> [u8; TXID_LEN] {
+    let mut channel_id = txid;
+    channel_id[TXID_LEN - 2] ^= (vout >> 8) as u8;
+    channel_id[TXID_LEN - 1] ^= vout as u8;
+    channel_id
+}
+
+fn encode_channel_type(commitment_type: &str) -> Result<Vec<u8>> {
+    let commitment_type = match commitment_type {
+        "Legacy" => lightning_signer::channel::CommitmentType::Legacy,
+        "StaticRemoteKey" => lightning_signer::channel::CommitmentType::StaticRemoteKey,
+        "Anchors" => lightning_signer::channel::CommitmentType::Anchors,
+        "AnchorsZeroFeeHtlc" => lightning_signer::channel::CommitmentType::AnchorsZeroFeeHtlc,
+        unknown => return Err(anyhow!("unsupported commitment type {}", unknown)),
+    };
+    if commitment_type == lightning_signer::channel::CommitmentType::Legacy {
+        return Ok(Vec::new());
+    }
+
+    Ok(vls_protocol_signer::util::commitment_type_to_channel_type(
+        commitment_type,
+    ))
+}
+
+fn encode_scb_tlvs(channel: &RecoverableChannel) -> Result<Vec<u8>> {
+    let mut tlvs = Vec::new();
+
+    let mut basepoints = Vec::new();
+    basepoints.extend(decode_hex_array::<PUBKEY_LEN>(
+        "revocation basepoint",
+        &channel.remote_basepoints.revocation_basepoint,
+    )?);
+    basepoints.extend(decode_hex_array::<PUBKEY_LEN>(
+        "payment basepoint",
+        &channel.remote_basepoints.payment_point,
+    )?);
+    basepoints.extend(decode_hex_array::<PUBKEY_LEN>(
+        "htlc basepoint",
+        &channel.remote_basepoints.htlc_basepoint,
+    )?);
+    basepoints.extend(decode_hex_array::<PUBKEY_LEN>(
+        "delayed payment basepoint",
+        &channel.remote_basepoints.delayed_payment_basepoint,
+    )?);
+    put_tlv(&mut tlvs, 3, &basepoints);
+
+    let opener = match channel.opener {
+        RecoverableChannelOpener::Local => 0,
+        RecoverableChannelOpener::Remote => 1,
+    };
+    put_tlv(&mut tlvs, 5, &[opener]);
+
+    let remote_to_self_delay: u16 = channel.remote_to_self_delay.try_into().with_context(|| {
+        format!(
+            "remote_to_self_delay {} does not fit in CLN SCB u16",
+            channel.remote_to_self_delay
+        )
+    })?;
+    let mut delay = Vec::new();
+    put_u16(&mut delay, remote_to_self_delay);
+    put_tlv(&mut tlvs, 7, &delay);
+
+    Ok(tlvs)
+}
+
+fn encode_wireaddr(addr: &str) -> Result<Vec<u8>> {
+    if let Ok(socket_addr) = addr.parse::<SocketAddr>() {
+        return Ok(encode_socket_addr(socket_addr));
+    }
+
+    let (host, port) = addr
+        .rsplit_once(':')
+        .ok_or_else(|| anyhow!("peer address {} is missing port", addr))?;
+    let port = port
+        .parse::<u16>()
+        .with_context(|| format!("invalid peer address port in {}", addr))?;
+    if host.contains(':') {
+        return Err(anyhow!(
+            "IPv6 peer address {} must use [addr]:port form",
+            addr
+        ));
+    }
+
+    if let Some(onion) = host.strip_suffix(".onion") {
+        let onion = decode_tor_v3_onion(onion)
+            .with_context(|| format!("invalid Tor v3 peer address {}", addr))?;
+        let mut wire = vec![4];
+        wire.extend(onion);
+        put_u16(&mut wire, port);
+        return Ok(wire);
+    }
+
+    let host = host.as_bytes();
+    if host.is_empty() || host.len() > u8::MAX as usize {
+        return Err(anyhow!(
+            "DNS peer address host length is invalid in {}",
+            addr
+        ));
+    }
+
+    let mut wire = vec![5, host.len() as u8];
+    wire.extend(host);
+    put_u16(&mut wire, port);
+    Ok(wire)
+}
+
+fn encode_socket_addr(addr: SocketAddr) -> Vec<u8> {
+    let mut wire = Vec::new();
+    match addr.ip() {
+        IpAddr::V4(ip) => {
+            wire.push(1);
+            wire.extend(ip.octets());
+        }
+        IpAddr::V6(ip) => {
+            wire.push(2);
+            wire.extend(ip.octets());
+        }
+    }
+    put_u16(&mut wire, addr.port());
+    wire
+}
+
+fn decode_tor_v3_onion(host: &str) -> Result<[u8; 35]> {
+    if host.len() != 56 {
+        return Err(anyhow!(
+            "Tor v3 onion host must be 56 base32 characters, got {}",
+            host.len()
+        ));
+    }
+
+    let mut bits: u16 = 0;
+    let mut bit_count: u8 = 0;
+    let mut out = Vec::with_capacity(35);
+
+    for byte in host.bytes() {
+        let value = match byte {
+            b'a'..=b'z' => byte - b'a',
+            b'A'..=b'Z' => byte - b'A',
+            b'2'..=b'7' => byte - b'2' + 26,
+            _ => return Err(anyhow!("invalid base32 character {}", byte as char)),
+        };
+        bits = (bits << 5) | u16::from(value);
+        bit_count += 5;
+        while bit_count >= 8 {
+            bit_count -= 8;
+            out.push((bits >> bit_count) as u8);
+            bits &= (1u16 << bit_count) - 1;
+        }
+    }
+
+    if bit_count != 0 || out.len() != 35 {
+        return Err(anyhow!("invalid Tor v3 onion base32 length"));
+    }
+
+    Ok(out.try_into().expect("length checked"))
+}
+
+fn decode_hex_array<const N: usize>(label: &str, value: &str) -> Result<[u8; N]> {
+    let bytes = hex::decode(value).with_context(|| format!("decoding {}", label))?;
+    if bytes.len() != N {
+        return Err(anyhow!(
+            "{} must be {} bytes, got {}",
+            label,
+            N,
+            bytes.len()
+        ));
+    }
+
+    Ok(bytes.try_into().expect("length checked"))
+}
+
+fn put_tlv(out: &mut Vec<u8>, typ: u64, value: &[u8]) {
+    put_bigsize(out, typ);
+    put_bigsize(out, value.len() as u64);
+    out.extend(value);
+}
+
+fn put_bigsize(out: &mut Vec<u8>, value: u64) {
+    if value < 0xfd {
+        out.push(value as u8);
+    } else if value <= 0xffff {
+        out.push(0xfd);
+        put_u16(out, value as u16);
+    } else if value <= 0xffff_ffff {
+        out.push(0xfe);
+        put_u32(out, value as u32);
+    } else {
+        out.push(0xff);
+        put_u64(out, value);
+    }
+}
+
+fn put_u16(out: &mut Vec<u8>, value: u16) {
+    out.extend(value.to_be_bytes());
+}
+
+fn put_u32(out: &mut Vec<u8>, value: u32) {
+    out.extend(value.to_be_bytes());
+}
+
+fn put_u64(out: &mut Vec<u8>, value: u64) {
+    out.extend(value.to_be_bytes());
+}
+
 fn parse_peerlist_entry(entry: &crate::pb::cln::ListdatastoreDatastore) -> Result<PeerlistEntry> {
     if entry.key.len() != 3
         || entry.key[0] != PEERLIST_PREFIX[0]
@@ -402,6 +809,16 @@ mod tests {
             "is_outbound": is_outbound,
             "push_value_msat": 0
         })
+    }
+
+    fn full_txid() -> &'static str {
+        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    }
+
+    fn expected_cln_txid(txid: &str) -> [u8; 32] {
+        let mut bytes: [u8; 32] = hex::decode(txid).unwrap().try_into().unwrap();
+        bytes.reverse();
+        bytes
     }
 
     fn write_json(path: &Path, value: serde_json::Value) {
@@ -731,6 +1148,215 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("parsing recoverable channel"));
+    }
+
+    #[test]
+    fn to_cln_backup_rejects_incomplete_channels_by_default() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 1);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key: [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
+            })),
+            peerlist: vec![],
+        };
+
+        let err = snapshot
+            .to_cln_backup(CLNBackupOptions::default())
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("missing_peer_addr"));
+    }
+
+    #[test]
+    fn to_cln_backup_skips_incomplete_channels_when_requested() {
+        let peer_a = peer_id(0xaa);
+        let peer_b = peer_id(0xbb);
+        let channel_a = channel_key(&peer_a, 1);
+        let channel_b = channel_key(&peer_b, 2);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_a.clone(): [1, channel(recovery_setup(full_txid(), 0, 1000, true))],
+                channel_b.clone(): [1, channel(recovery_setup(full_txid(), 1, 2000, false))]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer_a.clone(),
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let export = snapshot
+            .to_cln_backup(CLNBackupOptions {
+                skip_incomplete: true,
+            })
+            .unwrap();
+
+        assert_eq!(export.request.scb.len(), 1);
+        assert_eq!(export.total_channels, 2);
+        assert_eq!(export.exported_channels, 1);
+        assert_eq!(export.skipped_channels, 1);
+        assert_eq!(export.channels[0].channel_key, channel_a);
+        assert_eq!(export.channels[0].cln_dbid, 1);
+        assert_eq!(export.channels[0].warnings, vec![SHACHAIN_OMITTED_WARNING]);
+        assert_eq!(export.skipped[0].channel_key, channel_b);
+        assert_eq!(export.skipped[0].warnings, vec!["missing_peer_addr"]);
+    }
+
+    #[test]
+    fn to_cln_backup_fails_when_every_channel_is_skipped() {
+        let peer = peer_id(0xaa);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key(&peer, 1): [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
+            })),
+            peerlist: vec![],
+        };
+
+        let err = snapshot
+            .to_cln_backup(CLNBackupOptions {
+                skip_incomplete: true,
+            })
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("no complete recoverable channels"));
+    }
+
+    #[test]
+    fn to_cln_backup_encodes_modern_scb_for_ipv4_peer() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 42);
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key.clone(): [1, channel(recovery_setup(full_txid(), 0x0102, 1_000_000, true))]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer.clone(),
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let export = snapshot
+            .to_cln_backup(CLNBackupOptions::default())
+            .unwrap();
+        let scb = hex::decode(&export.request.scb[0]).unwrap();
+        let txid = expected_cln_txid(full_txid());
+        let mut channel_id = txid;
+        channel_id[30] ^= 0x01;
+        channel_id[31] ^= 0x02;
+
+        assert_eq!(&scb[0..8], &42u64.to_be_bytes());
+        assert_eq!(&scb[8..40], &channel_id);
+        assert_eq!(export.channels[0].channel_id, hex::encode(channel_id));
+        assert_eq!(&scb[40..73], hex::decode(&peer).unwrap());
+        assert_eq!(&scb[73..80], hex::decode("017f0000012607").unwrap());
+        assert_eq!(&scb[80..112], &txid);
+        assert_eq!(&scb[112..116], &0x0102u32.to_be_bytes());
+        assert_eq!(&scb[116..124], &1_000_000u64.to_be_bytes());
+
+        let channel_type_len = u16::from_be_bytes(scb[124..126].try_into().unwrap()) as usize;
+        assert!(channel_type_len > 0);
+        let tlv_len_offset = 126 + channel_type_len;
+        let tlv_len =
+            u32::from_be_bytes(scb[tlv_len_offset..tlv_len_offset + 4].try_into().unwrap())
+                as usize;
+        let tlvs = &scb[tlv_len_offset + 4..];
+        assert_eq!(tlvs.len(), tlv_len);
+        assert_eq!(tlvs[0], 3);
+        assert_eq!(tlvs[1], 132);
+        assert_eq!(
+            &tlvs[2..35],
+            hex::decode("02eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+                .unwrap()
+        );
+        assert!(tlvs.windows(3).any(|window| window == [5, 1, 0]));
+        assert!(tlvs.windows(4).any(|window| window == [7, 2, 0, 144]));
+    }
+
+    #[test]
+    fn to_cln_backup_rejects_malformed_export_fields() {
+        let peer = peer_id(0xaa);
+        let mut setup = recovery_setup(full_txid(), 0, 1000, true);
+        setup["commitment_type"] = json!("Unknown");
+        let snapshot = SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state: state(json!({
+                channel_key(&peer, 1): [1, channel(setup)]
+            })),
+            peerlist: vec![PeerlistEntry {
+                peer_id: peer,
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+                generation: Some(1),
+                raw_datastore_string: "{}".to_string(),
+            }],
+        };
+
+        let err = snapshot
+            .to_cln_backup(CLNBackupOptions::default())
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("unsupported commitment type"));
+    }
+
+    #[test]
+    fn encode_wireaddr_supports_ipv4_ipv6_dns_and_tor_v3() {
+        let tor = format!("{}.onion:9735", "a".repeat(56));
+
+        assert_eq!(
+            encode_wireaddr("127.0.0.1:9735").unwrap(),
+            hex::decode("017f0000012607").unwrap()
+        );
+        assert_eq!(
+            encode_wireaddr("[2001:db8::1]:9735").unwrap(),
+            hex::decode("0220010db80000000000000000000000012607").unwrap()
+        );
+        assert_eq!(
+            encode_wireaddr("example.com:9735").unwrap(),
+            hex::decode("050b6578616d706c652e636f6d2607").unwrap()
+        );
+
+        let encoded_tor = encode_wireaddr(&tor).unwrap();
+        assert_eq!(encoded_tor.len(), 38);
+        assert_eq!(encoded_tor[0], 4);
+        assert_eq!(&encoded_tor[1..36], &[0u8; 35]);
+        assert_eq!(&encoded_tor[36..38], &9735u16.to_be_bytes());
+    }
+
+    #[test]
+    fn encode_channel_type_preserves_legacy_as_empty_features() {
+        assert_eq!(encode_channel_type("Legacy").unwrap(), Vec::<u8>::new());
+        assert!(!encode_channel_type("StaticRemoteKey").unwrap().is_empty());
     }
 
     #[test]

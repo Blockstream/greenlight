@@ -3,8 +3,9 @@ use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
 use gl_client::signer::{
-    RecoverableChannel, Signer, SignerBackupSnapshot, SignerBackupStrategy, SignerConfig,
-    StateSignatureMode, StateSignatureOverrideConfig,
+    RecoverableChannel, CLNBackup, CLNBackupOptions, Signer,
+    SignerBackupSnapshot, SignerBackupStrategy, SignerConfig, StateSignatureMode,
+    StateSignatureOverrideConfig,
 };
 use lightning_signer::bitcoin::Network;
 use serde::Serialize;
@@ -52,6 +53,17 @@ impl Default for BackupInspectFormat {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum BackupConvertFormat {
+    Cln,
+}
+
+impl Default for BackupConvertFormat {
+    fn default() -> Self {
+        Self::Cln
+    }
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Command {
     /// Starts a signer that connects to greenlight
@@ -69,6 +81,17 @@ pub enum Command {
         path: PathBuf,
         #[arg(long, value_enum, default_value_t = BackupInspectFormat::Json)]
         format: BackupInspectFormat,
+    },
+    /// Converts a signer backup to another channel recovery format
+    ConvertBackup {
+        #[arg(long)]
+        path: PathBuf,
+        #[arg(long)]
+        output: Option<PathBuf>,
+        #[arg(long, value_enum, default_value_t = BackupConvertFormat::Cln)]
+        format: BackupConvertFormat,
+        #[arg(long)]
+        skip_incomplete: bool,
     },
     /// Prints the version of the signer used
     Version,
@@ -90,6 +113,12 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             .await
         }
         Command::InspectBackup { path, format } => inspect_backup(&path, format),
+        Command::ConvertBackup {
+            path,
+            output,
+            format,
+            skip_incomplete,
+        } => convert_backup(&path, output.as_deref(), format, skip_incomplete),
         Command::Version => version(config).await,
     }
 }
@@ -137,6 +166,62 @@ fn inspect_backup_report(path: &Path) -> Result<BackupInspectionReport> {
     })?;
 
     Ok(backup_inspection_report(snapshot, channels))
+}
+
+fn convert_backup(
+    path: &Path,
+    output: Option<&Path>,
+    format: BackupConvertFormat,
+    skip_incomplete: bool,
+) -> Result<()> {
+    let rendered = convert_backup_output(path, format, skip_incomplete)?;
+
+    if let Some(output) = output {
+        std::fs::write(output, format!("{rendered}\n")).map_err(|e| {
+            Error::custom(format!(
+                "failed to write converted backup {}: {}",
+                output.display(),
+                e
+            ))
+        })?;
+    } else {
+        println!("{rendered}");
+    }
+
+    Ok(())
+}
+
+fn convert_backup_output(
+    path: &Path,
+    format: BackupConvertFormat,
+    skip_incomplete: bool,
+) -> Result<String> {
+    match format {
+        BackupConvertFormat::Cln => {
+            let export = cln_to_cln_backup(path, skip_incomplete)?;
+            serde_json::to_string_pretty(&export.request).map_err(Error::custom)
+        }
+    }
+}
+
+fn cln_to_cln_backup(path: &Path, skip_incomplete: bool) -> Result<CLNBackup> {
+    let snapshot = SignerBackupSnapshot::read(path).map_err(|e| {
+        Error::custom(format!(
+            "failed to read signer backup {}: {}",
+            path.display(),
+            e
+        ))
+    })?;
+
+    snapshot
+        .to_cln_backup(CLNBackupOptions { skip_incomplete })
+        .map_err(|e| {
+            Error::custom(format!(
+                "failed to convert signer backup {} to CLN recovery data: {}",
+                path.display(),
+                e
+            ))
+        })
 }
 
 fn backup_inspection_report(
@@ -282,8 +367,8 @@ async fn run_handler<P: AsRef<Path>>(
 #[cfg(test)]
 mod tests {
     use super::{
-        format_backup_report_text, inspect_backup_report, BackupInspectFormat, Command,
-        StateSignatureModeArg,
+        convert_backup_output, format_backup_report_text, inspect_backup_report,
+        BackupConvertFormat, BackupInspectFormat, Command, StateSignatureModeArg,
     };
     use clap::{Parser, Subcommand};
     use serde_json::json;
@@ -433,6 +518,67 @@ mod tests {
     }
 
     #[test]
+    fn parse_convert_backup_defaults_to_cln() {
+        let cli = TestCli::parse_from(["test", "convert-backup", "--path", "backup.json"]);
+        match cli.cmd {
+            Command::ConvertBackup {
+                path,
+                output,
+                format,
+                skip_incomplete,
+            } => {
+                assert_eq!(path, Path::new("backup.json"));
+                assert!(output.is_none());
+                assert_eq!(format, BackupConvertFormat::Cln);
+                assert!(!skip_incomplete);
+            }
+            _ => panic!("expected convert-backup command"),
+        }
+    }
+
+    #[test]
+    fn parse_convert_backup_cln_output_and_skip() {
+        let cli = TestCli::parse_from([
+            "test",
+            "convert-backup",
+            "--path",
+            "backup.json",
+            "--output",
+            "recoverchannel.json",
+            "--format",
+            "cln",
+            "--skip-incomplete",
+        ]);
+        match cli.cmd {
+            Command::ConvertBackup {
+                path,
+                output,
+                format,
+                skip_incomplete,
+            } => {
+                assert_eq!(path, Path::new("backup.json"));
+                assert_eq!(output.as_deref(), Some(Path::new("recoverchannel.json")));
+                assert_eq!(format, BackupConvertFormat::Cln);
+                assert!(skip_incomplete);
+            }
+            _ => panic!("expected convert-backup command"),
+        }
+    }
+
+    #[test]
+    fn parse_convert_backup_rejects_invalid_format() {
+        assert!(TestCli::try_parse_from([
+            "test",
+            "convert-backup",
+            "--path",
+            "backup.json",
+            "--format",
+            "yaml",
+        ])
+        .is_err());
+    }
+
+    #[test]
     fn inspect_backup_report_counts_channels_and_warnings() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("backup.json");
@@ -572,6 +718,78 @@ mod tests {
         assert!(text.contains("warnings: missing_peer_addr"));
     }
 
+    #[test]
+    fn convert_backup_cln_output_contains_only_scb_request() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        let peer = peer_id(0xaa);
+        write_json(
+            &path,
+            backup_json(
+                json!({
+                    channel_key(&peer, 7): [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
+                }),
+                json!([peerlist_entry(&peer, "127.0.0.1:9735")]),
+                json!("new_channels_only"),
+            ),
+        );
+
+        let output = convert_backup_output(&path, BackupConvertFormat::Cln, false).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&output).unwrap();
+
+        assert!(value["scb"][0].as_str().unwrap().len() > 100);
+        assert!(value.get("channels").is_none());
+        assert!(value.get("state").is_none());
+        assert!(value.get("peerlist").is_none());
+    }
+
+    #[test]
+    fn convert_backup_cln_skips_incomplete_channels_when_requested() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        let peer_a = peer_id(0xaa);
+        let peer_b = peer_id(0xbb);
+        write_json(
+            &path,
+            backup_json(
+                json!({
+                    channel_key(&peer_a, 7): [1, channel(recovery_setup(full_txid(), 0, 1000, true))],
+                    channel_key(&peer_b, 8): [1, channel(recovery_setup(full_txid(), 1, 2000, false))]
+                }),
+                json!([peerlist_entry(&peer_a, "127.0.0.1:9735")]),
+                json!("new_channels_only"),
+            ),
+        );
+
+        let output = convert_backup_output(&path, BackupConvertFormat::Cln, true).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&output).unwrap();
+
+        assert_eq!(value["scb"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn convert_backup_cln_fails_for_incomplete_channel_without_skip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        let peer = peer_id(0xaa);
+        write_json(
+            &path,
+            backup_json(
+                json!({
+                    channel_key(&peer, 7): [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
+                }),
+                json!([]),
+                json!("new_channels_only"),
+            ),
+        );
+
+        let err = convert_backup_output(&path, BackupConvertFormat::Cln, false)
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("missing_peer_addr"));
+    }
+
     fn backup_json(
         channels: serde_json::Value,
         peerlist: serde_json::Value,
@@ -646,6 +864,10 @@ mod tests {
             "is_outbound": is_outbound,
             "push_value_msat": 0
         })
+    }
+
+    fn full_txid() -> &'static str {
+        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
     }
 
     fn write_json(path: &Path, value: serde_json::Value) {
