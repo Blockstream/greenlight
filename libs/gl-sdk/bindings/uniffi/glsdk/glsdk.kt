@@ -31,13 +31,6 @@ import java.nio.charset.CodingErrorAction
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -873,6 +866,12 @@ internal open class UniffiVTableCallbackInterfaceNodeEventListener(
 
 
 
+
+
+
+
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -932,9 +931,15 @@ fun uniffi_glsdk_checksum_method_node_lnurl_withdraw(
 ): Short
 fun uniffi_glsdk_checksum_method_node_node_state(
 ): Short
+fun uniffi_glsdk_checksum_method_node_onchain_balance_state(
+): Short
+fun uniffi_glsdk_checksum_method_node_onchain_fee_rates(
+): Short
 fun uniffi_glsdk_checksum_method_node_onchain_receive(
 ): Short
 fun uniffi_glsdk_checksum_method_node_onchain_send(
+): Short
+fun uniffi_glsdk_checksum_method_node_prepare_onchain_send(
 ): Short
 fun uniffi_glsdk_checksum_method_node_receive(
 ): Short
@@ -1099,9 +1104,15 @@ fun uniffi_glsdk_fn_method_node_lnurl_withdraw(`ptr`: Pointer,`request`: RustBuf
 ): RustBuffer.ByValue
 fun uniffi_glsdk_fn_method_node_node_state(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_glsdk_fn_method_node_onchain_balance_state(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_glsdk_fn_method_node_onchain_fee_rates(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_glsdk_fn_method_node_onchain_receive(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
-fun uniffi_glsdk_fn_method_node_onchain_send(`ptr`: Pointer,`destination`: RustBuffer.ByValue,`amountOrAll`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+fun uniffi_glsdk_fn_method_node_onchain_send(`ptr`: Pointer,`destination`: RustBuffer.ByValue,`amountOrAll`: RustBuffer.ByValue,`satPerVbyte`: RustBuffer.ByValue,`utxos`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_glsdk_fn_method_node_prepare_onchain_send(`ptr`: Pointer,`destination`: RustBuffer.ByValue,`amountOrAll`: RustBuffer.ByValue,`satPerVbyte`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_glsdk_fn_method_node_receive(`ptr`: Pointer,`label`: RustBuffer.ByValue,`description`: RustBuffer.ByValue,`amountMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1165,8 +1176,8 @@ fun uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener(`vtable`: UniffiVTabl
 ): Unit
 fun uniffi_glsdk_fn_func_parse_input(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
-fun uniffi_glsdk_fn_func_resolve_input(`input`: RustBuffer.ByValue,
-): Long
+fun uniffi_glsdk_fn_func_resolve_input(`input`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_glsdk_fn_func_set_log_level(`level`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_glsdk_fn_func_set_logger(`level`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1300,7 +1311,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_glsdk_checksum_func_parse_input() != 49187.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_glsdk_checksum_func_resolve_input() != 24844.toShort()) {
+    if (lib.uniffi_glsdk_checksum_func_resolve_input() != 54924.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_glsdk_checksum_func_set_log_level() != 52328.toShort()) {
@@ -1363,10 +1374,19 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_glsdk_checksum_method_node_node_state() != 41833.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_glsdk_checksum_method_node_onchain_balance_state() != 52276.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_glsdk_checksum_method_node_onchain_fee_rates() != 57819.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 46432.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_glsdk_checksum_method_node_onchain_send() != 12590.toShort()) {
+    if (lib.uniffi_glsdk_checksum_method_node_onchain_send() != 63330.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_glsdk_checksum_method_node_prepare_onchain_send() != 37850.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_glsdk_checksum_method_node_receive() != 39761.toShort()) {
@@ -1454,46 +1474,6 @@ public fun uniffiEnsureInitialized() {
 }
 
 // Async support
-// Async return type handlers
-
-internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
-internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
-
-internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
-
-// FFI type for Rust future continuations
-internal object uniffiRustFutureContinuationCallbackImpl: UniffiRustFutureContinuationCallback {
-    override fun callback(data: Long, pollResult: Byte) {
-        uniffiContinuationHandleMap.remove(data).resume(pollResult)
-    }
-}
-
-internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
-    rustFuture: Long,
-    pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
-    completeFunc: (Long, UniffiRustCallStatus) -> F,
-    freeFunc: (Long) -> Unit,
-    liftFunc: (F) -> T,
-    errorHandler: UniffiRustCallStatusErrorHandler<E>
-): T {
-    try {
-        do {
-            val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
-                pollFunc(
-                    rustFuture,
-                    uniffiRustFutureContinuationCallbackImpl,
-                    uniffiContinuationHandleMap.insert(continuation)
-                )
-            }
-        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
-
-        return liftFunc(
-            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
-        )
-    } finally {
-        freeFunc(rustFuture)
-    }
-}
 
 // Public interface members begin here.
 
@@ -3097,6 +3077,43 @@ public interface NodeInterface {
     fun `nodeState`(): NodeState
     
     /**
+     * Classify the on-chain wallet for the withdraw entry-point UI.
+     *
+     * Runs three RPCs concurrently:
+     * * `list_funds` — current confirmed/unconfirmed/immature on-chain
+     * balances.
+     * * `list_peer_channels` — pending channel-close payouts that
+     * haven't yet hit the wallet.
+     * * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+     * non-locking probe whose response tells us **exactly** how
+     * much CLN will carve as the anchor-channel emergency reserve
+     * for this specific node, no client-side guessing required.
+     * The carved amount is computed from the response as
+     * `total_inputs − excess − fee`, which is identical to what
+     * CLN would carve on a real broadcast.
+     *
+     * Cheaper to call than `node_state()` and answers a different
+     * question. Wallets typically call it once per render of the
+     * home screen.
+     *
+     * For the *exact* post-fee recipient amount of a withdraw, use
+     * `prepare_onchain_send`; the `withdrawable_sat` returned here
+     * is a pre-fee, reserve-aware figure for the entry-point label.
+     */
+    fun `onchainBalanceState`(): OnchainBalanceState
+    
+    /**
+     * On-chain fee rates, in sats per virtual byte, at several
+     * confirmation targets.
+     *
+     * Sourced from the connected node's view of the network — no
+     * 3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+     * `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+     * broadcast time and should be the lower bound of any slider.
+     */
+    fun `onchainFeeRates`(): OnchainFeeRates
+    
+    /**
      * Generate a fresh on-chain Bitcoin address for receiving funds.
      *
      * Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
@@ -3114,11 +3131,53 @@ public interface NodeInterface {
      * - `"50000"` or `"50000sat"` — 50,000 satoshis
      * - `"50000msat"` — 50,000 millisatoshis
      * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+     * Pass `None` to let the node pick. Pass the value from a prior
+     * `prepare_onchain_send` to reproduce the previewed fee.
+     * * `utxos` — Optional pinned input set. Pass the `utxos` returned
+     * by `prepare_onchain_send` (together with the same
+     * `sat_per_vbyte`) to broadcast a transaction with the exact
+     * inputs and fee shown in the preview. Pass `None` to let the
+     * node coin-select.
      *
      * Returns the raw transaction, txid, and PSBT once broadcast.
      * The transaction is broadcast immediately — this is not a dry run.
      */
-    fun `onchainSend`(`destination`: kotlin.String, `amountOrAll`: kotlin.String): OnchainSendResponse
+    fun `onchainSend`(`destination`: kotlin.String, `amountOrAll`: kotlin.String, `satPerVbyte`: kotlin.UInt?, `utxos`: List<Outpoint>?): OnchainSendResponse
+    
+    /**
+     * Preview an on-chain send without broadcasting or reserving UTXOs.
+     *
+     * Runs CLN's coin selection at the given fee rate and returns the
+     * inputs that would be spent, the fee, and the amount the recipient
+     * would receive. Safe to call repeatedly (e.g. while the user
+     * adjusts a fee slider) — nothing is locked.
+     *
+     * To broadcast with the previewed values, pass the returned
+     * `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+     * inputs at the same fee rate yield the same fee.
+     *
+     * **Use this for "Send Max" UIs.** `recipient_sat` is the only
+     * authoritative post-fee amount the destination will receive
+     * for a sweep. `NodeState.onchain_balance_msat` includes the
+     * emergency reserve and the fee — neither of which leaves the
+     * wallet with the recipient. For the entry-point button label
+     * (a pre-fee approximation that updates without an RPC), use
+     * `OnchainBalanceState::Available.withdrawable_sat`.
+     *
+     * # Arguments
+     * * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+     * * `amount_or_all` — Amount to send. Accepts:
+     * - `"50000"` or `"50000sat"` — 50,000 satoshis
+     * - `"50000msat"` — 50,000 millisatoshis
+     * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+     * `None` to use the node's "normal" priority feerate; the
+     * effective rate CLN picked is reported back in the result's
+     * `sat_per_vbyte` field, which can be passed to `onchain_send`
+     * to reproduce it.
+     */
+    fun `prepareOnchainSend`(`destination`: kotlin.String, `amountOrAll`: kotlin.String, `satPerVbyte`: kotlin.UInt?): PreparedOnchainSend
     
     /**
      * Receive an off-chain payment.
@@ -3502,6 +3561,65 @@ open class Node: Disposable, AutoCloseable, NodeInterface
 
     
     /**
+     * Classify the on-chain wallet for the withdraw entry-point UI.
+     *
+     * Runs three RPCs concurrently:
+     * * `list_funds` — current confirmed/unconfirmed/immature on-chain
+     * balances.
+     * * `list_peer_channels` — pending channel-close payouts that
+     * haven't yet hit the wallet.
+     * * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+     * non-locking probe whose response tells us **exactly** how
+     * much CLN will carve as the anchor-channel emergency reserve
+     * for this specific node, no client-side guessing required.
+     * The carved amount is computed from the response as
+     * `total_inputs − excess − fee`, which is identical to what
+     * CLN would carve on a real broadcast.
+     *
+     * Cheaper to call than `node_state()` and answers a different
+     * question. Wallets typically call it once per render of the
+     * home screen.
+     *
+     * For the *exact* post-fee recipient amount of a withdraw, use
+     * `prepare_onchain_send`; the `withdrawable_sat` returned here
+     * is a pre-fee, reserve-aware figure for the entry-point label.
+     */
+    @Throws(Exception::class)override fun `onchainBalanceState`(): OnchainBalanceState {
+            return FfiConverterTypeOnchainBalanceState.lift(
+    callWithPointer {
+    uniffiRustCallWithError(Exception) { _status ->
+    UniffiLib.INSTANCE.uniffi_glsdk_fn_method_node_onchain_balance_state(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * On-chain fee rates, in sats per virtual byte, at several
+     * confirmation targets.
+     *
+     * Sourced from the connected node's view of the network — no
+     * 3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+     * `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+     * broadcast time and should be the lower bound of any slider.
+     */
+    @Throws(Exception::class)override fun `onchainFeeRates`(): OnchainFeeRates {
+            return FfiConverterTypeOnchainFeeRates.lift(
+    callWithPointer {
+    uniffiRustCallWithError(Exception) { _status ->
+    UniffiLib.INSTANCE.uniffi_glsdk_fn_method_node_onchain_fee_rates(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Generate a fresh on-chain Bitcoin address for receiving funds.
      *
      * Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
@@ -3530,16 +3648,69 @@ open class Node: Disposable, AutoCloseable, NodeInterface
      * - `"50000"` or `"50000sat"` — 50,000 satoshis
      * - `"50000msat"` — 50,000 millisatoshis
      * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+     * Pass `None` to let the node pick. Pass the value from a prior
+     * `prepare_onchain_send` to reproduce the previewed fee.
+     * * `utxos` — Optional pinned input set. Pass the `utxos` returned
+     * by `prepare_onchain_send` (together with the same
+     * `sat_per_vbyte`) to broadcast a transaction with the exact
+     * inputs and fee shown in the preview. Pass `None` to let the
+     * node coin-select.
      *
      * Returns the raw transaction, txid, and PSBT once broadcast.
      * The transaction is broadcast immediately — this is not a dry run.
      */
-    @Throws(Exception::class)override fun `onchainSend`(`destination`: kotlin.String, `amountOrAll`: kotlin.String): OnchainSendResponse {
+    @Throws(Exception::class)override fun `onchainSend`(`destination`: kotlin.String, `amountOrAll`: kotlin.String, `satPerVbyte`: kotlin.UInt?, `utxos`: List<Outpoint>?): OnchainSendResponse {
             return FfiConverterTypeOnchainSendResponse.lift(
     callWithPointer {
     uniffiRustCallWithError(Exception) { _status ->
     UniffiLib.INSTANCE.uniffi_glsdk_fn_method_node_onchain_send(
-        it, FfiConverterString.lower(`destination`),FfiConverterString.lower(`amountOrAll`),_status)
+        it, FfiConverterString.lower(`destination`),FfiConverterString.lower(`amountOrAll`),FfiConverterOptionalUInt.lower(`satPerVbyte`),FfiConverterOptionalSequenceTypeOutpoint.lower(`utxos`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Preview an on-chain send without broadcasting or reserving UTXOs.
+     *
+     * Runs CLN's coin selection at the given fee rate and returns the
+     * inputs that would be spent, the fee, and the amount the recipient
+     * would receive. Safe to call repeatedly (e.g. while the user
+     * adjusts a fee slider) — nothing is locked.
+     *
+     * To broadcast with the previewed values, pass the returned
+     * `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+     * inputs at the same fee rate yield the same fee.
+     *
+     * **Use this for "Send Max" UIs.** `recipient_sat` is the only
+     * authoritative post-fee amount the destination will receive
+     * for a sweep. `NodeState.onchain_balance_msat` includes the
+     * emergency reserve and the fee — neither of which leaves the
+     * wallet with the recipient. For the entry-point button label
+     * (a pre-fee approximation that updates without an RPC), use
+     * `OnchainBalanceState::Available.withdrawable_sat`.
+     *
+     * # Arguments
+     * * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+     * * `amount_or_all` — Amount to send. Accepts:
+     * - `"50000"` or `"50000sat"` — 50,000 satoshis
+     * - `"50000msat"` — 50,000 millisatoshis
+     * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+     * `None` to use the node's "normal" priority feerate; the
+     * effective rate CLN picked is reported back in the result's
+     * `sat_per_vbyte` field, which can be passed to `onchain_send`
+     * to reproduce it.
+     */
+    @Throws(Exception::class)override fun `prepareOnchainSend`(`destination`: kotlin.String, `amountOrAll`: kotlin.String, `satPerVbyte`: kotlin.UInt?): PreparedOnchainSend {
+            return FfiConverterTypePreparedOnchainSend.lift(
+    callWithPointer {
+    uniffiRustCallWithError(Exception) { _status ->
+    UniffiLib.INSTANCE.uniffi_glsdk_fn_method_node_prepare_onchain_send(
+        it, FfiConverterString.lower(`destination`),FfiConverterString.lower(`amountOrAll`),FfiConverterOptionalUInt.lower(`satPerVbyte`),_status)
 }
     }
     )
@@ -6194,6 +6365,73 @@ public object FfiConverterTypeNodeState: FfiConverterRustBuffer<NodeState> {
 
 
 /**
+ * On-chain fee rates in sats per virtual byte at various
+ * confirmation targets, derived from the connected node's view of
+ * network mempool conditions. Use as the basis for a fee-picker UI.
+ */
+data class OnchainFeeRates (
+    /**
+     * Target the next block (~10 min).
+     */
+    var `nextBlockSatPerVbyte`: kotlin.ULong, 
+    /**
+     * ~30 minute confirmation target (3 blocks).
+     */
+    var `halfHourSatPerVbyte`: kotlin.ULong, 
+    /**
+     * ~1 hour confirmation target (6 blocks).
+     */
+    var `hourSatPerVbyte`: kotlin.ULong, 
+    /**
+     * ~1 day confirmation target (144 blocks). Suitable for
+     * non-urgent sweeps.
+     */
+    var `daySatPerVbyte`: kotlin.ULong, 
+    /**
+     * Network minimum relay fee. Anything below this will be
+     * rejected by mempool policy at broadcast time. Use as the
+     * lower bound of any user-facing fee slider.
+     */
+    var `minimumRelaySatPerVbyte`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOnchainFeeRates: FfiConverterRustBuffer<OnchainFeeRates> {
+    override fun read(buf: ByteBuffer): OnchainFeeRates {
+        return OnchainFeeRates(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: OnchainFeeRates) = (
+            FfiConverterULong.allocationSize(value.`nextBlockSatPerVbyte`) +
+            FfiConverterULong.allocationSize(value.`halfHourSatPerVbyte`) +
+            FfiConverterULong.allocationSize(value.`hourSatPerVbyte`) +
+            FfiConverterULong.allocationSize(value.`daySatPerVbyte`) +
+            FfiConverterULong.allocationSize(value.`minimumRelaySatPerVbyte`)
+    )
+
+    override fun write(value: OnchainFeeRates, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`nextBlockSatPerVbyte`, buf)
+            FfiConverterULong.write(value.`halfHourSatPerVbyte`, buf)
+            FfiConverterULong.write(value.`hourSatPerVbyte`, buf)
+            FfiConverterULong.write(value.`daySatPerVbyte`, buf)
+            FfiConverterULong.write(value.`minimumRelaySatPerVbyte`, buf)
+    }
+}
+
+
+
+/**
  * A pair of on-chain addresses for receiving funds.
  */
 data class OnchainReceiveResponse (
@@ -6277,6 +6515,47 @@ public object FfiConverterTypeOnchainSendResponse: FfiConverterRustBuffer<Onchai
             FfiConverterByteArray.write(value.`tx`, buf)
             FfiConverterString.write(value.`txid`, buf)
             FfiConverterString.write(value.`psbt`, buf)
+    }
+}
+
+
+
+/**
+ * A specific on-chain output, identified by its outpoint.
+ */
+data class Outpoint (
+    /**
+     * Transaction id as lowercase hex (64 chars).
+     */
+    var `txid`: kotlin.String, 
+    /**
+     * Output index within that transaction.
+     */
+    var `vout`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOutpoint: FfiConverterRustBuffer<Outpoint> {
+    override fun read(buf: ByteBuffer): Outpoint {
+        return Outpoint(
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: Outpoint) = (
+            FfiConverterString.allocationSize(value.`txid`) +
+            FfiConverterUInt.allocationSize(value.`vout`)
+    )
+
+    override fun write(value: Outpoint, buf: ByteBuffer) {
+            FfiConverterString.write(value.`txid`, buf)
+            FfiConverterUInt.write(value.`vout`, buf)
     }
 }
 
@@ -6664,6 +6943,83 @@ public object FfiConverterTypePeerChannel: FfiConverterRustBuffer<PeerChannel> {
             FfiConverterOptionalULong.write(value.`receivableMsat`, buf)
             FfiConverterOptionalTypeChannelSide.write(value.`closer`, buf)
             FfiConverterSequenceString.write(value.`status`, buf)
+    }
+}
+
+
+
+/**
+ * Preview of an on-chain send: the inputs CLN would select at the
+ * given fee rate, the resulting fee, and the amount the recipient
+ * would receive. Inputs are NOT reserved — the wallet is free to
+ * spend them via other paths until `onchain_send` actually broadcasts.
+ *
+ * Pass `utxos` and `sat_per_vbyte` back to `onchain_send` to broadcast
+ * with identical inputs and fee.
+ *
+ * Amounts are in satoshis: on-chain transactions cannot carry sub-sat
+ * precision, so msat denomination would be misleading here.
+ */
+data class PreparedOnchainSend (
+    /**
+     * UTXOs that would be spent, in selection order.
+     */
+    var `utxos`: List<Outpoint>, 
+    /**
+     * Sum of all input UTXO values, in satoshis.
+     */
+    var `totalInputSat`: kotlin.ULong, 
+    /**
+     * Fee that would be paid, in satoshis.
+     */
+    var `feeSat`: kotlin.ULong, 
+    /**
+     * Amount the recipient would receive, in satoshis.
+     * For a sweep ("all") this equals `total_input_sat - fee_sat`.
+     * For a fixed amount this equals the requested amount.
+     */
+    var `recipientSat`: kotlin.ULong, 
+    /**
+     * Effective fee rate (sat per virtual byte) the node used to
+     * compute this preview. Equal to the caller's `sat_per_vbyte` if
+     * one was supplied; otherwise the rate the node picked at
+     * "normal" priority. Pass this back to `onchain_send` to
+     * reproduce the previewed fee.
+     */
+    var `satPerVbyte`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePreparedOnchainSend: FfiConverterRustBuffer<PreparedOnchainSend> {
+    override fun read(buf: ByteBuffer): PreparedOnchainSend {
+        return PreparedOnchainSend(
+            FfiConverterSequenceTypeOutpoint.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: PreparedOnchainSend) = (
+            FfiConverterSequenceTypeOutpoint.allocationSize(value.`utxos`) +
+            FfiConverterULong.allocationSize(value.`totalInputSat`) +
+            FfiConverterULong.allocationSize(value.`feeSat`) +
+            FfiConverterULong.allocationSize(value.`recipientSat`) +
+            FfiConverterUInt.allocationSize(value.`satPerVbyte`)
+    )
+
+    override fun write(value: PreparedOnchainSend, buf: ByteBuffer) {
+            FfiConverterSequenceTypeOutpoint.write(value.`utxos`, buf)
+            FfiConverterULong.write(value.`totalInputSat`, buf)
+            FfiConverterULong.write(value.`feeSat`, buf)
+            FfiConverterULong.write(value.`recipientSat`, buf)
+            FfiConverterUInt.write(value.`satPerVbyte`, buf)
     }
 }
 
@@ -7458,6 +7814,180 @@ public object FfiConverterTypeNodeEvent : FfiConverterRustBuffer<NodeEvent>{
             is NodeEvent.InvoicePaid -> {
                 buf.putInt(1)
                 FfiConverterTypeInvoicePaidEvent.write(value.`details`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * Classifies the on-chain wallet into discrete cases that a wallet
+ * UI can switch on to render the correct entry-point for the
+ * withdraw flow. Derived purely from `NodeState` — no RPC.
+ */
+sealed class OnchainBalanceState {
+    
+    /**
+     * No funds on-chain in any form (confirmed, unconfirmed,
+     * immature, or pending channel-close payouts are all zero).
+     * Don't render a withdraw entry point.
+     */
+    object Unavailable : OnchainBalanceState()
+    
+    
+    /**
+     * Funds are spendable now. Render the withdraw entry point
+     * enabled with `withdrawable_sat` as the headline.
+     */
+    data class Available(
+        /**
+         * `onchain_balance_sat - emergency_reserve_sat`. Use as
+         * the displayed amount on the entry point.
+         */
+        val `withdrawableSat`: kotlin.ULong, 
+        /**
+         * Held back by CLN for anchor-channel safety; cannot be
+         * withdrawn without closing channels first.
+         */
+        val `emergencyReserveSat`: kotlin.ULong, 
+        /**
+         * Inbound on-chain funds not yet confirmed. Informational
+         * only — not part of `withdrawable_sat`.
+         */
+        val `unconfirmedSat`: kotlin.ULong) : OnchainBalanceState() {
+        companion object
+    }
+    
+    /**
+     * On-chain funds exist but are entirely locked as the
+     * anchor-channel emergency reserve. Render the entry point
+     * disabled with an explainer (e.g. "close channels to free
+     * these funds").
+     */
+    data class ReserveOnly(
+        val `reserveSat`: kotlin.ULong) : OnchainBalanceState() {
+        companion object
+    }
+    
+    /**
+     * Inbound on-chain funds are awaiting confirmation. Render a
+     * "pending" indicator instead of an enabled withdraw button.
+     */
+    data class PendingConfirmation(
+        val `unconfirmedSat`: kotlin.ULong) : OnchainBalanceState() {
+        companion object
+    }
+    
+    /**
+     * Funds exist as CSV-timelocked outputs from a recent channel
+     * close and can't be spent until the relative locktime
+     * expires. Render the entry point disabled with a
+     * "channel closing" explainer.
+     */
+    data class Immature(
+        val `immatureSat`: kotlin.ULong) : OnchainBalanceState() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeOnchainBalanceState : FfiConverterRustBuffer<OnchainBalanceState>{
+    override fun read(buf: ByteBuffer): OnchainBalanceState {
+        return when(buf.getInt()) {
+            1 -> OnchainBalanceState.Unavailable
+            2 -> OnchainBalanceState.Available(
+                FfiConverterULong.read(buf),
+                FfiConverterULong.read(buf),
+                FfiConverterULong.read(buf),
+                )
+            3 -> OnchainBalanceState.ReserveOnly(
+                FfiConverterULong.read(buf),
+                )
+            4 -> OnchainBalanceState.PendingConfirmation(
+                FfiConverterULong.read(buf),
+                )
+            5 -> OnchainBalanceState.Immature(
+                FfiConverterULong.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: OnchainBalanceState) = when(value) {
+        is OnchainBalanceState.Unavailable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is OnchainBalanceState.Available -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`withdrawableSat`)
+                + FfiConverterULong.allocationSize(value.`emergencyReserveSat`)
+                + FfiConverterULong.allocationSize(value.`unconfirmedSat`)
+            )
+        }
+        is OnchainBalanceState.ReserveOnly -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`reserveSat`)
+            )
+        }
+        is OnchainBalanceState.PendingConfirmation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`unconfirmedSat`)
+            )
+        }
+        is OnchainBalanceState.Immature -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterULong.allocationSize(value.`immatureSat`)
+            )
+        }
+    }
+
+    override fun write(value: OnchainBalanceState, buf: ByteBuffer) {
+        when(value) {
+            is OnchainBalanceState.Unavailable -> {
+                buf.putInt(1)
+                Unit
+            }
+            is OnchainBalanceState.Available -> {
+                buf.putInt(2)
+                FfiConverterULong.write(value.`withdrawableSat`, buf)
+                FfiConverterULong.write(value.`emergencyReserveSat`, buf)
+                FfiConverterULong.write(value.`unconfirmedSat`, buf)
+                Unit
+            }
+            is OnchainBalanceState.ReserveOnly -> {
+                buf.putInt(3)
+                FfiConverterULong.write(value.`reserveSat`, buf)
+                Unit
+            }
+            is OnchainBalanceState.PendingConfirmation -> {
+                buf.putInt(4)
+                FfiConverterULong.write(value.`unconfirmedSat`, buf)
+                Unit
+            }
+            is OnchainBalanceState.Immature -> {
+                buf.putInt(5)
+                FfiConverterULong.write(value.`immatureSat`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -8444,6 +8974,38 @@ public object FfiConverterOptionalTypeSuccessActionProcessed: FfiConverterRustBu
 /**
  * @suppress
  */
+public object FfiConverterOptionalSequenceTypeOutpoint: FfiConverterRustBuffer<List<Outpoint>?> {
+    override fun read(buf: ByteBuffer): List<Outpoint>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceTypeOutpoint.read(buf)
+    }
+
+    override fun allocationSize(value: List<Outpoint>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceTypeOutpoint.allocationSize(value)
+        }
+    }
+
+    override fun write(value: List<Outpoint>?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceTypeOutpoint.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalSequenceTypePaymentTypeFilter: FfiConverterRustBuffer<List<PaymentTypeFilter>?> {
     override fun read(buf: ByteBuffer): List<PaymentTypeFilter>? {
         if (buf.get().toInt() == 0) {
@@ -8578,6 +9140,34 @@ public object FfiConverterSequenceTypeInvoice: FfiConverterRustBuffer<List<Invoi
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeInvoice.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeOutpoint: FfiConverterRustBuffer<List<Outpoint>> {
+    override fun read(buf: ByteBuffer): List<Outpoint> {
+        val len = buf.getInt()
+        return List<Outpoint>(len) {
+            FfiConverterTypeOutpoint.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<Outpoint>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeOutpoint.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<Outpoint>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeOutpoint.write(it, buf)
         }
     }
 }
@@ -8760,14 +9350,6 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
         }
     }
 }
-
-
-
-
-
-
-
-
         /**
          * Synchronously classify the input. **No HTTP, no I/O.**
          *
@@ -8793,7 +9375,7 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
     
 
         /**
-         * Asynchronously classify and resolve the input.
+         * Classify and resolve the input.
          *
          * Internally calls `parse_input` for offline classification, then
          * for LNURL bech32 strings and Lightning Addresses performs the
@@ -8802,21 +9384,25 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
          * immediately without I/O.
          *
          * Strips `lightning:` / `LIGHTNING:` prefixes automatically.
+         *
+         * # Blocking
+         *
+         * This function blocks the calling thread while any network I/O
+         * completes. The SDK exposes a **synchronous-only** public API so
+         * that every language binding (Python, Kotlin, Swift, Ruby, C++)
+         * works without requiring an async runtime on the caller side.
+         * Async work is executed internally on a shared Tokio runtime
+         * managed by the SDK.
          */
-    @Throws(Exception::class)
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-     suspend fun `resolveInput`(`input`: kotlin.String) : ResolvedInput {
-        return uniffiRustCallAsync(
-        UniffiLib.INSTANCE.uniffi_glsdk_fn_func_resolve_input(FfiConverterString.lower(`input`),),
-        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_glsdk_rust_future_poll_rust_buffer(future, callback, continuation) },
-        { future, continuation -> UniffiLib.INSTANCE.ffi_glsdk_rust_future_complete_rust_buffer(future, continuation) },
-        { future -> UniffiLib.INSTANCE.ffi_glsdk_rust_future_free_rust_buffer(future) },
-        // lift function
-        { FfiConverterTypeResolvedInput.lift(it) },
-        // Error FFI converter
-        Exception.ErrorHandler,
+    @Throws(Exception::class) fun `resolveInput`(`input`: kotlin.String): ResolvedInput {
+            return FfiConverterTypeResolvedInput.lift(
+    uniffiRustCallWithError(Exception) { _status ->
+    UniffiLib.INSTANCE.uniffi_glsdk_fn_func_resolve_input(
+        FfiConverterString.lower(`input`),_status)
+}
     )
     }
+    
 
         /**
          * Change the log filter at runtime without reinstalling the listener.

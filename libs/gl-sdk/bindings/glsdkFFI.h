@@ -437,6 +437,16 @@ RustBuffer uniffi_glsdk_fn_method_node_lnurl_withdraw(void*_Nonnull ptr, RustBuf
 RustBuffer uniffi_glsdk_fn_method_node_node_state(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_BALANCE_STATE
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_BALANCE_STATE
+RustBuffer uniffi_glsdk_fn_method_node_onchain_balance_state(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_FEE_RATES
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_FEE_RATES
+RustBuffer uniffi_glsdk_fn_method_node_onchain_fee_rates(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_RECEIVE
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_RECEIVE
 RustBuffer uniffi_glsdk_fn_method_node_onchain_receive(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -444,7 +454,12 @@ RustBuffer uniffi_glsdk_fn_method_node_onchain_receive(void*_Nonnull ptr, RustCa
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_SEND
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_ONCHAIN_SEND
-RustBuffer uniffi_glsdk_fn_method_node_onchain_send(void*_Nonnull ptr, RustBuffer destination, RustBuffer amount_or_all, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_glsdk_fn_method_node_onchain_send(void*_Nonnull ptr, RustBuffer destination, RustBuffer amount_or_all, RustBuffer sat_per_vbyte, RustBuffer utxos, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_PREPARE_ONCHAIN_SEND
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_PREPARE_ONCHAIN_SEND
+RustBuffer uniffi_glsdk_fn_method_node_prepare_onchain_send(void*_Nonnull ptr, RustBuffer destination, RustBuffer amount_or_all, RustBuffer sat_per_vbyte, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_RECEIVE
@@ -604,7 +619,7 @@ RustBuffer uniffi_glsdk_fn_func_parse_input(RustBuffer input, RustCallStatus *_N
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_FUNC_RESOLVE_INPUT
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_FUNC_RESOLVE_INPUT
-uint64_t uniffi_glsdk_fn_func_resolve_input(RustBuffer input
+RustBuffer uniffi_glsdk_fn_func_resolve_input(RustBuffer input, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_FUNC_SET_LOG_LEVEL
@@ -1029,6 +1044,18 @@ uint16_t uniffi_glsdk_checksum_method_node_node_state(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_BALANCE_STATE
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_BALANCE_STATE
+uint16_t uniffi_glsdk_checksum_method_node_onchain_balance_state(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_FEE_RATES
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_FEE_RATES
+uint16_t uniffi_glsdk_checksum_method_node_onchain_fee_rates(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_RECEIVE
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_RECEIVE
 uint16_t uniffi_glsdk_checksum_method_node_onchain_receive(void
@@ -1038,6 +1065,12 @@ uint16_t uniffi_glsdk_checksum_method_node_onchain_receive(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_SEND
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_ONCHAIN_SEND
 uint16_t uniffi_glsdk_checksum_method_node_onchain_send(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_PREPARE_ONCHAIN_SEND
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODE_PREPARE_ONCHAIN_SEND
+uint16_t uniffi_glsdk_checksum_method_node_prepare_onchain_send(void
     
 );
 #endif

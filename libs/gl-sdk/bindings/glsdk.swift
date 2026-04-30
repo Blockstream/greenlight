@@ -1246,6 +1246,43 @@ public protocol NodeProtocol: AnyObject, Sendable {
     func nodeState() throws  -> NodeState
     
     /**
+     * Classify the on-chain wallet for the withdraw entry-point UI.
+     *
+     * Runs three RPCs concurrently:
+     * * `list_funds` — current confirmed/unconfirmed/immature on-chain
+     * balances.
+     * * `list_peer_channels` — pending channel-close payouts that
+     * haven't yet hit the wallet.
+     * * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+     * non-locking probe whose response tells us **exactly** how
+     * much CLN will carve as the anchor-channel emergency reserve
+     * for this specific node, no client-side guessing required.
+     * The carved amount is computed from the response as
+     * `total_inputs − excess − fee`, which is identical to what
+     * CLN would carve on a real broadcast.
+     *
+     * Cheaper to call than `node_state()` and answers a different
+     * question. Wallets typically call it once per render of the
+     * home screen.
+     *
+     * For the *exact* post-fee recipient amount of a withdraw, use
+     * `prepare_onchain_send`; the `withdrawable_sat` returned here
+     * is a pre-fee, reserve-aware figure for the entry-point label.
+     */
+    func onchainBalanceState() throws  -> OnchainBalanceState
+    
+    /**
+     * On-chain fee rates, in sats per virtual byte, at several
+     * confirmation targets.
+     *
+     * Sourced from the connected node's view of the network — no
+     * 3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+     * `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+     * broadcast time and should be the lower bound of any slider.
+     */
+    func onchainFeeRates() throws  -> OnchainFeeRates
+    
+    /**
      * Generate a fresh on-chain Bitcoin address for receiving funds.
      *
      * Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
@@ -1263,11 +1300,53 @@ public protocol NodeProtocol: AnyObject, Sendable {
      * - `"50000"` or `"50000sat"` — 50,000 satoshis
      * - `"50000msat"` — 50,000 millisatoshis
      * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+     * Pass `None` to let the node pick. Pass the value from a prior
+     * `prepare_onchain_send` to reproduce the previewed fee.
+     * * `utxos` — Optional pinned input set. Pass the `utxos` returned
+     * by `prepare_onchain_send` (together with the same
+     * `sat_per_vbyte`) to broadcast a transaction with the exact
+     * inputs and fee shown in the preview. Pass `None` to let the
+     * node coin-select.
      *
      * Returns the raw transaction, txid, and PSBT once broadcast.
      * The transaction is broadcast immediately — this is not a dry run.
      */
-    func onchainSend(destination: String, amountOrAll: String) throws  -> OnchainSendResponse
+    func onchainSend(destination: String, amountOrAll: String, satPerVbyte: UInt32?, utxos: [Outpoint]?) throws  -> OnchainSendResponse
+    
+    /**
+     * Preview an on-chain send without broadcasting or reserving UTXOs.
+     *
+     * Runs CLN's coin selection at the given fee rate and returns the
+     * inputs that would be spent, the fee, and the amount the recipient
+     * would receive. Safe to call repeatedly (e.g. while the user
+     * adjusts a fee slider) — nothing is locked.
+     *
+     * To broadcast with the previewed values, pass the returned
+     * `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+     * inputs at the same fee rate yield the same fee.
+     *
+     * **Use this for "Send Max" UIs.** `recipient_sat` is the only
+     * authoritative post-fee amount the destination will receive
+     * for a sweep. `NodeState.onchain_balance_msat` includes the
+     * emergency reserve and the fee — neither of which leaves the
+     * wallet with the recipient. For the entry-point button label
+     * (a pre-fee approximation that updates without an RPC), use
+     * `OnchainBalanceState::Available.withdrawable_sat`.
+     *
+     * # Arguments
+     * * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+     * * `amount_or_all` — Amount to send. Accepts:
+     * - `"50000"` or `"50000sat"` — 50,000 satoshis
+     * - `"50000msat"` — 50,000 millisatoshis
+     * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+     * `None` to use the node's "normal" priority feerate; the
+     * effective rate CLN picked is reported back in the result's
+     * `sat_per_vbyte` field, which can be passed to `onchain_send`
+     * to reproduce it.
+     */
+    func prepareOnchainSend(destination: String, amountOrAll: String, satPerVbyte: UInt32?) throws  -> PreparedOnchainSend
     
     /**
      * Receive an off-chain payment.
@@ -1556,6 +1635,53 @@ open func nodeState()throws  -> NodeState  {
 }
     
     /**
+     * Classify the on-chain wallet for the withdraw entry-point UI.
+     *
+     * Runs three RPCs concurrently:
+     * * `list_funds` — current confirmed/unconfirmed/immature on-chain
+     * balances.
+     * * `list_peer_channels` — pending channel-close payouts that
+     * haven't yet hit the wallet.
+     * * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+     * non-locking probe whose response tells us **exactly** how
+     * much CLN will carve as the anchor-channel emergency reserve
+     * for this specific node, no client-side guessing required.
+     * The carved amount is computed from the response as
+     * `total_inputs − excess − fee`, which is identical to what
+     * CLN would carve on a real broadcast.
+     *
+     * Cheaper to call than `node_state()` and answers a different
+     * question. Wallets typically call it once per render of the
+     * home screen.
+     *
+     * For the *exact* post-fee recipient amount of a withdraw, use
+     * `prepare_onchain_send`; the `withdrawable_sat` returned here
+     * is a pre-fee, reserve-aware figure for the entry-point label.
+     */
+open func onchainBalanceState()throws  -> OnchainBalanceState  {
+    return try  FfiConverterTypeOnchainBalanceState_lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_method_node_onchain_balance_state(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * On-chain fee rates, in sats per virtual byte, at several
+     * confirmation targets.
+     *
+     * Sourced from the connected node's view of the network — no
+     * 3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+     * `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+     * broadcast time and should be the lower bound of any slider.
+     */
+open func onchainFeeRates()throws  -> OnchainFeeRates  {
+    return try  FfiConverterTypeOnchainFeeRates_lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_method_node_onchain_fee_rates(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
      * Generate a fresh on-chain Bitcoin address for receiving funds.
      *
      * Returns both a bech32 (SegWit v0) and a p2tr (Taproot) address.
@@ -1578,15 +1704,67 @@ open func onchainReceive()throws  -> OnchainReceiveResponse  {
      * - `"50000"` or `"50000sat"` — 50,000 satoshis
      * - `"50000msat"` — 50,000 millisatoshis
      * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+     * Pass `None` to let the node pick. Pass the value from a prior
+     * `prepare_onchain_send` to reproduce the previewed fee.
+     * * `utxos` — Optional pinned input set. Pass the `utxos` returned
+     * by `prepare_onchain_send` (together with the same
+     * `sat_per_vbyte`) to broadcast a transaction with the exact
+     * inputs and fee shown in the preview. Pass `None` to let the
+     * node coin-select.
      *
      * Returns the raw transaction, txid, and PSBT once broadcast.
      * The transaction is broadcast immediately — this is not a dry run.
      */
-open func onchainSend(destination: String, amountOrAll: String)throws  -> OnchainSendResponse  {
+open func onchainSend(destination: String, amountOrAll: String, satPerVbyte: UInt32?, utxos: [Outpoint]?)throws  -> OnchainSendResponse  {
     return try  FfiConverterTypeOnchainSendResponse_lift(try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_glsdk_fn_method_node_onchain_send(self.uniffiClonePointer(),
         FfiConverterString.lower(destination),
-        FfiConverterString.lower(amountOrAll),$0
+        FfiConverterString.lower(amountOrAll),
+        FfiConverterOptionUInt32.lower(satPerVbyte),
+        FfiConverterOptionSequenceTypeOutpoint.lower(utxos),$0
+    )
+})
+}
+    
+    /**
+     * Preview an on-chain send without broadcasting or reserving UTXOs.
+     *
+     * Runs CLN's coin selection at the given fee rate and returns the
+     * inputs that would be spent, the fee, and the amount the recipient
+     * would receive. Safe to call repeatedly (e.g. while the user
+     * adjusts a fee slider) — nothing is locked.
+     *
+     * To broadcast with the previewed values, pass the returned
+     * `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+     * inputs at the same fee rate yield the same fee.
+     *
+     * **Use this for "Send Max" UIs.** `recipient_sat` is the only
+     * authoritative post-fee amount the destination will receive
+     * for a sweep. `NodeState.onchain_balance_msat` includes the
+     * emergency reserve and the fee — neither of which leaves the
+     * wallet with the recipient. For the entry-point button label
+     * (a pre-fee approximation that updates without an RPC), use
+     * `OnchainBalanceState::Available.withdrawable_sat`.
+     *
+     * # Arguments
+     * * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+     * * `amount_or_all` — Amount to send. Accepts:
+     * - `"50000"` or `"50000sat"` — 50,000 satoshis
+     * - `"50000msat"` — 50,000 millisatoshis
+     * - `"all"` — sweep the entire on-chain balance
+     * * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+     * `None` to use the node's "normal" priority feerate; the
+     * effective rate CLN picked is reported back in the result's
+     * `sat_per_vbyte` field, which can be passed to `onchain_send`
+     * to reproduce it.
+     */
+open func prepareOnchainSend(destination: String, amountOrAll: String, satPerVbyte: UInt32?)throws  -> PreparedOnchainSend  {
+    return try  FfiConverterTypePreparedOnchainSend_lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_method_node_prepare_onchain_send(self.uniffiClonePointer(),
+        FfiConverterString.lower(destination),
+        FfiConverterString.lower(amountOrAll),
+        FfiConverterOptionUInt32.lower(satPerVbyte),$0
     )
 })
 }
@@ -5100,6 +5278,141 @@ public func FfiConverterTypeNodeState_lower(_ value: NodeState) -> RustBuffer {
 
 
 /**
+ * On-chain fee rates in sats per virtual byte at various
+ * confirmation targets, derived from the connected node's view of
+ * network mempool conditions. Use as the basis for a fee-picker UI.
+ */
+public struct OnchainFeeRates {
+    /**
+     * Target the next block (~10 min).
+     */
+    public var nextBlockSatPerVbyte: UInt64
+    /**
+     * ~30 minute confirmation target (3 blocks).
+     */
+    public var halfHourSatPerVbyte: UInt64
+    /**
+     * ~1 hour confirmation target (6 blocks).
+     */
+    public var hourSatPerVbyte: UInt64
+    /**
+     * ~1 day confirmation target (144 blocks). Suitable for
+     * non-urgent sweeps.
+     */
+    public var daySatPerVbyte: UInt64
+    /**
+     * Network minimum relay fee. Anything below this will be
+     * rejected by mempool policy at broadcast time. Use as the
+     * lower bound of any user-facing fee slider.
+     */
+    public var minimumRelaySatPerVbyte: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Target the next block (~10 min).
+         */nextBlockSatPerVbyte: UInt64, 
+        /**
+         * ~30 minute confirmation target (3 blocks).
+         */halfHourSatPerVbyte: UInt64, 
+        /**
+         * ~1 hour confirmation target (6 blocks).
+         */hourSatPerVbyte: UInt64, 
+        /**
+         * ~1 day confirmation target (144 blocks). Suitable for
+         * non-urgent sweeps.
+         */daySatPerVbyte: UInt64, 
+        /**
+         * Network minimum relay fee. Anything below this will be
+         * rejected by mempool policy at broadcast time. Use as the
+         * lower bound of any user-facing fee slider.
+         */minimumRelaySatPerVbyte: UInt64) {
+        self.nextBlockSatPerVbyte = nextBlockSatPerVbyte
+        self.halfHourSatPerVbyte = halfHourSatPerVbyte
+        self.hourSatPerVbyte = hourSatPerVbyte
+        self.daySatPerVbyte = daySatPerVbyte
+        self.minimumRelaySatPerVbyte = minimumRelaySatPerVbyte
+    }
+}
+
+#if compiler(>=6)
+extension OnchainFeeRates: Sendable {}
+#endif
+
+
+extension OnchainFeeRates: Equatable, Hashable {
+    public static func ==(lhs: OnchainFeeRates, rhs: OnchainFeeRates) -> Bool {
+        if lhs.nextBlockSatPerVbyte != rhs.nextBlockSatPerVbyte {
+            return false
+        }
+        if lhs.halfHourSatPerVbyte != rhs.halfHourSatPerVbyte {
+            return false
+        }
+        if lhs.hourSatPerVbyte != rhs.hourSatPerVbyte {
+            return false
+        }
+        if lhs.daySatPerVbyte != rhs.daySatPerVbyte {
+            return false
+        }
+        if lhs.minimumRelaySatPerVbyte != rhs.minimumRelaySatPerVbyte {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(nextBlockSatPerVbyte)
+        hasher.combine(halfHourSatPerVbyte)
+        hasher.combine(hourSatPerVbyte)
+        hasher.combine(daySatPerVbyte)
+        hasher.combine(minimumRelaySatPerVbyte)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOnchainFeeRates: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OnchainFeeRates {
+        return
+            try OnchainFeeRates(
+                nextBlockSatPerVbyte: FfiConverterUInt64.read(from: &buf), 
+                halfHourSatPerVbyte: FfiConverterUInt64.read(from: &buf), 
+                hourSatPerVbyte: FfiConverterUInt64.read(from: &buf), 
+                daySatPerVbyte: FfiConverterUInt64.read(from: &buf), 
+                minimumRelaySatPerVbyte: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: OnchainFeeRates, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.nextBlockSatPerVbyte, into: &buf)
+        FfiConverterUInt64.write(value.halfHourSatPerVbyte, into: &buf)
+        FfiConverterUInt64.write(value.hourSatPerVbyte, into: &buf)
+        FfiConverterUInt64.write(value.daySatPerVbyte, into: &buf)
+        FfiConverterUInt64.write(value.minimumRelaySatPerVbyte, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOnchainFeeRates_lift(_ buf: RustBuffer) throws -> OnchainFeeRates {
+    return try FfiConverterTypeOnchainFeeRates.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOnchainFeeRates_lower(_ value: OnchainFeeRates) -> RustBuffer {
+    return FfiConverterTypeOnchainFeeRates.lower(value)
+}
+
+
+/**
  * A pair of on-chain addresses for receiving funds.
  */
 public struct OnchainReceiveResponse {
@@ -5280,6 +5593,91 @@ public func FfiConverterTypeOnchainSendResponse_lift(_ buf: RustBuffer) throws -
 #endif
 public func FfiConverterTypeOnchainSendResponse_lower(_ value: OnchainSendResponse) -> RustBuffer {
     return FfiConverterTypeOnchainSendResponse.lower(value)
+}
+
+
+/**
+ * A specific on-chain output, identified by its outpoint.
+ */
+public struct Outpoint {
+    /**
+     * Transaction id as lowercase hex (64 chars).
+     */
+    public var txid: String
+    /**
+     * Output index within that transaction.
+     */
+    public var vout: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Transaction id as lowercase hex (64 chars).
+         */txid: String, 
+        /**
+         * Output index within that transaction.
+         */vout: UInt32) {
+        self.txid = txid
+        self.vout = vout
+    }
+}
+
+#if compiler(>=6)
+extension Outpoint: Sendable {}
+#endif
+
+
+extension Outpoint: Equatable, Hashable {
+    public static func ==(lhs: Outpoint, rhs: Outpoint) -> Bool {
+        if lhs.txid != rhs.txid {
+            return false
+        }
+        if lhs.vout != rhs.vout {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(txid)
+        hasher.combine(vout)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOutpoint: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Outpoint {
+        return
+            try Outpoint(
+                txid: FfiConverterString.read(from: &buf), 
+                vout: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Outpoint, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.txid, into: &buf)
+        FfiConverterUInt32.write(value.vout, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutpoint_lift(_ buf: RustBuffer) throws -> Outpoint {
+    return try FfiConverterTypeOutpoint.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOutpoint_lower(_ value: Outpoint) -> RustBuffer {
+    return FfiConverterTypeOutpoint.lower(value)
 }
 
 
@@ -6081,6 +6479,154 @@ public func FfiConverterTypePeerChannel_lift(_ buf: RustBuffer) throws -> PeerCh
 #endif
 public func FfiConverterTypePeerChannel_lower(_ value: PeerChannel) -> RustBuffer {
     return FfiConverterTypePeerChannel.lower(value)
+}
+
+
+/**
+ * Preview of an on-chain send: the inputs CLN would select at the
+ * given fee rate, the resulting fee, and the amount the recipient
+ * would receive. Inputs are NOT reserved — the wallet is free to
+ * spend them via other paths until `onchain_send` actually broadcasts.
+ *
+ * Pass `utxos` and `sat_per_vbyte` back to `onchain_send` to broadcast
+ * with identical inputs and fee.
+ *
+ * Amounts are in satoshis: on-chain transactions cannot carry sub-sat
+ * precision, so msat denomination would be misleading here.
+ */
+public struct PreparedOnchainSend {
+    /**
+     * UTXOs that would be spent, in selection order.
+     */
+    public var utxos: [Outpoint]
+    /**
+     * Sum of all input UTXO values, in satoshis.
+     */
+    public var totalInputSat: UInt64
+    /**
+     * Fee that would be paid, in satoshis.
+     */
+    public var feeSat: UInt64
+    /**
+     * Amount the recipient would receive, in satoshis.
+     * For a sweep ("all") this equals `total_input_sat - fee_sat`.
+     * For a fixed amount this equals the requested amount.
+     */
+    public var recipientSat: UInt64
+    /**
+     * Effective fee rate (sat per virtual byte) the node used to
+     * compute this preview. Equal to the caller's `sat_per_vbyte` if
+     * one was supplied; otherwise the rate the node picked at
+     * "normal" priority. Pass this back to `onchain_send` to
+     * reproduce the previewed fee.
+     */
+    public var satPerVbyte: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * UTXOs that would be spent, in selection order.
+         */utxos: [Outpoint], 
+        /**
+         * Sum of all input UTXO values, in satoshis.
+         */totalInputSat: UInt64, 
+        /**
+         * Fee that would be paid, in satoshis.
+         */feeSat: UInt64, 
+        /**
+         * Amount the recipient would receive, in satoshis.
+         * For a sweep ("all") this equals `total_input_sat - fee_sat`.
+         * For a fixed amount this equals the requested amount.
+         */recipientSat: UInt64, 
+        /**
+         * Effective fee rate (sat per virtual byte) the node used to
+         * compute this preview. Equal to the caller's `sat_per_vbyte` if
+         * one was supplied; otherwise the rate the node picked at
+         * "normal" priority. Pass this back to `onchain_send` to
+         * reproduce the previewed fee.
+         */satPerVbyte: UInt32) {
+        self.utxos = utxos
+        self.totalInputSat = totalInputSat
+        self.feeSat = feeSat
+        self.recipientSat = recipientSat
+        self.satPerVbyte = satPerVbyte
+    }
+}
+
+#if compiler(>=6)
+extension PreparedOnchainSend: Sendable {}
+#endif
+
+
+extension PreparedOnchainSend: Equatable, Hashable {
+    public static func ==(lhs: PreparedOnchainSend, rhs: PreparedOnchainSend) -> Bool {
+        if lhs.utxos != rhs.utxos {
+            return false
+        }
+        if lhs.totalInputSat != rhs.totalInputSat {
+            return false
+        }
+        if lhs.feeSat != rhs.feeSat {
+            return false
+        }
+        if lhs.recipientSat != rhs.recipientSat {
+            return false
+        }
+        if lhs.satPerVbyte != rhs.satPerVbyte {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(utxos)
+        hasher.combine(totalInputSat)
+        hasher.combine(feeSat)
+        hasher.combine(recipientSat)
+        hasher.combine(satPerVbyte)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePreparedOnchainSend: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PreparedOnchainSend {
+        return
+            try PreparedOnchainSend(
+                utxos: FfiConverterSequenceTypeOutpoint.read(from: &buf), 
+                totalInputSat: FfiConverterUInt64.read(from: &buf), 
+                feeSat: FfiConverterUInt64.read(from: &buf), 
+                recipientSat: FfiConverterUInt64.read(from: &buf), 
+                satPerVbyte: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PreparedOnchainSend, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeOutpoint.write(value.utxos, into: &buf)
+        FfiConverterUInt64.write(value.totalInputSat, into: &buf)
+        FfiConverterUInt64.write(value.feeSat, into: &buf)
+        FfiConverterUInt64.write(value.recipientSat, into: &buf)
+        FfiConverterUInt32.write(value.satPerVbyte, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePreparedOnchainSend_lift(_ buf: RustBuffer) throws -> PreparedOnchainSend {
+    return try FfiConverterTypePreparedOnchainSend.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePreparedOnchainSend_lower(_ value: PreparedOnchainSend) -> RustBuffer {
+    return FfiConverterTypePreparedOnchainSend.lower(value)
 }
 
 
@@ -7248,6 +7794,153 @@ public func FfiConverterTypeNodeEvent_lower(_ value: NodeEvent) -> RustBuffer {
 
 
 extension NodeEvent: Equatable, Hashable {}
+
+
+
+
+
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Classifies the on-chain wallet into discrete cases that a wallet
+ * UI can switch on to render the correct entry-point for the
+ * withdraw flow. Derived purely from `NodeState` — no RPC.
+ */
+
+public enum OnchainBalanceState {
+    
+    /**
+     * No funds on-chain in any form (confirmed, unconfirmed,
+     * immature, or pending channel-close payouts are all zero).
+     * Don't render a withdraw entry point.
+     */
+    case unavailable
+    /**
+     * Funds are spendable now. Render the withdraw entry point
+     * enabled with `withdrawable_sat` as the headline.
+     */
+    case available(
+        /**
+         * `onchain_balance_sat - emergency_reserve_sat`. Use as
+         * the displayed amount on the entry point.
+         */withdrawableSat: UInt64, 
+        /**
+         * Held back by CLN for anchor-channel safety; cannot be
+         * withdrawn without closing channels first.
+         */emergencyReserveSat: UInt64, 
+        /**
+         * Inbound on-chain funds not yet confirmed. Informational
+         * only — not part of `withdrawable_sat`.
+         */unconfirmedSat: UInt64
+    )
+    /**
+     * On-chain funds exist but are entirely locked as the
+     * anchor-channel emergency reserve. Render the entry point
+     * disabled with an explainer (e.g. "close channels to free
+     * these funds").
+     */
+    case reserveOnly(reserveSat: UInt64
+    )
+    /**
+     * Inbound on-chain funds are awaiting confirmation. Render a
+     * "pending" indicator instead of an enabled withdraw button.
+     */
+    case pendingConfirmation(unconfirmedSat: UInt64
+    )
+    /**
+     * Funds exist as CSV-timelocked outputs from a recent channel
+     * close and can't be spent until the relative locktime
+     * expires. Render the entry point disabled with a
+     * "channel closing" explainer.
+     */
+    case immature(immatureSat: UInt64
+    )
+}
+
+
+#if compiler(>=6)
+extension OnchainBalanceState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeOnchainBalanceState: FfiConverterRustBuffer {
+    typealias SwiftType = OnchainBalanceState
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OnchainBalanceState {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .unavailable
+        
+        case 2: return .available(withdrawableSat: try FfiConverterUInt64.read(from: &buf), emergencyReserveSat: try FfiConverterUInt64.read(from: &buf), unconfirmedSat: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 3: return .reserveOnly(reserveSat: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 4: return .pendingConfirmation(unconfirmedSat: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        case 5: return .immature(immatureSat: try FfiConverterUInt64.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: OnchainBalanceState, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .unavailable:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .available(withdrawableSat,emergencyReserveSat,unconfirmedSat):
+            writeInt(&buf, Int32(2))
+            FfiConverterUInt64.write(withdrawableSat, into: &buf)
+            FfiConverterUInt64.write(emergencyReserveSat, into: &buf)
+            FfiConverterUInt64.write(unconfirmedSat, into: &buf)
+            
+        
+        case let .reserveOnly(reserveSat):
+            writeInt(&buf, Int32(3))
+            FfiConverterUInt64.write(reserveSat, into: &buf)
+            
+        
+        case let .pendingConfirmation(unconfirmedSat):
+            writeInt(&buf, Int32(4))
+            FfiConverterUInt64.write(unconfirmedSat, into: &buf)
+            
+        
+        case let .immature(immatureSat):
+            writeInt(&buf, Int32(5))
+            FfiConverterUInt64.write(immatureSat, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOnchainBalanceState_lift(_ buf: RustBuffer) throws -> OnchainBalanceState {
+    return try FfiConverterTypeOnchainBalanceState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeOnchainBalanceState_lower(_ value: OnchainBalanceState) -> RustBuffer {
+    return FfiConverterTypeOnchainBalanceState.lower(value)
+}
+
+
+extension OnchainBalanceState: Equatable, Hashable {}
 
 
 
@@ -8461,6 +9154,30 @@ fileprivate struct FfiConverterOptionTypeSuccessActionProcessed: FfiConverterRus
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceTypeOutpoint: FfiConverterRustBuffer {
+    typealias SwiftType = [Outpoint]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeOutpoint.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeOutpoint.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceTypePaymentTypeFilter: FfiConverterRustBuffer {
     typealias SwiftType = [PaymentTypeFilter]?
 
@@ -8577,6 +9294,31 @@ fileprivate struct FfiConverterSequenceTypeInvoice: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeInvoice.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeOutpoint: FfiConverterRustBuffer {
+    typealias SwiftType = [Outpoint]
+
+    public static func write(_ value: [Outpoint], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOutpoint.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Outpoint] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Outpoint]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOutpoint.read(from: &buf))
         }
         return seq
     }
@@ -8732,52 +9474,6 @@ fileprivate struct FfiConverterDictionaryStringString: FfiConverterRustBuffer {
         return dict
     }
 }
-private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
-private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
-
-fileprivate let uniffiContinuationHandleMap = UniffiHandleMap<UnsafeContinuation<Int8, Never>>()
-
-fileprivate func uniffiRustCallAsync<F, T>(
-    rustFutureFunc: () -> UInt64,
-    pollFunc: (UInt64, @escaping UniffiRustFutureContinuationCallback, UInt64) -> (),
-    completeFunc: (UInt64, UnsafeMutablePointer<RustCallStatus>) -> F,
-    freeFunc: (UInt64) -> (),
-    liftFunc: (F) throws -> T,
-    errorHandler: ((RustBuffer) throws -> Swift.Error)?
-) async throws -> T {
-    // Make sure to call the ensure init function since future creation doesn't have a
-    // RustCallStatus param, so doesn't use makeRustCall()
-    uniffiEnsureGlsdkInitialized()
-    let rustFuture = rustFutureFunc()
-    defer {
-        freeFunc(rustFuture)
-    }
-    var pollResult: Int8;
-    repeat {
-        pollResult = await withUnsafeContinuation {
-            pollFunc(
-                rustFuture,
-                uniffiFutureContinuationCallback,
-                uniffiContinuationHandleMap.insert(obj: $0)
-            )
-        }
-    } while pollResult != UNIFFI_RUST_FUTURE_POLL_READY
-
-    return try liftFunc(makeRustCall(
-        { completeFunc(rustFuture, $0) },
-        errorHandler: errorHandler
-    ))
-}
-
-// Callback handlers for an async calls.  These are invoked by Rust when the future is ready.  They
-// lift the return value or error and resume the suspended function.
-fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: Int8) {
-    if let continuation = try? uniffiContinuationHandleMap.remove(handle: handle) {
-        continuation.resume(returning: pollResult)
-    } else {
-        print("uniffiFutureContinuationCallback invalid handle")
-    }
-}
 /**
  * Synchronously classify the input. **No HTTP, no I/O.**
  *
@@ -8800,7 +9496,7 @@ public func parseInput(input: String)throws  -> ParsedInput  {
 })
 }
 /**
- * Asynchronously classify and resolve the input.
+ * Classify and resolve the input.
  *
  * Internally calls `parse_input` for offline classification, then
  * for LNURL bech32 strings and Lightning Addresses performs the
@@ -8809,20 +9505,22 @@ public func parseInput(input: String)throws  -> ParsedInput  {
  * immediately without I/O.
  *
  * Strips `lightning:` / `LIGHTNING:` prefixes automatically.
+ *
+ * # Blocking
+ *
+ * This function blocks the calling thread while any network I/O
+ * completes. The SDK exposes a **synchronous-only** public API so
+ * that every language binding (Python, Kotlin, Swift, Ruby, C++)
+ * works without requiring an async runtime on the caller side.
+ * Async work is executed internally on a shared Tokio runtime
+ * managed by the SDK.
  */
-public func resolveInput(input: String)async throws  -> ResolvedInput  {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_glsdk_fn_func_resolve_input(FfiConverterString.lower(input)
-                )
-            },
-            pollFunc: ffi_glsdk_rust_future_poll_rust_buffer,
-            completeFunc: ffi_glsdk_rust_future_complete_rust_buffer,
-            freeFunc: ffi_glsdk_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypeResolvedInput_lift,
-            errorHandler: FfiConverterTypeError_lift
-        )
+public func resolveInput(input: String)throws  -> ResolvedInput  {
+    return try  FfiConverterTypeResolvedInput_lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_func_resolve_input(
+        FfiConverterString.lower(input),$0
+    )
+})
 }
 /**
  * Change the log filter at runtime without reinstalling the listener.
@@ -8868,7 +9566,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_func_parse_input() != 49187) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_func_resolve_input() != 24844) {
+    if (uniffi_glsdk_checksum_func_resolve_input() != 54924) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_func_set_log_level() != 52328) {
@@ -8931,10 +9629,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_method_node_node_state() != 41833) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_glsdk_checksum_method_node_onchain_balance_state() != 52276) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_glsdk_checksum_method_node_onchain_fee_rates() != 57819) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_glsdk_checksum_method_node_onchain_receive() != 46432) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_method_node_onchain_send() != 12590) {
+    if (uniffi_glsdk_checksum_method_node_onchain_send() != 63330) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_glsdk_checksum_method_node_prepare_onchain_send() != 37850) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_node_receive() != 39761) {
