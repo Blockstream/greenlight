@@ -34,9 +34,22 @@ picky-asn1-der = "0.4"
 pin-project = "1.1.5"
 prost = "0.12"
 prost-derive = "0.12"
+# `rustls-tls-webpki-roots` compiles Mozilla's CA bundle into the
+# binary. Identical TLS behaviour on every platform — Android, iOS,
+# desktop — with no runtime OS root-store discovery. We previously
+# used `rustls-tls-native-roots`, which silently returned an empty
+# cert set on some Android variants and broke every HTTPS request
+# from `LnUrlHttpClearnetClient` with `UnknownIssuer`.
+#
+# When bumping reqwest to 0.12+, switch to `rustls-platform-verifier`
+# instead. It uses Android's `KeyStore` (via JNI), iOS's `SecTrust`,
+# and the Windows / macOS native verifiers — strictly better than
+# either webpki-roots (CA updates follow OS) or native-roots (no
+# discovery breakage). Requires reqwest >= 0.12, which we don't have
+# on this 0.11 line.
 reqwest = { version = "^0.11", features = [
     "json",
-    "rustls-tls-native-roots",
+    "rustls-tls-webpki-roots",
 ], default-features = false }
 ring = "~0.16.20"
 runeauth = "0.1"
