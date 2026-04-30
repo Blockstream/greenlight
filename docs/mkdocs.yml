@@ -83,6 +83,7 @@ nav:
     - Testserver: reference/testserver.md
     - Certificates: reference/certs.md
     - Security: reference/security.md
+    - Signer Backups: reference/signer-backups.md
     - LSP Integration: reference/lsp.md
     - Webhooks: reference/webhooks.md
     - Pairing: reference/pairing.md
