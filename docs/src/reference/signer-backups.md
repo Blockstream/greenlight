@@ -1,6 +1,6 @@
 # Signer Backups
 
-Greenlight signers can keep a local copy of the VLS signer state to enable migration to a self-hosted node. This backup is opt-in and disabled by default. When enabled, the backup file contains the signer state plus the peer address list needed to
+Greenlight signers can keep a local copy of the VLS signer state to enable disaster recovery or migration to a self-hosted node. This backup is opt-in and disabled by default. When enabled, the backup file contains the signer state plus the peer address list needed to
 build channel recovery data.
 
 ## Enable backups
