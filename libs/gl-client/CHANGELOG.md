@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
-## [0.4.1] - 2026-04-30
+## [0.5.0] - 2026-05-01
 
 ### Added
 
@@ -55,5 +55,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Addressed a deprecation warning in gl-testing regarding `PROTOCOL_TLS` being renamed to `PROTOCOL_TLS_SERVER`
 - Fixed initial VLS state not being persisted to the tower (nodelet)
 
-[0.4.1]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.4.0...gl-client-v0.4.1
+[0.5.0]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.4.0...gl-client-v0.5.0
 [0.4.0]: https://github.com/Blockstream/greenlight/compare/gl-client-0.3.2...gl-client-v0.4.0

@@ -1,6 +1,6 @@
 [package]
 name = "gl-sdk-node"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 
@@ -13,7 +13,7 @@ napi = { version = "2", features = ["async", "tokio_rt"] }
 napi-derive = "2"
 
 # Use local gl-sdk (library name is 'glsdk')
-glsdk = { path = "../gl-sdk", package = "gl-sdk" }
+glsdk = { version = "0.3.0", path = "../gl-sdk", package = "gl-sdk" }
 
 # Additional dependencies that gl-sdk uses
 tokio = { version = "1", features = ["full"] }

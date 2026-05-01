@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
-## [0.2.1] - 2026-04-30
+## [0.3.0] - 2026-05-01
 
 ### Added
 
@@ -62,6 +62,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Updated gl-client dependency to support CLN v25.12 signer.
 
-[0.2.1]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.2.0...gl-sdk-v0.2.1
+[0.3.0]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.2.0...gl-sdk-v0.3.0
 [0.2.0]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.1.1...gl-sdk-v0.2.0
 [0.1.1]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-v0.1.1
