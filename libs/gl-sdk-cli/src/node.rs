@@ -128,7 +128,7 @@ fn onchain_receive(node: &glsdk::Node) -> Result<()> {
 }
 
 fn onchain_send(node: &glsdk::Node, destination: String, amount_or_all: String) -> Result<()> {
-    let res = node.onchain_send(destination, amount_or_all)?;
+    let res = node.onchain_send(destination, amount_or_all, None, None)?;
     output::print_json(&OnchainSendOutput::from(res));
     Ok(())
 }

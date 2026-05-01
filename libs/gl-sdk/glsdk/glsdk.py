@@ -461,15 +461,7 @@ def _uniffi_check_contract_api_version(lib):
         raise InternalError("UniFFI contract version mismatch: try cleaning and rebuilding your project")
 
 def _uniffi_check_api_checksums(lib):
-    if lib.uniffi_glsdk_checksum_func_connect() != 43555:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_parse_input() != 49187:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_recover() != 39257:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_register() != 39628:
-        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_func_register_or_recover() != 65070:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_func_resolve_input() != 24844:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -513,9 +505,15 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_node_state() != 41833:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_onchain_balance_state() != 52276:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_onchain_fee_rates() != 57819:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_onchain_receive() != 46432:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 12590:
+    if lib.uniffi_glsdk_checksum_method_node_onchain_send() != 63330:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_node_prepare_onchain_send() != 37850:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_receive() != 39761:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -524,6 +522,16 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_method_node_stop() != 20186:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_stream_node_events() != 5933:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_connect() != 47474:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_recover() != 46087:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_register() != 49580:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover() != 5543:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener() != 56969:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -545,7 +553,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_developercert_new() != 57793:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_constructor_node_new() != 7003:
+    if lib.uniffi_glsdk_checksum_constructor_nodebuilder_new() != 34740:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_scheduler_new() != 15239:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -554,6 +562,8 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_loglistener_on_log() != 34844:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event() != 17790:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
 
 # A ctypes library to expose the extern-C FFI definitions.
@@ -664,9 +674,17 @@ _UNIFFI_FOREIGN_FUTURE_COMPLETE_VOID = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_Un
 _UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
+_UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0 = ctypes.CFUNCTYPE(None,ctypes.c_uint64,_UniffiRustBuffer,ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
 class _UniffiVTableCallbackInterfaceLogListener(ctypes.Structure):
     _fields_ = [
         ("on_log", _UNIFFI_CALLBACK_INTERFACE_LOG_LISTENER_METHOD0),
+        ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
+    ]
+class _UniffiVTableCallbackInterfaceNodeEventListener(ctypes.Structure):
+    _fields_ = [
+        ("on_event", _UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0),
         ("uniffi_free", _UNIFFI_CALLBACK_INTERFACE_FREE),
     ]
 _UniffiLib.uniffi_glsdk_fn_clone_config.argtypes = (
@@ -761,11 +779,6 @@ _UniffiLib.uniffi_glsdk_fn_free_node.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_free_node.restype = None
-_UniffiLib.uniffi_glsdk_fn_constructor_node_new.argtypes = (
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_constructor_node_new.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_method_node_credentials.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -847,6 +860,16 @@ _UniffiLib.uniffi_glsdk_fn_method_node_node_state.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_node_state.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_balance_state.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_balance_state.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_fee_rates.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_onchain_fee_rates.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_onchain_receive.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -856,9 +879,19 @@ _UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_onchain_send.restype = _UniffiRustBuffer
+_UniffiLib.uniffi_glsdk_fn_method_node_prepare_onchain_send.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_node_prepare_onchain_send.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_receive.argtypes = (
     ctypes.c_void_p,
     _UniffiRustBuffer,
@@ -884,6 +917,54 @@ _UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_node_stream_node_events.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_free_nodebuilder.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_free_nodebuilder.restype = None
+_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new.argtypes = (
+    ctypes.c_void_p,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_uint64,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_nodeeventstream.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -973,38 +1054,15 @@ _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.argtypes = (
     ctypes.POINTER(_UniffiVTableCallbackInterfaceLogListener),
 )
 _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_loglistener.restype = None
-_UniffiLib.uniffi_glsdk_fn_func_connect.argtypes = (
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
+_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener.argtypes = (
+    ctypes.POINTER(_UniffiVTableCallbackInterfaceNodeEventListener),
 )
-_UniffiLib.uniffi_glsdk_fn_func_connect.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener.restype = None
 _UniffiLib.uniffi_glsdk_fn_func_parse_input.argtypes = (
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_func_parse_input.restype = _UniffiRustBuffer
-_UniffiLib.uniffi_glsdk_fn_func_recover.argtypes = (
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_func_recover.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_func_register.argtypes = (
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_func_register.restype = ctypes.c_void_p
-_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.argtypes = (
-    _UniffiRustBuffer,
-    _UniffiRustBuffer,
-    ctypes.c_void_p,
-    ctypes.POINTER(_UniffiRustCallStatus),
-)
-_UniffiLib.uniffi_glsdk_fn_func_register_or_recover.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_func_resolve_input.argtypes = (
     _UniffiRustBuffer,
 )
@@ -1288,21 +1346,9 @@ _UniffiLib.ffi_glsdk_rust_future_complete_void.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.ffi_glsdk_rust_future_complete_void.restype = None
-_UniffiLib.uniffi_glsdk_checksum_func_connect.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_connect.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_parse_input.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_parse_input.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_recover.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_recover.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_register.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_register.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.argtypes = (
-)
-_UniffiLib.uniffi_glsdk_checksum_func_register_or_recover.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_func_resolve_input.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_func_resolve_input.restype = ctypes.c_uint16
@@ -1366,12 +1412,21 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_lnurl_withdraw.restype = ctypes.c_u
 _UniffiLib.uniffi_glsdk_checksum_method_node_node_state.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_node_state.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_balance_state.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_balance_state.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_fee_rates.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_onchain_fee_rates.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_receive.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_send.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_onchain_send.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_node_prepare_onchain_send.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_node_prepare_onchain_send.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_receive.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_receive.restype = ctypes.c_uint16
@@ -1384,6 +1439,21 @@ _UniffiLib.uniffi_glsdk_checksum_method_node_stop.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_node_stream_node_events.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_connect.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_connect.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_register_or_recover.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.restype = ctypes.c_uint16
@@ -1414,9 +1484,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_credentials_load.restype = ctypes.c
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_developercert_new.restype = ctypes.c_uint16
-_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.argtypes = (
+_UniffiLib.uniffi_glsdk_checksum_constructor_nodebuilder_new.argtypes = (
 )
-_UniffiLib.uniffi_glsdk_checksum_constructor_node_new.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_nodebuilder_new.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_scheduler_new.restype = ctypes.c_uint16
@@ -1429,6 +1499,9 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.restype = ctyp
 _UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_nodeeventlistener_on_event.restype = ctypes.c_uint16
 _UniffiLib.ffi_glsdk_uniffi_contract_version.argtypes = (
 )
 _UniffiLib.ffi_glsdk_uniffi_contract_version.restype = ctypes.c_uint32
@@ -1568,6 +1641,8 @@ class _UniffiConverterBytes(_UniffiConverterRustBuffer):
     def write(value, buf):
         buf.write_i32(len(value))
         buf.write(value)
+
+
 
 
 
@@ -3241,6 +3316,92 @@ class _UniffiConverterTypeNodeState(_UniffiConverterRustBuffer):
         _UniffiConverterUInt64.write(value.spendable_balance_msat, buf)
 
 
+class OnchainFeeRates:
+    """
+    On-chain fee rates in sats per virtual byte at various
+    confirmation targets, derived from the connected node's view of
+    network mempool conditions. Use as the basis for a fee-picker UI.
+    """
+
+    next_block_sat_per_vbyte: "int"
+    """
+    Target the next block (~10 min).
+    """
+
+    half_hour_sat_per_vbyte: "int"
+    """
+    ~30 minute confirmation target (3 blocks).
+    """
+
+    hour_sat_per_vbyte: "int"
+    """
+    ~1 hour confirmation target (6 blocks).
+    """
+
+    day_sat_per_vbyte: "int"
+    """
+    ~1 day confirmation target (144 blocks). Suitable for
+    non-urgent sweeps.
+    """
+
+    minimum_relay_sat_per_vbyte: "int"
+    """
+    Network minimum relay fee. Anything below this will be
+    rejected by mempool policy at broadcast time. Use as the
+    lower bound of any user-facing fee slider.
+    """
+
+    def __init__(self, *, next_block_sat_per_vbyte: "int", half_hour_sat_per_vbyte: "int", hour_sat_per_vbyte: "int", day_sat_per_vbyte: "int", minimum_relay_sat_per_vbyte: "int"):
+        self.next_block_sat_per_vbyte = next_block_sat_per_vbyte
+        self.half_hour_sat_per_vbyte = half_hour_sat_per_vbyte
+        self.hour_sat_per_vbyte = hour_sat_per_vbyte
+        self.day_sat_per_vbyte = day_sat_per_vbyte
+        self.minimum_relay_sat_per_vbyte = minimum_relay_sat_per_vbyte
+
+    def __str__(self):
+        return "OnchainFeeRates(next_block_sat_per_vbyte={}, half_hour_sat_per_vbyte={}, hour_sat_per_vbyte={}, day_sat_per_vbyte={}, minimum_relay_sat_per_vbyte={})".format(self.next_block_sat_per_vbyte, self.half_hour_sat_per_vbyte, self.hour_sat_per_vbyte, self.day_sat_per_vbyte, self.minimum_relay_sat_per_vbyte)
+
+    def __eq__(self, other):
+        if self.next_block_sat_per_vbyte != other.next_block_sat_per_vbyte:
+            return False
+        if self.half_hour_sat_per_vbyte != other.half_hour_sat_per_vbyte:
+            return False
+        if self.hour_sat_per_vbyte != other.hour_sat_per_vbyte:
+            return False
+        if self.day_sat_per_vbyte != other.day_sat_per_vbyte:
+            return False
+        if self.minimum_relay_sat_per_vbyte != other.minimum_relay_sat_per_vbyte:
+            return False
+        return True
+
+class _UniffiConverterTypeOnchainFeeRates(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return OnchainFeeRates(
+            next_block_sat_per_vbyte=_UniffiConverterUInt64.read(buf),
+            half_hour_sat_per_vbyte=_UniffiConverterUInt64.read(buf),
+            hour_sat_per_vbyte=_UniffiConverterUInt64.read(buf),
+            day_sat_per_vbyte=_UniffiConverterUInt64.read(buf),
+            minimum_relay_sat_per_vbyte=_UniffiConverterUInt64.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterUInt64.check_lower(value.next_block_sat_per_vbyte)
+        _UniffiConverterUInt64.check_lower(value.half_hour_sat_per_vbyte)
+        _UniffiConverterUInt64.check_lower(value.hour_sat_per_vbyte)
+        _UniffiConverterUInt64.check_lower(value.day_sat_per_vbyte)
+        _UniffiConverterUInt64.check_lower(value.minimum_relay_sat_per_vbyte)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterUInt64.write(value.next_block_sat_per_vbyte, buf)
+        _UniffiConverterUInt64.write(value.half_hour_sat_per_vbyte, buf)
+        _UniffiConverterUInt64.write(value.hour_sat_per_vbyte, buf)
+        _UniffiConverterUInt64.write(value.day_sat_per_vbyte, buf)
+        _UniffiConverterUInt64.write(value.minimum_relay_sat_per_vbyte, buf)
+
+
 class OnchainReceiveResponse:
     """
     A pair of on-chain addresses for receiving funds.
@@ -3346,6 +3507,54 @@ class _UniffiConverterTypeOnchainSendResponse(_UniffiConverterRustBuffer):
         _UniffiConverterBytes.write(value.tx, buf)
         _UniffiConverterString.write(value.txid, buf)
         _UniffiConverterString.write(value.psbt, buf)
+
+
+class Outpoint:
+    """
+    A specific on-chain output, identified by its outpoint.
+    """
+
+    txid: "str"
+    """
+    Transaction id as lowercase hex (64 chars).
+    """
+
+    vout: "int"
+    """
+    Output index within that transaction.
+    """
+
+    def __init__(self, *, txid: "str", vout: "int"):
+        self.txid = txid
+        self.vout = vout
+
+    def __str__(self):
+        return "Outpoint(txid={}, vout={})".format(self.txid, self.vout)
+
+    def __eq__(self, other):
+        if self.txid != other.txid:
+            return False
+        if self.vout != other.vout:
+            return False
+        return True
+
+class _UniffiConverterTypeOutpoint(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return Outpoint(
+            txid=_UniffiConverterString.read(buf),
+            vout=_UniffiConverterUInt32.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterString.check_lower(value.txid)
+        _UniffiConverterUInt32.check_lower(value.vout)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterString.write(value.txid, buf)
+        _UniffiConverterUInt32.write(value.vout, buf)
 
 
 class ParsedInvoice:
@@ -3889,6 +4098,102 @@ class _UniffiConverterTypePeerChannel(_UniffiConverterRustBuffer):
         _UniffiConverterOptionalUInt64.write(value.receivable_msat, buf)
         _UniffiConverterOptionalTypeChannelSide.write(value.closer, buf)
         _UniffiConverterSequenceString.write(value.status, buf)
+
+
+class PreparedOnchainSend:
+    """
+    Preview of an on-chain send: the inputs CLN would select at the
+    given fee rate, the resulting fee, and the amount the recipient
+    would receive. Inputs are NOT reserved — the wallet is free to
+    spend them via other paths until `onchain_send` actually broadcasts.
+
+    Pass `utxos` and `sat_per_vbyte` back to `onchain_send` to broadcast
+    with identical inputs and fee.
+
+    Amounts are in satoshis: on-chain transactions cannot carry sub-sat
+    precision, so msat denomination would be misleading here.
+    """
+
+    utxos: "typing.List[Outpoint]"
+    """
+    UTXOs that would be spent, in selection order.
+    """
+
+    total_input_sat: "int"
+    """
+    Sum of all input UTXO values, in satoshis.
+    """
+
+    fee_sat: "int"
+    """
+    Fee that would be paid, in satoshis.
+    """
+
+    recipient_sat: "int"
+    """
+    Amount the recipient would receive, in satoshis.
+    For a sweep ("all") this equals `total_input_sat - fee_sat`.
+    For a fixed amount this equals the requested amount.
+    """
+
+    sat_per_vbyte: "int"
+    """
+    Effective fee rate (sat per virtual byte) the node used to
+    compute this preview. Equal to the caller's `sat_per_vbyte` if
+    one was supplied; otherwise the rate the node picked at
+    "normal" priority. Pass this back to `onchain_send` to
+    reproduce the previewed fee.
+    """
+
+    def __init__(self, *, utxos: "typing.List[Outpoint]", total_input_sat: "int", fee_sat: "int", recipient_sat: "int", sat_per_vbyte: "int"):
+        self.utxos = utxos
+        self.total_input_sat = total_input_sat
+        self.fee_sat = fee_sat
+        self.recipient_sat = recipient_sat
+        self.sat_per_vbyte = sat_per_vbyte
+
+    def __str__(self):
+        return "PreparedOnchainSend(utxos={}, total_input_sat={}, fee_sat={}, recipient_sat={}, sat_per_vbyte={})".format(self.utxos, self.total_input_sat, self.fee_sat, self.recipient_sat, self.sat_per_vbyte)
+
+    def __eq__(self, other):
+        if self.utxos != other.utxos:
+            return False
+        if self.total_input_sat != other.total_input_sat:
+            return False
+        if self.fee_sat != other.fee_sat:
+            return False
+        if self.recipient_sat != other.recipient_sat:
+            return False
+        if self.sat_per_vbyte != other.sat_per_vbyte:
+            return False
+        return True
+
+class _UniffiConverterTypePreparedOnchainSend(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return PreparedOnchainSend(
+            utxos=_UniffiConverterSequenceTypeOutpoint.read(buf),
+            total_input_sat=_UniffiConverterUInt64.read(buf),
+            fee_sat=_UniffiConverterUInt64.read(buf),
+            recipient_sat=_UniffiConverterUInt64.read(buf),
+            sat_per_vbyte=_UniffiConverterUInt32.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterSequenceTypeOutpoint.check_lower(value.utxos)
+        _UniffiConverterUInt64.check_lower(value.total_input_sat)
+        _UniffiConverterUInt64.check_lower(value.fee_sat)
+        _UniffiConverterUInt64.check_lower(value.recipient_sat)
+        _UniffiConverterUInt32.check_lower(value.sat_per_vbyte)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterSequenceTypeOutpoint.write(value.utxos, buf)
+        _UniffiConverterUInt64.write(value.total_input_sat, buf)
+        _UniffiConverterUInt64.write(value.fee_sat, buf)
+        _UniffiConverterUInt64.write(value.recipient_sat, buf)
+        _UniffiConverterUInt32.write(value.sat_per_vbyte, buf)
 
 
 class ReceiveResponse:
@@ -4866,24 +5171,6 @@ class NodeEvent:
                 return False
             return True
     
-    class UNKNOWN:
-        """
-        An unknown event type was received. This can happen if the
-        server sends a new event type that this client doesn't know about.
-        """
-
-
-        def __init__(self,):
-            pass
-
-        def __str__(self):
-            return "NodeEvent.UNKNOWN()".format()
-
-        def __eq__(self, other):
-            if not other.is_UNKNOWN():
-                return False
-            return True
-    
     
 
     # For each variant, we have `is_NAME` and `is_name` methods for easily checking
@@ -4892,17 +5179,12 @@ class NodeEvent:
         return isinstance(self, NodeEvent.INVOICE_PAID)
     def is_invoice_paid(self) -> bool:
         return isinstance(self, NodeEvent.INVOICE_PAID)
-    def is_UNKNOWN(self) -> bool:
-        return isinstance(self, NodeEvent.UNKNOWN)
-    def is_unknown(self) -> bool:
-        return isinstance(self, NodeEvent.UNKNOWN)
     
 
 # Now, a little trick - we make each nested variant class be a subclass of the main
 # enum class, so that method calls and instance checks etc will work intuitively.
 # We might be able to do this a little more neatly with a metaclass, but this'll do.
 NodeEvent.INVOICE_PAID = type("NodeEvent.INVOICE_PAID", (NodeEvent.INVOICE_PAID, NodeEvent,), {})  # type: ignore
-NodeEvent.UNKNOWN = type("NodeEvent.UNKNOWN", (NodeEvent.UNKNOWN, NodeEvent,), {})  # type: ignore
 
 
 
@@ -4915,17 +5197,12 @@ class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
             return NodeEvent.INVOICE_PAID(
                 _UniffiConverterTypeInvoicePaidEvent.read(buf),
             )
-        if variant == 2:
-            return NodeEvent.UNKNOWN(
-            )
         raise InternalError("Raw enum value doesn't match any cases")
 
     @staticmethod
     def check_lower(value):
         if value.is_INVOICE_PAID():
             _UniffiConverterTypeInvoicePaidEvent.check_lower(value.details)
-            return
-        if value.is_UNKNOWN():
             return
         raise ValueError(value)
 
@@ -4934,8 +5211,257 @@ class _UniffiConverterTypeNodeEvent(_UniffiConverterRustBuffer):
         if value.is_INVOICE_PAID():
             buf.write_i32(1)
             _UniffiConverterTypeInvoicePaidEvent.write(value.details, buf)
-        if value.is_UNKNOWN():
+
+
+
+
+
+
+
+class OnchainBalanceState:
+    """
+    Classifies the on-chain wallet into discrete cases that a wallet
+    UI can switch on to render the correct entry-point for the
+    withdraw flow. Derived purely from `NodeState` — no RPC.
+    """
+
+    def __init__(self):
+        raise RuntimeError("OnchainBalanceState cannot be instantiated directly")
+
+    # Each enum variant is a nested class of the enum itself.
+    class UNAVAILABLE:
+        """
+        No funds on-chain in any form (confirmed, unconfirmed,
+        immature, or pending channel-close payouts are all zero).
+        Don't render a withdraw entry point.
+        """
+
+
+        def __init__(self,):
+            pass
+
+        def __str__(self):
+            return "OnchainBalanceState.UNAVAILABLE()".format()
+
+        def __eq__(self, other):
+            if not other.is_UNAVAILABLE():
+                return False
+            return True
+    
+    class AVAILABLE:
+        """
+        Funds are spendable now. Render the withdraw entry point
+        enabled with `withdrawable_sat` as the headline.
+        """
+
+        withdrawable_sat: "int"
+        """
+        `onchain_balance_sat - emergency_reserve_sat`. Use as
+        the displayed amount on the entry point.
+        """
+
+        emergency_reserve_sat: "int"
+        """
+        Held back by CLN for anchor-channel safety; cannot be
+        withdrawn without closing channels first.
+        """
+
+        unconfirmed_sat: "int"
+        """
+        Inbound on-chain funds not yet confirmed. Informational
+        only — not part of `withdrawable_sat`.
+        """
+
+
+        def __init__(self,withdrawable_sat: "int", emergency_reserve_sat: "int", unconfirmed_sat: "int"):
+            self.withdrawable_sat = withdrawable_sat
+            self.emergency_reserve_sat = emergency_reserve_sat
+            self.unconfirmed_sat = unconfirmed_sat
+
+        def __str__(self):
+            return "OnchainBalanceState.AVAILABLE(withdrawable_sat={}, emergency_reserve_sat={}, unconfirmed_sat={})".format(self.withdrawable_sat, self.emergency_reserve_sat, self.unconfirmed_sat)
+
+        def __eq__(self, other):
+            if not other.is_AVAILABLE():
+                return False
+            if self.withdrawable_sat != other.withdrawable_sat:
+                return False
+            if self.emergency_reserve_sat != other.emergency_reserve_sat:
+                return False
+            if self.unconfirmed_sat != other.unconfirmed_sat:
+                return False
+            return True
+    
+    class RESERVE_ONLY:
+        """
+        On-chain funds exist but are entirely locked as the
+        anchor-channel emergency reserve. Render the entry point
+        disabled with an explainer (e.g. "close channels to free
+        these funds").
+        """
+
+        reserve_sat: "int"
+
+        def __init__(self,reserve_sat: "int"):
+            self.reserve_sat = reserve_sat
+
+        def __str__(self):
+            return "OnchainBalanceState.RESERVE_ONLY(reserve_sat={})".format(self.reserve_sat)
+
+        def __eq__(self, other):
+            if not other.is_RESERVE_ONLY():
+                return False
+            if self.reserve_sat != other.reserve_sat:
+                return False
+            return True
+    
+    class PENDING_CONFIRMATION:
+        """
+        Inbound on-chain funds are awaiting confirmation. Render a
+        "pending" indicator instead of an enabled withdraw button.
+        """
+
+        unconfirmed_sat: "int"
+
+        def __init__(self,unconfirmed_sat: "int"):
+            self.unconfirmed_sat = unconfirmed_sat
+
+        def __str__(self):
+            return "OnchainBalanceState.PENDING_CONFIRMATION(unconfirmed_sat={})".format(self.unconfirmed_sat)
+
+        def __eq__(self, other):
+            if not other.is_PENDING_CONFIRMATION():
+                return False
+            if self.unconfirmed_sat != other.unconfirmed_sat:
+                return False
+            return True
+    
+    class IMMATURE:
+        """
+        Funds exist as CSV-timelocked outputs from a recent channel
+        close and can't be spent until the relative locktime
+        expires. Render the entry point disabled with a
+        "channel closing" explainer.
+        """
+
+        immature_sat: "int"
+
+        def __init__(self,immature_sat: "int"):
+            self.immature_sat = immature_sat
+
+        def __str__(self):
+            return "OnchainBalanceState.IMMATURE(immature_sat={})".format(self.immature_sat)
+
+        def __eq__(self, other):
+            if not other.is_IMMATURE():
+                return False
+            if self.immature_sat != other.immature_sat:
+                return False
+            return True
+    
+    
+
+    # For each variant, we have `is_NAME` and `is_name` methods for easily checking
+    # whether an instance is that variant.
+    def is_UNAVAILABLE(self) -> bool:
+        return isinstance(self, OnchainBalanceState.UNAVAILABLE)
+    def is_unavailable(self) -> bool:
+        return isinstance(self, OnchainBalanceState.UNAVAILABLE)
+    def is_AVAILABLE(self) -> bool:
+        return isinstance(self, OnchainBalanceState.AVAILABLE)
+    def is_available(self) -> bool:
+        return isinstance(self, OnchainBalanceState.AVAILABLE)
+    def is_RESERVE_ONLY(self) -> bool:
+        return isinstance(self, OnchainBalanceState.RESERVE_ONLY)
+    def is_reserve_only(self) -> bool:
+        return isinstance(self, OnchainBalanceState.RESERVE_ONLY)
+    def is_PENDING_CONFIRMATION(self) -> bool:
+        return isinstance(self, OnchainBalanceState.PENDING_CONFIRMATION)
+    def is_pending_confirmation(self) -> bool:
+        return isinstance(self, OnchainBalanceState.PENDING_CONFIRMATION)
+    def is_IMMATURE(self) -> bool:
+        return isinstance(self, OnchainBalanceState.IMMATURE)
+    def is_immature(self) -> bool:
+        return isinstance(self, OnchainBalanceState.IMMATURE)
+    
+
+# Now, a little trick - we make each nested variant class be a subclass of the main
+# enum class, so that method calls and instance checks etc will work intuitively.
+# We might be able to do this a little more neatly with a metaclass, but this'll do.
+OnchainBalanceState.UNAVAILABLE = type("OnchainBalanceState.UNAVAILABLE", (OnchainBalanceState.UNAVAILABLE, OnchainBalanceState,), {})  # type: ignore
+OnchainBalanceState.AVAILABLE = type("OnchainBalanceState.AVAILABLE", (OnchainBalanceState.AVAILABLE, OnchainBalanceState,), {})  # type: ignore
+OnchainBalanceState.RESERVE_ONLY = type("OnchainBalanceState.RESERVE_ONLY", (OnchainBalanceState.RESERVE_ONLY, OnchainBalanceState,), {})  # type: ignore
+OnchainBalanceState.PENDING_CONFIRMATION = type("OnchainBalanceState.PENDING_CONFIRMATION", (OnchainBalanceState.PENDING_CONFIRMATION, OnchainBalanceState,), {})  # type: ignore
+OnchainBalanceState.IMMATURE = type("OnchainBalanceState.IMMATURE", (OnchainBalanceState.IMMATURE, OnchainBalanceState,), {})  # type: ignore
+
+
+
+
+class _UniffiConverterTypeOnchainBalanceState(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return OnchainBalanceState.UNAVAILABLE(
+            )
+        if variant == 2:
+            return OnchainBalanceState.AVAILABLE(
+                _UniffiConverterUInt64.read(buf),
+                _UniffiConverterUInt64.read(buf),
+                _UniffiConverterUInt64.read(buf),
+            )
+        if variant == 3:
+            return OnchainBalanceState.RESERVE_ONLY(
+                _UniffiConverterUInt64.read(buf),
+            )
+        if variant == 4:
+            return OnchainBalanceState.PENDING_CONFIRMATION(
+                _UniffiConverterUInt64.read(buf),
+            )
+        if variant == 5:
+            return OnchainBalanceState.IMMATURE(
+                _UniffiConverterUInt64.read(buf),
+            )
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value.is_UNAVAILABLE():
+            return
+        if value.is_AVAILABLE():
+            _UniffiConverterUInt64.check_lower(value.withdrawable_sat)
+            _UniffiConverterUInt64.check_lower(value.emergency_reserve_sat)
+            _UniffiConverterUInt64.check_lower(value.unconfirmed_sat)
+            return
+        if value.is_RESERVE_ONLY():
+            _UniffiConverterUInt64.check_lower(value.reserve_sat)
+            return
+        if value.is_PENDING_CONFIRMATION():
+            _UniffiConverterUInt64.check_lower(value.unconfirmed_sat)
+            return
+        if value.is_IMMATURE():
+            _UniffiConverterUInt64.check_lower(value.immature_sat)
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value.is_UNAVAILABLE():
+            buf.write_i32(1)
+        if value.is_AVAILABLE():
             buf.write_i32(2)
+            _UniffiConverterUInt64.write(value.withdrawable_sat, buf)
+            _UniffiConverterUInt64.write(value.emergency_reserve_sat, buf)
+            _UniffiConverterUInt64.write(value.unconfirmed_sat, buf)
+        if value.is_RESERVE_ONLY():
+            buf.write_i32(3)
+            _UniffiConverterUInt64.write(value.reserve_sat, buf)
+        if value.is_PENDING_CONFIRMATION():
+            buf.write_i32(4)
+            _UniffiConverterUInt64.write(value.unconfirmed_sat, buf)
+        if value.is_IMMATURE():
+            buf.write_i32(5)
+            _UniffiConverterUInt64.write(value.immature_sat, buf)
 
 
 
@@ -5755,6 +6281,68 @@ _UniffiConverterTypeLogListener = _UniffiCallbackInterfaceFfiConverter()
 
 
 
+
+class NodeEventListener(typing.Protocol):
+    """
+    Callback interface for receiving node events.
+
+    `on_event` is invoked from the SDK's internal event-dispatch task.
+    Implementations should be cheap and non-blocking; to update UI,
+    dispatch to the main thread from inside the handler.
+
+    Installed via `NodeBuilder::with_event_listener(...)` so events
+    emitted during node bring-up are captured. The polling-style
+    `Node::stream_node_events()` API is still available for callers
+    that prefer to drive events themselves.
+    """
+
+    def on_event(self, event: "NodeEvent"):
+        raise NotImplementedError
+
+
+# Put all the bits inside a class to keep the top-level namespace clean
+class _UniffiTraitImplNodeEventListener:
+    # For each method, generate a callback function to pass to Rust
+
+    @_UNIFFI_CALLBACK_INTERFACE_NODE_EVENT_LISTENER_METHOD0
+    def on_event(
+            uniffi_handle,
+            event,
+            uniffi_out_return,
+            uniffi_call_status_ptr,
+        ):
+        uniffi_obj = _UniffiConverterTypeNodeEventListener._handle_map.get(uniffi_handle)
+        def make_call():
+            args = (_UniffiConverterTypeNodeEvent.lift(event), )
+            method = uniffi_obj.on_event
+            return method(*args)
+
+        
+        write_return_value = lambda v: None
+        _uniffi_trait_interface_call(
+                uniffi_call_status_ptr.contents,
+                make_call,
+                write_return_value,
+        )
+
+    @_UNIFFI_CALLBACK_INTERFACE_FREE
+    def _uniffi_free(uniffi_handle):
+        _UniffiConverterTypeNodeEventListener._handle_map.remove(uniffi_handle)
+
+    # Generate the FFI VTable.  This has a field for each callback interface method.
+    _uniffi_vtable = _UniffiVTableCallbackInterfaceNodeEventListener(
+        on_event,
+        _uniffi_free
+    )
+    # Send Rust a pointer to the VTable.  Note: this means we need to keep the struct alive forever,
+    # or else bad things will happen when Rust tries to access it.
+    _UniffiLib.uniffi_glsdk_fn_init_callback_vtable_nodeeventlistener(ctypes.byref(_uniffi_vtable))
+
+# The _UniffiConverter which transforms the Callbacks in to Handles to pass to Rust.
+_UniffiConverterTypeNodeEventListener = _UniffiCallbackInterfaceFfiConverter()
+
+
+
 class _UniffiConverterOptionalUInt32(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -6025,6 +6613,33 @@ class _UniffiConverterOptionalTypeSuccessActionProcessed(_UniffiConverterRustBuf
 
 
 
+class _UniffiConverterOptionalSequenceTypeOutpoint(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        if value is not None:
+            _UniffiConverterSequenceTypeOutpoint.check_lower(value)
+
+    @classmethod
+    def write(cls, value, buf):
+        if value is None:
+            buf.write_u8(0)
+            return
+
+        buf.write_u8(1)
+        _UniffiConverterSequenceTypeOutpoint.write(value, buf)
+
+    @classmethod
+    def read(cls, buf):
+        flag = buf.read_u8()
+        if flag == 0:
+            return None
+        elif flag == 1:
+            return _UniffiConverterSequenceTypeOutpoint.read(buf)
+        else:
+            raise InternalError("Unexpected flag byte for optional type")
+
+
+
 class _UniffiConverterOptionalSequenceTypePaymentTypeFilter(_UniffiConverterRustBuffer):
     @classmethod
     def check_lower(cls, value):
@@ -6148,6 +6763,31 @@ class _UniffiConverterSequenceTypeInvoice(_UniffiConverterRustBuffer):
 
         return [
             _UniffiConverterTypeInvoice.read(buf) for i in range(count)
+        ]
+
+
+
+class _UniffiConverterSequenceTypeOutpoint(_UniffiConverterRustBuffer):
+    @classmethod
+    def check_lower(cls, value):
+        for item in value:
+            _UniffiConverterTypeOutpoint.check_lower(item)
+
+    @classmethod
+    def write(cls, value, buf):
+        items = len(value)
+        buf.write_i32(items)
+        for item in value:
+            _UniffiConverterTypeOutpoint.write(item, buf)
+
+    @classmethod
+    def read(cls, buf):
+        count = buf.read_i32()
+        if count < 0:
+            raise InternalError("Unexpected negative sequence length")
+
+        return [
+            _UniffiConverterTypeOutpoint.read(buf) for i in range(count)
         ]
 
 
@@ -6781,6 +7421,45 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
+    def onchain_balance_state(self, ):
+        """
+        Classify the on-chain wallet for the withdraw entry-point UI.
+
+        Runs three RPCs concurrently:
+        * `list_funds` — current confirmed/unconfirmed/immature on-chain
+        balances.
+        * `list_peer_channels` — pending channel-close payouts that
+        haven't yet hit the wallet.
+        * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+        non-locking probe whose response tells us **exactly** how
+        much CLN will carve as the anchor-channel emergency reserve
+        for this specific node, no client-side guessing required.
+        The carved amount is computed from the response as
+        `total_inputs − excess − fee`, which is identical to what
+        CLN would carve on a real broadcast.
+
+        Cheaper to call than `node_state()` and answers a different
+        question. Wallets typically call it once per render of the
+        home screen.
+
+        For the *exact* post-fee recipient amount of a withdraw, use
+        `prepare_onchain_send`; the `withdrawable_sat` returned here
+        is a pre-fee, reserve-aware figure for the entry-point label.
+        """
+
+        raise NotImplementedError
+    def onchain_fee_rates(self, ):
+        """
+        On-chain fee rates, in sats per virtual byte, at several
+        confirmation targets.
+
+        Sourced from the connected node's view of the network — no
+        3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+        `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+        broadcast time and should be the lower bound of any slider.
+        """
+
+        raise NotImplementedError
     def onchain_receive(self, ):
         """
         Generate a fresh on-chain Bitcoin address for receiving funds.
@@ -6791,7 +7470,7 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
-    def onchain_send(self, destination: "str",amount_or_all: "str"):
+    def onchain_send(self, destination: "str",amount_or_all: "str",sat_per_vbyte: "typing.Optional[int]",utxos: "typing.Optional[typing.List[Outpoint]]"):
         """
         Send bitcoin on-chain to a destination address.
 
@@ -6801,9 +7480,52 @@ class NodeProtocol(typing.Protocol):
         - `"50000"` or `"50000sat"` — 50,000 satoshis
         - `"50000msat"` — 50,000 millisatoshis
         - `"all"` — sweep the entire on-chain balance
+        * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+        Pass `None` to let the node pick. Pass the value from a prior
+        `prepare_onchain_send` to reproduce the previewed fee.
+        * `utxos` — Optional pinned input set. Pass the `utxos` returned
+        by `prepare_onchain_send` (together with the same
+        `sat_per_vbyte`) to broadcast a transaction with the exact
+        inputs and fee shown in the preview. Pass `None` to let the
+        node coin-select.
 
         Returns the raw transaction, txid, and PSBT once broadcast.
         The transaction is broadcast immediately — this is not a dry run.
+        """
+
+        raise NotImplementedError
+    def prepare_onchain_send(self, destination: "str",amount_or_all: "str",sat_per_vbyte: "typing.Optional[int]"):
+        """
+        Preview an on-chain send without broadcasting or reserving UTXOs.
+
+        Runs CLN's coin selection at the given fee rate and returns the
+        inputs that would be spent, the fee, and the amount the recipient
+        would receive. Safe to call repeatedly (e.g. while the user
+        adjusts a fee slider) — nothing is locked.
+
+        To broadcast with the previewed values, pass the returned
+        `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+        inputs at the same fee rate yield the same fee.
+
+        **Use this for "Send Max" UIs.** `recipient_sat` is the only
+        authoritative post-fee amount the destination will receive
+        for a sweep. `NodeState.onchain_balance_msat` includes the
+        emergency reserve and the fee — neither of which leaves the
+        wallet with the recipient. For the entry-point button label
+        (a pre-fee approximation that updates without an RPC), use
+        `OnchainBalanceState::Available.withdrawable_sat`.
+
+        # Arguments
+        * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+        * `amount_or_all` — Amount to send. Accepts:
+        - `"50000"` or `"50000sat"` — 50,000 satoshis
+        - `"50000msat"` — 50,000 millisatoshis
+        - `"all"` — sweep the entire on-chain balance
+        * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+        `None` to use the node's "normal" priority feerate; the
+        effective rate CLN picked is reported back in the result's
+        `sat_per_vbyte` field, which can be passed to `onchain_send`
+        to reproduce it.
         """
 
         raise NotImplementedError
@@ -6852,11 +7574,9 @@ class Node():
     """
 
     _pointer: ctypes.c_void_p
-    def __init__(self, credentials: "Credentials"):
-        _UniffiConverterTypeCredentials.check_lower(credentials)
-        
-        self._pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_node_new,
-        _UniffiConverterTypeCredentials.lower(credentials))
+    
+    def __init__(self, *args, **kwargs):
+        raise ValueError("This class has no default constructor")
 
     def __del__(self):
         # In case of partial initialization of instances.
@@ -7143,6 +7863,59 @@ class Node():
 
 
 
+    def onchain_balance_state(self, ) -> "OnchainBalanceState":
+        """
+        Classify the on-chain wallet for the withdraw entry-point UI.
+
+        Runs three RPCs concurrently:
+        * `list_funds` — current confirmed/unconfirmed/immature on-chain
+        balances.
+        * `list_peer_channels` — pending channel-close payouts that
+        haven't yet hit the wallet.
+        * `fund_psbt(satoshi=All, reserve=0, normal feerate)` — a
+        non-locking probe whose response tells us **exactly** how
+        much CLN will carve as the anchor-channel emergency reserve
+        for this specific node, no client-side guessing required.
+        The carved amount is computed from the response as
+        `total_inputs − excess − fee`, which is identical to what
+        CLN would carve on a real broadcast.
+
+        Cheaper to call than `node_state()` and answers a different
+        question. Wallets typically call it once per render of the
+        home screen.
+
+        For the *exact* post-fee recipient amount of a withdraw, use
+        `prepare_onchain_send`; the `withdrawable_sat` returned here
+        is a pre-fee, reserve-aware figure for the entry-point label.
+        """
+
+        return _UniffiConverterTypeOnchainBalanceState.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_onchain_balance_state,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
+    def onchain_fee_rates(self, ) -> "OnchainFeeRates":
+        """
+        On-chain fee rates, in sats per virtual byte, at several
+        confirmation targets.
+
+        Sourced from the connected node's view of the network — no
+        3rd-party HTTP calls. Use as the basis for a fee-picker UI;
+        `minimum_relay_sat_per_vbyte` is the relay floor enforced at
+        broadcast time and should be the lower bound of any slider.
+        """
+
+        return _UniffiConverterTypeOnchainFeeRates.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_onchain_fee_rates,self._uniffi_clone_pointer(),)
+        )
+
+
+
+
+
     def onchain_receive(self, ) -> "OnchainReceiveResponse":
         """
         Generate a fresh on-chain Bitcoin address for receiving funds.
@@ -7160,7 +7933,7 @@ class Node():
 
 
 
-    def onchain_send(self, destination: "str",amount_or_all: "str") -> "OnchainSendResponse":
+    def onchain_send(self, destination: "str",amount_or_all: "str",sat_per_vbyte: "typing.Optional[int]",utxos: "typing.Optional[typing.List[Outpoint]]") -> "OnchainSendResponse":
         """
         Send bitcoin on-chain to a destination address.
 
@@ -7170,6 +7943,14 @@ class Node():
         - `"50000"` or `"50000sat"` — 50,000 satoshis
         - `"50000msat"` — 50,000 millisatoshis
         - `"all"` — sweep the entire on-chain balance
+        * `sat_per_vbyte` — Optional fee rate in sats per virtual byte.
+        Pass `None` to let the node pick. Pass the value from a prior
+        `prepare_onchain_send` to reproduce the previewed fee.
+        * `utxos` — Optional pinned input set. Pass the `utxos` returned
+        by `prepare_onchain_send` (together with the same
+        `sat_per_vbyte`) to broadcast a transaction with the exact
+        inputs and fee shown in the preview. Pass `None` to let the
+        node coin-select.
 
         Returns the raw transaction, txid, and PSBT once broadcast.
         The transaction is broadcast immediately — this is not a dry run.
@@ -7179,10 +7960,67 @@ class Node():
         
         _UniffiConverterString.check_lower(amount_or_all)
         
+        _UniffiConverterOptionalUInt32.check_lower(sat_per_vbyte)
+        
+        _UniffiConverterOptionalSequenceTypeOutpoint.check_lower(utxos)
+        
         return _UniffiConverterTypeOnchainSendResponse.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_onchain_send,self._uniffi_clone_pointer(),
         _UniffiConverterString.lower(destination),
-        _UniffiConverterString.lower(amount_or_all))
+        _UniffiConverterString.lower(amount_or_all),
+        _UniffiConverterOptionalUInt32.lower(sat_per_vbyte),
+        _UniffiConverterOptionalSequenceTypeOutpoint.lower(utxos))
+        )
+
+
+
+
+
+    def prepare_onchain_send(self, destination: "str",amount_or_all: "str",sat_per_vbyte: "typing.Optional[int]") -> "PreparedOnchainSend":
+        """
+        Preview an on-chain send without broadcasting or reserving UTXOs.
+
+        Runs CLN's coin selection at the given fee rate and returns the
+        inputs that would be spent, the fee, and the amount the recipient
+        would receive. Safe to call repeatedly (e.g. while the user
+        adjusts a fee slider) — nothing is locked.
+
+        To broadcast with the previewed values, pass the returned
+        `utxos` and `sat_per_vbyte` back to `onchain_send`. Identical
+        inputs at the same fee rate yield the same fee.
+
+        **Use this for "Send Max" UIs.** `recipient_sat` is the only
+        authoritative post-fee amount the destination will receive
+        for a sweep. `NodeState.onchain_balance_msat` includes the
+        emergency reserve and the fee — neither of which leaves the
+        wallet with the recipient. For the entry-point button label
+        (a pre-fee approximation that updates without an RPC), use
+        `OnchainBalanceState::Available.withdrawable_sat`.
+
+        # Arguments
+        * `destination` — A Bitcoin address (bech32, p2sh, or p2tr).
+        * `amount_or_all` — Amount to send. Accepts:
+        - `"50000"` or `"50000sat"` — 50,000 satoshis
+        - `"50000msat"` — 50,000 millisatoshis
+        - `"all"` — sweep the entire on-chain balance
+        * `sat_per_vbyte` — Fee rate in sats per virtual byte. Pass
+        `None` to use the node's "normal" priority feerate; the
+        effective rate CLN picked is reported back in the result's
+        `sat_per_vbyte` field, which can be passed to `onchain_send`
+        to reproduce it.
+        """
+
+        _UniffiConverterString.check_lower(destination)
+        
+        _UniffiConverterString.check_lower(amount_or_all)
+        
+        _UniffiConverterOptionalUInt32.check_lower(sat_per_vbyte)
+        
+        return _UniffiConverterTypePreparedOnchainSend.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_prepare_onchain_send,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(destination),
+        _UniffiConverterString.lower(amount_or_all),
+        _UniffiConverterOptionalUInt32.lower(sat_per_vbyte))
         )
 
 
@@ -7295,6 +8133,262 @@ class _UniffiConverterTypeNode:
 
     @classmethod
     def write(cls, value: NodeProtocol, buf: _UniffiRustBuffer):
+        buf.write_u64(cls.lower(value))
+class NodeBuilderProtocol(typing.Protocol):
+    """
+    Configurable Node construction. See module docs.
+
+    All fields are immutable after construction. Each `with_*` setter
+    returns a fresh `Arc<NodeBuilder>` that shares ownership of any
+    previously-installed modifiers via `Arc<dyn …>`. No interior
+    mutability, no locks — the builder is a value, not a state
+    machine.
+    """
+
+    def connect(self, credentials: "bytes",mnemonic: "typing.Optional[str]"):
+        """
+        Connect to an existing node using saved credentials and return
+        a connected Node with any configured modifiers applied.
+
+        If `mnemonic` is `Some(...)`, the SDK spawns a signer for the
+        connected Node. If `None`, the Node is signerless and signing
+        happens elsewhere (paired device, CLN node's local signer,
+        hardware signer).
+        """
+
+        raise NotImplementedError
+    def recover(self, mnemonic: "str"):
+        """
+        Recover credentials for an existing node and return a
+        connected Node with any configured modifiers applied.
+
+        `mnemonic` is required — recovery drives the signer to
+        authenticate.
+        """
+
+        raise NotImplementedError
+    def register(self, mnemonic: "str",invite_code: "typing.Optional[str]"):
+        """
+        Register a new Greenlight node and return a connected Node
+        with the SDK signer running and any configured modifiers
+        applied.
+
+        `mnemonic` is required — registration drives the signer to
+        sign the registration challenge, so the SDK must hold the
+        seed for this call.
+        """
+
+        raise NotImplementedError
+    def register_or_recover(self, mnemonic: "str",invite_code: "typing.Optional[str]"):
+        """
+        Try to recover; if the node doesn't exist, register a new one.
+
+        `mnemonic` is required — both recover and register drive the
+        signer.
+        """
+
+        raise NotImplementedError
+    def with_event_listener(self, listener: "NodeEventListener"):
+        """
+        Install a node event listener. Events fire from the moment the
+        gRPC stream is established by the build call (`register` /
+        `recover` / `connect` / …), so attach the listener via the
+        builder rather than after the fact to capture events from the
+        very first moment.
+
+        Returns a new builder that shares the rest of the
+        configuration. Build calls on the returned builder will
+        install the listener; the original builder is unchanged.
+        """
+
+        raise NotImplementedError
+# NodeBuilder is a Rust-only trait - it's a wrapper around a Rust implementation.
+class NodeBuilder():
+    """
+    Configurable Node construction. See module docs.
+
+    All fields are immutable after construction. Each `with_*` setter
+    returns a fresh `Arc<NodeBuilder>` that shares ownership of any
+    previously-installed modifiers via `Arc<dyn …>`. No interior
+    mutability, no locks — the builder is a value, not a state
+    machine.
+    """
+
+    _pointer: ctypes.c_void_p
+    def __init__(self, config: "Config"):
+        """
+        Create a builder for a Node with `config`. No I/O happens
+        until you call `connect` / `register` / `recover` /
+        `register_or_recover`.
+        """
+
+        _UniffiConverterTypeConfig.check_lower(config)
+        
+        self._pointer = _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_constructor_nodebuilder_new,
+        _UniffiConverterTypeConfig.lower(config))
+
+    def __del__(self):
+        # In case of partial initialization of instances.
+        pointer = getattr(self, "_pointer", None)
+        if pointer is not None:
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_free_nodebuilder, pointer)
+
+    def _uniffi_clone_pointer(self):
+        return _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_clone_nodebuilder, self._pointer)
+
+    # Used by alternative constructors or any methods which return this type.
+    @classmethod
+    def _make_instance_(cls, pointer):
+        # Lightly yucky way to bypass the usual __init__ logic
+        # and just create a new instance with the required pointer.
+        inst = cls.__new__(cls)
+        inst._pointer = pointer
+        return inst
+
+
+    def connect(self, credentials: "bytes",mnemonic: "typing.Optional[str]") -> "Node":
+        """
+        Connect to an existing node using saved credentials and return
+        a connected Node with any configured modifiers applied.
+
+        If `mnemonic` is `Some(...)`, the SDK spawns a signer for the
+        connected Node. If `None`, the Node is signerless and signing
+        happens elsewhere (paired device, CLN node's local signer,
+        hardware signer).
+        """
+
+        _UniffiConverterBytes.check_lower(credentials)
+        
+        _UniffiConverterOptionalString.check_lower(mnemonic)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_connect,self._uniffi_clone_pointer(),
+        _UniffiConverterBytes.lower(credentials),
+        _UniffiConverterOptionalString.lower(mnemonic))
+        )
+
+
+
+
+
+    def recover(self, mnemonic: "str") -> "Node":
+        """
+        Recover credentials for an existing node and return a
+        connected Node with any configured modifiers applied.
+
+        `mnemonic` is required — recovery drives the signer to
+        authenticate.
+        """
+
+        _UniffiConverterString.check_lower(mnemonic)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_recover,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(mnemonic))
+        )
+
+
+
+
+
+    def register(self, mnemonic: "str",invite_code: "typing.Optional[str]") -> "Node":
+        """
+        Register a new Greenlight node and return a connected Node
+        with the SDK signer running and any configured modifiers
+        applied.
+
+        `mnemonic` is required — registration drives the signer to
+        sign the registration challenge, so the SDK must hold the
+        seed for this call.
+        """
+
+        _UniffiConverterString.check_lower(mnemonic)
+        
+        _UniffiConverterOptionalString.check_lower(invite_code)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code))
+        )
+
+
+
+
+
+    def register_or_recover(self, mnemonic: "str",invite_code: "typing.Optional[str]") -> "Node":
+        """
+        Try to recover; if the node doesn't exist, register a new one.
+
+        `mnemonic` is required — both recover and register drive the
+        signer.
+        """
+
+        _UniffiConverterString.check_lower(mnemonic)
+        
+        _UniffiConverterOptionalString.check_lower(invite_code)
+        
+        return _UniffiConverterTypeNode.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_register_or_recover,self._uniffi_clone_pointer(),
+        _UniffiConverterString.lower(mnemonic),
+        _UniffiConverterOptionalString.lower(invite_code))
+        )
+
+
+
+
+
+    def with_event_listener(self, listener: "NodeEventListener") -> "NodeBuilder":
+        """
+        Install a node event listener. Events fire from the moment the
+        gRPC stream is established by the build call (`register` /
+        `recover` / `connect` / …), so attach the listener via the
+        builder rather than after the fact to capture events from the
+        very first moment.
+
+        Returns a new builder that shares the rest of the
+        configuration. Build calls on the returned builder will
+        install the listener; the original builder is unchanged.
+        """
+
+        _UniffiConverterTypeNodeEventListener.check_lower(listener)
+        
+        return _UniffiConverterTypeNodeBuilder.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_nodebuilder_with_event_listener,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeNodeEventListener.lower(listener))
+        )
+
+
+
+
+
+
+class _UniffiConverterTypeNodeBuilder:
+
+    @staticmethod
+    def lift(value: int):
+        return NodeBuilder._make_instance_(value)
+
+    @staticmethod
+    def check_lower(value: NodeBuilder):
+        if not isinstance(value, NodeBuilder):
+            raise TypeError("Expected NodeBuilder instance, {} found".format(type(value).__name__))
+
+    @staticmethod
+    def lower(value: NodeBuilderProtocol):
+        if not isinstance(value, NodeBuilder):
+            raise TypeError("Expected NodeBuilder instance, {} found".format(type(value).__name__))
+        return value._uniffi_clone_pointer()
+
+    @classmethod
+    def read(cls, buf: _UniffiRustBuffer):
+        ptr = buf.read_u64()
+        if ptr == 0:
+            raise InternalError("Raw pointer value was null")
+        return cls.lift(ptr)
+
+    @classmethod
+    def write(cls, value: NodeBuilderProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class NodeEventStreamProtocol(typing.Protocol):
     """
@@ -7688,23 +8782,6 @@ async def _uniffi_rust_call_async(rust_future, ffi_poll, ffi_complete, ffi_free,
     finally:
         ffi_free(rust_future)
 
-def connect(mnemonic: "str",credentials: "bytes",config: "Config") -> "Node":
-    """
-    Connect to an existing Greenlight node using previously saved credentials.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterBytes.check_lower(credentials)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_connect,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterBytes.lower(credentials),
-        _UniffiConverterTypeConfig.lower(config)))
-
-
 def parse_input(input: "str") -> "ParsedInput":
     """
     Synchronously classify the input. **No HTTP, no I/O.**
@@ -7725,60 +8802,6 @@ def parse_input(input: "str") -> "ParsedInput":
     
     return _UniffiConverterTypeParsedInput.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_parse_input,
         _UniffiConverterString.lower(input)))
-
-
-def recover(mnemonic: "str",config: "Config") -> "Node":
-    """
-    Recover credentials for an existing Greenlight node and return a connected Node.
-
-    The app should call `node.credentials()` to get the credential bytes
-    and persist them for future `connect()` calls.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_recover,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterTypeConfig.lower(config)))
-
-
-def register(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
-    """
-    Register a new Greenlight node and return a connected Node with signer running.
-
-    The app should call `node.credentials()` to get the credential bytes
-    and persist them for future `connect()` calls.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterOptionalString.check_lower(invite_code)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterOptionalString.lower(invite_code),
-        _UniffiConverterTypeConfig.lower(config)))
-
-
-def register_or_recover(mnemonic: "str",invite_code: "typing.Optional[str]",config: "Config") -> "Node":
-    """
-    Try to recover an existing node; if none exists, register a new one.
-    """
-
-    _UniffiConverterString.check_lower(mnemonic)
-    
-    _UniffiConverterOptionalString.check_lower(invite_code)
-    
-    _UniffiConverterTypeConfig.check_lower(config)
-    
-    return _UniffiConverterTypeNode.lift(_uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_func_register_or_recover,
-        _UniffiConverterString.lower(mnemonic),
-        _UniffiConverterOptionalString.lower(invite_code),
-        _UniffiConverterTypeConfig.lower(config)))
 
 async def resolve_input(input: "str") -> "ResolvedInput":
 
@@ -7853,6 +8876,7 @@ __all__ = [
     "LogLevel",
     "Network",
     "NodeEvent",
+    "OnchainBalanceState",
     "OutputStatus",
     "ParsedInput",
     "PayStatus",
@@ -7882,20 +8906,19 @@ __all__ = [
     "LnUrlWithdrawSuccessData",
     "LogEntry",
     "NodeState",
+    "OnchainFeeRates",
     "OnchainReceiveResponse",
     "OnchainSendResponse",
+    "Outpoint",
     "ParsedInvoice",
     "Pay",
     "Payment",
     "Peer",
     "PeerChannel",
+    "PreparedOnchainSend",
     "ReceiveResponse",
     "SendResponse",
-    "connect",
     "parse_input",
-    "recover",
-    "register",
-    "register_or_recover",
     "resolve_input",
     "set_log_level",
     "set_logger",
@@ -7904,9 +8927,11 @@ __all__ = [
     "DeveloperCert",
     "Handle",
     "Node",
+    "NodeBuilder",
     "NodeEventStream",
     "Scheduler",
     "Signer",
     "LogListener",
+    "NodeEventListener",
 ]
 
