@@ -549,9 +549,7 @@ fn decode_cln_channel_key(channel_key: &str) -> Result<ClnChannelKey> {
 }
 
 fn decode_txid_for_cln_wire(txid: &str) -> Result<[u8; TXID_LEN]> {
-    let mut bytes = decode_hex_array::<TXID_LEN>("funding txid", txid)?;
-    bytes.reverse();
-    Ok(bytes)
+    decode_hex_array::<TXID_LEN>("funding txid", txid)
 }
 
 fn derive_v1_channel_id(txid: [u8; TXID_LEN], vout: u32) -> [u8; TXID_LEN] {
@@ -1004,9 +1002,7 @@ mod tests {
     }
 
     fn expected_cln_txid(txid: &str) -> [u8; 32] {
-        let mut bytes: [u8; 32] = hex::decode(txid).unwrap().try_into().unwrap();
-        bytes.reverse();
-        bytes
+        hex::decode(txid).unwrap().try_into().unwrap()
     }
 
     fn scb_tlvs(scb: &[u8]) -> &[u8] {
