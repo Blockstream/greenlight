@@ -135,8 +135,7 @@ async fn on_custommsg(plugin: Plugin, v: serde_json::Value) -> Result<serde_json
 }
 
 /// Notification handler that receives notifications on successful
-/// peer connections, then stores them into the `datastore` for future
-/// reference.
+/// peer connections, then stores them for reconnects and signer backups.
 async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
     debug!("Got a successful peer connection: {:?}", v);
     let call = serde_json::from_value::<messages::PeerConnectedCall>(v.clone()).unwrap();
@@ -156,6 +155,26 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
     // We ignore the response and continue anyways.
     let res = rpc.call_typed(&req).await;
     debug!("Got datastore response: {:?}", res);
+
+    let direction = match call.peer.direction {
+        messages::Direction::In => "in",
+        messages::Direction::Out => "out",
+    };
+    let peer = gl_client::persist::PeerEntry {
+        peer_id: call.peer.id,
+        addr: call.peer.addr,
+        direction: direction.to_string(),
+        features: call.peer.features,
+    };
+    if let Err(e) = plugin
+        .state()
+        .events
+        .clone()
+        .send(Event::PeerConnected(peer))
+    {
+        log::debug!("Error sending peer connection to listeners: {}", e);
+    }
+
     Ok(json!({"result": "continue"}))
 }
 

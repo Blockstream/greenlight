@@ -1,4 +1,5 @@
 use super::{SignerBackupConfig, SignerBackupStrategy};
+pub use crate::persist::PeerEntry;
 use crate::persist::State;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,6 @@ use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
 
 const BACKUP_VERSION: u32 = 1;
-const PEERLIST_PREFIX: [&str; 2] = ["greenlight", "peerlist"];
 const NODE_ID_LEN: usize = 33;
 const PEER_ID_LEN: usize = 33;
 const CLN_DBID_LEN: usize = 8;
@@ -23,32 +23,14 @@ const SHACHAIN_EMPTY_INDEX: u64 = 1 << 48;
 const SHACHAIN_MAX_ENTRIES: usize = 49;
 const SHACHAIN_MISSING_WARNING: &str = "shachain_tlv_missing";
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PeerlistEntry {
-    pub peer_id: String,
-    pub addr: String,
-    pub direction: String,
-    pub features: String,
-    pub generation: Option<u64>,
-    pub raw_datastore_string: String,
-}
-
-#[derive(Deserialize)]
-struct PeerRecord {
-    id: String,
-    direction: String,
-    addr: String,
-    features: String,
-}
-
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SignerBackupSnapshot {
     pub version: u32,
     pub created_at: String,
     pub node_id: String,
     pub strategy: SignerBackupStrategy,
     pub state: State,
-    pub peerlist: Vec<PeerlistEntry>,
 }
 
 impl SignerBackupSnapshot {
@@ -65,14 +47,13 @@ impl SignerBackupSnapshot {
     pub fn recovery_data(&self) -> Result<Vec<RecoverableChannel>> {
         self.validate()?;
 
-        let peers: BTreeMap<&str, &PeerlistEntry> = self
-            .peerlist
-            .iter()
-            .map(|peer| (peer.peer_id.as_str(), peer))
-            .collect();
+        let state = self.state.omit_tombstones();
+        let peers = peers_from_state(&state)?
+            .into_iter()
+            .map(|peer| (peer.peer_id.clone(), peer))
+            .collect::<BTreeMap<_, _>>();
 
-        self.state
-            .omit_tombstones()
+        state
             .recoverable_channel_values()
             .into_iter()
             .map(|(channel_key, value)| {
@@ -83,7 +64,7 @@ impl SignerBackupSnapshot {
                     anyhow!("recoverable channel {} is missing channel_setup", channel_key)
                 })?;
                 let peer_addr = peers
-                    .get(peer_id.as_str())
+                    .get(&peer_id)
                     .and_then(|peer| (!peer.addr.is_empty()).then(|| peer.addr.clone()));
                 let mut warnings = Vec::new();
                 if peer_addr.is_none() {
@@ -388,22 +369,10 @@ fn has_recoverable_state_update(before: &State, after: &State) -> bool {
     !before.diff_state(after).recoverable_channel_keys().is_empty()
 }
 
-pub(crate) fn parse_peerlist(
-    entries: &[crate::pb::cln::ListdatastoreDatastore],
-) -> Result<Vec<PeerlistEntry>> {
-    let mut peers = entries
-        .iter()
-        .map(parse_peerlist_entry)
-        .collect::<Result<Vec<_>>>()?;
-    peers.sort_by(|a, b| a.peer_id.cmp(&b.peer_id));
-    Ok(peers)
-}
-
 pub(crate) fn write_snapshot(
     config: &SignerBackupConfig,
     node_id: &[u8],
     state: State,
-    peerlist: Vec<PeerlistEntry>,
 ) -> Result<()> {
     let snapshot = SignerBackupSnapshot {
         version: BACKUP_VERSION,
@@ -411,7 +380,6 @@ pub(crate) fn write_snapshot(
         node_id: hex::encode(node_id),
         strategy: config.strategy,
         state,
-        peerlist,
     };
 
     let dir = backup_dir(&config.path);
@@ -440,6 +408,32 @@ fn backup_dir(path: &Path) -> &Path {
     path.parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."))
+}
+
+fn peers_from_state(state: &State) -> Result<Vec<PeerEntry>> {
+    let mut peers = state
+        .peer_values()
+        .into_iter()
+        .map(|(key, value)| peer_from_state_value(&key, value))
+        .collect::<Result<Vec<_>>>()?;
+    peers.sort_by(|a, b| a.peer_id.cmp(&b.peer_id));
+    Ok(peers)
+}
+
+fn peer_from_state_value(key: &str, value: serde_json::Value) -> Result<PeerEntry> {
+    let key_peer_id = key
+        .strip_prefix("peers/")
+        .ok_or_else(|| anyhow!("invalid peer state key: {}", key))?;
+    let peer: PeerEntry =
+        serde_json::from_value(value).with_context(|| format!("parsing peer state {}", key))?;
+    if peer.peer_id != key_peer_id {
+        return Err(anyhow!(
+            "peer state key {} does not match payload peer_id {}",
+            key_peer_id,
+            peer.peer_id
+        ));
+    }
+    Ok(peer)
 }
 
 fn peer_id_from_channel_key(channel_key: &str) -> Result<String> {
@@ -859,48 +853,6 @@ fn put_u64(out: &mut Vec<u8>, value: u64) {
     out.extend(value.to_be_bytes());
 }
 
-fn parse_peerlist_entry(entry: &crate::pb::cln::ListdatastoreDatastore) -> Result<PeerlistEntry> {
-    if entry.key.len() != 3
-        || entry.key[0] != PEERLIST_PREFIX[0]
-        || entry.key[1] != PEERLIST_PREFIX[1]
-    {
-        return Err(anyhow!("invalid peerlist datastore key: {:?}", entry.key));
-    }
-
-    let key_peer_id = &entry.key[2];
-    let raw = entry
-        .string
-        .as_ref()
-        .ok_or_else(|| anyhow!("peerlist entry {} is missing string payload", key_peer_id))?;
-    let peer = parse_peer_record(raw)
-        .with_context(|| format!("parsing peerlist entry {}", key_peer_id))?;
-
-    if peer.id != *key_peer_id {
-        return Err(anyhow!(
-            "peerlist key {} does not match payload id {}",
-            key_peer_id,
-            peer.id
-        ));
-    }
-
-    Ok(PeerlistEntry {
-        peer_id: peer.id,
-        addr: peer.addr,
-        direction: peer.direction,
-        features: peer.features,
-        generation: entry.generation,
-        raw_datastore_string: raw.clone(),
-    })
-}
-
-fn parse_peer_record(raw: &str) -> Result<PeerRecord> {
-    serde_json::from_str(raw).or_else(|first_error| {
-        let cleaned = raw.replace('\\', "");
-        serde_json::from_str(&cleaned)
-            .with_context(|| format!("invalid peer JSON; original parse error: {}", first_error))
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -947,16 +899,30 @@ mod tests {
         json!([vec![0u8; SHACHAIN_SECRET_LEN], SHACHAIN_EMPTY_INDEX])
     }
 
-    fn peer_entry(
-        key: Vec<&str>,
-        generation: Option<u64>,
-        string: Option<&str>,
-    ) -> crate::pb::cln::ListdatastoreDatastore {
-        crate::pb::cln::ListdatastoreDatastore {
-            key: key.into_iter().map(str::to_owned).collect(),
-            generation,
-            hex: None,
-            string: string.map(str::to_owned),
+    fn peer_entry(peer_id: &str, addr: &str) -> serde_json::Value {
+        json!({
+            "peer_id": peer_id,
+            "addr": addr,
+            "direction": "out",
+            "features": ""
+        })
+    }
+
+    fn state_with_peers(mut entries: serde_json::Value, peers: &[(&str, &str)]) -> State {
+        let entries = entries.as_object_mut().expect("state entries object");
+        for (peer_id, addr) in peers {
+            entries.insert(format!("peers/{peer_id}"), json!([0, peer_entry(peer_id, addr)]));
+        }
+        state(serde_json::Value::Object(entries.clone()))
+    }
+
+    fn backup_snapshot(state: State) -> SignerBackupSnapshot {
+        SignerBackupSnapshot {
+            version: BACKUP_VERSION,
+            created_at: "2026-04-29T00:00:00Z".to_string(),
+            node_id: hex::encode([2u8; 33]),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+            state,
         }
     }
 
@@ -1110,74 +1076,17 @@ mod tests {
     }
 
     #[test]
-    fn parse_peerlist_normalizes_valid_entries() {
-        let raw = r#"{"id":"02aa","direction":"out","addr":"127.0.0.1:9735","features":"abcd"}"#;
-        let peers = parse_peerlist(&[peer_entry(
-            vec!["greenlight", "peerlist", "02aa"],
-            Some(7),
-            Some(raw),
-        )])
-        .unwrap();
-
-        assert_eq!(
-            peers,
-            vec![PeerlistEntry {
-                peer_id: "02aa".to_string(),
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "abcd".to_string(),
-                generation: Some(7),
-                raw_datastore_string: raw.to_string(),
-            }]
-        );
-    }
-
-    #[test]
-    fn parse_peerlist_rejects_malformed_entries() {
-        assert!(parse_peerlist(&[peer_entry(
-            vec!["greenlight", "peerlist", "02aa"],
-            None,
-            Some("not-json"),
-        )])
-        .is_err());
-
-        assert!(parse_peerlist(&[peer_entry(
-            vec!["greenlight", "peerlist", "02aa"],
-            None,
-            Some(r#"{"id":"02aa","direction":"out","features":""}"#),
-        )])
-        .is_err());
-
-        assert!(parse_peerlist(&[peer_entry(
-            vec!["greenlight", "wrong", "02aa"],
-            None,
-            Some(r#"{"id":"02aa","direction":"out","addr":"127.0.0.1:9735","features":""}"#),
-        )])
-        .is_err());
-    }
-
-    #[test]
-    fn write_snapshot_includes_state_peerlist_and_omits_tombstones() {
+    fn write_snapshot_includes_state_peers_and_omits_tombstones() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("backup.json");
         let config = SignerBackupConfig::new(path.clone());
-        let state = state(json!({
+        let state = state_with_peers(json!({
             "channels/a": [0, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))],
             "channels/deleted": [u64::MAX, null]
-        }))
+        }), &[("02aa", "127.0.0.1:9735")])
         .omit_tombstones();
-        let peerlist = vec![PeerlistEntry {
-            peer_id: "02aa".to_string(),
-            addr: "127.0.0.1:9735".to_string(),
-            direction: "out".to_string(),
-            features: "".to_string(),
-            generation: Some(3),
-            raw_datastore_string:
-                r#"{"id":"02aa","direction":"out","addr":"127.0.0.1:9735","features":""}"#
-                    .to_string(),
-        }];
 
-        write_snapshot(&config, &[2u8; 33], state, peerlist).unwrap();
+        write_snapshot(&config, &[2u8; 33], state).unwrap();
 
         let written: serde_json::Value =
             serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
@@ -1190,12 +1099,13 @@ mod tests {
             .unwrap()
             .get("channels/deleted")
             .is_none());
-        assert_eq!(written["peerlist"][0]["peer_id"], "02aa");
-        assert_eq!(written["peerlist"][0]["generation"], 3);
-        assert!(written["peerlist"][0]["raw_datastore_string"]
-            .as_str()
-            .unwrap()
-            .contains("\"addr\""));
+        assert_eq!(written["state"]["values"]["peers/02aa"][1]["peer_id"], "02aa");
+        assert_eq!(
+            written["state"]["values"]["peers/02aa"][1]["addr"],
+            "127.0.0.1:9735"
+        );
+        assert!(written.get("peers").is_none());
+        assert!(written.get("peerlist").is_none());
     }
 
     #[test]
@@ -1204,7 +1114,7 @@ mod tests {
         let path = dir.path().join("backup.json");
         let config = SignerBackupConfig::new(path.clone());
 
-        write_snapshot(&config, &[2u8; 33], state(json!({})), vec![]).unwrap();
+        write_snapshot(&config, &[2u8; 33], state(json!({}))).unwrap();
 
         let snapshot = SignerBackupSnapshot::read(&path).unwrap();
         assert_eq!(snapshot.version, 1);
@@ -1223,8 +1133,7 @@ mod tests {
                 "created_at": "2026-04-29T00:00:00Z",
                 "node_id": hex::encode([2u8; 33]),
                 "strategy": "new_channels_only",
-                "state": { "values": {} },
-                "peerlist": []
+                "state": { "values": {} }
             }),
         );
 
@@ -1245,13 +1154,31 @@ mod tests {
                 "created_at": "2026-04-29T00:00:00Z",
                 "node_id": hex::encode([2u8; 33]),
                 "strategy": "new_channels_only",
-                "state": { "values": { "channels/a": "not-a-state-entry" } },
-                "peerlist": []
+                "state": { "values": { "channels/a": "not-a-state-entry" } }
             }),
         );
 
         assert!(read_backup_err(&malformed_json).contains("parsing signer backup"));
         assert!(read_backup_err(&malformed_state).contains("parsing signer backup"));
+    }
+
+    #[test]
+    fn read_snapshot_rejects_top_level_peers_field() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
+        write_json(
+            &path,
+            json!({
+                "version": 1,
+                "created_at": "2026-04-29T00:00:00Z",
+                "node_id": hex::encode([2u8; 33]),
+                "strategy": "new_channels_only",
+                "state": { "values": {} },
+                "peers": []
+            }),
+        );
+
+        assert!(read_backup_err(&path).contains("parsing signer backup"));
     }
 
     #[test]
@@ -1263,28 +1190,17 @@ mod tests {
         let channel_missing_addr = channel_key(&peer_b, 3);
         let stub = channel_key(&peer_a, 4);
         let tombstone = channel_key(&peer_a, 5);
-        let state = state(json!({
-            channel_a.clone(): [1, channel(recovery_setup("00", 0, 1000, true))],
-            channel_b.clone(): [1, channel(recovery_setup("11", 1, 2000, false))],
-            channel_missing_addr.clone(): [1, channel(recovery_setup("22", 2, 3000, false))],
-            stub: [1, channel(serde_json::Value::Null)],
-            tombstone: [u64::MAX, null]
-        }));
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state,
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer_a.clone(),
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let state = state_with_peers(
+            json!({
+                channel_a.clone(): [1, channel(recovery_setup("00", 0, 1000, true))],
+                channel_b.clone(): [1, channel(recovery_setup("11", 1, 2000, false))],
+                channel_missing_addr.clone(): [1, channel(recovery_setup("22", 2, 3000, false))],
+                stub: [1, channel(serde_json::Value::Null)],
+                tombstone: [u64::MAX, null]
+            }),
+            &[(&peer_a, "127.0.0.1:9735")],
+        );
+        let snapshot = backup_snapshot(state);
 
         let inventory = snapshot.recovery_data().unwrap();
 
@@ -1324,19 +1240,50 @@ mod tests {
     }
 
     #[test]
-    fn recovery_data_rejects_malformed_channel_json() {
+    fn recovery_data_marks_missing_peer_state_incomplete() {
         let peer = peer_id(0xaa);
-        let channel_key = channel_key(&peer, 1);
+        let key = channel_key(&peer, 1);
+        let snapshot = backup_snapshot(state(json!({
+            key: [1, channel(recovery_setup("00", 0, 1000, true))]
+        })));
+
+        let inventory = snapshot.recovery_data().unwrap();
+
+        assert_eq!(inventory.len(), 1);
+        assert!(!inventory[0].complete);
+        assert_eq!(inventory[0].peer_addr, None);
+        assert_eq!(inventory[0].warnings, vec!["missing_peer_addr"]);
+    }
+
+    #[test]
+    fn recovery_data_rejects_malformed_peer_state() {
+        let peer = peer_id(0xaa);
+        let key = channel_key(&peer, 1);
         let snapshot = SignerBackupSnapshot {
             version: BACKUP_VERSION,
             created_at: "2026-04-29T00:00:00Z".to_string(),
             node_id: hex::encode([2u8; 33]),
             strategy: SignerBackupStrategy::NewChannelsOnly,
             state: state(json!({
-                channel_key: [1, channel(json!({ "channel_value_sat": 1000 }))]
+                key: [1, channel(recovery_setup("00", 0, 1000, true))],
+                format!("peers/{peer}"): [0, json!({ "peer_id": peer })]
             })),
-            peerlist: vec![],
         };
+
+        assert!(snapshot
+            .recovery_data()
+            .unwrap_err()
+            .to_string()
+            .contains("parsing peer state"));
+    }
+
+    #[test]
+    fn recovery_data_rejects_malformed_channel_json() {
+        let peer = peer_id(0xaa);
+        let channel_key = channel_key(&peer, 1);
+        let snapshot = backup_snapshot(state(json!({
+            channel_key: [1, channel(json!({ "channel_value_sat": 1000 }))]
+        })));
 
         assert!(snapshot
             .recovery_data()
@@ -1349,16 +1296,9 @@ mod tests {
     fn to_cln_backup_rejects_incomplete_channels_by_default() {
         let peer = peer_id(0xaa);
         let channel_key = channel_key(&peer, 1);
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key: [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
-            })),
-            peerlist: vec![],
-        };
+        let snapshot = backup_snapshot(state(json!({
+            channel_key: [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
+        })));
 
         let err = snapshot
             .to_cln_backup(CLNBackupOptions::default())
@@ -1374,24 +1314,15 @@ mod tests {
         let peer_b = peer_id(0xbb);
         let channel_a = channel_key(&peer_a, 1);
         let channel_b = channel_key(&peer_b, 2);
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_a.clone(): [1, channel(recovery_setup(full_txid(), 0, 1000, true))],
-                channel_b.clone(): [1, channel(recovery_setup(full_txid(), 1, 2000, false))]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer_a.clone(),
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_a.clone(): [1, channel(recovery_setup(full_txid(), 0, 1000, true))],
+                    channel_b.clone(): [1, channel(recovery_setup(full_txid(), 1, 2000, false))]
+                }),
+                &[(&peer_a, "127.0.0.1:9735")],
+            ),
+        );
 
         let export = snapshot
             .to_cln_backup(CLNBackupOptions {
@@ -1416,16 +1347,9 @@ mod tests {
     #[test]
     fn to_cln_backup_fails_when_every_channel_is_skipped() {
         let peer = peer_id(0xaa);
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key(&peer, 1): [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
-            })),
-            peerlist: vec![],
-        };
+        let snapshot = backup_snapshot(state(json!({
+            channel_key(&peer, 1): [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
+        })));
 
         let err = snapshot
             .to_cln_backup(CLNBackupOptions {
@@ -1441,27 +1365,16 @@ mod tests {
     fn to_cln_backup_encodes_modern_scb_for_ipv4_peer() {
         let peer = peer_id(0xaa);
         let channel_key = channel_key(&peer, 42);
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key.clone(): [1, channel(recovery_setup(full_txid(), 0x0102, 1_000_000, true))]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer.clone(),
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_key.clone(): [1, channel(recovery_setup(full_txid(), 0x0102, 1_000_000, true))]
+                }),
+                &[(&peer, "127.0.0.1:9735")],
+            ),
+        );
 
-        let export = snapshot
-            .to_cln_backup(CLNBackupOptions::default())
-            .unwrap();
+        let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
         let scb = hex::decode(&export.request.scb[0]).unwrap();
         let txid = expected_cln_txid(full_txid());
         let mut channel_id = txid;
@@ -1497,29 +1410,20 @@ mod tests {
         let channel_key = channel_key(&peer, 42);
         let first_index = SHACHAIN_EMPTY_INDEX - 1;
         let second_index = SHACHAIN_EMPTY_INDEX - 2;
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key.clone(): [1, channel_with_enforcement(
-                    recovery_setup(full_txid(), 0, 1_000_000, true),
-                    enforcement_with_old_secrets(json!([
-                        old_secret(0x11, first_index),
-                        old_secret(0x22, second_index)
-                    ]))
-                )]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer,
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_key.clone(): [1, channel_with_enforcement(
+                        recovery_setup(full_txid(), 0, 1_000_000, true),
+                        enforcement_with_old_secrets(json!([
+                            old_secret(0x11, first_index),
+                            old_secret(0x22, second_index)
+                        ]))
+                    )]
+                }),
+                &[(&peer, "127.0.0.1:9735")],
+            ),
+        );
 
         let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
         let scb = hex::decode(&export.request.scb[0]).unwrap();
@@ -1551,26 +1455,17 @@ mod tests {
     fn to_cln_backup_omits_empty_shachain_without_warning() {
         let peer = peer_id(0xaa);
         let channel_key = channel_key(&peer, 42);
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key: [1, channel_with_enforcement(
-                    recovery_setup(full_txid(), 0, 1_000_000, true),
-                    enforcement_with_old_secrets(json!([]))
-                )]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer,
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_key: [1, channel_with_enforcement(
+                        recovery_setup(full_txid(), 0, 1_000_000, true),
+                        enforcement_with_old_secrets(json!([]))
+                    )]
+                }),
+                &[(&peer, "127.0.0.1:9735")],
+            ),
+        );
 
         let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
         let scb = hex::decode(&export.request.scb[0]).unwrap();
@@ -1584,26 +1479,17 @@ mod tests {
     fn to_cln_backup_warns_when_counterparty_secrets_are_missing() {
         let peer = peer_id(0xaa);
         let channel_key = channel_key(&peer, 42);
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key: [1, channel_with_enforcement(
-                    recovery_setup(full_txid(), 0, 1_000_000, true),
-                    json!({ "counterparty_secrets": null })
-                )]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer,
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_key: [1, channel_with_enforcement(
+                        recovery_setup(full_txid(), 0, 1_000_000, true),
+                        json!({ "counterparty_secrets": null })
+                    )]
+                }),
+                &[(&peer, "127.0.0.1:9735")],
+            ),
+        );
 
         let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
 
@@ -1618,30 +1504,21 @@ mod tests {
         let peer = peer_id(0xaa);
         let channel_key = channel_key(&peer, 42);
         let first_index = SHACHAIN_EMPTY_INDEX - 1;
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key: [1, channel_with_enforcement(
-                    recovery_setup(full_txid(), 0, 1_000_000, true),
-                    enforcement_with_old_secrets(json!([
-                        old_secret(0x11, first_index),
-                        dummy_old_secret(),
-                        dummy_old_secret()
-                    ]))
-                )]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer,
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_key: [1, channel_with_enforcement(
+                        recovery_setup(full_txid(), 0, 1_000_000, true),
+                        enforcement_with_old_secrets(json!([
+                            old_secret(0x11, first_index),
+                            dummy_old_secret(),
+                            dummy_old_secret()
+                        ]))
+                    )]
+                }),
+                &[(&peer, "127.0.0.1:9735")],
+            ),
+        );
 
         let export = snapshot.to_cln_backup(CLNBackupOptions::default()).unwrap();
         let scb = hex::decode(&export.request.scb[0]).unwrap();
@@ -1688,26 +1565,17 @@ mod tests {
                 "invalid shachain index",
             ),
         ] {
-            let snapshot = SignerBackupSnapshot {
-                version: BACKUP_VERSION,
-                created_at: "2026-04-29T00:00:00Z".to_string(),
-                node_id: hex::encode([2u8; 33]),
-                strategy: SignerBackupStrategy::NewChannelsOnly,
-                state: state(json!({
-                    channel_key.clone(): [1, channel_with_enforcement(
-                        recovery_setup(full_txid(), 0, 1_000_000, true),
-                        enforcement_with_old_secrets(old_secrets)
-                    )]
-                })),
-                peerlist: vec![PeerlistEntry {
-                    peer_id: peer.clone(),
-                    addr: "127.0.0.1:9735".to_string(),
-                    direction: "out".to_string(),
-                    features: "".to_string(),
-                    generation: Some(1),
-                    raw_datastore_string: "{}".to_string(),
-                }],
-            };
+            let snapshot = backup_snapshot(
+                state_with_peers(
+                    json!({
+                        channel_key.clone(): [1, channel_with_enforcement(
+                            recovery_setup(full_txid(), 0, 1_000_000, true),
+                            enforcement_with_old_secrets(old_secrets)
+                        )]
+                    }),
+                    &[(&peer, "127.0.0.1:9735")],
+                ),
+            );
 
             let err = snapshot
                 .to_cln_backup(CLNBackupOptions::default())
@@ -1722,23 +1590,14 @@ mod tests {
         let peer = peer_id(0xaa);
         let mut setup = recovery_setup(full_txid(), 0, 1000, true);
         setup["commitment_type"] = json!("Unknown");
-        let snapshot = SignerBackupSnapshot {
-            version: BACKUP_VERSION,
-            created_at: "2026-04-29T00:00:00Z".to_string(),
-            node_id: hex::encode([2u8; 33]),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-            state: state(json!({
-                channel_key(&peer, 1): [1, channel(setup)]
-            })),
-            peerlist: vec![PeerlistEntry {
-                peer_id: peer,
-                addr: "127.0.0.1:9735".to_string(),
-                direction: "out".to_string(),
-                features: "".to_string(),
-                generation: Some(1),
-                raw_datastore_string: "{}".to_string(),
-            }],
-        };
+        let snapshot = backup_snapshot(
+            state_with_peers(
+                json!({
+                    channel_key(&peer, 1): [1, channel(setup)]
+                }),
+                &[(&peer, "127.0.0.1:9735")],
+            ),
+        );
 
         let err = snapshot
             .to_cln_backup(CLNBackupOptions::default())
@@ -1784,7 +1643,7 @@ mod tests {
         let config = SignerBackupConfig::new(dir.path().join("missing").join("backup.json"));
         let state = state(json!({}));
 
-        assert!(write_snapshot(&config, &[2u8; 33], state, vec![]).is_err());
+        assert!(write_snapshot(&config, &[2u8; 33], state).is_err());
     }
 
     #[test]
@@ -1793,7 +1652,7 @@ mod tests {
         let path = dir.path().join("backup.json");
         let config = SignerBackupConfig::periodic(path.clone(), 5).unwrap();
 
-        write_snapshot(&config, &[2u8; 33], state(json!({})), vec![]).unwrap();
+        write_snapshot(&config, &[2u8; 33], state(json!({}))).unwrap();
 
         let written: serde_json::Value =
             serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();

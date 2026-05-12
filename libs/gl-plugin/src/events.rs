@@ -194,6 +194,7 @@
 
 use crate::pb;
 use crate::stager;
+use gl_client::persist::PeerEntry;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -220,6 +221,9 @@ pub enum Event<I = ()> {
     /// A custom message was received from a peer.
     CustomMsg(pb::Custommsg),
 
+    /// A peer address was learned from CLN's `peer_connected` hook.
+    PeerConnected(PeerEntry),
+
     /// Internal events from gl-plugin-internal or other extensions.
     /// This variant is not used when `I = ()`.
     Internal(I),
@@ -236,6 +240,7 @@ impl<I> Event<I> {
             Event::RpcCall(r) => Event::RpcCall(r),
             Event::IncomingPayment(p) => Event::IncomingPayment(p),
             Event::CustomMsg(m) => Event::CustomMsg(m),
+            Event::PeerConnected(p) => Event::PeerConnected(p),
             Event::Internal(i) => Event::Internal(f(i)),
         }
     }
@@ -251,6 +256,7 @@ impl<I> Event<I> {
             Event::RpcCall(r) => Some(Event::RpcCall(r)),
             Event::IncomingPayment(p) => Some(Event::IncomingPayment(p)),
             Event::CustomMsg(m) => Some(Event::CustomMsg(m)),
+            Event::PeerConnected(p) => Some(Event::PeerConnected(p)),
             Event::Internal(i) => f(i).map(Event::Internal),
         }
     }
@@ -339,6 +345,7 @@ impl ErasedEventExt for ErasedEvent {
             Event::RpcCall(r) => Some(Event::RpcCall(r.clone())),
             Event::IncomingPayment(p) => Some(Event::IncomingPayment(p.clone())),
             Event::CustomMsg(m) => Some(Event::CustomMsg(m.clone())),
+            Event::PeerConnected(p) => Some(Event::PeerConnected(p.clone())),
             Event::Internal(any) => any.downcast_ref::<I>().cloned().map(Event::Internal),
         }
     }

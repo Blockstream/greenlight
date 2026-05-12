@@ -821,7 +821,7 @@ mod tests {
                     channel_key(&peer_a, 2): [1, channel(recovery_setup("11", 1, 2000, false))],
                     channel_key(&peer_b, 3): [1, channel(recovery_setup("22", 2, 3000, false))]
                 }),
-                json!([peerlist_entry(&peer_a, "127.0.0.1:9735")]),
+                json!([peer_entry(&peer_a, "127.0.0.1:9735")]),
                 json!("new_channels_only"),
             ),
         );
@@ -843,6 +843,7 @@ mod tests {
         assert!(serialized["channels"][0]["remote_basepoints"].is_object());
         assert!(serialized.get("state").is_none());
         assert!(serialized.get("peerlist").is_none());
+        assert!(serialized.get("peers").is_none());
         let incomplete = report
             .channels
             .iter()
@@ -873,7 +874,7 @@ mod tests {
                         })
                     )]
                 }),
-                json!([peerlist_entry(&peer, "127.0.0.1:9735")]),
+                json!([peer_entry(&peer, "127.0.0.1:9735")]),
                 json!("new_channels_only"),
             ),
         );
@@ -991,7 +992,7 @@ mod tests {
                 json!({
                     channel_key(&peer, 7): [1, channel(recovery_setup(full_txid(), 0, 1000, true))]
                 }),
-                json!([peerlist_entry(&peer, "127.0.0.1:9735")]),
+                json!([peer_entry(&peer, "127.0.0.1:9735")]),
                 json!("new_channels_only"),
             ),
         );
@@ -1003,6 +1004,7 @@ mod tests {
         assert!(value.get("channels").is_none());
         assert!(value.get("state").is_none());
         assert!(value.get("peerlist").is_none());
+        assert!(value.get("peers").is_none());
     }
 
     #[test]
@@ -1018,7 +1020,7 @@ mod tests {
                     channel_key(&peer_a, 7): [1, channel(recovery_setup(full_txid(), 0, 1000, true))],
                     channel_key(&peer_b, 8): [1, channel(recovery_setup(full_txid(), 1, 2000, false))]
                 }),
-                json!([peerlist_entry(&peer_a, "127.0.0.1:9735")]),
+                json!([peer_entry(&peer_a, "127.0.0.1:9735")]),
                 json!("new_channels_only"),
             ),
         );
@@ -1054,31 +1056,35 @@ mod tests {
 
     fn backup_json(
         channels: serde_json::Value,
-        peerlist: serde_json::Value,
+        peers: serde_json::Value,
         strategy: serde_json::Value,
     ) -> serde_json::Value {
+        let mut values = channels;
+        {
+            let values = values.as_object_mut().expect("backup state values object");
+            for peer in peers.as_array().expect("backup peers array") {
+                let peer_id = peer["peer_id"].as_str().expect("peer_id");
+                values.insert(format!("peers/{peer_id}"), json!([0, peer]));
+            }
+        }
+
         json!({
             "version": 1,
             "created_at": "2026-04-29T00:00:00Z",
             "node_id": hex::encode([2u8; 33]),
             "strategy": strategy,
             "state": {
-                "values": channels
-            },
-            "peerlist": peerlist
+                "values": values
+            }
         })
     }
 
-    fn peerlist_entry(peer_id: &str, addr: &str) -> serde_json::Value {
+    fn peer_entry(peer_id: &str, addr: &str) -> serde_json::Value {
         json!({
             "peer_id": peer_id,
             "addr": addr,
             "direction": "out",
-            "features": "",
-            "generation": 7,
-            "raw_datastore_string": format!(
-                r#"{{"id":"{peer_id}","direction":"out","addr":"{addr}","features":""}}"#
-            )
+            "features": ""
         })
     }
 
