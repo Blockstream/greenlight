@@ -1,14 +1,13 @@
-use super::{SignerBackupConfig, SignerBackupStrategy};
 pub use crate::persist::PeerEntry;
 use crate::persist::State;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 use std::fs;
 use std::io::Write;
 use std::net::{IpAddr, SocketAddr};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const BACKUP_VERSION: u32 = 1;
 const NODE_ID_LEN: usize = 33;
@@ -22,6 +21,55 @@ const SHACHAIN_SECRET_LEN: usize = 32;
 const SHACHAIN_EMPTY_INDEX: u64 = 1 << 48;
 const SHACHAIN_MAX_ENTRIES: usize = 49;
 const SHACHAIN_MISSING_WARNING: &str = "shachain_tlv_missing";
+const CHANNEL_PREFIX: &str = "channels/";
+const PEER_PREFIX: &str = "peers/";
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignerBackupConfig {
+    pub path: PathBuf,
+    pub strategy: SignerBackupStrategy,
+}
+
+impl SignerBackupConfig {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: path.into(),
+            strategy: SignerBackupStrategy::NewChannelsOnly,
+        }
+    }
+
+    pub fn periodic(path: impl Into<PathBuf>, updates: u32) -> Result<Self> {
+        let config = Self {
+            path: path.into(),
+            strategy: SignerBackupStrategy::Periodic { updates },
+        };
+        config.validate()?;
+        Ok(config)
+    }
+
+    pub(crate) fn validate(&self) -> Result<()> {
+        self.strategy.validate()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SignerBackupStrategy {
+    NewChannelsOnly,
+    Periodic { updates: u32 },
+}
+
+impl SignerBackupStrategy {
+    pub(crate) fn validate(&self) -> Result<()> {
+        match self {
+            SignerBackupStrategy::NewChannelsOnly => Ok(()),
+            SignerBackupStrategy::Periodic { updates: 0 } => {
+                Err(anyhow!("periodic signer backup updates must be greater than zero"))
+            }
+            SignerBackupStrategy::Periodic { .. } => Ok(()),
+        }
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -47,14 +95,12 @@ impl SignerBackupSnapshot {
     pub fn recovery_data(&self) -> Result<Vec<RecoverableChannel>> {
         self.validate()?;
 
-        let state = self.state.omit_tombstones();
-        let peers = peers_from_state(&state)?
+        let peers = peers_from_state(&self.state)?
             .into_iter()
             .map(|peer| (peer.peer_id.clone(), peer))
             .collect::<BTreeMap<_, _>>();
 
-        state
-            .recoverable_channel_values()
+        recoverable_channel_values(&self.state)
             .into_iter()
             .map(|(channel_key, value)| {
                 let peer_id = peer_id_from_channel_key(&channel_key)?;
@@ -181,9 +227,7 @@ impl SignerBackupSnapshot {
     fn recoverable_channel_shachains(
         &self,
     ) -> Result<BTreeMap<String, Option<Vec<CounterpartySecret>>>> {
-        self.state
-            .omit_tombstones()
-            .recoverable_channel_values()
+        recoverable_channel_values(&self.state)
             .into_iter()
             .map(|(channel_key, value)| {
                 let entry: ClnChannelEntry = serde_json::from_value(value).with_context(|| {
@@ -358,15 +402,14 @@ impl BackupRuntime {
 }
 
 pub(crate) fn should_snapshot_new_channels(before: &State, after: &State) -> bool {
-    let before_channels = before.recoverable_channel_keys();
-    after
-        .recoverable_channel_keys()
+    let before_channels = recoverable_channel_keys(before);
+    recoverable_channel_keys(after)
         .iter()
         .any(|key| !before_channels.contains(key))
 }
 
 fn has_recoverable_state_update(before: &State, after: &State) -> bool {
-    !before.diff_state(after).recoverable_channel_keys().is_empty()
+    !recoverable_channel_keys(&before.diff_state(after)).is_empty()
 }
 
 pub(crate) fn write_snapshot(
@@ -410,9 +453,40 @@ fn backup_dir(path: &Path) -> &Path {
         .unwrap_or_else(|| Path::new("."))
 }
 
+fn recoverable_channel_entries(
+    state: &State,
+) -> impl Iterator<Item = (&str, &serde_json::Value)> + '_ {
+    state.live_values().filter(|(key, value)| {
+        key.starts_with(CHANNEL_PREFIX)
+            && value
+                .get("channel_setup")
+                .map(|setup| !setup.is_null())
+                .unwrap_or(false)
+    })
+}
+
+fn recoverable_channel_keys(state: &State) -> BTreeSet<String> {
+    recoverable_channel_entries(state)
+        .map(|(key, _)| key.to_string())
+        .collect()
+}
+
+fn recoverable_channel_values(state: &State) -> Vec<(String, serde_json::Value)> {
+    recoverable_channel_entries(state)
+        .map(|(key, value)| (key.to_string(), value.clone()))
+        .collect()
+}
+
+fn peer_values(state: &State) -> Vec<(String, serde_json::Value)> {
+    state
+        .live_values()
+        .filter(|(key, _)| key.starts_with(PEER_PREFIX))
+        .map(|(key, value)| (key.to_string(), value.clone()))
+        .collect()
+}
+
 fn peers_from_state(state: &State) -> Result<Vec<PeerEntry>> {
-    let mut peers = state
-        .peer_values()
+    let mut peers = peer_values(state)
         .into_iter()
         .map(|(key, value)| peer_from_state_value(&key, value))
         .collect::<Result<Vec<_>>>()?;
