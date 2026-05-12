@@ -31,7 +31,6 @@ use ring::digest::{digest, SHA256};
 use ring::signature::{UnparsedPublicKey, ECDSA_P256_SHA256_FIXED};
 use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::SystemTime;
@@ -48,11 +47,15 @@ use vls_protocol_signer::handler::Handler;
 
 mod approver;
 mod auth;
+#[cfg(feature = "backup")]
 mod backup;
+mod backup_runtime;
+#[cfg(feature = "backup")]
 pub use backup::{
     CLNBackup, CLNBackupChannel, CLNBackupOptions, PeerEntry, RecoverableBasepoints,
     RecoverableChannel, RecoverableChannelOpener, RecoverableFundingOutpoint,
-    RecoverchannelRequest, RecoverchannelSkippedChannel, SignerBackupSnapshot,
+    RecoverchannelRequest, RecoverchannelSkippedChannel, SignerBackupConfig, SignerBackupSnapshot,
+    SignerBackupStrategy,
 };
 pub mod model;
 mod report;
@@ -91,54 +94,8 @@ pub struct StateSignatureOverrideConfig {
 pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
+    #[cfg(feature = "backup")]
     pub backup: Option<SignerBackupConfig>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SignerBackupConfig {
-    pub path: PathBuf,
-    pub strategy: SignerBackupStrategy,
-}
-
-impl SignerBackupConfig {
-    pub fn new(path: impl Into<PathBuf>) -> Self {
-        Self {
-            path: path.into(),
-            strategy: SignerBackupStrategy::NewChannelsOnly,
-        }
-    }
-
-    pub fn periodic(path: impl Into<PathBuf>, updates: u32) -> Result<Self> {
-        let config = Self {
-            path: path.into(),
-            strategy: SignerBackupStrategy::Periodic { updates },
-        };
-        config.validate()?;
-        Ok(config)
-    }
-
-    fn validate(&self) -> Result<()> {
-        self.strategy.validate()
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SignerBackupStrategy {
-    NewChannelsOnly,
-    Periodic { updates: u32 },
-}
-
-impl SignerBackupStrategy {
-    fn validate(&self) -> Result<()> {
-        match self {
-            SignerBackupStrategy::NewChannelsOnly => Ok(()),
-            SignerBackupStrategy::Periodic { updates: 0 } => {
-                Err(anyhow!("periodic signer backup updates must be greater than zero"))
-            }
-            SignerBackupStrategy::Periodic { .. } => Ok(()),
-        }
-    }
 }
 
 #[derive(Debug, Default)]
@@ -171,8 +128,7 @@ pub struct Signer {
 
     network: Network,
     state: Arc<Mutex<crate::persist::State>>,
-    backup: Option<SignerBackupConfig>,
-    backup_runtime: Arc<Mutex<backup::BackupRuntime>>,
+    backup: backup_runtime::Runtime,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -236,10 +192,8 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
-        if let Some(backup) = &config.backup {
-            backup.validate()?;
-        }
-        let backup = config.backup.clone();
+        let backup = backup_runtime::Runtime::new(&config)?;
+
         let (state_signature_override_enabled, state_signature_override_note) =
             match config.state_signature_override {
                 Some(override_config) => {
@@ -385,7 +339,6 @@ impl Signer {
             network,
             state: persister.state(),
             backup,
-            backup_runtime: Arc::new(Mutex::new(backup::BackupRuntime::default())),
         })
     }
 
@@ -836,7 +789,7 @@ impl Signer {
                 );
             }
             trace!("Processing request {}", hex::encode(&req.raw));
-            let pre_backup_state = state.clone();
+            let pre_backup_state = self.backup.before_request(&state);
             let prestate_log = serde_json::to_string(&*state).map_err(|e| {
                 Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
             })?;
@@ -970,10 +923,7 @@ impl Signer {
             }
         };
 
-        let (signer_state, pending_backup): (
-            Vec<crate::pb::SignerStateEntry>,
-            Option<(SignerBackupConfig, crate::persist::State)>,
-        ) = {
+        let (signer_state, pending_backup) = {
             debug!("Serializing state changes to report to node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!(
@@ -986,19 +936,7 @@ impl Signer {
                     self.sign_state_payload(key, version, value)
                 })
                 .map_err(|e| Error::Other(anyhow!("Failed to sign signer state entries: {e}")))?;
-            let final_state = state.clone();
-            let pending_backup = self.backup.as_ref().and_then(|config| {
-                let mut runtime = match self.backup_runtime.lock() {
-                    Ok(runtime) => runtime,
-                    Err(e) => {
-                        error!("Signer backup runtime lock failed; skipping backup snapshot: {e}");
-                        return None;
-                    }
-                };
-                runtime
-                    .observe(config.strategy, &pre_backup_state, &final_state)
-                    .then(|| (config.clone(), final_state.omit_tombstones()))
-            });
+            let pending_backup = self.backup.after_request(&pre_backup_state, &state);
             let full_wire_bytes = {
                 let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
                 signer_state_response_wire_bytes(&full_entries)
@@ -1016,23 +954,7 @@ impl Signer {
             );
             (diff_entries, pending_backup)
         };
-        if let Some((backup_config, backup_state)) = pending_backup {
-            let backup_result =
-                backup::write_snapshot(&backup_config, &self.id, backup_state.clone())
-                    .map_err(|e| Error::Other(anyhow!("failed to write signer backup: {e}")));
-
-            match backup_result {
-                Ok(()) => match self.backup_runtime.lock() {
-                    Ok(mut runtime) => runtime.snapshot_succeeded(&backup_state),
-                    Err(e) => {
-                        error!("Signer backup runtime lock failed after successful snapshot: {e}")
-                    }
-                },
-                Err(e) => {
-                    error!("Signer backup failed; continuing without backup snapshot: {e}");
-                }
-            }
-        }
+        self.backup.write_pending(&self.id, pending_backup);
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
@@ -1700,7 +1622,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: None,
-                backup: None,
+                ..SignerConfig::default()
             },
         )
         .unwrap()
@@ -1714,7 +1636,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: Some(test_override_config(note)),
-                backup: None,
+                ..SignerConfig::default()
             },
         )
         .unwrap()
@@ -1733,6 +1655,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "backup")]
     #[test]
     fn periodic_backup_rejects_zero_updates() {
         assert!(SignerBackupConfig::periodic("backup.json", 0).is_err());
@@ -1745,7 +1668,7 @@ mod tests {
                 state_signature_mode: StateSignatureMode::Soft,
                 state_signature_override: None,
                 backup: Some(SignerBackupConfig {
-                    path: PathBuf::from("backup.json"),
+                    path: "backup.json".into(),
                     strategy: SignerBackupStrategy::Periodic { updates: 0 },
                 }),
             },
@@ -2076,7 +1999,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: StateSignatureMode::Off,
                 state_signature_override: Some(test_override_config(Some("test"))),
-                backup: None,
+                ..SignerConfig::default()
             },
         );
         let err = signer.err().unwrap().to_string();
@@ -2095,7 +2018,7 @@ mod tests {
                     ack: "WRONG".to_string(),
                     note: None,
                 }),
-                backup: None,
+                ..SignerConfig::default()
             },
         );
         let err = signer.err().unwrap().to_string();
