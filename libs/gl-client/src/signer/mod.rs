@@ -38,7 +38,7 @@ use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::transport::{Channel, Endpoint, Uri};
+use tonic::transport::{Endpoint, Uri};
 use tonic::{Code, Request};
 use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
 use vls_protocol::serde_bolt::Octets;
@@ -50,10 +50,9 @@ mod approver;
 mod auth;
 mod backup;
 pub use backup::{
-    PeerlistEntry, RecoverableBasepoints, RecoverableChannel, RecoverableChannelOpener,
-    RecoverableFundingOutpoint, CLNBackup, CLNBackupChannel,
-    CLNBackupOptions, RecoverchannelRequest, RecoverchannelSkippedChannel,
-    SignerBackupSnapshot,
+    CLNBackup, CLNBackupChannel, CLNBackupOptions, PeerEntry, RecoverableBasepoints,
+    RecoverableChannel, RecoverableChannelOpener, RecoverableFundingOutpoint,
+    RecoverchannelRequest, RecoverchannelSkippedChannel, SignerBackupSnapshot,
 };
 pub mod model;
 mod report;
@@ -722,8 +721,7 @@ impl Signer {
             .keep_alive_while_idle(true)
             .connect_lazy();
 
-        let mut client = NodeClient::new(c.clone());
-        let mut peerlist_client = self.backup_peerlist_client(c);
+        let mut client = NodeClient::new(c);
 
         let mut stream = client
             .stream_hsm_requests(Request::new(Empty::default()))
@@ -748,10 +746,7 @@ impl Signer {
             let signer_state = req.signer_state.clone();
             trace!("Received request {}", hex_req);
 
-            match self
-                .process_request(req.clone(), peerlist_client.as_mut())
-                .await
-            {
+            match self.process_request(req.clone()).await {
                 Ok(response) => {
                     trace!("Sending response {}", hex::encode(&response.raw));
                     client
@@ -790,27 +785,6 @@ impl Signer {
         }
     }
 
-    fn backup_peerlist_client(&self, channel: Channel) -> Option<node::ClnClient> {
-        if self.backup.is_none() {
-            return None;
-        }
-
-        let Some(private_key) = self.tls.private_key.clone() else {
-            warn!("Signer backup enabled but missing TLS private key for CLN auth");
-            return None;
-        };
-        let auth = match node::service::AuthLayer::new(private_key, self.master_rune.to_base64()) {
-            Ok(auth) => auth,
-            Err(e) => {
-                warn!("Signer backup peerlist client setup failed: {e}");
-                return None;
-            }
-        };
-        let service = tower::ServiceBuilder::new().layer(auth).service(channel);
-
-        Some(node::ClnClient::new(service))
-    }
-
     fn authenticate_request(
         &self,
         msg: &vls_protocol::msgs::Message,
@@ -828,11 +802,7 @@ impl Signer {
         Ok(())
     }
 
-    async fn process_request(
-        &self,
-        req: HsmRequest,
-        mut node_client: Option<&mut crate::node::ClnClient>,
-    ) -> Result<HsmResponse, Error> {
+    async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
         debug!("Processing request {:?}", req);
         let req = req;
 
@@ -1047,21 +1017,9 @@ impl Signer {
             (diff_entries, pending_backup)
         };
         if let Some((backup_config, backup_state)) = pending_backup {
-            let backup_result = match node_client.as_mut() {
-                Some(client) => match Self::fetch_backup_peerlist(*client).await {
-                    Ok(peerlist) => backup::write_snapshot(
-                        &backup_config,
-                        &self.id,
-                        backup_state.clone(),
-                        peerlist,
-                    )
-                    .map_err(|e| Error::Other(anyhow!("failed to write signer backup: {e}"))),
-                    Err(e) => Err(e),
-                },
-                None => Err(Error::Other(anyhow!(
-                    "backup snapshot is due but no node client is available to refresh peerlist"
-                ))),
-            };
+            let backup_result =
+                backup::write_snapshot(&backup_config, &self.id, backup_state.clone())
+                    .map_err(|e| Error::Other(anyhow!("failed to write signer backup: {e}")));
 
             match backup_result {
                 Ok(()) => match self.backup_runtime.lock() {
@@ -1081,20 +1039,6 @@ impl Signer {
             signer_state,
             error: "".to_owned(),
         })
-    }
-
-    async fn fetch_backup_peerlist(
-        client: &mut crate::node::ClnClient,
-    ) -> Result<Vec<backup::PeerlistEntry>, Error> {
-        let response = client
-            .list_datastore(Request::new(crate::pb::cln::ListdatastoreRequest {
-                key: vec!["greenlight".to_string(), "peerlist".to_string()],
-            }))
-            .await
-            .map_err(|e| Error::Other(anyhow!("failed to refresh backup peerlist: {e}")))?;
-
-        backup::parse_peerlist(&response.into_inner().datastore)
-            .map_err(|e| Error::Other(anyhow!("failed to parse backup peerlist: {e}")))
     }
 
     pub fn node_id(&self) -> Vec<u8> {
@@ -1836,7 +1780,7 @@ mod tests {
                 raw: msg,
                 signer_state: vec![],
                 requests: Vec::new(),
-            }, None)
+            })
             .await
             .is_err());
     }
@@ -1859,7 +1803,7 @@ mod tests {
                     raw: vec![],
                     signer_state: vec![],
                     requests: Vec::new(),
-                }, None)
+                })
                 .await
                 .unwrap_err()
                 .to_string(),
@@ -1888,7 +1832,7 @@ mod tests {
             signer_state: vec![mk_state_entry(&key, 1, json!({"v": 1}))],
             requests: vec![],
         };
-        let response = signer.process_request(req, None).await.unwrap();
+        let response = signer.process_request(req).await.unwrap();
         let repaired = response
             .signer_state
             .iter()
@@ -1909,7 +1853,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            }, None)
+            })
             .await
             .unwrap_err()
             .to_string();
@@ -1926,7 +1870,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![mk_state_entry("state/test", 1, json!({"v": 1}))],
                 requests: vec![],
-            }, None)
+            })
             .await
             .unwrap_err()
             .to_string();
@@ -1945,7 +1889,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            }, None)
+            })
             .await
             .unwrap_err()
             .to_string();
@@ -1967,7 +1911,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            }, None)
+            })
             .await;
         assert!(res.is_ok());
     }
@@ -1985,7 +1929,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid, missing],
                 requests: vec![],
-            }, None)
+            })
             .await;
         assert!(res.is_ok());
     }
@@ -2003,7 +1947,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid1],
             requests: vec![],
-            }, None)
+            })
             .await
             .unwrap();
         let snapshot1: Vec<SignerStateEntry> = {
@@ -2022,7 +1966,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid2],
                 requests: vec![],
-            }, None)
+            })
             .await;
         assert!(res2.is_ok());
 
@@ -2046,7 +1990,7 @@ mod tests {
                     raw: heartbeat_raw(),
                     signer_state: vec![mk_state_entry(key, 1, json!({"v": request_id}))],
                     requests: vec![],
-                }, None)
+                })
                 .await
                 .unwrap();
             let snapshot: Vec<SignerStateEntry> = {
@@ -2071,7 +2015,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid],
                 requests: vec![],
-            }, None)
+            })
             .await
             .unwrap();
 
@@ -2104,7 +2048,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![valid.clone(), invalid],
                 requests: vec![],
-            }, None)
+            })
             .await
             .unwrap();
 
@@ -2174,7 +2118,7 @@ mod tests {
                 raw: heartbeat_raw(),
                 signer_state: vec![entry],
                 requests: vec![],
-            }, None)
+            })
             .await
             .unwrap_err()
             .to_string();

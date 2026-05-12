@@ -28,7 +28,17 @@ const NODE_STATE_PREFIX: &str = "nodestates";
 const CHANNEL_PREFIX: &str = "channels";
 const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
+const PEER_PREFIX: &str = "peers";
 const TOMBSTONE_VERSION: u64 = u64::MAX;
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PeerEntry {
+    pub peer_id: String,
+    pub addr: String,
+    pub direction: String,
+    #[serde(default)]
+    pub features: String,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 struct StateEntry {
@@ -221,6 +231,22 @@ impl State {
             .get_mut(&key)
             .expect("attempting to update non-existent channel");
         *v = StateEntry::new(v.version + 1, serde_json::to_value(channel_entry).unwrap());
+        Ok(())
+    }
+
+    pub fn insert_or_update_peer(&mut self, peer: PeerEntry) -> Result<(), Error> {
+        let key = format!("{PEER_PREFIX}/{}", peer.peer_id);
+        self.ensure_not_tombstone(&key)?;
+        let value = serde_json::to_value(peer).unwrap();
+        match self.values.get_mut(&key) {
+            Some(entry) => {
+                *entry = StateEntry::new(entry.version.saturating_add(1), value);
+            }
+            None => {
+                let version = self.next_version(&key);
+                self.values.insert(key, StateEntry::new(version, value));
+            }
+        }
         Ok(())
     }
 
@@ -559,6 +585,15 @@ impl State {
                     .map(|setup| !setup.is_null())
                     .unwrap_or(false)
             })
+            .map(|(key, value)| (key.clone(), value.value.clone()))
+            .collect()
+    }
+
+    pub(crate) fn peer_values(&self) -> Vec<(String, serde_json::Value)> {
+        self.values
+            .iter()
+            .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
+            .filter(|(key, _)| key.starts_with(&format!("{PEER_PREFIX}/")))
             .map(|(key, value)| (key.clone(), value.value.clone()))
             .collect()
     }
@@ -994,8 +1029,8 @@ mod tests {
     use crate::persist::TOMBSTONE_VERSION;
 
     use super::{
-        State, StateEntry, StateSketch, ALLOWLIST_PREFIX, CHANNEL_PREFIX, NODE_PREFIX,
-        NODE_STATE_PREFIX, TRACKER_PREFIX,
+        PeerEntry, State, StateEntry, StateSketch, ALLOWLIST_PREFIX, CHANNEL_PREFIX, NODE_PREFIX,
+        NODE_STATE_PREFIX, PEER_PREFIX, TRACKER_PREFIX,
     };
     use crate::pb::SignerStateEntry;
     use serde_json::json;
@@ -1505,6 +1540,52 @@ mod tests {
         state.delete_channel("abc");
 
         assert_tombstone(&state, &live_key);
+    }
+
+    #[test]
+    fn insert_or_update_peer_keeps_last_known_address() {
+        let mut state = State::new();
+        let key = format!("{PEER_PREFIX}/02aa");
+
+        state
+            .insert_or_update_peer(PeerEntry {
+                peer_id: "02aa".to_string(),
+                addr: "127.0.0.1:9735".to_string(),
+                direction: "out".to_string(),
+                features: "".to_string(),
+            })
+            .unwrap();
+        assert_entry(
+            &state,
+            &key,
+            0,
+            json!({
+                "peer_id": "02aa",
+                "addr": "127.0.0.1:9735",
+                "direction": "out",
+                "features": ""
+            }),
+        );
+
+        state
+            .insert_or_update_peer(PeerEntry {
+                peer_id: "02aa".to_string(),
+                addr: "127.0.0.2:9735".to_string(),
+                direction: "out".to_string(),
+                features: "abcd".to_string(),
+            })
+            .unwrap();
+        assert_entry(
+            &state,
+            &key,
+            1,
+            json!({
+                "peer_id": "02aa",
+                "addr": "127.0.0.2:9735",
+                "direction": "out",
+                "features": "abcd"
+            }),
+        );
     }
 
     #[test]
