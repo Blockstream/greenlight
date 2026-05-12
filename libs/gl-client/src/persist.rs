@@ -15,7 +15,7 @@ use log::{trace, warn};
 use serde::de::{self, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -557,45 +557,12 @@ impl State {
         State { values }
     }
 
-    pub(crate) fn recoverable_channel_keys(&self) -> BTreeSet<String> {
+    #[cfg(feature = "backup")]
+    pub(crate) fn live_values(&self) -> impl Iterator<Item = (&str, &serde_json::Value)> + '_ {
         self.values
             .iter()
             .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
-            .filter(|(key, _)| key.starts_with(&format!("{CHANNEL_PREFIX}/")))
-            .filter(|(_, value)| {
-                value
-                    .value
-                    .get("channel_setup")
-                    .map(|setup| !setup.is_null())
-                    .unwrap_or(false)
-            })
-            .map(|(key, _)| key.clone())
-            .collect()
-    }
-
-    pub(crate) fn recoverable_channel_values(&self) -> Vec<(String, serde_json::Value)> {
-        self.values
-            .iter()
-            .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
-            .filter(|(key, _)| key.starts_with(&format!("{CHANNEL_PREFIX}/")))
-            .filter(|(_, value)| {
-                value
-                    .value
-                    .get("channel_setup")
-                    .map(|setup| !setup.is_null())
-                    .unwrap_or(false)
-            })
-            .map(|(key, value)| (key.clone(), value.value.clone()))
-            .collect()
-    }
-
-    pub(crate) fn peer_values(&self) -> Vec<(String, serde_json::Value)> {
-        self.values
-            .iter()
-            .filter(|(_, value)| value.version != TOMBSTONE_VERSION)
-            .filter(|(key, _)| key.starts_with(&format!("{PEER_PREFIX}/")))
-            .map(|(key, value)| (key.clone(), value.value.clone()))
-            .collect()
+            .map(|(key, value)| (key.as_str(), &value.value))
     }
 }
 
