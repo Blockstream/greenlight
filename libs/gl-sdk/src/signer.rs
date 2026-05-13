@@ -14,7 +14,7 @@ pub struct Signer {
 impl Signer {
     #[uniffi::constructor()]
     pub fn new(phrase: String) -> Result<Signer, Error> {
-        let phrase = Mnemonic::from_str(phrase.as_str()).map_err(|_e| Error::PhraseCorrupted())?;
+        let phrase = Mnemonic::from_str(phrase.as_str()).map_err(|_e| Error::phrase_corrupted())?;
         let seed = phrase.to_seed_normalized(&"").to_vec();
         Self::new_from_seed(seed)
     }
@@ -28,7 +28,7 @@ impl Signer {
             gl_client::bitcoin::Network::Bitcoin,
             credentials,
         )
-        .map_err(|e| Error::Other(e.to_string()))?;
+        .map_err(|e| Error::other(e.to_string()))?;
         let credentials = None;
         Ok(Signer {
             seed,
@@ -45,7 +45,7 @@ impl Signer {
             gl_client::bitcoin::Network::Bitcoin,
             creds.inner.clone(),
         )
-        .map_err(|e| Error::Other(e.to_string()))?;
+        .map_err(|e| Error::other(e.to_string()))?;
 
         Ok(Signer {
             inner,

@@ -1,27 +1,128 @@
+use std::collections::HashMap;
+
 uniffi::setup_scaffolding!();
 
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum Error {
-    #[error("There is already a node for node_id={0}, maybe you want to recover?")]
-    DuplicateNode(String),
+    #[error("{message}")]
+    DuplicateNode {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
 
-    #[error("There is no node with node_id={0}, maybe you need to register first?")]
-    NoSuchNode(String),
+    #[error("{message}")]
+    NoSuchNode {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
 
-    #[error("The provided credentials could not be parsed, please recover.")]
-    UnparseableCreds(),
+    #[error("{message}")]
+    UnparseableCreds {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
 
-    #[error("The passphrase you provided fails the checksum")]
-    PhraseCorrupted(),
+    #[error("{message}")]
+    PhraseCorrupted {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
 
-    #[error("Error calling the rpc: {0}")]
-    Rpc(String),
+    #[error("{message}")]
+    Rpc {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
 
-    #[error("Invalid argument: {0}={1}")]
-    Argument(String, String),
+    #[error("{message}")]
+    Argument {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
 
-    #[error("Generic error: {0}")]
-    Other(String),
+    #[error("{message}")]
+    Other {
+        code: i32,
+        message: String,
+        values: HashMap<String, String>,
+    },
+}
+
+impl Error {
+    pub fn duplicate_node(node_id: impl Into<String>) -> Self {
+        let node_id = node_id.into();
+        Error::DuplicateNode {
+            code: 1000,
+            message: format!(
+                "There is already a node for node_id={node_id}, maybe you want to recover?"
+            ),
+            values: HashMap::from([("node_id".into(), node_id)]),
+        }
+    }
+
+    pub fn no_such_node(node_id: impl Into<String>) -> Self {
+        let node_id = node_id.into();
+        Error::NoSuchNode {
+            code: 1001,
+            message: format!(
+                "There is no node with node_id={node_id}, maybe you need to register first?"
+            ),
+            values: HashMap::from([("node_id".into(), node_id)]),
+        }
+    }
+
+    pub fn unparseable_creds() -> Self {
+        Error::UnparseableCreds {
+            code: 1100,
+            message: "The provided credentials could not be parsed, please recover.".into(),
+            values: HashMap::new(),
+        }
+    }
+
+    pub fn phrase_corrupted() -> Self {
+        Error::PhraseCorrupted {
+            code: 1101,
+            message: "The passphrase you provided fails the checksum".into(),
+            values: HashMap::new(),
+        }
+    }
+
+    pub fn rpc(detail: impl Into<String>) -> Self {
+        let detail = detail.into();
+        Error::Rpc {
+            code: 2000,
+            message: format!("Error calling the rpc: {detail}"),
+            values: HashMap::from([("detail".into(), detail)]),
+        }
+    }
+
+    pub fn argument(arg_name: impl Into<String>, arg_value: impl Into<String>) -> Self {
+        let arg_name = arg_name.into();
+        let arg_value = arg_value.into();
+        Error::Argument {
+            code: 3000,
+            message: format!("Invalid argument: {arg_name}={arg_value}"),
+            values: HashMap::from([
+                ("arg_name".into(), arg_name),
+                ("arg_value".into(), arg_value),
+            ]),
+        }
+    }
+
+    pub fn other(detail: impl Into<String>) -> Self {
+        let detail = detail.into();
+        Error::Other {
+            code: 9000,
+            message: format!("Generic error: {detail}"),
+            values: HashMap::from([("detail".into(), detail)]),
+        }
+    }
 }
 
 mod config;
@@ -79,11 +180,11 @@ fn schedule_node(
     let credentials = util::exec(async move {
         let signer =
             gl_client::signer::Signer::new(seed_for_async, network, nobody.clone())
-                .map_err(|e| Error::Other(e.to_string()))?;
+                .map_err(|e| Error::other(e.to_string()))?;
 
         let scheduler = gl_client::scheduler::Scheduler::new(network, nobody)
             .await
-            .map_err(|e| Error::Other(e.to_string()))?;
+            .map_err(|e| Error::other(e.to_string()))?;
 
         let node_id_hex = hex::encode(signer.node_id());
 
@@ -109,7 +210,7 @@ fn schedule_node(
 
     let authenticated_signer =
         gl_client::signer::Signer::new(seed, network, credentials.inner.clone())
-            .map_err(|e| Error::Other(e.to_string()))?;
+            .map_err(|e| Error::other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
     let node = node::Node::with_signer(credentials, handle, network)?;
@@ -124,9 +225,9 @@ fn map_scheduler_error(e: anyhow::Error, node_id_hex: &str) -> Error {
         if let Some(status) = cause.downcast_ref::<tonic::Status>() {
             match status.code() {
                 tonic::Code::AlreadyExists => {
-                    return Error::DuplicateNode(node_id_hex.to_string())
+                    return Error::duplicate_node(node_id_hex.to_string())
                 }
-                tonic::Code::NotFound => return Error::NoSuchNode(node_id_hex.to_string()),
+                tonic::Code::NotFound => return Error::no_such_node(node_id_hex.to_string()),
                 // Don't return here — the tonic status might be a generic
                 // wrapper (e.g. Internal/Unknown) around a more specific
                 // error. Fall through to string matching.
@@ -141,11 +242,11 @@ fn map_scheduler_error(e: anyhow::Error, node_id_hex: &str) -> Error {
         || msg.contains("no rows returned")
         || msg.contains("Recovery failed")
     {
-        Error::NoSuchNode(node_id_hex.to_string())
+        Error::no_such_node(node_id_hex.to_string())
     } else if msg.contains("ALREADY_EXISTS") {
-        Error::DuplicateNode(node_id_hex.to_string())
+        Error::duplicate_node(node_id_hex.to_string())
     } else {
-        Error::Other(msg)
+        Error::other(msg)
     }
 }
 
@@ -153,7 +254,7 @@ fn map_scheduler_error(e: anyhow::Error, node_id_hex: &str) -> Error {
 fn parse_mnemonic(mnemonic: &str) -> Result<Vec<u8>, Error> {
     use bip39::Mnemonic;
     use std::str::FromStr;
-    let phrase = Mnemonic::from_str(mnemonic).map_err(|_e| Error::PhraseCorrupted())?;
+    let phrase = Mnemonic::from_str(mnemonic).map_err(|_e| Error::phrase_corrupted())?;
     Ok(phrase.to_seed_normalized("").to_vec())
 }
 
@@ -172,7 +273,7 @@ pub(crate) fn connect_internal(
 
     let authenticated_signer =
         gl_client::signer::Signer::new(seed, network, creds.inner.clone())
-            .map_err(|e| Error::Other(e.to_string()))?;
+            .map_err(|e| Error::other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
     let node = node::Node::with_signer(creds, handle, network)?;
@@ -209,7 +310,7 @@ pub(crate) fn register_or_recover_internal(
 ) -> Result<std::sync::Arc<node::Node>, Error> {
     match recover_internal(mnemonic.clone(), config) {
         Ok(node) => Ok(node),
-        Err(Error::NoSuchNode(_)) => register_internal(mnemonic, invite_code, config),
+        Err(Error::NoSuchNode { .. }) => register_internal(mnemonic, invite_code, config),
         Err(e) => Err(e),
     }
 }

@@ -57,14 +57,14 @@ impl Scheduler {
         exec(async move {
             let inner = gl_client::scheduler::Scheduler::new(self.network, nobody)
                 .await
-                .map_err(|e| Error::Other(e.to_string()))?;
+                .map_err(|e| Error::other(e.to_string()))?;
 
             let res = inner
                 .register(&signer.inner, code)
                 .await
-                .map_err(|e| Error::Other(e.to_string().clone()))?;
+                .map_err(|e| Error::other(e.to_string()))?;
 
-            Credentials::load(res.creds).map_err(|_e| Error::UnparseableCreds())
+            Credentials::load(res.creds).map_err(|_e| Error::unparseable_creds())
         })
     }
 
@@ -73,14 +73,14 @@ impl Scheduler {
         exec(async move {
             let inner = gl_client::scheduler::Scheduler::new(self.network, nobody)
                 .await
-                .map_err(|e| Error::Other(e.to_string()))?;
+                .map_err(|e| Error::other(e.to_string()))?;
 
             let res = inner
                 .recover(&signer.inner)
                 .await
-                .map_err(|e| Error::Other(e.to_string()))?;
+                .map_err(|e| Error::other(e.to_string()))?;
 
-            Credentials::load(res.creds).map_err(|_e| Error::UnparseableCreds())
+            Credentials::load(res.creds).map_err(|_e| Error::unparseable_creds())
         })
     }
 }
