@@ -4,52 +4,52 @@ uniffi::setup_scaffolding!();
 
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum Error {
-    #[error("{message}")]
+    #[error("{msg}")]
     DuplicateNode {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 
-    #[error("{message}")]
+    #[error("{msg}")]
     NoSuchNode {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 
-    #[error("{message}")]
+    #[error("{msg}")]
     UnparseableCreds {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 
-    #[error("{message}")]
+    #[error("{msg}")]
     PhraseCorrupted {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 
-    #[error("{message}")]
+    #[error("{msg}")]
     Rpc {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 
-    #[error("{message}")]
+    #[error("{msg}")]
     Argument {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 
-    #[error("{message}")]
+    #[error("{msg}")]
     Other {
         code: i32,
-        message: String,
+        msg: String,
         values: HashMap<String, String>,
     },
 }
@@ -59,7 +59,7 @@ impl Error {
         let node_id = node_id.into();
         Error::DuplicateNode {
             code: 1000,
-            message: format!(
+            msg: format!(
                 "There is already a node for node_id={node_id}, maybe you want to recover?"
             ),
             values: HashMap::from([("node_id".into(), node_id)]),
@@ -70,7 +70,7 @@ impl Error {
         let node_id = node_id.into();
         Error::NoSuchNode {
             code: 1001,
-            message: format!(
+            msg: format!(
                 "There is no node with node_id={node_id}, maybe you need to register first?"
             ),
             values: HashMap::from([("node_id".into(), node_id)]),
@@ -80,7 +80,7 @@ impl Error {
     pub fn unparseable_creds() -> Self {
         Error::UnparseableCreds {
             code: 1100,
-            message: "The provided credentials could not be parsed, please recover.".into(),
+            msg: "The provided credentials could not be parsed, please recover.".into(),
             values: HashMap::new(),
         }
     }
@@ -88,7 +88,7 @@ impl Error {
     pub fn phrase_corrupted() -> Self {
         Error::PhraseCorrupted {
             code: 1101,
-            message: "The passphrase you provided fails the checksum".into(),
+            msg: "The passphrase you provided fails the checksum".into(),
             values: HashMap::new(),
         }
     }
@@ -97,7 +97,7 @@ impl Error {
         let detail = detail.into();
         Error::Rpc {
             code: 2000,
-            message: format!("Error calling the rpc: {detail}"),
+            msg: format!("Error calling the rpc: {detail}"),
             values: HashMap::from([("detail".into(), detail)]),
         }
     }
@@ -107,7 +107,7 @@ impl Error {
         let arg_value = arg_value.into();
         Error::Argument {
             code: 3000,
-            message: format!("Invalid argument: {arg_name}={arg_value}"),
+            msg: format!("Invalid argument: {arg_name}={arg_value}"),
             values: HashMap::from([
                 ("arg_name".into(), arg_name),
                 ("arg_value".into(), arg_value),
@@ -119,7 +119,7 @@ impl Error {
         let detail = detail.into();
         Error::Other {
             code: 9000,
-            message: format!("Generic error: {detail}"),
+            msg: format!("Generic error: {detail}"),
             values: HashMap::from([("detail".into(), detail)]),
         }
     }
