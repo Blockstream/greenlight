@@ -89,7 +89,7 @@ pub enum ResolvedInput {
 pub fn parse_input(input: String) -> Result<ParsedInput, Error> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
-        return Err(Error::Other("Empty input".to_string()));
+        return Err(Error::other("Empty input".to_string()));
     }
 
     // Strip lightning: prefix (case-insensitive)
@@ -121,7 +121,7 @@ pub fn parse_input(input: String) -> Result<ParsedInput, Error> {
         return Ok(result);
     }
 
-    Err(Error::Other("Unrecognized input".to_string()))
+    Err(Error::other("Unrecognized input".to_string()))
 }
 
 /// Asynchronously classify and resolve the input.
@@ -147,7 +147,7 @@ pub async fn resolve_input(input: String) -> Result<ResolvedInput, Error> {
         ParsedInput::LnUrl { url } => url,
         ParsedInput::LnUrlAddress { address } => {
             gl_client::lnurl::pay::parse_lightning_address(&address)
-                .map_err(|e| Error::Other(e.to_string()))?
+                .map_err(|e| Error::other(e.to_string()))?
         }
     };
 
@@ -155,7 +155,7 @@ pub async fn resolve_input(input: String) -> Result<ResolvedInput, Error> {
     let response = client
         .resolve(&url)
         .await
-        .map_err(|e| Error::Other(e.to_string()))?;
+        .map_err(|e| Error::other(e.to_string()))?;
 
     Ok(match response {
         LnUrlResponse::Pay(d) => {
@@ -179,7 +179,7 @@ fn try_parse_lnurl(input: &str) -> Option<Result<ParsedInput, Error>> {
     }
     match gl_client::lnurl::utils::parse_lnurl(input) {
         Ok(url) => Some(Ok(ParsedInput::LnUrl { url })),
-        Err(e) => Some(Err(Error::Other(format!("Invalid LNURL: {}", e)))),
+        Err(e) => Some(Err(Error::other(format!("Invalid LNURL: {}", e)))),
     }
 }
 
@@ -220,11 +220,11 @@ fn try_parse_bolt11(input: &str) -> Option<Result<ParsedInput, Error>> {
 
     let parsed: lightning_invoice::Bolt11Invoice = match input.parse() {
         Ok(inv) => inv,
-        Err(e) => return Some(Err(Error::Other(format!("Invalid BOLT11 invoice: {e}")))),
+        Err(e) => return Some(Err(Error::other(format!("Invalid BOLT11 invoice: {e}")))),
     };
 
     if parsed.check_signature().is_err() {
-        return Some(Err(Error::Other(
+        return Some(Err(Error::other(
             "BOLT11 invoice has invalid signature".to_string(),
         )));
     }

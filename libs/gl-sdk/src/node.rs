@@ -50,7 +50,7 @@ impl Node {
         let node_id = credentials
             .inner
             .node_id()
-            .map_err(|_e| Error::UnparseableCreds())?;
+            .map_err(|_e| Error::unparseable_creds())?;
         let inner = ClientNode::new(node_id, credentials.inner.clone())
             .expect("infallible client instantiation");
 
@@ -91,7 +91,7 @@ impl Node {
     pub fn credentials(&self) -> Result<Vec<u8>, Error> {
         match &self.stored_credentials {
             Some(creds) => creds.save(),
-            None => Err(Error::Other(
+            None => Err(Error::other(
                 "No credentials stored. Use register/recover/connect to create a Node with credentials.".to_string(),
             )),
         }
@@ -135,7 +135,7 @@ impl Node {
             token: "".to_owned(),
         };
         let res = exec(gl_client.lsp_invoice(req))
-            .map_err(|s| Error::Rpc(s.to_string()))?
+            .map_err(|s| Error::rpc(s.to_string()))?
             .into_inner();
         Ok(ReceiveResponse {
             bolt11: res.bolt11,
@@ -166,7 +166,7 @@ impl Node {
             riskfactor: None,
         };
         exec(cln_client.pay(req))
-            .map_err(|e| Error::Rpc(e.to_string()))
+            .map_err(|e| Error::rpc(e.to_string()))
             .map(|r| r.into_inner().into())
     }
 
@@ -215,7 +215,7 @@ impl Node {
             (0, "all") => clnpb::AmountOrAll {
                 value: Some(clnpb::amount_or_all::Value::All(true)),
             },
-            (_, _) => return Err(Error::Argument("amount_or_all".to_owned(), amount_or_all)),
+            (_, _) => return Err(Error::argument("amount_or_all", amount_or_all)),
         };
 
         let req = clnpb::WithdrawRequest {
@@ -227,7 +227,7 @@ impl Node {
         };
 
         exec(cln_client.withdraw(req))
-            .map_err(|e| Error::Rpc(e.to_string()))
+            .map_err(|e| Error::rpc(e.to_string()))
             .map(|r| r.into_inner().into())
     }
 
@@ -245,7 +245,7 @@ impl Node {
         };
 
         let res = exec(cln_client.new_addr(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -261,7 +261,7 @@ impl Node {
         let req = clnpb::GetinfoRequest {};
 
         let res = exec(cln_client.getinfo(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -280,7 +280,7 @@ impl Node {
         };
 
         let res = exec(cln_client.list_peers(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -296,7 +296,7 @@ impl Node {
         let req = clnpb::ListpeerchannelsRequest { id: None };
 
         let res = exec(cln_client.list_peer_channels(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -312,7 +312,7 @@ impl Node {
         let req = clnpb::ListfundsRequest { spent: None };
 
         let res = exec(cln_client.list_funds(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -337,15 +337,15 @@ impl Node {
         });
 
         let info: GetInfoResponse = info_res
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner()
             .into();
         let channels: ListPeerChannelsResponse = channels_res
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner()
             .into();
         let funds: ListFundsResponse = funds_res
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner()
             .into();
 
@@ -468,7 +468,7 @@ impl Node {
         };
 
         let res = exec(cln_client.list_invoices(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -504,7 +504,7 @@ impl Node {
         };
 
         let res = exec(cln_client.list_pays(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(res.into())
     }
@@ -520,12 +520,12 @@ impl Node {
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
         let invoices = exec(cln_client.list_invoices(clnpb::ListinvoicesRequest::default()))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
 
         let mut cln_client = exec(self.get_cln_client())?.clone();
         let pays = exec(cln_client.list_pays(clnpb::ListpaysRequest::default()))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
 
         let mut payments: Vec<Payment> = Vec::new();
@@ -607,7 +607,7 @@ impl Node {
         let mut gl_client = exec(self.get_gl_client())?.clone();
         let req = glpb::NodeEventsRequest {};
         let stream = exec(gl_client.stream_node_events(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
         Ok(Arc::new(NodeEventStream {
             inner: Mutex::new(stream),
@@ -724,7 +724,7 @@ impl Node {
             Some(action) => {
                 let processed = action
                     .process(&pay_response.payment_preimage)
-                    .map_err(|e| Error::Other(e.to_string()))?;
+                    .map_err(|e| Error::other(e.to_string()))?;
                 if validate_url {
                     if let gl_client::lnurl::models::ProcessedSuccessAction::Url {
                         url, ..
@@ -733,7 +733,7 @@ impl Node {
                         if let Some(reason) =
                             url_action_domain_mismatch(&request.data.callback, url)
                         {
-                            return Err(Error::Other(reason));
+                            return Err(Error::other(reason));
                         }
                     }
                 }
@@ -784,7 +784,7 @@ impl Node {
             &request.data.k1,
             &invoice_response.bolt11,
         )
-        .map_err(|e| Error::Other(e.to_string()))?;
+        .map_err(|e| Error::other(e.to_string()))?;
 
         // Step 3: Send invoice to service
         match exec(http_client.send_invoice_for_withdraw_request(&callback_url)) {
@@ -830,7 +830,7 @@ fn build_diagnostic_json(
             "node_state": node_state,
         }
     });
-    serde_json::to_string_pretty(&envelope).map_err(|e| Error::Other(e.to_string()))
+    serde_json::to_string_pretty(&envelope).map_err(|e| Error::other(e.to_string()))
 }
 
 /// Returns a human-readable reason if the invoice's BOLT-11 currency
@@ -882,25 +882,25 @@ fn url_action_domain_mismatch(callback_url: &str, action_url: &str) -> Option<St
 fn validate_lnurl_pay_input(request: &crate::lnurl::LnUrlPayRequest) -> Result<(), Error> {
     let data = &request.data;
     if request.amount_msat < data.min_sendable {
-        return Err(Error::Other(format!(
+        return Err(Error::other(format!(
             "amount_msat {} is below the service's min_sendable ({})",
             request.amount_msat, data.min_sendable
         )));
     }
     if request.amount_msat > data.max_sendable {
-        return Err(Error::Other(format!(
+        return Err(Error::other(format!(
             "amount_msat {} is above the service's max_sendable ({})",
             request.amount_msat, data.max_sendable
         )));
     }
     if let Some(comment) = request.comment.as_deref() {
         if data.comment_allowed == 0 && !comment.is_empty() {
-            return Err(Error::Other(
+            return Err(Error::other(
                 "this LNURL service does not accept comments".to_string(),
             ));
         }
         if (comment.len() as u64) > data.comment_allowed {
-            return Err(Error::Other(format!(
+            return Err(Error::other(format!(
                 "comment length {} exceeds the service's comment_allowed ({})",
                 comment.len(),
                 data.comment_allowed
@@ -930,13 +930,13 @@ impl Node {
         let mut gl_client = exec(self.get_gl_client())?.clone();
         let req = glpb::NodeEventsRequest {};
         let stream = exec(gl_client.stream_node_events(req))
-            .map_err(|e| Error::Rpc(e.to_string()))?
+            .map_err(|e| Error::rpc(e.to_string()))?
             .into_inner();
 
         let mut guard = self
             .event_task
             .lock()
-            .map_err(|e| Error::Other(e.to_string()))?;
+            .map_err(|e| Error::other(e.to_string()))?;
         if let Some(prev) = guard.take() {
             prev.abort();
         }
@@ -962,7 +962,7 @@ impl Node {
 
     fn check_connected(&self) -> Result<(), Error> {
         if self.disconnected.load(Ordering::Relaxed) {
-            return Err(Error::Other("Node is disconnected".to_string()));
+            return Err(Error::other("Node is disconnected".to_string()));
         }
         Ok(())
     }
@@ -977,7 +977,7 @@ impl Node {
         let node_id = credentials
             .inner
             .node_id()
-            .map_err(|_e| Error::UnparseableCreds())?;
+            .map_err(|_e| Error::unparseable_creds())?;
         let inner = ClientNode::new(node_id, credentials.inner.clone())
             .expect("infallible client instantiation");
 
@@ -1000,7 +1000,7 @@ impl Node {
         self.gl_client
             .get_or_try_init(|| async { inner.schedule::<GlClient>().await })
             .await
-            .map_err(|e| Error::Rpc(e.to_string()))
+            .map_err(|e| Error::rpc(e.to_string()))
     }
 
     async fn get_cln_client<'a>(&'a self) -> Result<&'a ClnClient, Error> {
@@ -1009,7 +1009,7 @@ impl Node {
         self.cln_client
             .get_or_try_init(|| async { inner.schedule::<ClnClient>().await })
             .await
-            .map_err(|e| Error::Rpc(e.to_string()))
+            .map_err(|e| Error::rpc(e.to_string()))
     }
 }
 
@@ -1913,7 +1913,7 @@ impl NodeEventStream {
     /// stream ends. Returns `None` when the stream is exhausted or
     /// the connection is lost.
     pub fn next(&self) -> Result<Option<NodeEvent>, Error> {
-        let mut stream = self.inner.lock().map_err(|e| Error::Other(e.to_string()))?;
+        let mut stream = self.inner.lock().map_err(|e| Error::other(e.to_string()))?;
         // Loop over wire events, skipping any the SDK doesn't recognise,
         // until we either decode a known event, the stream ends, or it
         // errors. The public `NodeEvent` enum is a closed set —
@@ -1928,7 +1928,7 @@ impl NodeEventStream {
                 }
                 Ok(None) => return Ok(None),
                 Err(e) if e.code() == tonic::Code::Unknown => return Ok(None),
-                Err(e) => return Err(Error::Rpc(e.to_string())),
+                Err(e) => return Err(Error::rpc(e.to_string())),
             }
         }
     }
