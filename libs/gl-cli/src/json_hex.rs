@@ -218,3 +218,13 @@ impl ToJsonHex for cln::FundchannelResponse {
         j
     }
 }
+
+impl ToJsonHex for cln::WithdrawResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        json!({
+            "tx": hex::encode(&self.tx),
+            "txid": hex::encode(&self.txid),
+            "psbt": self.psbt.clone(),
+        })
+    }
+}
