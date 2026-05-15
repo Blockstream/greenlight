@@ -28,6 +28,7 @@ hex = "0.4"
 thiserror = "2.0.11"
 tokio = "1.43.0"
 vls-core.workspace = true
+serde_json = "^1.0"
 
 [badges]
 maintenance = { status = "actively-developed" }

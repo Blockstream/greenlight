@@ -20,6 +20,9 @@ pub struct Cli {
     network: Network,
     #[arg(long, short, global = true, help_heading = "Global options")]
     verbose: bool,
+    /// Produce json outputs.
+    #[arg(long, short, global = true, help_heading = "Global options")]
+    pub json: bool,
     #[command(subcommand)]
     cmd: Commands,
 }
@@ -57,6 +60,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 scheduler::Config {
                     data_dir,
                     network: cli.network,
+                    print_json: cli.json,
                 },
             )
             .await?
@@ -68,6 +72,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 signer::Config {
                     data_dir,
                     network: cli.network,
+                    print_json: cli.json,
                 },
             )
             .await?
@@ -78,6 +83,7 @@ pub async fn run(cli: Cli) -> Result<()> {
                 node::Config {
                     data_dir,
                     network: cli.network,
+                    print_json: cli.json,
                 },
             )
             .await?

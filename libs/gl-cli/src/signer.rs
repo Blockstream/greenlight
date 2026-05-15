@@ -13,6 +13,7 @@ use util::{CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
 pub struct Config<P: AsRef<Path>> {
     pub data_dir: P,
     pub network: Network,
+    pub print_json: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
