@@ -20,12 +20,10 @@ impl ToJsonHex for cln::GetinfoResponse {
             "blockheight": self.blockheight,
             "network": self.network,
             "lightning_dir": self.lightning_dir.clone(),
+            "fees_collected_msat": self.fees_collected_msat.clone().map_or(0, |amt| amt.msat),
         });
         if let Some(alias) = &self.alias {
             j["alias"] = json!(alias);
-        }
-        if let Some(amt) = &self.fees_collected_msat {
-            j["fees_collected_msat"] = amt.msat.into();
         }
         if let Some(feat) = &self.our_features {
             j["our_features"] = json!({
@@ -40,6 +38,36 @@ impl ToJsonHex for cln::GetinfoResponse {
         }
         if let Some(warn_lsync) = &self.warning_lightningd_sync {
             j["warning_lightningd_sync"] = json!(warn_lsync);
+        }
+        j
+    }
+}
+
+impl ToJsonHex for cln::InvoiceResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "bolt11": self.bolt11.clone(),
+            "payment_hash": hex::encode(&self.payment_hash),
+            "payment_secret": hex::encode(&self.payment_secret),
+            "expires_at": self.expires_at,
+        });
+        if let Some(x) = self.created_index {
+            j["created_index"] = json!(x);
+        }
+        if let Some(x) = &self.warning_capacity {
+            j["warning_capacity"] = json!(x);
+        }
+        if let Some(x) = &self.warning_offline {
+            j["warning_offline"] = json!(x);
+        }
+        if let Some(x) = &self.warning_deadends {
+            j["warning_deadends"] = json!(x);
+        }
+        if let Some(x) = &self.warning_private_unused {
+            j["warning_private_unused"] = json!(x);
+        }
+        if let Some(x) = &self.warning_mpp {
+            j["warning_mpp"] = json!(x);
         }
         j
     }
