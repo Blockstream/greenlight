@@ -183,3 +183,19 @@ impl ToJsonHex for cln::StopResponse {
         json!({})
     }
 }
+
+impl ToJsonHex for cln::CloseResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "item_type": self.item_type,
+        });
+        if let Some(x) = &self.tx {
+            j["tx"] = json!(hex::encode(x));
+        }
+        if let Some(x) = &self.txid {
+            j["txid"] = json!(hex::encode(x));
+        }
+
+        j
+    }
+}
