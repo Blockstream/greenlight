@@ -441,7 +441,8 @@ async fn getinfo_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
         let j = res.to_json_hex();
         println!(
             "{}",
-            serde_json::to_string_pretty(&j).map_err(|e| Error::custom(e.to_string()))?
+            serde_json::to_string_pretty(&j)
+                .map_err(|e| Error::failed_response_serialization(e))?
         );
     } else {
         println!("{:?}", res);
