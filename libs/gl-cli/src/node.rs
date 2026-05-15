@@ -1,4 +1,5 @@
 use crate::error::{Error, Result};
+use crate::json_hex::ToJsonHex;
 use crate::model;
 use crate::util::{self, CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
 use clap::Subcommand;
@@ -429,13 +430,22 @@ async fn stop<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 }
 
 async fn getinfo_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let print_json = config.print_json;
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .getinfo(cln::GetinfoRequest {})
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
-    println!("{:?}", res);
+    if print_json {
+        let j = res.to_json_hex();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&j).map_err(|e| Error::custom(e.to_string()))?
+        );
+    } else {
+        println!("{:?}", res);
+    }
     Ok(())
 }
 
