@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error(transparent)]
     UtilError(#[from] util::UtilsError),
+
+    #[error("Failed to serialize response: {0}")]
+    JsonResponseError(String),
 }
 
 impl Error {
@@ -30,6 +33,10 @@ impl Error {
 
     pub fn credentials_not_found(e: impl std::fmt::Display) -> Error {
         Error::CredentialsNotFoundError(e.to_string())
+    }
+
+    pub fn failed_response_serialization(e: impl std::fmt::Display) -> Error {
+        Error::JsonResponseError(e.to_string())
     }
 }
 
