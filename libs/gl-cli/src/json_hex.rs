@@ -177,3 +177,9 @@ impl ToJsonHex for cln::ConnectResponse {
         j
     }
 }
+
+impl ToJsonHex for cln::StopResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        json!({})
+    }
+}
