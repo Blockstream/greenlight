@@ -388,6 +388,7 @@ async fn fundchannel_handler<P: AsRef<Path>>(
     id: String,
     amount_sat: model::AmountSatOrAll,
 ) -> Result<()> {
+    let print_json = config.print_json;
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let id_bytes = hex::FromHex::from_hex(&id)
         .map_err(|e| Error::custom(format!("Invalid hex string: {id}. {e}")))?;
@@ -410,7 +411,7 @@ async fn fundchannel_handler<P: AsRef<Path>>(
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
-    println!("{:?}", res);
+    print_json_or_pb!(print_json, res);
     Ok(())
 }
 

@@ -199,3 +199,22 @@ impl ToJsonHex for cln::CloseResponse {
         j
     }
 }
+
+impl ToJsonHex for cln::FundchannelResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "tx": hex::encode(&self.tx),
+            "txid": hex::encode(&self.txid),
+            "outnum": self.outnum,
+            "channel_id": hex::encode(&self.channel_id),
+        });
+        if let Some(x) = &self.close_to {
+            j["close_to"] = json!(hex::encode(x));
+        }
+        if let Some(x) = &self.mindepth {
+            j["mindepth"] = json!(x);
+        }
+
+        j
+    }
+}
