@@ -93,3 +93,55 @@ impl ToJsonHex for cln::PayResponse {
         j
     }
 }
+
+impl ToJsonHex for cln::ListpaysPays {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "payment_hash": hex::encode(&self.payment_hash),
+            "status": self.status,
+            "created_at": self.created_at,
+        });
+        if let Some(x) = &self.destination {
+            j["destination"] = json!(hex::encode(x));
+        }
+        if let Some(x) = self.completed_at {
+            j["completed_at"] = json!(x);
+        }
+        if let Some(x) = &self.label {
+            j["label"] = json!(x);
+        }
+        if let Some(x) = &self.bolt11 {
+            j["bolt11"] = json!(x);
+        }
+        if let Some(x) = &self.description {
+            j["description"] = json!(x);
+        }
+        if let Some(x) = &self.bolt12 {
+            j["bolt12"] = json!(x);
+        }
+        if let Some(x) = &self.amount_msat {
+            j["amount_msat"] = x.msat.into();
+        }
+        if let Some(x) = &self.amount_sent_msat {
+            j["amount_sent_msat"] = x.msat.into();
+        }
+        if let Some(x) = &self.preimage {
+            j["preimage"] = json!(hex::encode(x));
+        }
+        if let Some(x) = self.number_of_parts {
+            j["number_of_parts"] = json!(x);
+        }
+        if let Some(x) = &self.erroronion {
+            j["erroronion"] = json!(hex::encode(x));
+        }
+        j
+    }
+}
+
+impl ToJsonHex for cln::ListpaysResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        json!({
+            "pays": json!(self.pays.iter().map(|x| x.to_json_hex()).collect::<Vec<_>>())
+        })
+    }
+}

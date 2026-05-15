@@ -510,6 +510,7 @@ async fn listpays_handler<P: AsRef<Path>>(
     payment_hash: Option<Vec<u8>>,
     status: Option<i32>,
 ) -> Result<()> {
+    let print_json = config.print_json;
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .list_pays(cln::ListpaysRequest {
@@ -523,7 +524,7 @@ async fn listpays_handler<P: AsRef<Path>>(
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
-    println!("{:?}", res);
+    print_json_or_pb!(print_json, res);
     Ok(())
 }
 
