@@ -281,3 +281,16 @@ impl ToJsonHex for cln::ListfundsResponse {
         })
     }
 }
+
+impl ToJsonHex for cln::NewaddrResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({});
+        if let Some(x) = &self.p2tr {
+            j["p2tr"] = json!(x);
+        }
+        if let Some(x) = &self.bech32 {
+            j["bech32"] = json!(x);
+        }
+        j
+    }
+}
