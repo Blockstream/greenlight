@@ -145,3 +145,35 @@ impl ToJsonHex for cln::ListpaysResponse {
         })
     }
 }
+
+impl ToJsonHex for cln::ConnectAddress {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "item_type": self.item_type,
+        });
+        if let Some(x) = &self.socket {
+            j["socket"] = json!(x);
+        }
+        if let Some(x) = &self.address {
+            j["address"] = json!(x);
+        }
+        if let Some(x) = &self.port {
+            j["port"] = json!(x);
+        }
+        j
+    }
+}
+
+impl ToJsonHex for cln::ConnectResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "id": hex::encode(&self.id),
+            "features": hex::encode(&self.features),
+            "direction": self.direction,
+        });
+        if let Some(x) = &self.address {
+            j["address"] = x.to_json_hex();
+        }
+        j
+    }
+}
