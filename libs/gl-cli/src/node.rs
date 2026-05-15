@@ -233,6 +233,21 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
     }
 }
 
+macro_rules! print_json_or_pb {
+    ($print_json: expr, $obj: expr) => {
+        if $print_json {
+            let j = $obj.to_json_hex();
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&j)
+                    .map_err(|e| Error::failed_response_serialization(e))?
+            );
+        } else {
+            println!("{:?}", $obj);
+        }
+    };
+}
+
 async fn init_handler<P: AsRef<Path>>(config: Config<P>, mnemonic: Option<String>) -> Result<()> {
     // Check if seed already exists in the configuration path
     let seed_path = config.data_dir.as_ref().join(SEED_FILE_NAME);
@@ -437,16 +452,7 @@ async fn getinfo_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
-    if print_json {
-        let j = res.to_json_hex();
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&j)
-                .map_err(|e| Error::failed_response_serialization(e))?
-        );
-    } else {
-        println!("{:?}", res);
-    }
+    print_json_or_pb!(print_json, res);
     Ok(())
 }
 
