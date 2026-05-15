@@ -228,3 +228,56 @@ impl ToJsonHex for cln::WithdrawResponse {
         })
     }
 }
+
+impl ToJsonHex for cln::ListfundsOutputs {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "txid": hex::encode(&self.txid),
+            "scriptpubkey": hex::encode(&self.scriptpubkey),
+            "output": self.output,
+            "amount_msat": self.amount_msat.clone().map_or(0, |amt| amt.msat),
+            "status": self.status,
+            "reserved": self.reserved
+        });
+        if let Some(x) = &self.address {
+            j["address"] = json!(x);
+        }
+        if let Some(x) = &self.redeemscript {
+            j["redeemscript"] = json!(hex::encode(x));
+        }
+        if let Some(x) = self.blockheight {
+            j["blockheight"] = json!(x);
+        }
+        j
+    }
+}
+
+impl ToJsonHex for cln::ListfundsChannels {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "peer_id": hex::encode(&self.peer_id),
+            "our_amount_msat": self.our_amount_msat.clone().map_or(0, |amt| amt.msat),
+            "amount_msat": self.amount_msat.clone().map_or(0, |amt| amt.msat),
+            "funding_txid": hex::encode(&self.funding_txid),
+            "funding_output": self.funding_output,
+            "connected": self.connected,
+            "state": self.state,
+        });
+        if let Some(x) = &self.channel_id {
+            j["channel_id"] = json!(hex::encode(x));
+        }
+        if let Some(x) = &self.short_channel_id {
+            j["short_channel_id"] = json!(x);
+        }
+        j
+    }
+}
+
+impl ToJsonHex for cln::ListfundsResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        json!({
+            "outputs": json!(self.outputs.iter().map(|x| x.to_json_hex()).collect::<Vec<_>>()),
+            "channels": json!(self.channels.iter().map(|x| x.to_json_hex()).collect::<Vec<_>>())
+        })
+    }
+}
