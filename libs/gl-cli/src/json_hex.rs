@@ -72,3 +72,24 @@ impl ToJsonHex for cln::InvoiceResponse {
         j
     }
 }
+
+impl ToJsonHex for cln::PayResponse {
+    fn to_json_hex(&self) -> serde_json::Value {
+        let mut j = json!({
+            "status": self.status,
+            "payment_preimage": hex::encode(&self.payment_preimage),
+            "payment_hash": hex::encode(&self.payment_hash),
+            "created_at": self.created_at,
+            "parts": self.parts,
+            "amount_msat": self.amount_msat.clone().map_or(0, |amt| amt.msat),
+            "amount_sent_msat": self.amount_sent_msat.clone().map_or(0, |amt| amt.msat),
+        });
+        if let Some(x) = &self.destination {
+            j["destination"] = json!(hex::encode(x));
+        }
+        if let Some(x) = &self.warning_partial_completion {
+            j["warning_partial_completion"] = json!(x);
+        }
+        j
+    }
+}
