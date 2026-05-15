@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use gl_client::bitcoin::Network;
 use std::{path::PathBuf, str::FromStr};
 mod error;
+mod json_hex;
 pub mod model;
 mod node;
 mod scheduler;
