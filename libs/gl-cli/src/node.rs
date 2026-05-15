@@ -467,6 +467,7 @@ async fn invoice_handler<P: AsRef<Path>>(
     cltv: Option<u32>,
     deschashonly: Option<bool>,
 ) -> Result<()> {
+    let print_json = config.print_json;
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .invoice(cln::InvoiceRequest {
@@ -483,7 +484,7 @@ async fn invoice_handler<P: AsRef<Path>>(
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
-    println!("{:?}", res);
+    print_json_or_pb!(print_json, res);
     Ok(())
 }
 
