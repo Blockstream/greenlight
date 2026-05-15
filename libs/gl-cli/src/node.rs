@@ -10,6 +10,7 @@ use std::path::Path;
 pub struct Config<P: AsRef<Path>> {
     pub data_dir: P,
     pub network: Network,
+    pub print_json: bool,
 }
 
 #[derive(Subcommand, Debug)]
