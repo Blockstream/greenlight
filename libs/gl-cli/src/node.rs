@@ -341,13 +341,14 @@ async fn log<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 }
 
 async fn newaddr_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
+    let print_json = config.print_json;
     let mut node: gl_client::node::ClnClient = get_node(config).await?;
     let res = node
         .new_addr(cln::NewaddrRequest { addresstype: None })
         .await
         .map_err(|e| Error::custom(e.message()))?
         .into_inner();
-    println!("{:?}", res);
+    print_json_or_pb!(print_json, res);
     Ok(())
 }
 
