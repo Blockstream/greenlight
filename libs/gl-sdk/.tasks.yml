@@ -94,6 +94,27 @@ tasks:
         npm install
         npm run build
 
+  bindings-cpp:
+    desc: "Generate C++ bindings (requires uniffi-bindgen-cpp)"
+    dir: "{{.TASKFILE_DIR}}/../.."
+    deps:
+      - task: build
+        vars: { CARGO_FLAGS: '{{if eq .PROFILE "release"}}--release{{else}}{{end}} --features cpp-bindings' }
+    cmds:
+      - |
+        cp ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
+        uniffi-bindgen-cpp \
+          --library ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} \
+          --out-dir ./libs/gl-sdk/bindings
+
+        # Patch generated C++ identifiers that conflict with reserved keyword `register`.
+        perl -pi -e \
+          's/std::shared_ptr<Node> register\(/std::shared_ptr<Node> register_node\(/g; s/std::shared_ptr<Credentials> register\(/std::shared_ptr<Credentials> register_node\(/g' \
+          "./libs/gl-sdk/bindings/glsdk.hpp"
+        perl -pi -e \
+          's/NodeBuilder::register\(/NodeBuilder::register_node\(/g; s/Scheduler::register\(/Scheduler::register_node\(/g' \
+          "./libs/gl-sdk/bindings/glsdk.cpp"
+
   bindings-all:
     desc: "Generate all language bindings"
     dir: "{{.TASKFILE_DIR}}/../.."
@@ -103,6 +124,7 @@ tasks:
       - bindings-swift
       - bindings-ruby
       - bindings-typescript
+      - bindings-cpp
 
   package-python:
     desc: "Build Python wheel package"
