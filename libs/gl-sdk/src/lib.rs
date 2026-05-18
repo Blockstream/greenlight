@@ -259,9 +259,18 @@ pub fn parse_input(input: String) -> Result<input::ParsedInput, Error> {
 /// immediately without I/O.
 ///
 /// Strips `lightning:` / `LIGHTNING:` prefixes automatically.
+#[cfg(not(feature = "cpp-bindings"))]
 #[uniffi::export(async_runtime = "tokio")]
 pub async fn resolve_input(input: String) -> Result<input::ResolvedInput, Error> {
     input::resolve_input(input).await
+}
+
+/// Synchronously classify and resolve the input (C++ bindings).
+/// Note: This blocks the current thread. Use in a background thread if needed.
+#[cfg(feature = "cpp-bindings")]
+#[uniffi::export]
+pub fn resolve_input(input: String) -> Result<input::ResolvedInput, Error> {
+    util::exec(async { input::resolve_input(input).await })
 }
 
 /// Set up SDK logging. Call once before any other SDK function.

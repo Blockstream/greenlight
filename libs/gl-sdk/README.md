@@ -36,6 +36,9 @@ task sdk:bindings-swift
 # Generate Ruby bindings
 task sdk:bindings-ruby
 
+# Generate C++ bindings (requires uniffi-bindgen-cpp)
+task sdk:bindings-cpp
+
 # Generate all language bindings
 task sdk:bindings-all
 ```
@@ -75,6 +78,32 @@ cargo run --bin uniffi-bindgen -- generate \
   --language kotlin \
   --out-dir ./libs/gl-sdk/bindings
 ```
+
+### Generate C++ Bindings
+
+C++ bindings use [uniffi-bindgen-cpp](https://github.com/NordSecurity/uniffi-bindgen-cpp) instead of the built-in `uniffi-bindgen`. Install it first:
+
+```bash
+cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
+```
+
+Then build with the `cpp-bindings` feature and generate bindings:
+
+```bash
+cargo build --release -p gl-sdk --features cpp-bindings
+uniffi-bindgen-cpp --library target/release/libglsdk.dylib --out-dir libs/gl-sdk/bindings
+```
+
+> On Linux, replace `libglsdk.dylib` with `libglsdk.so`.
+
+The generated files require patching to avoid conflicts with the C++ reserved keyword `register`:
+
+```bash
+perl -pi -e 's/std::shared_ptr<Node> register\(/std::shared_ptr<Node> register_node\(/g; s/std::shared_ptr<Credentials> register\(/std::shared_ptr<Credentials> register_node\(/g' libs/gl-sdk/bindings/glsdk.hpp
+perl -pi -e 's/NodeBuilder::register\(/NodeBuilder::register_node\(/g; s/Scheduler::register\(/Scheduler::register_node\(/g' libs/gl-sdk/bindings/glsdk.cpp
+```
+
+The `task sdk:bindings-cpp` command handles all of the above automatically, including platform detection.
 
 ## Files
 
