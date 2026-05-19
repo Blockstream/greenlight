@@ -49,7 +49,6 @@ mod approver;
 mod auth;
 #[cfg(feature = "backup")]
 mod backup;
-mod backup_runtime;
 #[cfg(feature = "backup")]
 pub use backup::{
     CLNBackup, CLNBackupChannel, CLNBackupOptions, PeerEntry, RecoverableBasepoints,
@@ -128,7 +127,8 @@ pub struct Signer {
 
     network: Network,
     state: Arc<Mutex<crate::persist::State>>,
-    backup: backup_runtime::Runtime,
+    #[cfg(feature = "backup")]
+    backup_runtime: Arc<Mutex<backup::BackupRuntime>>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -192,7 +192,13 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
-        let backup = backup_runtime::Runtime::new(&config)?;
+        #[cfg(feature = "backup")]
+        let backup_config = {
+            if let Some(backup) = &config.backup {
+                backup.validate()?;
+            }
+            config.backup.clone()
+        };
 
         let (state_signature_override_enabled, state_signature_override_note) =
             match config.state_signature_override {
@@ -338,7 +344,12 @@ impl Signer {
             init,
             network,
             state: persister.state(),
-            backup,
+            #[cfg(feature = "backup")]
+            backup_runtime: Arc::new(Mutex::new(
+                backup_config
+                    .map(backup::BackupRuntime::new)
+                    .unwrap_or_default(),
+            )),
         })
     }
 
@@ -774,7 +785,10 @@ impl Signer {
         // including the initial VLS state created during Signer::new().
         let prestate_sketch = incoming_state.sketch();
 
-        let (prestate_log, pre_backup_state) = {
+        #[cfg(feature = "backup")]
+        let pre_backup_state;
+
+        let prestate_log = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
@@ -789,11 +803,14 @@ impl Signer {
                 );
             }
             trace!("Processing request {}", hex::encode(&req.raw));
-            let pre_backup_state = self.backup.before_request(&state);
+            #[cfg(feature = "backup")]
+            {
+                pre_backup_state = state.clone();
+            }
             let prestate_log = serde_json::to_string(&*state).map_err(|e| {
                 Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
             })?;
-            (prestate_log, pre_backup_state)
+            prestate_log
         };
 
         // The first two bytes represent the message type. Check that
@@ -923,7 +940,10 @@ impl Signer {
             }
         };
 
-        let (signer_state, pending_backup) = {
+        #[cfg(feature = "backup")]
+        let post_backup_state;
+
+        let signer_state = {
             debug!("Serializing state changes to report to node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!(
@@ -936,7 +956,6 @@ impl Signer {
                     self.sign_state_payload(key, version, value)
                 })
                 .map_err(|e| Error::Other(anyhow!("Failed to sign signer state entries: {e}")))?;
-            let pending_backup = self.backup.after_request(&pre_backup_state, &state);
             let full_wire_bytes = {
                 let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
                 signer_state_response_wire_bytes(&full_entries)
@@ -952,9 +971,25 @@ impl Signer {
                 full_wire_bytes,
                 saved_percent
             );
-            (diff_entries, pending_backup)
+            #[cfg(feature = "backup")]
+            {
+                post_backup_state = state.clone();
+            }
+            diff_entries
         };
-        self.backup.write_pending(&self.id, pending_backup);
+        #[cfg(feature = "backup")]
+        {
+            match self.backup_runtime.lock() {
+                Ok(mut runtime) => runtime.observe(
+                    &self.id,
+                    &pre_backup_state,
+                    &post_backup_state,
+                ),
+                Err(e) => {
+                    log::error!("Signer backup runtime lock failed; skipping backup snapshot: {e}")
+                }
+            }
+        }
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
