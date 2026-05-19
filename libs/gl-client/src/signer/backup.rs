@@ -24,7 +24,7 @@ const SHACHAIN_MISSING_WARNING: &str = "shachain_tlv_missing";
 const CHANNEL_PREFIX: &str = "channels/";
 const PEER_PREFIX: &str = "peers/";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct SignerBackupConfig {
     pub path: PathBuf,
     pub strategy: SignerBackupStrategy,
@@ -52,9 +52,11 @@ impl SignerBackupConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum SignerBackupStrategy {
+    #[default]
+    Never,
     NewChannelsOnly,
     Periodic { updates: u32 },
 }
@@ -62,6 +64,7 @@ pub enum SignerBackupStrategy {
 impl SignerBackupStrategy {
     pub(crate) fn validate(&self) -> Result<()> {
         match self {
+            SignerBackupStrategy::Never => Ok(()),
             SignerBackupStrategy::NewChannelsOnly => Ok(()),
             SignerBackupStrategy::Periodic { updates: 0 } => {
                 Err(anyhow!("periodic signer backup updates must be greater than zero"))
@@ -359,15 +362,24 @@ struct ChannelSetup {
 
 #[derive(Default)]
 pub(crate) struct BackupRuntime {
+    config: SignerBackupConfig,
     updates_since_backup: u32,
     snapshot_pending: bool,
     last_backed_state: Option<State>,
 }
 
 impl BackupRuntime {
-    pub(crate) fn observe(
+    pub fn new(config: SignerBackupConfig) -> Self {
+        Self {
+            config,
+            updates_since_backup: 0,
+            snapshot_pending: false,
+            last_backed_state: None,
+        }
+    }
+
+    fn contains_changes(
         &mut self,
-        strategy: SignerBackupStrategy,
         before: &State,
         after: &State,
     ) -> bool {
@@ -375,7 +387,7 @@ impl BackupRuntime {
             self.snapshot_pending = true;
         }
 
-        if let SignerBackupStrategy::Periodic { updates } = strategy {
+        if let SignerBackupStrategy::Periodic { updates } = self.config.strategy {
             if has_recoverable_state_update(before, after) {
                 self.updates_since_backup = self.updates_since_backup.saturating_add(1);
                 if updates > 0 && self.updates_since_backup >= updates {
@@ -387,17 +399,40 @@ impl BackupRuntime {
         self.snapshot_pending && self.has_unbacked_recoverable_state(after)
     }
 
-    pub(crate) fn snapshot_succeeded(&mut self, state: &State) {
-        self.updates_since_backup = 0;
-        self.snapshot_pending = false;
-        self.last_backed_state = Some(state.clone());
-    }
-
     fn has_unbacked_recoverable_state(&self, state: &State) -> bool {
         self.last_backed_state
             .as_ref()
             .map(|last| has_recoverable_state_update(last, state))
             .unwrap_or(true)
+    }
+
+    pub(crate) fn observe(
+        &mut self,
+        node_id: &[u8],
+        before: &State,
+        after: &State,
+    ) {
+        if self.config.strategy == SignerBackupStrategy::Never {
+            return;
+        }
+
+        if !self.contains_changes(before, after) {
+            log::trace!("skipping signer backup snapshot; no recoverable state changes detected");
+            return;
+        }
+
+        let snapshot = after.omit_tombstones();
+        match write_snapshot(&self.config, node_id, snapshot.clone()) {
+            Ok(()) => {
+                self.updates_since_backup = 0;
+                self.snapshot_pending = false;
+                self.last_backed_state = Some(snapshot.clone());
+                log::info!("Signer backup snapshot written successfully to {}", self.config.path.display());
+            },
+            Err(e) => {
+                log::error!("Signer backup failed; continuing without backup snapshot: {e}");
+            }
+        }
     }
 }
 
@@ -1090,24 +1125,28 @@ mod tests {
 
     #[test]
     fn runtime_retries_new_channel_snapshot_until_success() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("backup.json");
         let stub = state(json!({
             "channels/a": [0, channel(serde_json::Value::Null)]
         }));
         let ready = state(json!({
             "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
         }));
-        let mut runtime = BackupRuntime::default();
+        let mut runtime = BackupRuntime::new(SignerBackupConfig::new(path));
 
-        assert!(runtime.observe(SignerBackupStrategy::NewChannelsOnly, &stub, &ready));
-        assert!(runtime.observe(SignerBackupStrategy::NewChannelsOnly, &ready, &ready));
+        assert!(runtime.contains_changes(&stub, &ready));
+        assert!(runtime.contains_changes(&ready, &ready));
 
-        runtime.snapshot_succeeded(&ready);
+        runtime.observe(&[2u8; 33], &ready, &ready);
 
-        assert!(!runtime.observe(SignerBackupStrategy::NewChannelsOnly, &ready, &ready));
+        assert!(!runtime.contains_changes(&ready, &ready));
     }
 
     #[test]
     fn periodic_trigger_counts_recoverable_channel_updates() {
+        let dir = tempfile::tempdir().unwrap();
+        let empty = state(json!({}));
         let ready = state(json!({
             "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
         }));
@@ -1117,21 +1156,24 @@ mod tests {
         let updated_twice = state(json!({
             "channels/a": [3, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
         }));
-        let mut runtime = BackupRuntime::default();
-        let strategy = SignerBackupStrategy::Periodic { updates: 2 };
-        runtime.snapshot_succeeded(&ready);
+        let mut runtime = BackupRuntime::new(
+            SignerBackupConfig::periodic(dir.path().join("backup.json"), 2).unwrap(),
+        );
+        runtime.observe(&[2u8; 33], &empty, &ready);
 
-        assert!(!runtime.observe(strategy, &ready, &updated_once));
-        assert!(runtime.observe(strategy, &updated_once, &updated_twice));
-        assert!(runtime.observe(strategy, &updated_twice, &updated_twice));
+        assert!(!runtime.contains_changes(&ready, &updated_once));
+        assert!(runtime.contains_changes(&updated_once, &updated_twice));
+        assert!(runtime.contains_changes(&updated_twice, &updated_twice));
 
-        runtime.snapshot_succeeded(&updated_twice);
+        runtime.observe(&[2u8; 33], &updated_twice, &updated_twice);
 
-        assert!(!runtime.observe(strategy, &updated_twice, &updated_twice));
+        assert!(!runtime.contains_changes(&updated_twice, &updated_twice));
     }
 
     #[test]
     fn periodic_trigger_writes_new_channels_immediately() {
+        let dir = tempfile::tempdir().unwrap();
+        let empty = state(json!({}));
         let ready = state(json!({
             "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))]
         }));
@@ -1139,14 +1181,12 @@ mod tests {
             "channels/a": [1, channel(json!({ "funding_outpoint": { "txid": "00", "vout": 0 } }))],
             "channels/b": [1, channel(json!({ "funding_outpoint": { "txid": "11", "vout": 1 } }))]
         }));
-        let mut runtime = BackupRuntime::default();
-        runtime.snapshot_succeeded(&ready);
+        let mut runtime = BackupRuntime::new(
+            SignerBackupConfig::periodic(dir.path().join("backup.json"), 100).unwrap(),
+        );
+        runtime.observe(&[2u8; 33], &empty, &ready);
 
-        assert!(runtime.observe(
-            SignerBackupStrategy::Periodic { updates: 100 },
-            &ready,
-            &second_ready
-        ));
+        assert!(runtime.contains_changes(&ready, &second_ready));
     }
 
     #[test]

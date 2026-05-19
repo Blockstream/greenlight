@@ -309,6 +309,7 @@ fn format_backup_report_text(report: &BackupInspectionReport) -> String {
 
 fn format_strategy(strategy: SignerBackupStrategy) -> String {
     match strategy {
+        SignerBackupStrategy::Never => "never".to_string(),
         SignerBackupStrategy::NewChannelsOnly => "new_channels_only".to_string(),
         SignerBackupStrategy::Periodic { updates } => format!("periodic(updates={updates})"),
     }
