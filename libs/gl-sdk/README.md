@@ -87,10 +87,10 @@ C++ bindings use [uniffi-bindgen-cpp](https://github.com/NordSecurity/uniffi-bin
 cargo install uniffi-bindgen-cpp --git https://github.com/NordSecurity/uniffi-bindgen-cpp --tag v0.8.1+v0.29.4
 ```
 
-Then build with the `cpp-bindings` feature and generate bindings:
+Then build and generate bindings:
 
 ```bash
-cargo build --release -p gl-sdk --features cpp-bindings
+cargo build --release -p gl-sdk
 uniffi-bindgen-cpp --library target/release/libglsdk.dylib --out-dir libs/gl-sdk/bindings
 ```
 
@@ -104,6 +104,30 @@ perl -pi -e 's/NodeBuilder::register\(/NodeBuilder::register_node\(/g; s/Schedul
 ```
 
 The `task sdk:bindings-cpp` command handles all of the above automatically, including platform detection.
+
+## Synchronous API Design
+
+The entire public API exposed by the SDK through UniFFI is
+**synchronous**. Functions that need to perform async work (network
+I/O, gRPC calls) block the calling thread while an internal Tokio
+runtime executes the underlying async operations.
+
+This is a deliberate design choice:
+
+- **Uniform bindings** -- every target language (Python, Kotlin,
+  Swift, Ruby, C++) gets the same blocking API. No language needs
+  an async runtime, coroutine support, or special feature flags on
+  the caller side.
+- **Simpler integration** -- callers that need concurrency can use
+  their language's native threading primitives (e.g. `threading` in
+  Python, `std::thread` in C++, coroutines in Kotlin) to call SDK
+  methods off the main thread.
+- **No conditional compilation** -- a single build of the shared
+  library works for all bindings, avoiding feature-flag divergence
+  between languages.
+
+The internal Tokio runtime is created lazily on the first call and
+lives for the lifetime of the process (see `src/util.rs`).
 
 ## Files
 
