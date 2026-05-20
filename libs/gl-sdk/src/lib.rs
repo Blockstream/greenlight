@@ -250,7 +250,7 @@ pub fn parse_input(input: String) -> Result<input::ParsedInput, Error> {
     input::parse_input(input)
 }
 
-/// Asynchronously classify and resolve the input.
+/// Classify and resolve the input.
 ///
 /// Internally calls `parse_input` for offline classification, then
 /// for LNURL bech32 strings and Lightning Addresses performs the
@@ -259,15 +259,15 @@ pub fn parse_input(input: String) -> Result<input::ParsedInput, Error> {
 /// immediately without I/O.
 ///
 /// Strips `lightning:` / `LIGHTNING:` prefixes automatically.
-#[cfg(not(feature = "cpp-bindings"))]
-#[uniffi::export(async_runtime = "tokio")]
-pub async fn resolve_input(input: String) -> Result<input::ResolvedInput, Error> {
-    input::resolve_input(input).await
-}
-
-/// Synchronously classify and resolve the input (C++ bindings).
-/// Note: This blocks the current thread. Use in a background thread if needed.
-#[cfg(feature = "cpp-bindings")]
+///
+/// # Blocking
+///
+/// This function blocks the calling thread while any network I/O
+/// completes. The SDK exposes a **synchronous-only** public API so
+/// that every language binding (Python, Kotlin, Swift, Ruby, C++)
+/// works without requiring an async runtime on the caller side.
+/// Async work is executed internally on a shared Tokio runtime
+/// managed by the SDK.
 #[uniffi::export]
 pub fn resolve_input(input: String) -> Result<input::ResolvedInput, Error> {
     util::exec(async { input::resolve_input(input).await })
