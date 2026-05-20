@@ -23,18 +23,10 @@ impl std::error::Error for ParserError {}
 #[serde(tag = "method", content = "params")]
 #[serde(rename_all = "snake_case")]
 pub enum MyRequests {
-    HtlcAccepted(HtlcAcceptedCall),
     Getmanifest(GetManifestCall),
     Init(InitCall),
     InvoicePayment(InvoicePaymentCall),
     CommitmentRevocation(CommitmentRevocationCall),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct HtlcAcceptedCall {
-    pub onion: HtlcAcceptedCallOnion,
-    pub htlc: HtlcAcceptedCallHtlc,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -151,41 +143,6 @@ pub struct PluginRpcMethod {
     name: String,
     usage: String,
     description: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct HtlcAcceptedCallOnion {
-    #[serde(serialize_with = "buffer_to_hex", deserialize_with = "hex_to_buffer")]
-    pub payload: Vec<u8>,
-    short_channel_id: Option<String>,
-    forward_amount: String,
-    outgoing_cltv_value: u64,
-
-    #[serde(serialize_with = "buffer_to_hex", deserialize_with = "hex_to_buffer")]
-    next_onion: Vec<u8>,
-
-    #[serde(serialize_with = "buffer_to_hex", deserialize_with = "hex_to_buffer")]
-    pub shared_secret: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct HtlcAcceptedCallHtlc {
-    pub amount: String,
-    cltv_expiry: u64,
-    cltv_expiry_relative: u64,
-
-    #[serde(serialize_with = "buffer_to_hex", deserialize_with = "hex_to_buffer")]
-    pub payment_hash: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct HtlcAcceptedResponse {
-    pub result: String,
-    #[serde(serialize_with = "buffer_to_hex", deserialize_with = "hex_to_buffer")]
-    pub payment_key: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -362,54 +319,6 @@ mod test {
         assert_eq!(call.peer.direction, Direction::In);
         assert_eq!(call.peer.addr, "34.239.230.56:9735");
         assert_eq!(call.peer.features, "");
-    }
-
-    #[test]
-    fn test_htlc_accepted_call() {
-        let req = json!({"id": 1, "jsonrpc": "2.0", "method": "htlc_accepted", "params": {
-            "onion": {
-              "payload": "",
-              "type": "legacy",
-        "short_channel_id": "1x2x3",
-              "forward_amount": "42msat",
-        "outgoing_cltv_value": 500014,
-        "shared_secret": "0000000000000000000000000000000000000000000000000000000000000000",
-        "next_onion": "00DEADBEEF00",
-            },
-            "htlc": {
-        "amount": "43msat",
-        "cltv_expiry": 500028,
-        "cltv_expiry_relative": 10,
-        "payment_hash": "0000000000000000000000000000000000000000000000000000000000000000"
-            }
-        }
-        });
-
-        type T = JsonRpc<MyNotifications, MyRequests>;
-        let req = serde_json::from_str::<T>(&req.to_string()).unwrap();
-        match req {
-            T::Request(id, c) => {
-                assert_eq!(id, 1);
-                match c {
-                    MyRequests::HtlcAccepted(c) => {
-                        //assert_eq!(c.onion.payload, "");
-                        assert_eq!(c.onion.forward_amount, "42msat");
-                        assert_eq!(c.onion.outgoing_cltv_value, 500014);
-                        //assert_eq!(c.onion.next_onion, "[1365bytes of serialized onion]");
-                        //assert_eq!(
-                        //    c.onion.shared_secret,
-                        //    "0000000000000000000000000000000000000000000000000000000000000000"
-                        //);
-                        //assert_eq!(
-                        //    c.htlc.payment_hash,
-                        //    "0000000000000000000000000000000000000000000000000000000000000000"
-                        //);
-                    }
-                    _ => panic!("This was supposed to be an htlc_accepted call"),
-                }
-            }
-            _ => panic!("This was supposed to be a request"),
-        }
     }
 
     /// We have a bit of trouble parsing some invoice payment hook
