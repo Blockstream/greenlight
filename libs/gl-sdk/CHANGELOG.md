@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Changed
+
+- `resolve_input()` is now **synchronous**, matching every other public SDK function. Async work (LNURL HTTP fetches) is executed internally on a shared Tokio runtime. Callers no longer need an async runtime or coroutine support; use native threading primitives to call off the main thread if needed.
+- Removed the `cpp-bindings` Cargo feature flag. A single build of the shared library now works for all language bindings (Python, Kotlin, Swift, Ruby, C++) without conditional compilation.
+
 ## [0.2.1] - 2026-04-30
 
 ### Added
