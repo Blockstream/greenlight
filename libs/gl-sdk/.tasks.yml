@@ -98,8 +98,7 @@ tasks:
     desc: "Generate C++ bindings (requires uniffi-bindgen-cpp)"
     dir: "{{.TASKFILE_DIR}}/../.."
     deps:
-      - task: build
-        vars: { CARGO_FLAGS: '{{if eq .PROFILE "release"}}--release{{else}}{{end}} --features cpp-bindings' }
+      - build
     cmds:
       - |
         cp ${CARGO_TARGET_DIR:-target}/{{.PROFILE_DIR}}/libglsdk.{{.LIB_EXT}} ./libs/gl-sdk/glsdk/libglsdk.{{.LIB_EXT}};
