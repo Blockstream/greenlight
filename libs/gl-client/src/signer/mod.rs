@@ -47,6 +47,15 @@ use vls_protocol_signer::handler::Handler;
 
 mod approver;
 mod auth;
+#[cfg(feature = "backup")]
+mod backup;
+#[cfg(feature = "backup")]
+pub use backup::{
+    CLNBackup, CLNBackupChannel, CLNBackupOptions, PeerEntry, RecoverableBasepoints,
+    RecoverableChannel, RecoverableChannelOpener, RecoverableFundingOutpoint,
+    RecoverchannelRequest, RecoverchannelSkippedChannel, SignerBackupConfig, SignerBackupSnapshot,
+    SignerBackupStrategy,
+};
 pub mod model;
 mod report;
 mod resolve;
@@ -84,6 +93,8 @@ pub struct StateSignatureOverrideConfig {
 pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
+    #[cfg(feature = "backup")]
+    pub backup: Option<SignerBackupConfig>,
 }
 
 #[derive(Debug, Default)]
@@ -116,6 +127,8 @@ pub struct Signer {
 
     network: Network,
     state: Arc<Mutex<crate::persist::State>>,
+    #[cfg(feature = "backup")]
+    backup_runtime: Arc<Mutex<backup::BackupRuntime>>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -179,6 +192,14 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
+        #[cfg(feature = "backup")]
+        let backup_config = {
+            if let Some(backup) = &config.backup {
+                backup.validate()?;
+            }
+            config.backup.clone()
+        };
+
         let (state_signature_override_enabled, state_signature_override_note) =
             match config.state_signature_override {
                 Some(override_config) => {
@@ -323,6 +344,12 @@ impl Signer {
             init,
             network,
             state: persister.state(),
+            #[cfg(feature = "backup")]
+            backup_runtime: Arc::new(Mutex::new(
+                backup_config
+                    .map(backup::BackupRuntime::new)
+                    .unwrap_or_default(),
+            )),
         })
     }
 
@@ -758,6 +785,9 @@ impl Signer {
         // including the initial VLS state created during Signer::new().
         let prestate_sketch = incoming_state.sketch();
 
+        #[cfg(feature = "backup")]
+        let pre_backup_state;
+
         let prestate_log = {
             debug!("Updating local signer state with state from node");
             let mut state = self.state.lock().map_err(|e| {
@@ -773,9 +803,14 @@ impl Signer {
                 );
             }
             trace!("Processing request {}", hex::encode(&req.raw));
-            serde_json::to_string(&*state).map_err(|e| {
+            #[cfg(feature = "backup")]
+            {
+                pre_backup_state = state.clone();
+            }
+            let prestate_log = serde_json::to_string(&*state).map_err(|e| {
                 Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
-            })?
+            })?;
+            prestate_log
         };
 
         // The first two bytes represent the message type. Check that
@@ -905,7 +940,10 @@ impl Signer {
             }
         };
 
-        let signer_state: Vec<crate::pb::SignerStateEntry> = {
+        #[cfg(feature = "backup")]
+        let post_backup_state;
+
+        let signer_state = {
             debug!("Serializing state changes to report to node");
             let mut state = self.state.lock().map_err(|e| {
                 Error::Other(anyhow!(
@@ -933,8 +971,25 @@ impl Signer {
                 full_wire_bytes,
                 saved_percent
             );
+            #[cfg(feature = "backup")]
+            {
+                post_backup_state = state.clone();
+            }
             diff_entries
         };
+        #[cfg(feature = "backup")]
+        {
+            match self.backup_runtime.lock() {
+                Ok(mut runtime) => runtime.observe(
+                    &self.id,
+                    &pre_backup_state,
+                    &post_backup_state,
+                ),
+                Err(e) => {
+                    log::error!("Signer backup runtime lock failed; skipping backup snapshot: {e}")
+                }
+            }
+        }
         Ok(HsmResponse {
             raw: response.as_vec(),
             request_id: req.request_id,
@@ -1602,6 +1657,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: None,
+                ..SignerConfig::default()
             },
         )
         .unwrap()
@@ -1615,6 +1671,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: Some(test_override_config(note)),
+                ..SignerConfig::default()
             },
         )
         .unwrap()
@@ -1631,6 +1688,32 @@ mod tests {
             value: serde_json::to_vec(&value).unwrap(),
             signature: vec![],
         }
+    }
+
+    #[cfg(feature = "backup")]
+    #[test]
+    fn periodic_backup_rejects_zero_updates() {
+        assert!(SignerBackupConfig::periodic("backup.json", 0).is_err());
+
+        let signer = Signer::new_with_config(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: StateSignatureMode::Soft,
+                state_signature_override: None,
+                backup: Some(SignerBackupConfig {
+                    path: "backup.json".into(),
+                    strategy: SignerBackupStrategy::Periodic { updates: 0 },
+                }),
+            },
+        );
+
+        assert!(signer
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("periodic signer backup updates must be greater than zero"));
     }
 
     /// We should not sign messages that we get from the node, since
@@ -1655,7 +1738,7 @@ mod tests {
                 raw: msg,
                 signer_state: vec![],
                 requests: Vec::new(),
-            },)
+            })
             .await
             .is_err());
     }
@@ -1678,7 +1761,7 @@ mod tests {
                     raw: vec![],
                     signer_state: vec![],
                     requests: Vec::new(),
-                },)
+                })
                 .await
                 .unwrap_err()
                 .to_string(),
@@ -1951,6 +2034,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: StateSignatureMode::Off,
                 state_signature_override: Some(test_override_config(Some("test"))),
+                ..SignerConfig::default()
             },
         );
         let err = signer.err().unwrap().to_string();
@@ -1969,6 +2053,7 @@ mod tests {
                     ack: "WRONG".to_string(),
                     note: None,
                 }),
+                ..SignerConfig::default()
             },
         );
         let err = signer.err().unwrap().to_string();

@@ -137,6 +137,35 @@ impl PluginNodeServer {
             notifications,
         };
 
+        let signer_state = s.signer_state.clone();
+        let signer_state_store = s.signer_state_store.clone();
+        let mut peer_events = s.events.subscribe();
+        tokio::spawn(async move {
+            loop {
+                match peer_events.recv().await {
+                    Ok(super::Event::PeerConnected(peer)) => {
+                        let snapshot = {
+                            let mut state = signer_state.lock().await;
+                            if let Err(e) = state.insert_or_update_peer(peer) {
+                                warn!("Failed to update signer peer state: {e}");
+                                continue;
+                            }
+                            state.clone()
+                        };
+                        let store = signer_state_store.lock().await;
+                        if let Err(e) = store.write(snapshot).await {
+                            warn!("Failed to persist signer peer state: {e}");
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!("Signer peer state listener skipped {skipped} events");
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+
         tokio::spawn(async move {
             let rpc_arc = get_rpc(&rpc_path).await.clone();
             let mut rpc = rpc_arc.lock().await;
