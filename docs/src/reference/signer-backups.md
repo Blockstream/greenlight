@@ -1,6 +1,6 @@
 # Signer Backups
 
-Greenlight signers can keep a local copy of the VLS signer state to enable disaster recovery or migration to a self-hosted node. This backup is opt-in and disabled by default. When enabled, the backup file contains signer state entries for recoverable channels and known peers.
+Greenlight signers can keep a local copy of the VLS signer state for disaster recovery purposes. This backup is opt-in and disabled by default. The backups can be converted into CLN `recoverchannel` input, which can be used to restore channels in CLN if the Greenlight node is lost.
 
 ## Enable backups
 
@@ -26,7 +26,9 @@ periodic update threshold.
 
 ## Backup strategies
 
-`new-channels-only` is the default strategy. It writes a snapshot when a channel
+`never` disables automatic backups. Use this when you want to create backups
+
+`new-channels-only` writes a snapshot when a channel
 first becomes recoverable, which keeps disk writes low while still capturing the
 data needed to recover that channel later.
 
@@ -58,6 +60,9 @@ incomplete. Incomplete channels remain visible, but they cannot be converted
 into complete CLN recovery entries until an address is available.
 
 ## Convert for Core Lightning
+
+!!!important
+    Use CLN recovery only as the last resort when the Greenlight node is lost. Running it in parallel with an active Greenlight node risks loss of funds.
 
 Convert the signer backup to Core Lightning recovery input:
 
