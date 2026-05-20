@@ -1226,7 +1226,7 @@ pub fn parse_input(input: String) -> Result<ParsedInput> {
     Ok(napi_parsed_input_from_gl(parsed))
 }
 
-/// Asynchronously classify and resolve the input.
+/// Classify and resolve the input.
 ///
 /// Internally calls `parseInput`. For LNURL bech32 strings and
 /// Lightning Addresses performs the HTTP GET to the endpoint and
@@ -1234,9 +1234,11 @@ pub fn parse_input(input: String) -> Result<ParsedInput> {
 /// and node IDs returns immediately without I/O.
 #[napi]
 pub async fn resolve_input(input: String) -> Result<ResolvedInput> {
-    let resolved = glsdk::resolve_input(input)
-        .await
-        .map_err(|e| Error::from_reason(e.to_string()))?;
+    let resolved = tokio::task::spawn_blocking(move || {
+        glsdk::resolve_input(input).map_err(|e| Error::from_reason(e.to_string()))
+    })
+    .await
+    .map_err(|e| Error::from_reason(e.to_string()))??;
     Ok(napi_resolved_input_from_gl(resolved))
 }
 
