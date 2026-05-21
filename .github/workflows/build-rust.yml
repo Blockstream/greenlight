@@ -1,0 +1,33 @@
+name: Build and Test Rust
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out and build'
+        required: true
+        type: string
+
+jobs:
+  build-and-test:
+    name: Rust build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '23.2'
+
+      - name: Build workspace
+        run: cargo build --workspace
+
+      - name: Run tests
+        run: cargo test --workspace

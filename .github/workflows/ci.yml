@@ -1,0 +1,178 @@
+# ==============================================================================
+# CI ORCHESTRATOR
+# ==============================================================================
+# Runs all build and test jobs on PRs and pushes to main.
+# Delegates compilation to the reusable build-*.yml workflows (shared with
+# the release orchestrator), then runs language-specific tests on the
+# resulting artifacts.
+# ==============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - synchronize
+      - opened
+  workflow_dispatch:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Rust
+  # ============================================================================
+  rust:
+    name: Rust
+    uses: ./.github/workflows/build-rust.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # ============================================================================
+  # Kotlin / Android
+  # ============================================================================
+  kotlin:
+    name: Kotlin
+    uses: ./.github/workflows/build-kotlin.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # ============================================================================
+  # Node.js / N-API — build then test
+  # ============================================================================
+  napi-build:
+    name: N-API
+    uses: ./.github/workflows/build-napi.yml
+    with:
+      ref: ${{ github.sha }}
+
+  napi-test:
+    name: N-API Test
+    needs: napi-build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: libs/gl-sdk-napi
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: libs/gl-sdk-napi/package-lock.json
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Install cfssl
+        run: |
+          go install github.com/cloudflare/cfssl/cmd/cfssl@latest
+          go install github.com/cloudflare/cfssl/cmd/cfssljson@latest
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '23.2'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install bitcoind
+        run: |
+          BITCOIN_VERSION=28.2
+          curl -sO https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          tar -xzf bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          sudo install -m 0755 -t /usr/local/bin bitcoin-${BITCOIN_VERSION}/bin/*
+
+      - name: Install lightningd via clnvm
+        run: |
+          CLN_PATH=$(uv run --package cln-version-manager --with click --with rich clnvm get --tag v25.12gl1)
+          echo "$(dirname "$CLN_PATH")" >> $GITHUB_PATH
+
+      - name: Pre-build Python test dependencies
+        run: uv sync --package gl-testing
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download N-API artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: napi-x86_64-unknown-linux-gnu
+          path: libs/gl-sdk-napi
+
+      - name: Run tests
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 10
+          shell: bash
+          command: cd libs/gl-sdk-napi && npm test -- tests/basic.spec.ts
+
+  # ============================================================================
+  # Python — build then install-test
+  # ============================================================================
+  python-build:
+    name: Python
+    uses: ./.github/workflows/build-python.yml
+    with:
+      ref: ${{ github.sha }}
+
+  python-test:
+    name: Python Install Test
+    needs: python-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Download Linux x86_64 wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: python-wheel-linux-x86_64
+          path: dist
+
+      - name: Install and smoke-test wheel
+        run: |
+          uv venv
+          uv pip install dist/gl_client*.whl --force-reinstall
+          uv run python3 -c "import glclient; creds=glclient.Credentials(); signer=glclient.Signer(b'\x00'*32,'bitcoin', creds); print(repr(creds)); print(signer.version())"
+
+  # ============================================================================
+  # Formatting
+  # ============================================================================
+  formatting:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check Rust Formatting
+        run: cargo fmt --all -- --check

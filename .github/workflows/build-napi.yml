@@ -1,0 +1,96 @@
+name: Build N-API Bindings
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out and build'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build N-API - ${{ matrix.target }}
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            strip: strip -x *.node
+
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            strip: aarch64-linux-gnu-strip -x *.node
+
+          - host: macos-15-intel
+            target: x86_64-apple-darwin
+            strip: strip -x *.node
+
+          - host: macos-14
+            target: aarch64-apple-darwin
+            strip: strip -x *.node
+
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            strip: ""
+
+    defaults:
+      run:
+        working-directory: libs/gl-sdk-napi
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: libs/gl-sdk-napi/package-lock.json
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: napi-${{ matrix.target }}
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '23.2'
+
+      - name: Setup cross-compilation (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build -- --target ${{ matrix.target }}
+        shell: bash
+
+      - name: Strip binary
+        if: matrix.strip != ''
+        run: ${{ matrix.strip }}
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: napi-${{ matrix.target }}
+          path: |
+            libs/gl-sdk-napi/*.node
+            libs/gl-sdk-napi/index.js
+            libs/gl-sdk-napi/index.d.ts
+          if-no-files-found: error
+          retention-days: 7

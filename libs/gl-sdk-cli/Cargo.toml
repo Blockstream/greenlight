@@ -3,6 +3,8 @@ name = "gl-sdk-cli"
 version = "0.3.0"
 edition = "2021"
 description = "CLI wrapper for gl-sdk"
+license = "MIT"
+repository = "https://github.com/Blockstream/greenlight"
 
 [[bin]]
 name = "glsdk"

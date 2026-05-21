@@ -1,0 +1,72 @@
+name: Build Swift Bindings
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out and build'
+        required: true
+        type: string
+    outputs:
+      xcframework_checksum:
+        description: 'SHA-256 checksum of the XCFramework zip (for Package.swift)'
+        value: ${{ jobs.build.outputs.xcframework_checksum }}
+
+jobs:
+  build:
+    name: Build Swift XCFramework
+    runs-on: macos-15
+    outputs:
+      xcframework_checksum: ${{ steps.checksum.outputs.checksum }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ref: ${{ inputs.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Setup Task
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '23.2'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build iOS targets and Swift bindings
+        run: |
+          task build:ios
+          task build:ios-sim
+          task build:swift
+
+      - name: Compress XCFramework and compute checksum
+        id: checksum
+        run: |
+          cd target
+          zip -9 -r glsdkFFI.xcframework.zip glsdkFFI.xcframework
+          CHECKSUM=$(swift package compute-checksum glsdkFFI.xcframework.zip)
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+
+      - name: Upload XCFramework zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-xcframework
+          path: target/glsdkFFI.xcframework.zip
+          retention-days: 7
+
+      - name: Upload generated Swift source
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-generated-source
+          path: target/swift/glsdk.swift
+          retention-days: 7
