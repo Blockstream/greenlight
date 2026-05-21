@@ -3,8 +3,8 @@ use crate::runtime::exec;
 use crate::Signer;
 use anyhow::{anyhow, Result};
 use gl_client::bitcoin::Network;
-use gl_client::credentials::{NodeIdProvider, RuneProvider};
 use gl_client::credentials::TlsConfigProvider;
+use gl_client::credentials::{NodeIdProvider, RuneProvider};
 use gl_client::pb;
 use gl_client::scheduler;
 use prost::Message;
@@ -153,16 +153,14 @@ impl Scheduler {
         let inner = match creds.inner {
             crate::credentials::UnifiedCredentials::Nobody(_) => {
                 let scheduler = exec(async move {
-                    gl_client::scheduler::Scheduler::with(network, creds.inner.clone(), uri)
-                        .await
+                    gl_client::scheduler::Scheduler::with(network, creds.inner.clone(), uri).await
                 })
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 UnifiedScheduler::Unauthenticated(scheduler)
             }
             crate::credentials::UnifiedCredentials::Device(_) => {
                 let scheduler = exec(async move {
-                    gl_client::scheduler::Scheduler::with(network, creds.inner.clone(), uri)
-                        .await
+                    gl_client::scheduler::Scheduler::with(network, creds.inner.clone(), uri).await
                 })
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
                 UnifiedScheduler::Authenticated(scheduler)
@@ -195,9 +193,7 @@ impl Scheduler {
                     e.to_string()
                 ))
             })?;
-        Ok(Scheduler {
-            inner: s,
-        })
+        Ok(Scheduler { inner: s })
     }
 
     fn export_node(&self) -> PyResult<Vec<u8>> {

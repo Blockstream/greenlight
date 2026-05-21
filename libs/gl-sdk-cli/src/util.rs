@@ -30,9 +30,8 @@ pub enum Secret {
 
 pub fn read_secret(data_dir: &DataDir) -> Result<Secret> {
     let path = data_dir.0.join(PHRASE_FILE_NAME);
-    let raw = fs::read(&path).map_err(|_| {
-        Error::PhraseNotFound(format!("could not read from {}", path.display()))
-    })?;
+    let raw = fs::read(&path)
+        .map_err(|_| Error::PhraseNotFound(format!("could not read from {}", path.display())))?;
 
     // Try UTF-8 mnemonic first (glsdk format)
     if let Ok(text) = std::str::from_utf8(&raw) {

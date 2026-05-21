@@ -58,15 +58,10 @@ export default async function globalSetup(): Promise<void> {
 
   console.log('\n🚀 Starting gltestserver...');
 
-  // Run from the workspace root so uv resolves gl-testing and other
-  // workspace dependencies from the top-level pyproject.toml.
-  const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
-
   const server: ChildProcess = spawn(
     'uv',
-    ['run', '--package', 'gl-testing', 'python', path.join(__dirname, 'test_setup.py')],
+    ['run', '--no-sync', 'python', path.join(__dirname, 'test_setup.py')],
     {
-      cwd: workspaceRoot,
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     }

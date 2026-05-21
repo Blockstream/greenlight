@@ -10,15 +10,15 @@ on:
 
 jobs:
   build:
-    name: Build Kotlin Multiplatform Bindings
+    name: Build Kotlin Multiplatform Bindings (macOS)
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -35,6 +35,8 @@ jobs:
             x86_64-apple-ios
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "greenlight-kotlin"
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -60,7 +62,7 @@ jobs:
         run: ./gradlew :lib:publishToMavenLocal --console=plain
 
       - name: Upload Kotlin build outputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kotlin-outputs
           path: libs/gl-sdk-android/lib/build/outputs/

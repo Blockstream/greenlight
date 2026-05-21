@@ -193,11 +193,11 @@ impl Device {
             cert: cert.into(),
             key: key.into(),
             rune: rune.into(),
-            ca
+            ca,
         }
     }
 
-    pub fn with_ca<V>(self, ca: V) -> Self 
+    pub fn with_ca<V>(self, ca: V) -> Self
     where
         V: Into<Vec<u8>>,
     {
@@ -248,7 +248,6 @@ impl TlsConfigProvider for Device {
     fn tls_config(&self) -> TlsConfig {
         tls::TlsConfig::with(&self.cert, &self.key, &self.ca)
     }
-
 }
 
 impl RuneProvider for Device {

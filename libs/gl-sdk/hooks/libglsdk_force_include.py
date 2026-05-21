@@ -21,3 +21,4 @@ class CustomBuildHook(BuildHookInterface):
 
         shared_file = f"glsdk/libglsdk{lib_ext}"
         build_data['force_include'][shared_file] = shared_file
+        build_data['force_include']['glsdk/glsdk.py'] = 'glsdk/glsdk.py'

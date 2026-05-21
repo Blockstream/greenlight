@@ -139,21 +139,21 @@ mod util;
 pub use crate::{
     config::Config,
     credentials::{Credentials, DeveloperCert},
-    node::{
-        ChannelState, FundChannel, FundOutput, GetInfoResponse, Invoice,
-        InvoicePaidEvent, InvoiceStatus, ListFundsResponse, ListIndex, ListInvoicesResponse,
-        ListPaymentsRequest, ListPeerChannelsResponse, ListPaysResponse, ListPeersResponse,
-        Node, NodeEvent, NodeEventListener, NodeEventStream, NodeState, OnchainBalanceState,
-        OnchainFeeRates, OnchainReceiveResponse, OnchainSendResponse, Outpoint, OutputStatus,
-        Pay, PayStatus, Payment, PaymentStatus, PaymentType, PaymentTypeFilter, Peer,
-        PeerChannel, PreparedOnchainSend, ReceiveResponse, SendResponse,
-    },
     input::{ParsedInput, ParsedInvoice, ResolvedInput},
-    logging::{LogEntry, LogLevel, LogListener},
     lnurl::{
-        LnUrlErrorData, LnUrlPayRequest, LnUrlPayRequestData, LnUrlPayResult,
-        LnUrlPaySuccessData, LnUrlWithdrawRequest, LnUrlWithdrawRequestData,
-        LnUrlWithdrawResult, LnUrlWithdrawSuccessData, SuccessActionProcessed,
+        LnUrlErrorData, LnUrlPayRequest, LnUrlPayRequestData, LnUrlPayResult, LnUrlPaySuccessData,
+        LnUrlWithdrawRequest, LnUrlWithdrawRequestData, LnUrlWithdrawResult,
+        LnUrlWithdrawSuccessData, SuccessActionProcessed,
+    },
+    logging::{LogEntry, LogLevel, LogListener},
+    node::{
+        ChannelState, FundChannel, FundOutput, GetInfoResponse, Invoice, InvoicePaidEvent,
+        InvoiceStatus, ListFundsResponse, ListIndex, ListInvoicesResponse, ListPaymentsRequest,
+        ListPaysResponse, ListPeerChannelsResponse, ListPeersResponse, Node, NodeEvent,
+        NodeEventListener, NodeEventStream, NodeState, OnchainBalanceState, OnchainFeeRates,
+        OnchainReceiveResponse, OnchainSendResponse, Outpoint, OutputStatus, Pay, PayStatus,
+        Payment, PaymentStatus, PaymentType, PaymentTypeFilter, Peer, PeerChannel,
+        PreparedOnchainSend, ReceiveResponse, SendResponse,
     },
     node_builder::NodeBuilder,
     scheduler::Scheduler,
@@ -179,9 +179,8 @@ fn schedule_node(
 
     let seed_for_async = seed.clone();
     let credentials = util::exec(async move {
-        let signer =
-            gl_client::signer::Signer::new(seed_for_async, network, nobody.clone())
-                .map_err(|e| Error::other(e.to_string()))?;
+        let signer = gl_client::signer::Signer::new(seed_for_async, network, nobody.clone())
+            .map_err(|e| Error::other(e.to_string()))?;
 
         let scheduler = gl_client::scheduler::Scheduler::new(network, nobody)
             .await
@@ -226,7 +225,7 @@ fn map_scheduler_error(e: anyhow::Error, node_id_hex: &str) -> Error {
         if let Some(status) = cause.downcast_ref::<tonic::Status>() {
             match status.code() {
                 tonic::Code::AlreadyExists => {
-                    return Error::duplicate_node(node_id_hex.to_string())
+                    return Error::duplicate_node(node_id_hex.to_string());
                 }
                 tonic::Code::NotFound => return Error::no_such_node(node_id_hex.to_string()),
                 // Don't return here — the tonic status might be a generic
@@ -272,9 +271,8 @@ pub(crate) fn connect_internal(
     let network = config.network;
     let creds = credentials::Credentials::load(credentials)?;
 
-    let authenticated_signer =
-        gl_client::signer::Signer::new(seed, network, creds.inner.clone())
-            .map_err(|e| Error::other(e.to_string()))?;
+    let authenticated_signer = gl_client::signer::Signer::new(seed, network, creds.inner.clone())
+        .map_err(|e| Error::other(e.to_string()))?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
     let node = node::Node::with_signer(creds, handle, network)?;

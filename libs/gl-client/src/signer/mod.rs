@@ -195,16 +195,14 @@ impl Signer {
                         ));
                     }
 
-                    let note = override_config
-                        .note
-                        .and_then(|n| {
-                            let trimmed = n.trim().to_string();
-                            if trimmed.is_empty() {
-                                None
-                            } else {
-                                Some(trimmed)
-                            }
-                        });
+                    let note = override_config.note.and_then(|n| {
+                        let trimmed = n.trim().to_string();
+                        if trimmed.is_empty() {
+                            None
+                        } else {
+                            Some(trimmed)
+                        }
+                    });
                     (true, note)
                 }
                 None => (false, None),
@@ -470,7 +468,8 @@ impl Signer {
                 if self.state_signature_mode == StateSignatureMode::Hard {
                     usage.missing_keys.push(entry.key.clone());
                     if first_error.is_none() {
-                        first_error = Some(anyhow!("missing state signature for key {}", entry.key));
+                        first_error =
+                            Some(anyhow!("missing state signature for key {}", entry.key));
                     }
                 }
                 continue;
@@ -479,16 +478,19 @@ impl Signer {
             if let Err(e) = self.verify_state_entry_signature(entry) {
                 usage.invalid_keys.push(entry.key.clone());
                 if first_error.is_none() {
-                    first_error = Some(anyhow!("invalid state signature for key {}: {}", entry.key, e));
+                    first_error = Some(anyhow!(
+                        "invalid state signature for key {}: {}",
+                        entry.key,
+                        e
+                    ));
                 }
             }
         }
 
         if usage.is_used() && !self.state_signature_override_enabled {
-            return Err(Error::Other(
-                first_error
-                    .unwrap_or_else(|| anyhow!("state signature verification failed unexpectedly")),
-            ));
+            return Err(Error::Other(first_error.unwrap_or_else(|| {
+                anyhow!("state signature verification failed unexpectedly")
+            })));
         }
 
         Ok(usage)
@@ -752,7 +754,6 @@ impl Signer {
         let incoming_state = crate::persist::State::try_from(req.signer_state.as_slice())
             .map_err(|e| Error::Other(anyhow!("Failed to decode signer state: {e}")))?;
 
-
         // Create sketch from incoming state (nodelet's view) so we can
         // send back any entries the nodelet doesn't know about yet,
         // including the initial VLS state created during Signer::new().
@@ -760,12 +761,13 @@ impl Signer {
 
         let prestate_log = {
             debug!("Updating local signer state with state from node");
-            let mut state = self.state.lock().map_err(|e| {
-                Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
-            })?;
-            let merge_res = state.merge(&incoming_state).map_err(|e| {
-                Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
-            })?;
+            let mut state = self
+                .state
+                .lock()
+                .map_err(|e| Error::Other(anyhow!("Failed to acquire state lock: {:?}", e)))?;
+            let merge_res = state
+                .merge(&incoming_state)
+                .map_err(|e| Error::Other(anyhow!("Failed to merge signer state: {:?}", e)))?;
             if merge_res.has_conflicts() {
                 debug!(
                     "State merge ignored stale versions (count={})",
@@ -774,7 +776,10 @@ impl Signer {
             }
             trace!("Processing request {}", hex::encode(&req.raw));
             serde_json::to_string(&*state).map_err(|e| {
-                Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
+                Error::Other(anyhow!(
+                    "Failed to serialize signer state for logging: {:?}",
+                    e
+                ))
             })?
         };
 
@@ -1821,7 +1826,7 @@ mod tests {
                 context: None,
                 raw: heartbeat_raw(),
                 signer_state: vec![invalid1],
-            requests: vec![],
+                requests: vec![],
             })
             .await
             .unwrap();
@@ -1829,7 +1834,10 @@ mod tests {
             let state_guard = signer.state.lock().unwrap();
             state_guard.clone().into()
         };
-        let persisted1 = snapshot1.iter().find(|e| e.key == "state/invalid1").unwrap();
+        let persisted1 = snapshot1
+            .iter()
+            .find(|e| e.key == "state/invalid1")
+            .unwrap();
         assert_eq!(persisted1.signature, vec![4u8; COMPACT_SIGNATURE_LEN]);
 
         let mut invalid2 = mk_state_entry("state/invalid2", 1, json!({"v": 2}));
@@ -1849,7 +1857,10 @@ mod tests {
             let state_guard = signer.state.lock().unwrap();
             state_guard.clone().into()
         };
-        let persisted2 = snapshot2.iter().find(|e| e.key == "state/invalid2").unwrap();
+        let persisted2 = snapshot2
+            .iter()
+            .find(|e| e.key == "state/invalid2")
+            .unwrap();
         assert_eq!(persisted2.signature, vec![5u8; COMPACT_SIGNATURE_LEN]);
     }
 
@@ -1932,14 +1943,20 @@ mod tests {
             state_guard.clone().into()
         };
 
-        let persisted_valid = snapshot.iter().find(|entry| entry.key == "state/valid").unwrap();
+        let persisted_valid = snapshot
+            .iter()
+            .find(|entry| entry.key == "state/valid")
+            .unwrap();
         let preserved_invalid = snapshot
             .iter()
             .find(|entry| entry.key == "state/invalid")
             .unwrap();
 
         assert_eq!(persisted_valid.signature, valid.signature);
-        assert_eq!(preserved_invalid.signature, vec![7u8; COMPACT_SIGNATURE_LEN]);
+        assert_eq!(
+            preserved_invalid.signature,
+            vec![7u8; COMPACT_SIGNATURE_LEN]
+        );
     }
 
     #[test]

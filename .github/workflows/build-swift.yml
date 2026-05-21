@@ -14,12 +14,12 @@ on:
 
 jobs:
   build:
-    name: Build Swift XCFramework
+    name: Build Swift XCFramework (macOS)
     runs-on: macos-15
     outputs:
       xcframework_checksum: ${{ steps.checksum.outputs.checksum }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
           ref: ${{ inputs.ref }}
@@ -29,6 +29,8 @@ jobs:
           targets: x86_64-apple-ios,aarch64-apple-ios,aarch64-apple-ios-sim
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "greenlight-swift"
 
       - name: Setup Task
         run: |
@@ -58,14 +60,14 @@ jobs:
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
 
       - name: Upload XCFramework zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: swift-xcframework
           path: target/glsdkFFI.xcframework.zip
           retention-days: 7
 
       - name: Upload generated Swift source
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: swift-generated-source
           path: target/swift/glsdk.swift

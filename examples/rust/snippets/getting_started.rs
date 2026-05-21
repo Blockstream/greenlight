@@ -1,10 +1,13 @@
-use anyhow::{Result};
+use anyhow::Result;
 use bip39::{Language, Mnemonic};
 use gl_client::{
     bitcoin::Network,
     credentials::{Device, Nobody},
     node::ClnClient,
-    pb::{cln, cln::{amount_or_any, Amount, AmountOrAny}},
+    pb::{
+        cln,
+        cln::{amount_or_any, Amount, AmountOrAny},
+    },
     scheduler::Scheduler,
     signer::Signer,
 };
@@ -76,7 +79,10 @@ fn load_developer_creds() -> Result<Nobody> {
     Ok(developer_creds)
 }
 
-async fn register_node(seed: Vec<u8>, developer_creds: Nobody) -> Result<(Scheduler<Nobody>, Device, Signer)> {
+async fn register_node(
+    seed: Vec<u8>,
+    developer_creds: Nobody,
+) -> Result<(Scheduler<Nobody>, Device, Signer)> {
     // ---8<--- [start: init_signer]
     let signer = Signer::new(seed.clone(), NETWORK, developer_creds.clone())?;
     // ---8<--- [end: init_signer]
@@ -102,7 +108,13 @@ async fn get_node(scheduler: &Scheduler<Device>) -> Result<ClnClient> {
     Ok(node)
 }
 
-async fn start_node(device_creds_file_path: &str) -> Result<(cln::GetinfoResponse, cln::ListpeersResponse, cln::InvoiceResponse)> {
+async fn start_node(
+    device_creds_file_path: &str,
+) -> Result<(
+    cln::GetinfoResponse,
+    cln::ListpeersResponse,
+    cln::InvoiceResponse,
+)> {
     // ---8<--- [start: start_node]
     let creds = Device::from_path(device_creds_file_path);
     let scheduler = Scheduler::new(NETWORK, creds.clone()).await?;
@@ -168,21 +180,28 @@ async fn main() -> Result<()> {
 
     println!("Getting node information...");
     let device_scheduler = Scheduler::new(NETWORK, device_creds.clone()).await?;
-    let _gl_node = get_node(&device_scheduler).await?;    
+    let _gl_node = get_node(&device_scheduler).await?;
 
-    let (info, peers, invoice) = start_node(&format!("{TEST_NODE_DATA_DIR}/credentials.gfs")).await?;
+    let (info, peers, invoice) =
+        start_node(&format!("{TEST_NODE_DATA_DIR}/credentials.gfs")).await?;
     println!("Node pubkey: {}", hex::encode(info.id));
     println!("Peers list: {:?}", peers.peers);
     println!("Invoice created: {}", invoice.bolt11);
 
     println!("Upgrading certs...");
-    let _upgraded = upgrade_device_certs_to_creds(&scheduler, &signer, &format!("{TEST_NODE_DATA_DIR}/credentials.gfs")).await?;
+    let _upgraded = upgrade_device_certs_to_creds(
+        &scheduler,
+        &signer,
+        &format!("{TEST_NODE_DATA_DIR}/credentials.gfs"),
+    )
+    .await?;
 
     println!("Recovering node...");
     let (_scheduler2, _device_creds2, _signer2) = recover_node(developer_creds.clone()).await?;
     println!("Node Recovered!");
 
-    let (info, _peers, _invoice) = start_node(&format!("{TEST_NODE_DATA_DIR}/credentials.gfs")).await?;
+    let (info, _peers, _invoice) =
+        start_node(&format!("{TEST_NODE_DATA_DIR}/credentials.gfs")).await?;
     println!("Node pubkey: {}", hex::encode(info.id));
 
     println!("All steps completed successfully!");

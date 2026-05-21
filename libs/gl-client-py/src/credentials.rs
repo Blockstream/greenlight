@@ -182,7 +182,7 @@ impl Credentials {
                 let d = creds.clone().with_ca(ca);
                 let inner = UnifiedCredentials::Device(d);
                 Self { inner }
-            },
+            }
         }
     }
 }

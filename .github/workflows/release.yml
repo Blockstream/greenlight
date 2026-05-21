@@ -59,7 +59,7 @@ jobs:
     name: Validate release configuration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -88,7 +88,7 @@ jobs:
           check_version gl-sdk-cli "${{ inputs.gl_sdk_cli_version }}"
 
       - name: Setup Python for changelog validation
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
@@ -97,7 +97,7 @@ jobs:
           pip install python-kacl
           for crate_dir in libs/gl-client libs/gl-sdk libs/gl-sdk-cli; do
             echo "Validating $crate_dir/CHANGELOG.md..."
-            kacl-cli verify "$crate_dir/CHANGELOG.md"
+            (cd "$crate_dir" && kacl-cli verify)
           done
 
       - name: Verify changelog entries exist for each version
@@ -130,7 +130,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Protoc
@@ -157,7 +157,7 @@ jobs:
     needs: publish-gl-client
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Protoc
@@ -198,7 +198,7 @@ jobs:
     needs: publish-gl-sdk
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Protoc
@@ -283,10 +283,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run == false }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -295,7 +295,7 @@ jobs:
 
       # -- npm -----------------------------------------------------------
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
@@ -312,7 +312,7 @@ jobs:
 
       # -- PyPI ----------------------------------------------------------
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Publish to PyPI
         run: |
@@ -325,7 +325,7 @@ jobs:
 
       # -- Swift ---------------------------------------------------------
       - name: Checkout gl-sdk-swift repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: Blockstream/gl-sdk-swift
           token: ${{ secrets.SWIFT_RELEASE_TOKEN }}
@@ -358,7 +358,7 @@ jobs:
           git push origin "$VERSION"
 
       - name: Create Swift GitHub Release with XCFramework
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           repository: Blockstream/gl-sdk-swift
           token: ${{ secrets.SWIFT_RELEASE_TOKEN }}
@@ -381,7 +381,7 @@ jobs:
             "gl-sdk-cli-v${{ inputs.gl_sdk_cli_version }}"
 
       - name: Create GitHub Release for gl-client
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: gl-client-v${{ inputs.gl_client_version }}
           name: gl-client v${{ inputs.gl_client_version }}
@@ -389,7 +389,7 @@ jobs:
             Published gl-client v${{ inputs.gl_client_version }} to [crates.io](https://crates.io/crates/gl-client/${{ inputs.gl_client_version }}).
 
       - name: Create GitHub Release for gl-sdk
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: gl-sdk-v${{ inputs.gl_sdk_version }}
           name: gl-sdk v${{ inputs.gl_sdk_version }}
@@ -402,7 +402,7 @@ jobs:
             - PyPI: [gl-client](https://pypi.org/project/gl-client/)
 
       - name: Create GitHub Release for gl-sdk-cli
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: gl-sdk-cli-v${{ inputs.gl_sdk_cli_version }}
           name: gl-sdk-cli v${{ inputs.gl_sdk_cli_version }}
@@ -420,16 +420,16 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.dry_run == true }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
       - name: Download N-API artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 

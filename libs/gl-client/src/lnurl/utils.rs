@@ -83,8 +83,7 @@ mod tests {
 
     #[test]
     fn test_extract_description_from_metadata_with_multiple_entries() {
-        let metadata =
-            r#"[["text/identifier", "user@example.com"], ["text/plain", "Pay user"]]"#;
+        let metadata = r#"[["text/identifier", "user@example.com"], ["text/plain", "Pay user"]]"#;
         assert_eq!(
             extract_description_from_metadata(metadata),
             Some("Pay user".to_string())

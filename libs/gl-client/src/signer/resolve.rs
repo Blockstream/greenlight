@@ -82,10 +82,10 @@ impl Resolver {
                     // later on
                 }
                 (Message::SignInvoice(_l), Request::LspInvoice(_r)) => {
-		    // TODO: This could also need some
-		    // strengthening. See below.
-		    true
-		}
+                    // TODO: This could also need some
+                    // strengthening. See below.
+                    true
+                }
                 (Message::SignInvoice(_l), Request::Invoice(_r)) => {
                     // TODO: This could be strengthened by parsing the
                     // invoice from `l.u5bytes` and verify the

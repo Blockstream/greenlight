@@ -29,9 +29,9 @@
 use std::sync::Arc;
 
 use crate::{
+    Error,
     config::Config,
     node::{Node, NodeEventListener},
-    Error,
 };
 
 /// Configurable Node construction. See module docs.
@@ -69,10 +69,7 @@ impl NodeBuilder {
     /// Returns a new builder that shares the rest of the
     /// configuration. Build calls on the returned builder will
     /// install the listener; the original builder is unchanged.
-    pub fn with_event_listener(
-        self: Arc<Self>,
-        listener: Box<dyn NodeEventListener>,
-    ) -> Arc<Self> {
+    pub fn with_event_listener(self: Arc<Self>, listener: Box<dyn NodeEventListener>) -> Arc<Self> {
         // UniFFI's callback-interface lowering hands us a
         // `Box<dyn Trait>`. We re-wrap it as `Arc<dyn Trait>` because
         // the builder is reusable across multiple build calls — each
@@ -142,8 +139,7 @@ impl NodeBuilder {
         mnemonic: String,
         invite_code: Option<String>,
     ) -> Result<Arc<Node>, Error> {
-        let node =
-            crate::register_or_recover_internal(mnemonic, invite_code, &self.config)?;
+        let node = crate::register_or_recover_internal(mnemonic, invite_code, &self.config)?;
         self.attach_observers(&node)?;
         Ok(node)
     }

@@ -28,8 +28,8 @@ pub mod scheduler;
 /// move your funds.
 pub mod signer;
 
-pub mod persist;
 pub mod metrics;
+pub mod persist;
 
 pub mod lnurl;
 

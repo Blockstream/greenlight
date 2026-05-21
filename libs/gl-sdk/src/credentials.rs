@@ -50,6 +50,8 @@ impl Credentials {
     }
 
     pub fn node_id(&self) -> Result<Vec<u8>, Error> {
-        self.inner.node_id().map_err(|e| Error::other(e.to_string()))
+        self.inner
+            .node_id()
+            .map_err(|e| Error::other(e.to_string()))
     }
 }

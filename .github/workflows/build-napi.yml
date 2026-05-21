@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Build N-API - ${{ matrix.target }}
+    name: Build N-API - ${{ matrix.host }} / ${{ matrix.target }}
     runs-on: ${{ matrix.host }}
     strategy:
       fail-fast: false
@@ -23,10 +23,6 @@ jobs:
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             strip: aarch64-linux-gnu-strip -x *.node
-
-          - host: macos-15-intel
-            target: x86_64-apple-darwin
-            strip: strip -x *.node
 
           - host: macos-14
             target: aarch64-apple-darwin
@@ -41,12 +37,12 @@ jobs:
         working-directory: libs/gl-sdk-napi
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -59,12 +55,13 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: napi-${{ matrix.target }}
+          shared-key: "greenlight-${{ matrix.target }}"
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           version: '23.2'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup cross-compilation (Linux ARM64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -85,7 +82,7 @@ jobs:
         shell: bash
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: napi-${{ matrix.target }}
           path: |
