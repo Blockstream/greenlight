@@ -1526,7 +1526,7 @@ dependencies = [
 
 [[package]]
 name = "gl-client"
-version = "0.4.1"
+version = "0.6.0"
 dependencies = [
  "aes 0.8.4",
  "anyhow",
@@ -1650,7 +1650,7 @@ dependencies = [
 
 [[package]]
 name = "gl-sdk"
-version = "0.2.1"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "bip39",
@@ -1672,7 +1672,7 @@ dependencies = [
 
 [[package]]
 name = "gl-sdk-cli"
-version = "0.1.1"
+version = "0.3.0"
 dependencies = [
  "bip39",
  "clap",
@@ -1688,7 +1688,7 @@ dependencies = [
 
 [[package]]
 name = "gl-sdk-node"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "gl-sdk",
