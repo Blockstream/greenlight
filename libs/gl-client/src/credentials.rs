@@ -343,8 +343,16 @@ fn load_file_or_default(varname: &str, default: &[u8]) -> Result<Vec<u8>> {
     match std::env::var(varname) {
         Ok(fname) => {
             debug!("Loading file {} for envvar {}", fname, varname);
-            let f = std::fs::read(fname.clone())?;
-            Ok(f)
+            match std::fs::read(&fname) {
+                Ok(f) => Ok(f),
+                Err(e) => {
+                    debug!(
+                        "Failed to read {} from {}: {}, using compiled-in default",
+                        varname, fname, e
+                    );
+                    Ok(default.to_vec())
+                }
+            }
         }
         Err(_) => Ok(default.to_vec()),
     }

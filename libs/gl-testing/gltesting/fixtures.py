@@ -82,6 +82,9 @@ def root_id(cert_directory):
 
     yield identity
 
+    os.environ.pop("GL_CERT_PATH", None)
+    os.environ.pop("GL_CA_CRT", None)
+
 
 @pytest.fixture()
 def scheduler_id(root_id):
@@ -106,6 +109,9 @@ def nobody_id(users_id):
     )
 
     yield identity
+
+    os.environ.pop("GL_NOBODY_CRT", None)
+    os.environ.pop("GL_NOBODY_KEY", None)
 
 
 @pytest.fixture()
