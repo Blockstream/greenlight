@@ -1,6 +1,6 @@
 [package]
 name = "gl-sdk"
-version = "0.2.1"
+version = "0.4.0"
 edition = "2024"
 description = "High-level SDK for Greenlight with UniFFI language bindings"
 license = "MIT"
@@ -14,7 +14,7 @@ name = "glsdk"
 anyhow = "1"
 bip39 = "2.2.0"
 bitcoin = { version = "0.32", features = ["base64"] }
-gl-client = { version = "0.4.1", path = "../gl-client" }
+gl-client = { version = "0.6.0", path = "../gl-client" }
 hex = "0.4"
 log = "0.4"
 lightning-invoice = "0.33"

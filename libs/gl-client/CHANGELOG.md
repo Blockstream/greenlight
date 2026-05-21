@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
-## [0.4.1] - 2026-04-30
+## [0.6.0] - 2026-05-21
 
 ### Added
 
@@ -16,17 +16,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - LNURL model types: `LnUrlPayRequestData`, `LnUrlWithdrawRequestData`, `LnUrlHttpClient` trait, `LnUrlHttpClearnetClient`
 - Lightning Address parsing via `lnurl::pay::parse_lightning_address()`
 - LNURL bech32 decoding via `lnurl::utils::parse_lnurl()`
-
-### Fixed
-
-- Use `webpki-roots` for LNURL TLS to support cross-platform builds (no dependency on system CA store)
-- Hardened LNURL-pay against real-world service quirks
-- Case-insensitive comparison for BOLT11 invoice strings in signer
-
-## [0.4.0] - 2026-04-02
-
-### Added
-
 - New `metrics` module for signer state transfer instrumentation
 - New `Error::IllegalArgument` variant for improved error reporting
 - Signer now reports rejections to the server for debugging
@@ -50,10 +39,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- Use `webpki-roots` for LNURL TLS to support cross-platform builds (no dependency on system CA store)
+- Hardened LNURL-pay against real-world service quirks
+- Case-insensitive comparison for BOLT11 invoice strings in signer
 - Addressed an issue with signers being unable to connect to the node, due to an SNI header override that is no longer required
 - Parsing an invalid certificate no longer panics, instead returning an error
 - Addressed a deprecation warning in gl-testing regarding `PROTOCOL_TLS` being renamed to `PROTOCOL_TLS_SERVER`
 - Fixed initial VLS state not being persisted to the tower (nodelet)
 
-[0.4.1]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.4.0...gl-client-v0.4.1
-[0.4.0]: https://github.com/Blockstream/greenlight/compare/gl-client-0.3.2...gl-client-v0.4.0
+[0.6.0]: https://github.com/Blockstream/greenlight/compare/gl-client-0.3.2...gl-client-v0.6.0

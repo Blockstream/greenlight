@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Removed
+
+- Legacy client-side LSPS2 `htlc_accepted` hook — JIT channel fee handling is now performed natively by CLN
+
 ## [0.3.1] - 2026-01-16
 
 ### Changed
