@@ -50,11 +50,9 @@ def test_credentials_multiple_loads():
 
 def test_node_creation_fails_with_empty_creds():
     """Test that creating a Node with empty credentials fails as expected."""
-    creds = glsdk.Credentials.load(b"")
-
     # Node creation should fail with these invalid credentials
     with pytest.raises(glsdk.Error):
-        node = glsdk.Node(creds)
+        glsdk.NodeBuilder(glsdk.Config()).connect(b"", None)
 
 
 def test_developer_cert_construction():

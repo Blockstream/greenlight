@@ -156,7 +156,10 @@ pub enum SuccessActionProcessed {
     /// Display a URL to the user.
     Url { description: String, url: String },
     /// Decrypted AES payload (LUD-10).
-    Aes { description: String, plaintext: String },
+    Aes {
+        description: String,
+        plaintext: String,
+    },
 }
 
 // ── From conversions (gl-client → gl-sdk) ───────────────────────────

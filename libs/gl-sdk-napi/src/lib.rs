@@ -10,14 +10,14 @@ use glsdk::{
     Credentials as GlCredentials,
     DeveloperCert as GlDeveloperCert,
     Handle as GlHandle,
-    ParsedInput as GlParsedInput,
-    ResolvedInput as GlResolvedInput,
     Network as GlNetwork,
     Node as GlNode,
     NodeEvent as GlNodeEvent,
     NodeEventStream as GlNodeEventStream,
     OutputStatus as GlOutputStatus,
+    ParsedInput as GlParsedInput,
     ParsedInvoice as GlParsedInvoice,
+    ResolvedInput as GlResolvedInput,
     Scheduler as GlScheduler,
     Signer as GlSigner,
 };
@@ -679,10 +679,12 @@ impl Node {
     #[napi(constructor)]
     pub fn new(credentials: &Credentials) -> Result<Self> {
         // Connection is established lazily on first RPC.
-        let inner =
-            GlNode::signerless(credentials.inner.clone()).map_err(|e| Error::from_reason(e.to_string()))?;
+        let inner = GlNode::signerless(credentials.inner.clone())
+            .map_err(|e| Error::from_reason(e.to_string()))?;
 
-        Ok(Self { inner: std::sync::Arc::new(inner) })
+        Ok(Self {
+            inner: std::sync::Arc::new(inner),
+        })
     }
 
     /// Stop the node if it is currently running
@@ -1043,7 +1045,10 @@ impl Node {
     /// Build the request from `LnUrlWithdrawRequestData` (obtained out
     /// of band) and a chosen amount.
     #[napi]
-    pub async fn lnurl_withdraw(&self, request: LnUrlWithdrawRequest) -> Result<LnUrlWithdrawResult> {
+    pub async fn lnurl_withdraw(
+        &self,
+        request: LnUrlWithdrawRequest,
+    ) -> Result<LnUrlWithdrawResult> {
         let inner = self.inner.clone();
         let gl_request = gl_lnurl_withdraw_request_from_napi(request);
         let result = tokio::task::spawn_blocking(move || {
@@ -1221,8 +1226,7 @@ fn napi_resolved_input_from_gl(input: GlResolvedInput) -> ResolvedInput {
 /// but **not fetched** — call `resolveInput` for that.
 #[napi]
 pub fn parse_input(input: String) -> Result<ParsedInput> {
-    let parsed =
-        glsdk::parse_input(input).map_err(|e| Error::from_reason(e.to_string()))?;
+    let parsed = glsdk::parse_input(input).map_err(|e| Error::from_reason(e.to_string()))?;
     Ok(napi_parsed_input_from_gl(parsed))
 }
 

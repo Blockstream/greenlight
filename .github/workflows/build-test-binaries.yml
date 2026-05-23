@@ -1,0 +1,42 @@
+name: Build Test Binaries
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out and build'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build gl-plugin and gl-signerproxy (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "greenlight-test-binaries"
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '23.2'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build test binaries
+        run: cargo build -p gl-plugin -p gl-signerproxy
+
+      - name: Upload test binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-binaries-linux-x86_64
+          path: |
+            target/debug/gl-plugin
+            target/debug/gl-signerproxy
+          retention-days: 1

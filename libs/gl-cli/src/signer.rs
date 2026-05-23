@@ -2,9 +2,7 @@ use crate::error::{Error, Result};
 use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
-use gl_client::signer::{
-    Signer, SignerConfig, StateSignatureMode, StateSignatureOverrideConfig,
-};
+use gl_client::signer::{Signer, SignerConfig, StateSignatureMode, StateSignatureOverrideConfig};
 use lightning_signer::bitcoin::Network;
 use std::path::Path;
 use tokio::{join, signal};
@@ -110,11 +108,9 @@ async fn run_handler<P: AsRef<Path>>(
         ));
     }
 
-    let state_signature_override = state_override.map(|ack| {
-        StateSignatureOverrideConfig {
-            ack,
-            note: state_override_note,
-        }
+    let state_signature_override = state_override.map(|ack| StateSignatureOverrideConfig {
+        ack,
+        note: state_override_note,
     });
 
     let signer = Signer::new_with_config(

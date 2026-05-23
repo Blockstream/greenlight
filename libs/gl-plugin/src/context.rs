@@ -10,9 +10,9 @@
 //!    sign off actually match the authentic commands by a valid
 //!    caller.
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Request {

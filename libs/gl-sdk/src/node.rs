@@ -1,11 +1,11 @@
-use crate::{credentials::Credentials, signer::Handle, util::exec, Error};
-use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
+use crate::{Error, credentials::Credentials, signer::Handle, util::exec};
 use gl_client::credentials::NodeIdProvider;
 use gl_client::lnurl::models::LnUrlHttpClient as _;
 use gl_client::node::{Client as GlClient, ClnClient, Node as ClientNode};
 use gl_client::pb::{self as glpb, cln as clnpb};
 use lightning_invoice::Bolt11Invoice;
+use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::sync::OnceCell;
 
@@ -72,7 +72,6 @@ impl Node {
 
 #[uniffi::export]
 impl Node {
-
     /// Stop the node if it is currently running.
     pub fn stop(&self) -> Result<(), Error> {
         self.check_connected()?;
@@ -317,8 +316,7 @@ impl Node {
         if let (Some(rate), Ok(rates)) = (sat_per_vbyte, feerates_res.as_ref())
             && let Some(perkw) = rates.get_ref().perkw.as_ref()
         {
-            let min_sat_per_vbyte =
-                sat_per_vbyte_from_perkw(perkw.min_acceptable).max(1);
+            let min_sat_per_vbyte = sat_per_vbyte_from_perkw(perkw.min_acceptable).max(1);
             if (rate as u64) < min_sat_per_vbyte {
                 return Err(Error::argument(
                     "sat_per_vbyte",
@@ -354,8 +352,7 @@ impl Node {
         // fee_sat = weight_wu × feerate_per_kw / 1000. The proto-level
         // `estimated_final_weight` already includes the destination
         // output we declared via `startweight`, plus any change output.
-        let fee_sat: u64 =
-            (res.estimated_final_weight as u64 * res.feerate_per_kw as u64) / 1000;
+        let fee_sat: u64 = (res.estimated_final_weight as u64 * res.feerate_per_kw as u64) / 1000;
 
         // Sum input values directly from the PSBT. Each PSBT input
         // carries its prevout amount in `witness_utxo` (segwit) or
@@ -373,9 +370,7 @@ impl Node {
                 tx.output
                     .get(vout)
                     .map(|o| o.value)
-                    .ok_or_else(|| {
-                        Error::rpc("psbt non_witness_utxo missing vout")
-                    })?
+                    .ok_or_else(|| Error::rpc("psbt non_witness_utxo missing vout"))?
             } else {
                 return Err(Error::rpc(format!(
                     "psbt input {} has no witness_utxo or non_witness_utxo",
@@ -402,8 +397,7 @@ impl Node {
         // Round up so passing this back to `onchain_send` produces a
         // feerate at least as high as the previewed one; that way the
         // broadcast fee is never below what the user agreed to.
-        let effective_sat_per_vbyte: u32 =
-            (res.feerate_per_kw as u64).div_ceil(250) as u32;
+        let effective_sat_per_vbyte: u32 = (res.feerate_per_kw as u64).div_ceil(250) as u32;
 
         Ok(PreparedOnchainSend {
             utxos,
@@ -523,9 +517,7 @@ impl Node {
                     .map(|p| {
                         p.inputs
                             .iter()
-                            .filter_map(|i| {
-                                i.witness_utxo.as_ref().map(|t| t.value.to_sat())
-                            })
+                            .filter_map(|i| i.witness_utxo.as_ref().map(|t| t.value.to_sat()))
                             .sum::<u64>()
                     })
                     .unwrap_or(0);
@@ -534,9 +526,8 @@ impl Node {
                     .as_ref()
                     .map(|a| a.msat / 1000)
                     .unwrap_or(0);
-                let fee_sat = (resp.estimated_final_weight as u64
-                    * resp.feerate_per_kw as u64)
-                    / 1000;
+                let fee_sat =
+                    (resp.estimated_final_weight as u64 * resp.feerate_per_kw as u64) / 1000;
                 total_input_sat
                     .saturating_sub(excess_sat)
                     .saturating_sub(fee_sat)
@@ -722,11 +713,9 @@ impl Node {
             }
         }
 
-        let connected_channel_peers: Vec<String> =
-            connected_channel_peer_set.into_iter().collect();
+        let connected_channel_peers: Vec<String> = connected_channel_peer_set.into_iter().collect();
 
-        let max_chan_reserve_msat =
-            channels_balance_msat.saturating_sub(max_payable_msat);
+        let max_chan_reserve_msat = channels_balance_msat.saturating_sub(max_payable_msat);
 
         let mut onchain_balance_msat: u64 = 0;
         let mut unconfirmed_onchain_balance_msat: u64 = 0;
@@ -741,12 +730,8 @@ impl Node {
             }
             match output.status {
                 OutputStatus::Confirmed => onchain_balance_msat += output.amount_msat,
-                OutputStatus::Unconfirmed => {
-                    unconfirmed_onchain_balance_msat += output.amount_msat
-                }
-                OutputStatus::Immature => {
-                    immature_onchain_balance_msat += output.amount_msat
-                }
+                OutputStatus::Unconfirmed => unconfirmed_onchain_balance_msat += output.amount_msat,
+                OutputStatus::Immature => immature_onchain_balance_msat += output.amount_msat,
                 OutputStatus::Spent => {}
             }
         }
@@ -758,7 +743,6 @@ impl Node {
             .saturating_add(total_onchain_msat)
             .saturating_add(pending_onchain_balance_msat);
         let spendable_balance_msat = max_payable_msat.saturating_add(onchain_balance_msat);
-
 
         Ok(NodeState {
             id: info.id,
@@ -899,8 +883,7 @@ impl Node {
                     .invoices
                     .into_iter()
                     .filter(|i| {
-                        i.status()
-                            == clnpb::listinvoices_invoices::ListinvoicesInvoicesStatus::Paid
+                        i.status() == clnpb::listinvoices_invoices::ListinvoicesInvoicesStatus::Paid
                     })
                     .map(|i| -> Payment { i.into() }),
             );
@@ -1015,14 +998,12 @@ impl Node {
 
         // Phase 1: Get invoice from service callback
         let comment = request.comment.as_deref();
-        let (invoice_str, success_action) = match exec(
-            gl_client::lnurl::pay::fetch_invoice(
-                &http_client,
-                &request.data.callback,
-                request.amount_msat,
-                comment,
-            ),
-        ) {
+        let (invoice_str, success_action) = match exec(gl_client::lnurl::pay::fetch_invoice(
+            &http_client,
+            &request.data.callback,
+            request.amount_msat,
+            comment,
+        )) {
             Ok(v) => v,
             Err(e) => {
                 let msg = e.to_string();
@@ -1072,9 +1053,8 @@ impl Node {
                     .process(&pay_response.payment_preimage)
                     .map_err(|e| Error::other(e.to_string()))?;
                 if validate_url {
-                    if let gl_client::lnurl::models::ProcessedSuccessAction::Url {
-                        url, ..
-                    } = &processed
+                    if let gl_client::lnurl::models::ProcessedSuccessAction::Url { url, .. } =
+                        &processed
                     {
                         if let Some(reason) =
                             url_action_domain_mismatch(&request.data.callback, url)
@@ -1507,11 +1487,7 @@ fn classify_onchain_balance(
 ) -> OnchainBalanceState {
     let withdrawable_sat = confirmed_sat.saturating_sub(reserve_sat);
 
-    if confirmed_sat == 0
-        && unconfirmed_sat == 0
-        && immature_sat == 0
-        && pending_close_sat == 0
-    {
+    if confirmed_sat == 0 && unconfirmed_sat == 0 && immature_sat == 0 && pending_close_sat == 0 {
         return OnchainBalanceState::Unavailable;
     }
     if withdrawable_sat > ONCHAIN_DUST_THRESHOLD_SAT {
@@ -1574,8 +1550,7 @@ pub struct OnchainSendResponse {
 /// Parse an `amount_or_all` argument into the protobuf `AmountOrAll`.
 /// Accepts `"all"`, `"<n>"`, `"<n>sat"`, or `"<n>msat"`.
 fn parse_amount_or_all(amount_or_all: &str) -> Result<clnpb::AmountOrAll, Error> {
-    let (num, suffix): (String, String) =
-        amount_or_all.chars().partition(|c| c.is_ascii_digit());
+    let (num, suffix): (String, String) = amount_or_all.chars().partition(|c| c.is_ascii_digit());
 
     let num = if num.is_empty() {
         0
@@ -1591,7 +1566,9 @@ fn parse_amount_or_all(amount_or_all: &str) -> Result<clnpb::AmountOrAll, Error>
             })),
         }),
         (n, "msat") => Ok(clnpb::AmountOrAll {
-            value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: n })),
+            value: Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                msat: n,
+            })),
         }),
         (0, "all") => Ok(clnpb::AmountOrAll {
             value: Some(clnpb::amount_or_all::Value::All(true)),
@@ -1612,8 +1589,7 @@ fn feerate_perkw_from_sat_per_vbyte(sat_per_vbyte: u32) -> clnpb::Feerate {
 /// Convert a public `Outpoint` (hex txid) into the protobuf form
 /// (raw txid bytes) used by CLN's `WithdrawRequest`.
 fn outpoint_to_pb(o: Outpoint) -> Result<clnpb::Outpoint, Error> {
-    let txid = hex::decode(&o.txid)
-        .map_err(|_| Error::argument("utxos.txid", o.txid.clone()))?;
+    let txid = hex::decode(&o.txid).map_err(|_| Error::argument("utxos.txid", o.txid.clone()))?;
     Ok(clnpb::Outpoint {
         txid,
         outnum: o.vout,
@@ -1934,7 +1910,6 @@ impl ChannelState {
     fn is_open(&self) -> bool {
         matches!(self, ChannelState::ChanneldNormal)
     }
-
 }
 
 /// Returns true when the channel still holds on-chain funds that have
@@ -2620,24 +2595,33 @@ mod tests {
     #[test]
     fn parse_amount_or_all_handles_all_variants() {
         let all = parse_amount_or_all("all").unwrap();
-        assert!(matches!(all.value, Some(clnpb::amount_or_all::Value::All(true))));
+        assert!(matches!(
+            all.value,
+            Some(clnpb::amount_or_all::Value::All(true))
+        ));
 
         let plain = parse_amount_or_all("50000").unwrap();
         assert!(matches!(
             plain.value,
-            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: 50_000_000 }))
+            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                msat: 50_000_000
+            }))
         ));
 
         let sat = parse_amount_or_all("50000sat").unwrap();
         assert!(matches!(
             sat.value,
-            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: 50_000_000 }))
+            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                msat: 50_000_000
+            }))
         ));
 
         let msat = parse_amount_or_all("50000msat").unwrap();
         assert!(matches!(
             msat.value,
-            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount { msat: 50_000 }))
+            Some(clnpb::amount_or_all::Value::Amount(clnpb::Amount {
+                msat: 50_000
+            }))
         ));
 
         assert!(parse_amount_or_all("notanumber").is_err());
@@ -2665,7 +2649,10 @@ mod tests {
                 assert_eq!(emergency_reserve_sat, 25_000);
                 assert_eq!(unconfirmed_sat, 5_000);
             }
-            other => panic!("expected Available, got {:?}", std::mem::discriminant(&other)),
+            other => panic!(
+                "expected Available, got {:?}",
+                std::mem::discriminant(&other)
+            ),
         }
     }
 
@@ -2702,7 +2689,10 @@ mod tests {
             OnchainBalanceState::Immature { immature_sat } => {
                 assert_eq!(immature_sat, 100_000);
             }
-            other => panic!("expected Immature, got {:?}", std::mem::discriminant(&other)),
+            other => panic!(
+                "expected Immature, got {:?}",
+                std::mem::discriminant(&other)
+            ),
         }
     }
 
@@ -2888,10 +2878,16 @@ mod tests {
         );
 
         // P2SH — script_pubkey is 23 bytes, output = (8+1+23)*4 = 128
-        assert_eq!(output_weight_for_address("3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"), 128);
+        assert_eq!(
+            output_weight_for_address("3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy"),
+            128
+        );
 
         // P2PKH — script_pubkey is 25 bytes, output = (8+1+25)*4 = 136
-        assert_eq!(output_weight_for_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"), 136);
+        assert_eq!(
+            output_weight_for_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"),
+            136
+        );
 
         // Garbage falls back to the conservative 172 wu.
         assert_eq!(output_weight_for_address("not-an-address"), 172);

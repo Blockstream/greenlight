@@ -102,9 +102,8 @@ impl Log for SdkLogger {
 /// `set_log_level`.
 pub fn set_logger(level: LogLevel, listener: Box<dyn LogListener>) -> Result<(), Error> {
     let filter: LevelFilter = level.into();
-    log::set_boxed_logger(Box::new(SdkLogger { listener })).map_err(|e| {
-        Error::other(format!("a `log` logger is already installed: {e}"))
-    })?;
+    log::set_boxed_logger(Box::new(SdkLogger { listener }))
+        .map_err(|e| Error::other(format!("a `log` logger is already installed: {e}")))?;
     log::set_max_level(filter);
     Ok(())
 }

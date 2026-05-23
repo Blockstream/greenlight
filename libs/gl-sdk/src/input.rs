@@ -20,8 +20,8 @@
 // Wallets handling a QR scan that should proceed straight to the
 // pay/withdraw screen call `resolve_input`.
 
-use crate::lnurl::{LnUrlPayRequestData, LnUrlWithdrawRequestData};
 use crate::Error;
+use crate::lnurl::{LnUrlPayRequestData, LnUrlWithdrawRequestData};
 
 /// Parsed BOLT11 invoice with extracted fields.
 #[derive(Clone, uniffi::Record)]
@@ -132,7 +132,7 @@ pub fn parse_input(input: String) -> Result<ParsedInput, Error> {
 /// withdraw request data.
 pub async fn resolve_input(input: String) -> Result<ResolvedInput, Error> {
     use gl_client::lnurl::models::LnUrlHttpClearnetClient;
-    use gl_client::lnurl::{LnUrlResponse, LNURL};
+    use gl_client::lnurl::{LNURL, LnUrlResponse};
 
     // Capture the user's original input (post-trim) so that
     // `data.lnurl` on the resolved response carries the exact string
@@ -371,15 +371,19 @@ mod tests {
     #[test]
     fn test_parse_input_invalid_node_id_errors() {
         // 66 chars but starts with 0x04 (uncompressed pubkey prefix)
-        assert!(parse_input(
-            "04eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f283686619".to_string()
-        )
-        .is_err());
+        assert!(
+            parse_input(
+                "04eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f283686619".to_string()
+            )
+            .is_err()
+        );
         // 66 non-hex chars
-        assert!(parse_input(
-            "not_valid_hex_at_all_but_66_chars_long_xxxxxxxxxxxxxxxxxxxxxxxxxxx".to_string()
-        )
-        .is_err());
+        assert!(
+            parse_input(
+                "not_valid_hex_at_all_but_66_chars_long_xxxxxxxxxxxxxxxxxxxxxxxxxxx".to_string()
+            )
+            .is_err()
+        );
     }
 
     // ── resolve_input pass-through paths (no HTTP needed) ───────

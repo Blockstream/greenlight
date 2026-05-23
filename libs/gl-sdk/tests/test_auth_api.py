@@ -240,10 +240,10 @@ class TestDisconnectBlocksRpc:
 
 
 class TestLowLevelCredentials:
-    """Test that Node created via low-level API exposes credentials."""
+    """Test that Node created via signerless connect exposes credentials."""
 
-    def test_node_new_stores_credentials(self, scheduler, nobody_id):
-        """Node::new(creds) should allow calling node.credentials()."""
+    def test_node_connect_stores_credentials(self, scheduler, nobody_id):
+        """NodeBuilder.connect(creds, None) should allow calling node.credentials()."""
         dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
         config = glsdk.Config().with_developer_cert(dev_cert)
 
@@ -252,8 +252,8 @@ class TestLowLevelCredentials:
         saved_creds = node1.credentials()
         node1.disconnect()
 
-        # Create node via low-level API
-        creds_obj = glsdk.Credentials.load(saved_creds)
-        node2 = glsdk.Node(creds_obj)
+        # Create node via signerless connect
+        node2 = glsdk.NodeBuilder(config).connect(saved_creds, None)
         roundtripped = node2.credentials()
         assert len(roundtripped) > 0
+        node2.disconnect()

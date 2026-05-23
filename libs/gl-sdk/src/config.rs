@@ -1,9 +1,9 @@
 // SDK configuration for Greenlight node operations.
 // Holds network selection and optional developer certificate.
 
-use std::sync::Arc;
-use crate::credentials::DeveloperCert;
 use crate::Network;
+use crate::credentials::DeveloperCert;
+use std::sync::Arc;
 
 #[derive(uniffi::Object, Clone)]
 pub struct Config {

@@ -27,16 +27,10 @@ impl PayRequestResponse {
         }
 
         if amount_msats < self.min_sendable {
-            return Err(anyhow!(
-                "Amount must be {} or greater",
-                self.min_sendable
-            ));
+            return Err(anyhow!("Amount must be {} or greater", self.min_sendable));
         }
         if amount_msats > self.max_sendable {
-            return Err(anyhow!(
-                "Amount must be {} or less",
-                self.max_sendable
-            ));
+            return Err(anyhow!("Amount must be {} or less", self.max_sendable));
         }
 
         debug!(
@@ -46,9 +40,8 @@ impl PayRequestResponse {
 
         // For lightning addresses, verify the identifier appears in metadata
         if !is_lnurl(identifier) {
-            let entries: Vec<Vec<String>> =
-                serde_json::from_str(&self.metadata)
-                    .map_err(|e| anyhow!("Failed to deserialize metadata: {}", e))?;
+            let entries: Vec<Vec<String>> = serde_json::from_str(&self.metadata)
+                .map_err(|e| anyhow!("Failed to deserialize metadata: {}", e))?;
 
             let found = entries.iter().any(|entry| {
                 entry.len() >= 2
@@ -119,11 +112,7 @@ pub async fn fetch_invoice<T: LnUrlHttpClient>(
 pub const LNURL_SERVICE_ERROR_PREFIX: &str = "LNURL service error: ";
 
 /// Build a callback URL with amount and optional comment query parameters.
-fn build_callback_url(
-    callback: &str,
-    amount: u64,
-    comment: Option<&str>,
-) -> Result<String> {
+fn build_callback_url(callback: &str, amount: u64, comment: Option<&str>) -> Result<String> {
     let mut url = Url::parse(callback)?;
     url.query_pairs_mut()
         .append_pair("amount", &amount.to_string());
@@ -216,11 +205,12 @@ pub async fn resolve_lnurl_to_invoice<T: LnUrlHttpClient>(
 
     debug!("Domain: {}", Url::parse(&url).unwrap().host().unwrap());
 
-    let pay_request: PayRequestResponse =
-        http_client.get_pay_request_response(&url).await?;
+    let pay_request: PayRequestResponse = http_client.get_pay_request_response(&url).await?;
 
     pay_request.validate(lnurl_identifier, amount_msats)?;
-    pay_request.get_invoice(http_client, amount_msats, comment).await
+    pay_request
+        .get_invoice(http_client, amount_msats, comment)
+        .await
 }
 
 /// Parse a lightning address into its well-known LNURL-pay URL (LUD-16).
@@ -339,7 +329,10 @@ mod tests {
         let lnurl = "@cipherpunk.com";
         let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, 100000, None).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Username can not be empty"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Username can not be empty"));
     }
 
     #[tokio::test]
@@ -348,7 +341,10 @@ mod tests {
         let lnurl = "satoshi@";
         let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, 100000, None).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Domain can not be empty"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Domain can not be empty"));
     }
 
     #[tokio::test]
@@ -357,7 +353,10 @@ mod tests {
         let lnurl = "LNURL1111111111111111111111111111111111111111111111111111111111111111111";
 
         let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, 100000, None).await;
-        assert!(result.unwrap_err().to_string().contains("Failed to decode lnurl: invalid length"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Failed to decode lnurl: invalid length"));
     }
 
     #[tokio::test]

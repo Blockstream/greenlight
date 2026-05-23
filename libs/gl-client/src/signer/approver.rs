@@ -19,7 +19,7 @@ impl<A: Approve> ReportingApprover<A> {
 
 impl<A: Approve> Approve for ReportingApprover<A> {
     fn approve_invoice(&self, inv: &lightning_signer::invoice::Invoice) -> bool {
-	log::warn!("unapproved invoice: {:?}", inv);
+        log::warn!("unapproved invoice: {:?}", inv);
         self.inner.approve_invoice(inv)
     }
     fn approve_keysend(

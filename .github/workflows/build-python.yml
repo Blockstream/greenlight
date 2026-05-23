@@ -1,0 +1,148 @@
+name: Build Python Wheels
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out and build'
+        required: true
+        type: string
+
+jobs:
+  source:
+    name: Source Distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Build source distribution
+        run: uv build --package gl-client --sdist
+
+      - name: Upload source distribution
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-sdist
+          path: dist/gl_client-*.tar.gz
+          retention-days: 7
+
+  wheels:
+    name: Wheels - ${{ matrix.os }} / ${{ matrix.target }}
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: ubuntu-latest
+            os: linux
+            target: x86_64
+            architecture: x64
+
+          - host: ubuntu-latest
+            os: linux
+            target: i686
+            architecture: x64
+
+          - host: macos-14
+            os: macos
+            target: aarch64
+            architecture: arm64
+
+          - host: windows-latest
+            os: windows
+            target: x64
+            architecture: x64
+
+          - host: windows-latest
+            os: windows
+            target: x86
+            architecture: x86
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+          architecture: ${{ matrix.architecture }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache (Per Architecture)
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "greenlight-${{ matrix.target || 'host' }}"
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '23.2'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: libs/gl-client-py
+          rust-toolchain: stable
+          target: ${{ matrix.target }}
+          manylinux: auto
+          args: --release --out dist
+          # Mount host protoc into maturin's Docker container (Linux only)
+          docker-options: >-
+            -v /opt/hostedtoolcache/protoc/v23.2/x64/bin/protoc:/usr/bin/protoc:ro
+
+      - name: Build gl-sdk shared library (64-bit only)
+        if: matrix.target == 'x86_64' || matrix.target == 'aarch64' || matrix.target == 'x64'
+        run: cargo build --release -p gl-sdk
+
+      - name: Build and retag gl-sdk wheel (64-bit only)
+        if: matrix.target == 'x86_64' || matrix.target == 'aarch64' || matrix.target == 'x64'
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "macos" ]; then
+            LIB_EXT="dylib"
+          elif [ "${{ matrix.os }}" = "windows" ]; then
+            LIB_EXT="dll"
+          else
+            LIB_EXT="so"
+          fi
+          mkdir -p libs/gl-sdk/glsdk
+          LIB_PATH=$(find target -name "libglsdk.${LIB_EXT}" -o -name "glsdk.${LIB_EXT}" | head -n 1)
+          install -m 0755 "${LIB_PATH}" libs/gl-sdk/glsdk/libglsdk.${LIB_EXT}
+          if [ "${{ matrix.os }}" = "linux" ] && [ -d "libs/gl-client-py/dist" ]; then
+            sudo chown -R $(id -u):$(id -g) libs/gl-client-py/dist
+          fi
+          uv build --package gl-sdk --wheel --out-dir libs/gl-client-py/dist
+          # Retag: hatchling produces py3-none-any but the wheel contains a native shared lib
+          pip install wheel
+          if [ "${{ matrix.os }}" = "linux" ]; then
+            PLAT="manylinux_2_17_${{ matrix.target }}"
+          elif [ "${{ matrix.os }}" = "macos" ]; then
+            PLAT="${{ matrix.target == 'aarch64' && 'macosx_11_0_arm64' || 'macosx_10_12_x86_64' }}"
+          elif [ "${{ matrix.os }}" = "windows" ]; then
+            PLAT="${{ matrix.target == 'x64' && 'win_amd64' || 'win32' }}"
+          fi
+          for whl in libs/gl-client-py/dist/gl_sdk*.whl; do
+            python -m wheel tags --remove --platform-tag "$PLAT" "$whl"
+          done
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-wheel-${{ matrix.os }}-${{ matrix.target }}
+          path: libs/gl-client-py/dist/
+          retention-days: 7

@@ -1,10 +1,10 @@
-use crate::credentials::{self, RuneProvider, NodeIdProvider, TlsConfigProvider};
+use crate::credentials::{self, NodeIdProvider, RuneProvider, TlsConfigProvider};
 use crate::node::{self, GrpcClient};
 use crate::pb::scheduler::scheduler_client::SchedulerClient;
 use crate::tls::{self};
 use crate::utils::scheduler_uri;
 use crate::{pb, signer::Signer};
-use anyhow::{Result};
+use anyhow::Result;
 use lightning_signer::bitcoin::Network;
 use log::debug;
 use runeauth;

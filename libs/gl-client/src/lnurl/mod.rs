@@ -37,10 +37,7 @@ impl<T: LnUrlHttpClient> LNURL<T> {
     pub async fn resolve(&self, url: &str) -> Result<LnUrlResponse> {
         let json = self.http_client.get_json(url).await?;
 
-        let tag = json
-            .get("tag")
-            .and_then(|t| t.as_str())
-            .unwrap_or("");
+        let tag = json.get("tag").and_then(|t| t.as_str()).unwrap_or("");
 
         match tag {
             "payRequest" => {
@@ -84,8 +81,7 @@ impl<T: LnUrlHttpClient> LNURL<T> {
         node: &mut ClnClient,
     ) -> Result<()> {
         let url = parse_lnurl(lnurl)?;
-        let withdrawal_request_response =
-            withdraw::parse_withdraw_request_response_from_url(&url);
+        let withdrawal_request_response = withdraw::parse_withdraw_request_response_from_url(&url);
 
         let withdrawal_request_response = match withdrawal_request_response {
             Some(w) => w,
@@ -109,8 +105,7 @@ impl<T: LnUrlHttpClient> LNURL<T> {
             .map_err(|e| anyhow!(e))?
             .into_inner();
 
-        let callback_url =
-            withdrawal_request_response.build_callback_url(&invoice.bolt11)?;
+        let callback_url = withdrawal_request_response.build_callback_url(&invoice.bolt11)?;
 
         let _ = self
             .http_client

@@ -1,0 +1,244 @@
+# ==============================================================================
+# CI ORCHESTRATOR
+# ==============================================================================
+# Runs all build and test jobs on PRs and pushes to main.
+# Delegates compilation to the reusable build-*.yml workflows (shared with
+# the release orchestrator), then runs language-specific tests on the
+# resulting artifacts.
+# ==============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - synchronize
+      - opened
+  workflow_dispatch:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Rust
+  # ============================================================================
+  rust:
+    name: Rust
+    uses: ./.github/workflows/build-rust.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # ============================================================================
+  # Kotlin / Android
+  # ============================================================================
+  kotlin:
+    name: Kotlin
+    uses: ./.github/workflows/build-kotlin.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # ============================================================================
+  # Test binaries (gl-plugin, gl-signerproxy)
+  # ============================================================================
+  test-binaries:
+    name: Test Binaries
+    uses: ./.github/workflows/build-test-binaries.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # ============================================================================
+  # Node.js / N-API — build then test
+  # ============================================================================
+  napi-build:
+    name: N-API
+    uses: ./.github/workflows/build-napi.yml
+    with:
+      ref: ${{ github.sha }}
+
+  napi-test:
+    name: N-API Test
+    needs: [napi-build, python-build, test-binaries]
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    defaults:
+      run:
+        working-directory: libs/gl-sdk-napi
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: libs/gl-sdk-napi/package-lock.json
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install cfssl
+        run: |
+          curl -sL -o /usr/local/bin/cfssl https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssl_1.6.5_linux_amd64
+          curl -sL -o /usr/local/bin/cfssljson https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssljson_1.6.5_linux_amd64
+          chmod +x /usr/local/bin/cfssl /usr/local/bin/cfssljson
+
+      - name: Download test binaries
+        uses: actions/download-artifact@v8
+        with:
+          name: test-binaries-linux-x86_64
+          path: target/debug
+
+      - name: Make test binaries executable
+        run: chmod +x ${{ github.workspace }}/target/debug/gl-plugin ${{ github.workspace }}/target/debug/gl-signerproxy
+
+      - name: Install bitcoind
+        run: |
+          BITCOIN_VERSION=28.2
+          curl -sO https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          tar -xzf bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          sudo install -m 0755 -t /usr/local/bin bitcoin-${BITCOIN_VERSION}/bin/*
+
+      - name: Install lightningd via clnvm
+        run: |
+          CLN_PATH=$(uv run --package cln-version-manager --with click --with rich clnvm get --tag v25.12gl1)
+          echo "$(dirname "$CLN_PATH")" >> $GITHUB_PATH
+
+      - name: Download Linux x86_64 Python wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: python-wheel-linux-x86_64
+          path: ${{ github.workspace }}/dist
+
+      - name: Pre-build Python test dependencies
+        run: |
+          uv pip install ${{ github.workspace }}/dist/gl_client*.whl ${{ github.workspace }}/dist/gl_sdk*.whl
+          uv pip install ${{ github.workspace }}/libs/gl-testing --no-deps
+          uv pip install ${{ github.workspace }}/libs/cln-version-manager \
+            flaky "grpcio-tools>=1.66" "grpcio>=1.66.0" "httpx[http2]==0.27.2" \
+            "purerpc>=0.8.0" "pyln-client==24.2" "pyln-testing==24.2" \
+            "pytest-timeout>=2.3.1" "pytest-xdist>=3.6.1" "rich>=13.9.3" \
+            "sh>=1.14.3" "sonora>=0.2.3" "bip39>=0.0.2"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download N-API artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: napi-x86_64-unknown-linux-gnu
+          path: libs/gl-sdk-napi
+
+      - name: Run tests
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 10
+          shell: bash
+          command: cd libs/gl-sdk-napi && npm test -- tests/basic.spec.ts
+
+  # ============================================================================
+  # Python — build then install-test
+  # ============================================================================
+  python-build:
+    name: Python
+    uses: ./.github/workflows/build-python.yml
+    with:
+      ref: ${{ github.sha }}
+
+  python-test:
+    name: Python Install Test
+    needs: [python-build, test-binaries]
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install cfssl
+        run: |
+          curl -sL -o /usr/local/bin/cfssl https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssl_1.6.5_linux_amd64
+          curl -sL -o /usr/local/bin/cfssljson https://github.com/cloudflare/cfssl/releases/download/v1.6.5/cfssljson_1.6.5_linux_amd64
+          chmod +x /usr/local/bin/cfssl /usr/local/bin/cfssljson
+
+      - name: Install bitcoind
+        run: |
+          BITCOIN_VERSION=28.2
+          curl -sO https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          tar -xzf bitcoin-${BITCOIN_VERSION}-x86_64-linux-gnu.tar.gz
+          sudo install -m 0755 -t /usr/local/bin bitcoin-${BITCOIN_VERSION}/bin/*
+
+      - name: Install lightningd via clnvm
+        run: |
+          CLN_PATH=$(uv run --package cln-version-manager --with click --with rich clnvm get --tag v25.12gl1)
+          echo "$(dirname "$CLN_PATH")" >> $GITHUB_PATH
+
+      - name: Download test binaries
+        uses: actions/download-artifact@v8
+        with:
+          name: test-binaries-linux-x86_64
+          path: target/debug
+
+      - name: Make test binaries executable
+        run: chmod +x target/debug/gl-plugin target/debug/gl-signerproxy
+
+      - name: Download Linux x86_64 wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: python-wheel-linux-x86_64
+          path: dist
+
+      - name: Install prebuilt wheel and run tests
+        run: |
+          uv venv --clear
+          # Install the prebuilt wheels (gl_client and gl_sdk)
+          uv pip install dist/gl_client*.whl dist/gl_sdk*.whl --force-reinstall
+          
+          # Install gl-testing and its deps, but skip gl-client (already installed from prebuilt wheel)
+          uv pip install libs/gl-testing --no-deps
+          uv pip install libs/cln-version-manager pytest pytest-timeout \
+            flaky "grpcio-tools>=1.66" "grpcio>=1.66.0" "httpx[http2]==0.27.2" \
+            "purerpc>=0.8.0" "pyln-client==24.2" "pyln-testing==24.2" \
+            "pytest-xdist>=3.6.1" "rich>=13.9.3" "sh>=1.14.3" \
+            "sonora>=0.2.3" "bip39>=0.0.2"
+          
+          # Run the gl-client-py unit test suite using the prebuilt wheel!
+          echo "Running gl-client-py unit tests..."
+          uv run --no-sync pytest libs/gl-client-py/tests
+          
+          # Run the gl-sdk Python unit test suite using the prebuilt wheel!
+          echo "Running gl-sdk Python unit tests..."
+          uv run --no-sync pytest libs/gl-sdk/tests
+
+  # ============================================================================
+  # Formatting
+  # ============================================================================
+  formatting:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check Rust Formatting
+        run: cargo fmt --all -- --check

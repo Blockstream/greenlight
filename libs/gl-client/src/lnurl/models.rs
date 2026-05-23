@@ -86,9 +86,17 @@ pub enum SuccessAction {
 /// plaintext using the payment preimage.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ProcessedSuccessAction {
-    Message { message: String },
-    Url { description: String, url: String },
-    Aes { description: String, plaintext: String },
+    Message {
+        message: String,
+    },
+    Url {
+        description: String,
+        url: String,
+    },
+    Aes {
+        description: String,
+        plaintext: String,
+    },
 }
 
 impl SuccessAction {
@@ -137,8 +145,7 @@ impl SuccessAction {
                     iv.len() == 24,
                     "AES success action IV must be exactly 24 base64 chars"
                 );
-                let plaintext =
-                    super::pay::decrypt_aes_success_action(preimage, &ciphertext, &iv)?;
+                let plaintext = super::pay::decrypt_aes_success_action(preimage, &ciphertext, &iv)?;
                 Ok(ProcessedSuccessAction::Aes {
                     description,
                     plaintext,
@@ -226,7 +233,8 @@ mod tests {
 
     #[test]
     fn test_success_action_url_serde() {
-        let json = r#"{"tag":"url","description":"View order","url":"https://example.com/order/123"}"#;
+        let json =
+            r#"{"tag":"url","description":"View order","url":"https://example.com/order/123"}"#;
         let action: SuccessAction = serde_json::from_str(json).unwrap();
         match action {
             SuccessAction::Url { description, url } => {

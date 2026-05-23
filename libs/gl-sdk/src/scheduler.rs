@@ -1,8 +1,8 @@
 use crate::{
+    Error,
     credentials::{Credentials, DeveloperCert},
     signer::Signer,
     util::exec,
-    Error,
 };
 
 #[derive(uniffi::Object, Clone)]

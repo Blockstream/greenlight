@@ -98,10 +98,7 @@ mod test {
         let query_params: &Map<String, Value> = query_pairs.as_object().unwrap();
 
         assert_eq!(query_params.get("k1").unwrap().as_str().unwrap(), "unique");
-        assert_eq!(
-            query_params.get("pr").unwrap().as_str().unwrap(),
-            "invoice"
-        );
+        assert_eq!(query_params.get("pr").unwrap().as_str().unwrap(), "invoice");
 
         Ok(())
     }

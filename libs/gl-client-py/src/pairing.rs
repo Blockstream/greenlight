@@ -61,12 +61,7 @@ impl AttestationDeviceClient {
         }))?)
     }
 
-    fn approve_pairing(
-        &self,
-        device_id: &str,
-        device_name: &str,
-        restrs: &str,
-    ) -> Result<Vec<u8>> {
+    fn approve_pairing(&self, device_id: &str, device_name: &str, restrs: &str) -> Result<Vec<u8>> {
         Ok(convert(exec(async move {
             self.inner
                 .approve_pairing(device_id, device_name, restrs)

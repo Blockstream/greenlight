@@ -99,8 +99,9 @@ pub fn build_state_signature_override_used_message(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_state_signature_override_enabled_message, build_state_signature_override_used_message,
-        STATE_SIGNATURE_OVERRIDE_ENABLED_PREFIX, STATE_SIGNATURE_OVERRIDE_USED_PREFIX,
+        build_state_signature_override_enabled_message,
+        build_state_signature_override_used_message, STATE_SIGNATURE_OVERRIDE_ENABLED_PREFIX,
+        STATE_SIGNATURE_OVERRIDE_USED_PREFIX,
     };
 
     #[test]

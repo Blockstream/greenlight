@@ -1058,10 +1058,13 @@ mod tests {
 
     #[test]
     fn state_entry_canonical_value_bytes_sorts_nested_object_keys() {
-        let entry = StateEntry::new(0, json!({
-            "z": {"b": 1, "a": 2},
-            "a": [{"d": 4, "c": 3}]
-        }));
+        let entry = StateEntry::new(
+            0,
+            json!({
+                "z": {"b": 1, "a": 2},
+                "a": [{"d": 4, "c": 3}]
+            }),
+        );
 
         let bytes = entry.canonical_value_bytes().unwrap();
 

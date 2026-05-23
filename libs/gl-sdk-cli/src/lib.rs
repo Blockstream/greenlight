@@ -18,7 +18,13 @@ pub struct Cli {
     data_dir: Option<String>,
 
     /// Bitcoin network (bitcoin or regtest)
-    #[arg(short, long, default_value = "bitcoin", global = true, help_heading = "Global options")]
+    #[arg(
+        short,
+        long,
+        default_value = "bitcoin",
+        global = true,
+        help_heading = "Global options"
+    )]
     network: String,
 
     /// Enable debug logging

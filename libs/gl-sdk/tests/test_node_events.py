@@ -4,7 +4,6 @@ These tests verify that the UniFFI bindings correctly expose the NodeEventStream
 and related types.
 """
 
-import pytest
 import glsdk
 
 
@@ -27,10 +26,6 @@ class TestEventStreamTypes:
         """Test that NodeEvent has INVOICE_PAID variant."""
         assert hasattr(glsdk.NodeEvent, "INVOICE_PAID")
 
-    def test_node_event_has_unknown_variant(self):
-        """Test that NodeEvent has UNKNOWN variant."""
-        assert hasattr(glsdk.NodeEvent, "UNKNOWN")
-
     def test_node_has_stream_node_events_method(self):
         """Test that Node class has stream_node_events method."""
         assert hasattr(glsdk.Node, "stream_node_events")
@@ -46,24 +41,24 @@ class TestInvoicePaidEventFields:
     def test_invoice_paid_event_can_be_constructed(self):
         """Test InvoicePaidEvent can be constructed with all fields."""
         event = glsdk.InvoicePaidEvent(
-            payment_hash=b"\x00" * 32,
+            payment_hash="00" * 32,
             bolt11="lnbcrt1...",
-            preimage=b"\x01" * 32,
+            preimage="01" * 32,
             label="test-invoice",
             amount_msat=100000,
         )
-        assert event.payment_hash == b"\x00" * 32
+        assert event.payment_hash == "00" * 32
         assert event.bolt11 == "lnbcrt1..."
-        assert event.preimage == b"\x01" * 32
+        assert event.preimage == "01" * 32
         assert event.label == "test-invoice"
         assert event.amount_msat == 100000
 
     def test_invoice_paid_event_str(self):
         """Test InvoicePaidEvent has a reasonable string representation."""
         event = glsdk.InvoicePaidEvent(
-            payment_hash=b"\x00" * 32,
+            payment_hash="00" * 32,
             bolt11="lnbcrt1...",
-            preimage=b"\x01" * 32,
+            preimage="01" * 32,
             label="test-invoice",
             amount_msat=100000,
         )
@@ -78,38 +73,23 @@ class TestNodeEventVariants:
     def test_invoice_paid_variant_construction(self):
         """Test that INVOICE_PAID variant can be constructed."""
         details = glsdk.InvoicePaidEvent(
-            payment_hash=b"\x00" * 32,
+            payment_hash="00" * 32,
             bolt11="lnbcrt1...",
-            preimage=b"\x01" * 32,
+            preimage="01" * 32,
             label="test-invoice",
             amount_msat=100000,
         )
         event = glsdk.NodeEvent.INVOICE_PAID(details=details)
         assert event.details == details
 
-    def test_unknown_variant_construction(self):
-        """Test that UNKNOWN variant can be constructed."""
-        event = glsdk.NodeEvent.UNKNOWN()
-        assert event is not None
-
     def test_invoice_paid_is_invoice_paid(self):
         """Test is_invoice_paid() method on INVOICE_PAID variant."""
         details = glsdk.InvoicePaidEvent(
-            payment_hash=b"\x00" * 32,
+            payment_hash="00" * 32,
             bolt11="lnbcrt1...",
-            preimage=b"\x01" * 32,
+            preimage="01" * 32,
             label="test-invoice",
             amount_msat=100000,
         )
         event = glsdk.NodeEvent.INVOICE_PAID(details=details)
         assert event.is_invoice_paid()
-        assert not event.is_unknown()
-
-    def test_unknown_is_unknown(self):
-        """Test is_unknown() method on UNKNOWN variant."""
-        event = glsdk.NodeEvent.UNKNOWN()
-        assert event.is_unknown()
-        assert not event.is_invoice_paid()
-
-
-
