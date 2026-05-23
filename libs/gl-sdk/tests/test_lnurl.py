@@ -8,8 +8,6 @@ Network topology:
     gl_sdk_node ── channel ── relay ── channel ── service_node (LNURL server)
 """
 
-import asyncio
-
 from gltesting.fixtures import *  # noqa: F401, F403
 from pyln.testing.utils import wait_for
 
@@ -66,7 +64,7 @@ def fund_and_connect(node_factory, bitcoind, lnurl_service):
 
 def test_parse_input_lnurl_pay(lnurl_service):
     """parse_input on an LNURL-pay URL returns LnUrlPay with fetched data."""
-    resolved = asyncio.run(glsdk.resolve_input(lnurl_service.pay_url))
+    resolved = glsdk.resolve_input(lnurl_service.pay_url)
 
     assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
     data = resolved.data
@@ -79,7 +77,7 @@ def test_parse_input_lnurl_pay(lnurl_service):
 
 def test_parse_input_lnurl_withdraw(lnurl_service):
     """parse_input on an LNURL-withdraw URL returns LnUrlWithdraw with fetched data."""
-    resolved = asyncio.run(glsdk.resolve_input(lnurl_service.withdraw_url))
+    resolved = glsdk.resolve_input(lnurl_service.withdraw_url)
 
     assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_WITHDRAW)
     data = resolved.data
@@ -91,7 +89,7 @@ def test_parse_input_lnurl_withdraw(lnurl_service):
 
 def test_parse_input_lightning_address_url(lnurl_service):
     """parse_input on a well-known LUD-16 URL returns LnUrlPay."""
-    resolved = asyncio.run(glsdk.resolve_input(lnurl_service.lightning_address_url))
+    resolved = glsdk.resolve_input(lnurl_service.lightning_address_url)
 
     assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
     assert resolved.data.min_sendable == lnurl_service.min_sendable
@@ -115,7 +113,7 @@ def test_parse_input_bolt11_no_http(lnurl_service):
         "qqqzsqygarl9fh38s0gyuxjjgux34w75dnc6xp2l35j7es3jd4ugt3lu0xzre26yg5"
         "m7ke54n2d5sym4xcmxtl8238xxvw5h5h5j5r6drg6k6zcqj0fcwg"
     )
-    resolved = asyncio.run(glsdk.resolve_input(invoice))
+    resolved = glsdk.resolve_input(invoice)
 
     assert isinstance(resolved, glsdk.ResolvedInput.BOLT11)
     assert resolved.invoice.amount_msat == 10
@@ -165,11 +163,11 @@ def test_lnurl_pay_end_to_end(
 
     # Now build an SDK-level Node for LNURL operations
     creds_bytes = c.creds().to_bytes()
-    sdk_node = glsdk.Node(glsdk.Credentials.load(creds_bytes))
+    sdk_node = glsdk.NodeBuilder(glsdk.Config()).connect(creds_bytes, None)
 
     try:
         # Resolve
-        resolved = asyncio.run(glsdk.resolve_input(lnurl_service.pay_url))
+        resolved = glsdk.resolve_input(lnurl_service.pay_url)
         assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
         pay_data = resolved.data
 
@@ -232,10 +230,10 @@ def test_lnurl_pay_with_message_success_action(
     )
 
     creds_bytes = c.creds().to_bytes()
-    sdk_node = glsdk.Node(glsdk.Credentials.load(creds_bytes))
+    sdk_node = glsdk.NodeBuilder(glsdk.Config()).connect(creds_bytes, None)
 
     try:
-        resolved = asyncio.run(glsdk.resolve_input(lnurl_service.pay_url))
+        resolved = glsdk.resolve_input(lnurl_service.pay_url)
         assert isinstance(resolved, glsdk.ResolvedInput.LN_URL_PAY)
         pay_data = resolved.data
 

@@ -178,7 +178,7 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         # Check that we don't already have this node registered:
         if len([n for n in self.nodes if n.node_id == req.node_id]) > 0:
             raise ValueError(
-                "could not register the node with the DB, does the node already exist?"
+                "ALREADY_EXISTS: node already registered"
             )
 
         num = len(self.nodes)
@@ -249,6 +249,9 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         assert challenge.scope == schedpb.ChallengeScope.RECOVER
         # TODO Verify that the response matches the challenge.
         hex_node_id = challenge.node_id.hex()
+
+        if not any(n.node_id == req.node_id for n in self.nodes):
+            raise ValueError(f"Recovery failed: no node with node_id={hex_node_id}")
 
         # Check if the request contains a csr and use it to generate the
         # certificate. Use the old flow if csr is not present.
