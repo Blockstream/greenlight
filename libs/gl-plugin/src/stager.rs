@@ -105,6 +105,7 @@ impl Stage {
             12,  // WIRE_HSMD_SIGN_DELAYED_PAYMENT_TO_US
             13,  // WIRE_HSMD_SIGN_REMOTE_HTLC_TO_US
             14,  // WIRE_HSMD_SIGN_PENALTY_TO_US
+            18,  // WIRE_HSMD_GET_PER_COMMITMENT_POINT (onchaind key derivation)
             20,  // WIRE_HSMD_SIGN_REMOTE_HTLC_TX
             21,  // WIRE_HSMD_SIGN_MUTUAL_CLOSE_TX
             28,  // WIRE_HSMD_CHECK_PUBKEY
