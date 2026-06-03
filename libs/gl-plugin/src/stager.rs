@@ -97,23 +97,42 @@ impl Stage {
         }
     }
 
-    pub async fn is_stuck(&self) -> bool {
-        let sticky_types: Vec<u16> = vec![5, 28];
-        let sticky: Vec<Request> = self
+    /// Returns the HSM request types currently queued that block node progress.
+    /// An empty vec means the node is not stuck.
+    pub async fn stuck_request_types(&self) -> Vec<u16> {
+        let sticky_types: Vec<u16> = vec![
+            5,   // WIRE_HSMD_SIGN_COMMITMENT_TX
+            12,  // WIRE_HSMD_SIGN_DELAYED_PAYMENT_TO_US
+            13,  // WIRE_HSMD_SIGN_REMOTE_HTLC_TO_US
+            14,  // WIRE_HSMD_SIGN_PENALTY_TO_US
+            20,  // WIRE_HSMD_SIGN_REMOTE_HTLC_TX
+            21,  // WIRE_HSMD_SIGN_MUTUAL_CLOSE_TX
+            28,  // WIRE_HSMD_CHECK_PUBKEY
+            142, // WIRE_HSMD_SIGN_ANY_DELAYED_PAYMENT_TO_US
+            143, // WIRE_HSMD_SIGN_ANY_REMOTE_HTLC_TO_US
+            144, // WIRE_HSMD_SIGN_ANY_PENALTY_TO_US
+            146, // WIRE_HSMD_SIGN_ANY_LOCAL_HTLC_TX
+            147, // WIRE_HSMD_SIGN_ANCHORSPEND
+            149, // WIRE_HSMD_SIGN_HTLC_TX_MINGLE
+        ];
+        let types: Vec<u16> = self
             .requests
             .lock()
             .await
             .values()
-            .filter(|r| {
+            .filter_map(|r| {
                 let head: [u16; 2] = [r.request.raw[0].into(), r.request.raw[1].into()];
                 let typ = head[0] << 8 | head[1];
-                sticky_types.contains(&typ)
+                if sticky_types.contains(&typ) { Some(typ) } else { None }
             })
-            .map(|r| r.clone())
             .collect();
 
-        trace!("Found {:?} sticky requests.", sticky);
-        sticky.len() != 0
+        trace!("Found stuck request types: {:?}", types);
+        types
+    }
+
+    pub async fn is_stuck(&self) -> bool {
+        !self.stuck_request_types().await.is_empty()
     }
 }
 
