@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://blockstream.github.io/greenlight/reference/pairing/">
+        <link rel="canonical" href="https://blockstream.github.io/greenlight/reference/signer-backups/">
       
       
-        <link rel="prev" href="../webhooks/">
+        <link rel="prev" href="../security/">
       
       
-        <link rel="next" href="../../about/">
+        <link rel="next" href="../lsp/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Pairing - Greenlight Documentation</title>
+        <title>Signer Backups - Greenlight Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#signer-less-device-pairing" class="md-skip">
+        <a href="#signer-backups" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Pairing
+              Signer Backups
             
           </span>
         </div>
@@ -1078,10 +1078,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../signer-backups/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Signer Backups
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1097,6 +1124,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#enable-backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable backups
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backup-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backup strategies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspect-a-backup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inspect a backup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#convert-for-core-lightning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Convert for Core Lightning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1162,37 +1264,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Pairing
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../pairing/" class="md-nav__link">
         
   
   
@@ -1208,187 +1283,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#signer-less-device" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Signer-Less Device
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pairing-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pairing Process
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Pairing Process">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pairing-process-overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pairing Process Overview
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#detailed-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Detailed Process
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Detailed Process">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-initiate-pairing-request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Initiate Pairing Request
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-share-the-pairing-request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Share the Pairing Request
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-attestation-by-trusted-device" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Attestation by Trusted Device
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-create-credentials" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Create Credentials
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. Create Credentials">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#signer-provides-rune" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Signer Provides Rune
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#greenlight-supplies-credentials" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Greenlight Supplies Credentials
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-completion-of-pairing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Completion of Pairing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-considerations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Considerations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Use Cases
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1562,10 +1456,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#signer-less-device" class="md-nav__link">
+  <a href="#enable-backups" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Signer-Less Device
+        Enable backups
       
     </span>
   </a>
@@ -1573,138 +1467,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pairing-process" class="md-nav__link">
+  <a href="#backup-strategies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pairing Process
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Pairing Process">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pairing-process-overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pairing Process Overview
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#detailed-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Detailed Process
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Detailed Process">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-initiate-pairing-request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Initiate Pairing Request
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-share-the-pairing-request" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Share the Pairing Request
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-attestation-by-trusted-device" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Attestation by Trusted Device
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-create-credentials" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Create Credentials
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. Create Credentials">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#signer-provides-rune" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Signer Provides Rune
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#greenlight-supplies-credentials" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Greenlight Supplies Credentials
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-completion-of-pairing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Completion of Pairing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-considerations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Considerations
+        Backup strategies
       
     </span>
   </a>
@@ -1712,10 +1478,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
+  <a href="#inspect-a-backup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Use Cases
+        Inspect a backup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#convert-for-core-lightning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Convert for Core Lightning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current limitations
       
     </span>
   </a>
@@ -1742,196 +1530,85 @@
   
 
 
-<h1 id="signer-less-device-pairing">Signer-less Device Pairing</h1>
-<p>Greenlight achieves the non-custodial operation of a Lightning Node in the cloud by decoupling the cryptographic keys from the node operations. Greenlight services handle the infrastructural complexities, while the cryptographic keys used to sign transactions stay on the user's device, ensuring users maintain full control over their funds.</p>
-<p>To extend accessibility and flexibility, Greenlight introduced a <strong>Pairing Process</strong> enhanced with <strong>runes policy restrictions</strong> for signer-less devices.</p>
-<h2 id="signer-less-device">Signer-Less Device</h2>
-<p>A common way to set up Greenlight is to bundle the <strong>client</strong> and the <strong>signer</strong>, since the client needs access to the signer during node registration to prove ownership of the private key that belongs to the node ID under which they want to register a node.</p>
-<div class="admonition note">
-<p class="admonition-title">Figure 1: Common device setup with full signer access.</p>
-<pre class="mermaid"><code>block-beta
-  block:UD
-columns 1
-T1["User Device"]
-Client["&lt;b&gt;Client&lt;/b&gt;\nCredentials (C)"]
-Signer["&lt;b&gt;Signer&lt;/b&gt;\nSecret (S)"]
-  end
-
-  space
-  block:GL
-columns 1
-T2["Greenlight"]
-Node["Lightning Node"]
-space
-  end
-
-  space
-  Network
-
-  Node --&gt; Client
-  Client-- "Commands" --&gt;Node
-  Signer --&gt; Node
-  Node-- "Sig Requests" --&gt;Signer
-  Node --&gt; Network
-  Network --&gt; Node
-
-  classDef signer fill:#ffc800,stroke:#333;
-  classDef client fill:#a6e031,stroke:#333;
-  classDef headline fill:none,stroke:none;
-
-  class T1 headline
-  class T2 headline
-  class Signer signer
-  class Client client
-  class Node client</code></pre>
+<h1 id="signer-backups">Signer Backups</h1>
+<p>Greenlight signers can keep a local copy of the VLS signer state for disaster recovery purposes. This backup is opt-in and disabled by default. The backups can be converted into CLN <code>recoverchannel</code> input, which can be used to restore channels in CLN if the Greenlight node is lost.</p>
+<h2 id="enable-backups">Enable backups</h2>
+<p>Start the signer with a backup path:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>run<span class="w"> </span>--backup-path<span class="w"> </span>backup.json
+</code></pre></div>
+<p>By default, the signer writes a snapshot when a new recoverable channel appears.
+For periodic snapshots, use:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--backup-path<span class="w"> </span>backup.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--backup-strategy<span class="w"> </span>periodic<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--backup-periodic-updates<span class="w"> </span><span class="m">10</span>
+</code></pre></div>
+<p>The backup file is not created immediately at process startup. It is created
+after a snapshot trigger, such as a new recoverable channel or the configured
+periodic update threshold.</p>
+<h2 id="backup-strategies">Backup strategies</h2>
+<p><code>never</code> disables automatic backups. Use this when you want to create backups</p>
+<p><code>new-channels-only</code> writes a snapshot when a channel
+first becomes recoverable, which keeps disk writes low while still capturing the
+data needed to recover that channel later.</p>
+<p><code>periodic</code> writes the initial snapshot for new recoverable channels and then
+writes again after the configured number of recoverable channel updates. Use it
+when you want the local file to track ongoing signer-state changes more closely,
+at the cost of more frequent disk writes.</p>
+<p>If a backup write fails, the signer logs the error and continues. Check signer
+logs when relying on local backups.</p>
+<h2 id="inspect-a-backup">Inspect a backup</h2>
+<p>Use <code>inspect-backup</code> to verify that the file can be read and to list the
+recoverable channel inventory:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>inspect-backup<span class="w"> </span>--path<span class="w"> </span>backup.json
+</code></pre></div>
+<p>For human-readable output:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>inspect-backup<span class="w"> </span>--path<span class="w"> </span>backup.json<span class="w"> </span>--format<span class="w"> </span>text
+</code></pre></div>
+<p>Channels with missing <code>peers/{peer_id}</code> signer-state entries are marked
+incomplete. Incomplete channels remain visible, but they cannot be converted
+into complete CLN recovery entries until an address is available.</p>
+<h2 id="convert-for-core-lightning">Convert for Core Lightning</h2>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Use CLN recovery only as the last resort when the Greenlight node is lost. Running it in parallel with an active Greenlight node risks loss of funds.</p>
 </div>
-<p>However, there are situations where a user may not want a new device to have full access to the signer. In such cases, the user might have concerns about exposing the private key on a new or untrusted device. Also, the developer of an application that utilizes Greenlight might only need restricted access to the node and does not want to take the risks or comply with regulations that come with managing private keys on behalf of a user. To mitigate these risks, the user can keep the signer on a trusted device and allow a new device to interact with it remotely via Greenlight. This approach ensures that the private key remains protected while still allowing the client to perform necessary operations.</p>
-<p>A device that does not have direct access to a signer is called <strong>signer-less</strong>.</p>
-<div class="admonition note">
-<p class="admonition-title">Figure 2: Setup with a signer-less device that does not have direct access to a signer.</p>
-<pre class="mermaid"><code>block-beta
-  block:DS
-   columns 1
-   block:UD
-columns 1
-T1["User Device"]
-Client1["&lt;b&gt;Client&lt;/b&gt;\nCredentials (C)"]
-Signer["&lt;b&gt;Signer&lt;/b&gt;\nSecret (S)"]
-   end
-   block
-columns 1
-T3["Signer-Less Device"]
-Client2["&lt;b&gt;Client&lt;/b&gt;\nCredentials (C&lt;sup&gt;&amp;#8224;&lt;/sup&gt;)"]
-space
-   end
-  end
-
-  space
-  block:GL
-columns 1
-T4["Greenlight"]
-Node["Lightning Node"]
-space
-  end
-  space
-  Network
-
-  Node --&gt; Client1
-  Client1-- "Commands" --&gt;Node
-  Signer --&gt; Node
-  Node-- "Sig Requests" --&gt;Signer
-  Node --&gt; Client2
-  Client2-- "Commands" --&gt;Node
-  Node --&gt; Network
-  Network --&gt; Node
-
-  classDef signer fill:#ffc800,stroke:#333;
-  classDef client fill:#a6e031,stroke:#333;
-  classDef headline fill:none,stroke:none;
-
-  class Signer signer
-  class Client1 client
-  class Client2 client
-  class Node client
-  class T1 headline
-  class T3 headline
-  class T4 headline
-  class DS headline</code></pre>
-</div>
-<h2 id="pairing-process">Pairing Process</h2>
-<p>When integrating new client devices that do not have direct access to a signer, Greenlight employs a pairing process to securely associate these devices with the node. A signer-less device can request access to a node with a certain set of restrictions.</p>
-<h3 id="pairing-process-overview">Pairing Process Overview</h3>
-<p>The pairing process involves the following key steps:</p>
-<ol>
-<li><strong>Initiate Pairing Request</strong>: The new device sends a pairing request to Greenlight.</li>
-<li><strong>Share the Pairing Request</strong>: The new device presents a QR code to an already trusted device.</li>
-<li><strong>Attestation by Trusted Device</strong>: An already trusted device approves the pairing request.</li>
-<li><strong>Create Credentials</strong>: A connected signer provides a restricted rune bound to the new device.</li>
-<li><strong>Completion</strong>: Greenlight returns the bundled credentials to the new device, which is now paired and can interact with the node according to the restrictions set in the rune.</li>
-</ol>
-<h3 id="detailed-process">Detailed Process</h3>
-<pre class="mermaid"><code>sequenceDiagram
-    participant New Device
-    participant Trusted Device
-    participant Greenlight
-    participant Signer 
-
-    New Device -&gt;&gt; Greenlight: [PairDeviceRequest]
-    Note over Greenlight: Create pairing session, store data
-    Note over New Device: Create QR-Code with [PairingQR]
-    New Device -&gt;&gt; Trusted Device: [PairingQR] via QR
-    Trusted Device -&gt;&gt; Greenlight: [GetPairingDataRequest]
-    Greenlight -&gt;&gt; Trusted Device: [GetPairingDataResponse]
-    Note over Trusted Device: Possible user action: Approve pairing
-    alt Pairing approved
-        Signer &lt;&lt;--&gt;&gt; Greenlight: Attach a signer [StreamHsmRequests]
-        Trusted Device -&gt;&gt; Greenlight: [ApprovePairingRequest]
-        Greenlight -&gt;&gt; Signer: [ApprovePairingRequest]
-        Note over Signer: Verify pairing request 
-        Signer -&gt;&gt; Greenlight: [ApprovePairingResponse]
-        Note over Greenlight: Bundle response data 
-        Greenlight -&gt;&gt; New Device: [PairDeviceResponse]
-    else Pairing denied
-        Trusted Device -&gt;&gt; Greenlight: [PairingDenied]
-        Greenlight -&gt;&gt; New Device: [Error status: PERMISSION_DENIED]
-    else Timeout
-        Greenlight -&gt;&gt; New Device: [Error status: DEADLINE_EXCEEDED]
-    end</code></pre>
-<h4 id="1-initiate-pairing-request">1. Initiate Pairing Request</h4>
-<p>The new device, which lacks access to the signer's private key, initiates the pairing process by sending a <code>PairDeviceRequest</code> to the Greenlight service. This request typically includes:</p>
+<p>Convert the signer backup to Core Lightning recovery input:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>convert-backup<span class="w"> </span>--path<span class="w"> </span>backup.json<span class="w"> </span>--format<span class="w"> </span>cln
+</code></pre></div>
+<p>To write the converted recovery request to a file:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>convert-backup<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--path<span class="w"> </span>backup.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--format<span class="w"> </span>cln<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output<span class="w"> </span>cln-recoverchannel.json
+</code></pre></div>
+<p>The output is a CLN <code>recoverchannel</code> request body containing <code>scb</code> entries:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;scb&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;&lt;hex-encoded-static-channel-backup&gt;&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>When VLS counterparty revocation secrets are present in the backup, the
+converted CLN SCB entries include the shachain TLV. If that signer state is
+absent, conversion still emits CLN recovery input without the shachain TLV.</p>
+<p>Pass the generated <code>scb</code> array to CLN's <code>recoverchannel</code> RPC. The exact command
+depends on the CLN RPC client you are using. Greenlight does not execute
+recovery; <code>convert-backup</code> only prepares CLN recovery input.</p>
+<p>If the backup contains incomplete channels and you still want to export the
+complete ones, use:</p>
+<div class="highlight"><pre><span></span><code>glcli<span class="w"> </span>signer<span class="w"> </span>convert-backup<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--path<span class="w"> </span>backup.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--format<span class="w"> </span>cln<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--skip-incomplete
+</code></pre></div>
+<h2 id="current-limitations">Current limitations</h2>
 <ul>
-<li><strong>Device Identifier</strong>: The public TLS key of the new device that matches the signature for the certificate signing request (CSR).</li>
-<li><strong>Certificate Signing Request</strong>: A certificate signing request for an X.509 TLS certificate to authenticate against the Greenlight services.</li>
-<li><strong>Device Name</strong>: A descriptive name for the device that will be set in the subject CN field of the certificate.</li>
-<li><strong>Device Description</strong>: A human-readable description about the purpose of the device that is meant to be presented to the user during the pairing process.</li>
-<li><strong>Restrictions</strong>: A set of restrictions that will be used to construct the rune for the device, which will provide authorization to issue node commands.</li>
-</ul>
-<h3 id="2-share-the-pairing-request">2. Share the Pairing Request</h3>
-<p>To get attestation from an already known device, the new device needs to share some data with a trusted device. This is typically done by presenting a QR code that the trusted device can scan. The data that has to be shared is in the following format:</p>
-<ul>
-<li><strong>QR Data</strong>: <code>gl-pairing:&lt;public_key_of_device&gt;</code></li>
-</ul>
-<h3 id="3-attestation-by-trusted-device">3. Attestation by Trusted Device</h3>
-<p>The trusted device retrieves the pairing session data from Greenlight via a <code>GetPairingDataRequest</code>. The trusted device validates the returned data and can optionally present it to the user to ask for permission. After that, the trusted device sends an <code>ApprovePairingRequest</code> message via Greenlight to an attached signer. This message includes:</p>
-<ul>
-<li><strong>Pairing Session Identifier</strong>: The new device's public key as returned by the <code>GetPairingDataResponse</code> message.</li>
-<li><strong>Timestamp</strong>: The time at which the pairing request was attestated.</li>
-<li><strong>Device Name</strong>: The device name as returned by the <code>GetPairingDataResponse</code> message.</li>
-<li><strong>Restrictions</strong>: A set of restrictions used by the signer to construct the rune for the new device.</li>
-<li><strong>Signature</strong>: A signature of the above fields for the signer to check for data integrity.</li>
-<li><strong>Public Key</strong>: The public key corresponding to the signature in this message.</li>
-<li><strong>Rune</strong>: The rune of the trusted device. The public key field of the rune has to match the public key field above.</li>
-</ul>
-<h3 id="4-create-credentials">4. Create Credentials</h3>
-<h4 id="signer-provides-rune">Signer Provides Rune</h4>
-<p>The signer, upon receiving the <code>ApprovePairingRequest</code>, checks the data integrity and verifies that the trusted device is allowed to attest pairing requests. After that, it generates a <strong>rune</strong>, which is an authorization token defining the restrictions for the new device. The rune:</p>
-<ul>
-<li><strong>Is Cryptographically Signed</strong>: Ensures authenticity and integrity.</li>
-<li><strong>Contains Restrictions</strong>: Specifies what actions the new device is allowed to perform.</li>
-</ul>
-<h4 id="greenlight-supplies-credentials">Greenlight Supplies Credentials</h4>
-<p>Greenlight then delivers the necessary credentials to the new device. This includes:</p>
-<ul>
-<li><strong>TLS Certificate</strong>: Used to authenticate the device with Greenlight and for secure communication between services.</li>
-<li><strong>Rune</strong>: Used to authenticate commands with the signer.</li>
-</ul>
-<h3 id="5-completion-of-pairing">5. Completion of Pairing</h3>
-<p>With the rune and credentials received:</p>
-<ul>
-<li><strong>Secure Connection Established</strong>: The new device can securely connect to the node via Greenlight.</li>
-<li><strong>Access Granted</strong>: The device can perform operations as permitted by the rune and credentials.</li>
-<li><strong>Device Registered</strong>: Greenlight and the signer recognize the new device as an authorized client.</li>
-</ul>
-<h2 id="security-considerations">Security Considerations</h2>
-<ul>
-<li><strong>Controlled Access</strong>: Only devices approved by a trusted device with signer access can pair, preventing unauthorized access.</li>
-<li><strong>Private Key Protection</strong>: The signer's private key remains secure and is not exposed to new devices.</li>
-<li><strong>Granular Permissions</strong>: Runes allow for fine-grained permission control, limiting the scope of what new devices can do.</li>
-</ul>
-<h2 id="use-cases">Use Cases</h2>
-<ul>
-<li><strong>Multi-Device Management</strong>: Users can manage their node from multiple devices without exposing the private key to each device.</li>
-<li><strong>Delegated Access</strong>: Specific devices can be given limited permissions, useful for roles like monitoring, auditing, or invoice creation.</li>
+<li>CLN conversion assumes current v1 channels where the channel id is derived
+  from the funding outpoint.</li>
+<li>The CLN shachain TLV is included only when VLS counterparty revocation
+  secrets are present in the backup.</li>
+<li>Missing <code>peers/{peer_id}</code> signer-state entries make affected channels
+  incomplete. This issue will gradually resolve as the signer receives peer
+  addresses during normal operation.</li>
 </ul>
 
 
