@@ -21,7 +21,7 @@ tonic-build = "0.8"
 anyhow = { workspace = true }
 env_logger = { workspace = true }
 # Minimal tokio - only for gRPC client runtime
-tokio = { version = "1", features = ["rt", "net", "io-util"] }
+tokio = { version = "1", features = ["rt", "net", "io-util", "sync"] }
 tonic = { version = "0.8", features = ["tls", "transport"] }
 prost = "0.11"
 log = "*"
@@ -29,3 +29,6 @@ tower = "0.4"
 which = "4.4.2"
 libc = "0.2"
 byteorder = "1.5.0"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["time"] }
