@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Changed
+
+- Updated gl-client dependency to support CLN `v26.06` signer.
+
 ## [0.3.1] - 2026-01-16
 
 ### Changed
