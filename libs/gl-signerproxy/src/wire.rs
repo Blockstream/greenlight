@@ -1,16 +1,13 @@
-use crate::passfd::SyncFdPassingExt;
-use anyhow::{anyhow, Error, Result};
+use crate::passfd::AsyncFdPassingExt;
+use anyhow::{Error, Result};
 use byteorder::{BigEndian, ByteOrder};
 use log::trace;
-use std::io::{Read, Write};
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::os::unix::net::UnixStream;
-use std::sync::Mutex;
+use std::os::unix::io::RawFd;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::UnixStream;
 
-/// A simple implementation of the inter-daemon protocol wrapping a
-/// UnixStream. Easy to read from and write to.
 pub struct DaemonConnection {
-    conn: Mutex<UnixStream>,
+    conn: UnixStream,
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +42,7 @@ impl Message {
         }
     }
 }
+
 impl PartialEq for Message {
     fn eq(&self, other: &Self) -> bool {
         self.body == other.body && self.typ == other.typ && self.fds == other.fds
@@ -52,10 +50,8 @@ impl PartialEq for Message {
 }
 
 impl DaemonConnection {
-    pub fn new(connection: UnixStream) -> DaemonConnection {
-        DaemonConnection {
-            conn: Mutex::new(connection),
-        }
+    pub fn new(conn: UnixStream) -> DaemonConnection {
+        DaemonConnection { conn }
     }
 
     fn count_fds(typ: u16) -> i8 {
@@ -65,58 +61,43 @@ impl DaemonConnection {
         }
     }
 
-    pub fn read(&self) -> Result<Message, Error> {
-        let mut sock = self.conn.lock().unwrap();
-
-        // Read 4-byte length prefix in big-endian
+    pub async fn read(&mut self) -> Result<Message, Error> {
         let mut len_buf = [0u8; 4];
-        sock.read_exact(&mut len_buf)?;
+        self.conn.read_exact(&mut len_buf).await?;
         let msglen = BigEndian::read_u32(&len_buf);
 
-        // Read the message body
         let mut buf = vec![0u8; msglen as usize];
-        sock.read_exact(&mut buf)?;
-
-        if buf.len() < msglen as usize {
-            return Err(anyhow!("Short read from client"));
-        }
+        self.conn.read_exact(&mut buf).await?;
 
         let typ = BigEndian::read_u16(&buf);
-        let mut fds = vec![];
-
-        // Receive any file descriptors associated with this message type
         let numfds = DaemonConnection::count_fds(typ);
+        let mut fds = vec![];
         for _ in 0..numfds {
-            fds.push(sock.as_raw_fd().recv_fd()?);
+            fds.push(self.conn.recv_fd().await.map_err(Error::from)?);
         }
 
-        if fds.len() == 0 {
+        if fds.is_empty() {
             Ok(Message::new(buf))
         } else {
             Ok(Message::new_with_fds(buf, &fds))
         }
     }
 
-    pub fn write(&self, msg: Message) -> Result<(), Error> {
+    pub async fn write(&mut self, msg: Message) -> Result<(), Error> {
         trace!(
             "Sending message {} ({} bytes, {} FDs)",
             msg.typ,
             msg.body.len(),
             msg.fds.len()
         );
-        let mut client = self.conn.lock().unwrap();
 
-        // Write 4-byte length prefix in big-endian
         let mut len_buf = [0u8; 4];
         BigEndian::write_u32(&mut len_buf, msg.body.len() as u32);
-        client.write_all(&len_buf)?;
+        self.conn.write_all(&len_buf).await?;
+        self.conn.write_all(&msg.body).await?;
 
-        // Write the message body
-        client.write_all(&msg.body)?;
-
-        // Send any file descriptors
         for fd in msg.fds {
-            client.as_raw_fd().send_fd(fd)?;
+            self.conn.send_fd(fd).await.map_err(Error::from)?;
         }
 
         Ok(())
