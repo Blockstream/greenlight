@@ -295,9 +295,11 @@ impl Node for PluginNodeServer {
 
         // In case the client did not specify an LSP to work with,
         // let's enumerate them, and select the best option ourselves.
-        let lsps = self.get_lsps_offers(&mut rpc).await.map_err(|_e| {
+        let mut lsps = self.get_lsps_offers(&mut rpc).await.map_err(|_e| {
             Status::not_found("Could not retrieve LSPS peers for invoice negotiation.")
         })?;
+
+        lsps.sort_by_key(|l| l.node_id.clone());
 
         if lsps.is_empty() {
             return Err(Status::not_found(
