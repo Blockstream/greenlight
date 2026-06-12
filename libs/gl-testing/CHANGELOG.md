@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Updated gl-client dependency to support CLN `v26.06` signer.
+- Remove the use of `decodepay`, deprecated in v24.11, always use `decode`
+  instead.
 
 ## [0.3.1] - 2026-01-16
 

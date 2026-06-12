@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Removed
 
 - Legacy client-side LSPS2 `htlc_accepted` hook — JIT channel fee handling is now performed natively by CLN
+- Remove `Decodepay` rpc, deprecated in v24.11.
 
 ## [0.3.1] - 2026-01-16
 
