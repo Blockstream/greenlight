@@ -85,7 +85,7 @@ def test_node_network(node_factory, clients, bitcoind):
         label="lbl",
     ).bolt11
 
-    decoded = l1.rpc.decodepay(inv)
+    decoded = l1.rpc.decode(inv)
     pprint(decoded)
     l1.rpc.pay(inv)
 
@@ -166,7 +166,7 @@ def test_node_invoice_amountless(bitcoind, node_factory, clients):
         payload={"label": "test", "amount_msat": "any", "description": "desc"},
     )["bolt11"]
     print(inv)
-    print(l1.rpc.decodepay(inv))
+    print(l1.rpc.decode(inv))
     p = gl1.pay(inv, clnpb.Amount(msat=31337))
     invs = l1.rpc.listinvoices()["invoices"]
 
@@ -288,16 +288,16 @@ def test_vls_crash_repro(
 ) -> None:
     """Reproduce an overflow panic in VLS v0.10.0."""
     (l1,) = node_factory.line_graph(1, opts={"experimental-anchors": None})
-    
+
     c = clients.new()
     c.register(configure=True)
-    
+
     # Get the expected node version from the signer version mapping
     from gltesting.utils import SignerVersion
     signer_version_str = c.signer().version()
     signer_version = SignerVersion(name=signer_version_str)
     expected_node_version = signer_version.get_node_version()
-    
+
     assert l1.rpc.getinfo()["version"] == expected_node_version
     s = c.signer().run_in_thread()
     gl1 = c.node()

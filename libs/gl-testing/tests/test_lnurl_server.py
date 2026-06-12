@@ -55,7 +55,7 @@ def test_pay_callback_returns_valid_invoice(lnurl_service):
     assert "pr" in body
 
     # Decode the BOLT11 using the backing CLN node
-    decoded = lnurl_service.cln_rpc.decodepay(body["pr"])
+    decoded = lnurl_service.cln_rpc.decode(body["pr"])
     assert decoded["amount_msat"] == amount_msat
     # description hash must match SHA256(metadata)
     expected_hash = metadata_sha256(pay_req["metadata"])
