@@ -299,35 +299,42 @@ impl Node for PluginNodeServer {
             Status::not_found("Could not retrieve LSPS peers for invoice negotiation.")
         })?;
 
-        if lsps.len() < 1 {
+        if lsps.is_empty() {
             return Err(Status::not_found(
                 "Could not find an LSP peer to negotiate the LSPS2 channel for this invoice.",
             ));
         }
 
-        let lsp = &lsps[0];
-        log::info!("Selecting {:?} for invoice negotiation", lsp);
+        let (lsp_id, param) = select_opening_params(lsps).ok_or_else(|| {
+            Status::not_found("No opening params returned by any LSP, cannot create invoice.")
+        })?;
+
+        log::info!(
+            "Selecting LSP {} with params {:?} for invoice negotiation",
+            lsp_id,
+            param
+        );
 
         // Compute the expected opening fee from the LSP's fee parameters.
-        let opening_fee_msat = lsp.params.first().map_or(0, |p| {
-            let min_fee: u64 = p.min_fee_msat.parse().unwrap_or(0);
+        let opening_fee_msat = {
+            let min_fee: u64 = param.min_fee_msat.parse().unwrap_or(0);
             let proportional_fee = req
                 .amount_msat
-                .saturating_mul(p.proportional)
+                .saturating_mul(param.proportional)
                 .div_ceil(1_000_000);
             std::cmp::max(min_fee, proportional_fee)
-        });
+        };
 
         // Use the new RPC method name for versions > v25.05gl1
         let mut res = if *version > *"v25.05gl1" {
             let mut invreq: crate::requests::LspInvoiceRequestV2 = req.into();
-            invreq.lsp_id = lsp.node_id.to_owned();
+            invreq.lsp_id = lsp_id.to_owned();
             rpc.call_typed(&invreq)
                 .await
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
         } else {
             let mut invreq: crate::requests::LspInvoiceRequest = req.into();
-            invreq.lsp_id = lsp.node_id.to_owned();
+            invreq.lsp_id = lsp_id.to_owned();
             rpc.call_typed(&invreq)
                 .await
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
@@ -837,6 +844,22 @@ struct Lsps2Offer {
     params: Vec<crate::responses::OpeningFeeParams>,
 }
 
+/// Select the LSP and opening fee params to use for an LSPS2 invoice
+/// negotiation.
+///
+/// We flatten the params across all LSPs and pick the first available
+/// pair. This way an LSP that got selected but returned an empty param
+/// set is skipped in favor of the next LSP that actually returned
+/// usable params, rather than ending up without valid opening params.
+/// Returns `None` if no LSP returned any params at all.
+fn select_opening_params(
+    lsps: Vec<Lsps2Offer>,
+) -> Option<(String, crate::responses::OpeningFeeParams)> {
+    lsps.into_iter()
+        .flat_map(|l| l.params.into_iter().map(move |p| (l.node_id.clone(), p)))
+        .next()
+}
+
 impl PluginNodeServer {
     pub async fn run(self) -> Result<()> {
         let addr = self.grpc_binding.parse().unwrap();
@@ -1210,3 +1233,85 @@ where
 
 mod rpcwait;
 pub use rpcwait::RpcWaitService;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::responses::OpeningFeeParams;
+
+    fn param(min_fee_msat: &str) -> OpeningFeeParams {
+        OpeningFeeParams {
+            min_fee_msat: min_fee_msat.to_string(),
+            proportional: 0,
+            valid_until: "2100-01-01T00:00:00Z".to_string(),
+            min_lifetime: 144,
+            max_client_to_self_delay: 1024,
+            min_payment_size_msat: "0".to_string(),
+            max_payment_size_msat: "1000000000".to_string(),
+            promise: "promise".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_select_opening_params_empty() {
+        // No LSPs at all -> nothing to select.
+        assert!(select_opening_params(vec![]).is_none());
+    }
+
+    #[test]
+    fn test_select_opening_params_first_lsp_empty() {
+        // The first LSP got selected but returned an empty param set.
+        // We must skip it and fall back to the next LSP that actually
+        // returned usable params.
+        let lsps = vec![
+            Lsps2Offer {
+                node_id: "lsp_empty".to_string(),
+                params: vec![],
+            },
+            Lsps2Offer {
+                node_id: "lsp_good".to_string(),
+                params: vec![param("100")],
+            },
+        ];
+
+        let (lsp_id, p) = select_opening_params(lsps).expect("should fall back to second LSP");
+        assert_eq!(lsp_id, "lsp_good");
+        assert_eq!(p.min_fee_msat, "100");
+    }
+
+    #[test]
+    fn test_select_opening_params_all_empty() {
+        // Every LSP returned an empty param set -> nothing valid to pick.
+        let lsps = vec![
+            Lsps2Offer {
+                node_id: "lsp_empty_1".to_string(),
+                params: vec![],
+            },
+            Lsps2Offer {
+                node_id: "lsp_empty_2".to_string(),
+                params: vec![],
+            },
+        ];
+
+        assert!(select_opening_params(lsps).is_none());
+    }
+
+    #[test]
+    fn test_select_opening_params_prefers_first_nonempty() {
+        // When the first LSP does return params we keep using it.
+        let lsps = vec![
+            Lsps2Offer {
+                node_id: "lsp_first".to_string(),
+                params: vec![param("1"), param("2")],
+            },
+            Lsps2Offer {
+                node_id: "lsp_second".to_string(),
+                params: vec![param("3")],
+            },
+        ];
+
+        let (lsp_id, p) = select_opening_params(lsps).expect("first LSP has params");
+        assert_eq!(lsp_id, "lsp_first");
+        assert_eq!(p.min_fee_msat, "1");
+    }
+}
