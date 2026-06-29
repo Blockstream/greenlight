@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tarfile
@@ -41,6 +42,40 @@ class VersionDescriptor:
 
 
 logger = logging.getLogger(__name__)
+
+
+# Matches tags like ``v25.12``, ``v25.12.``, ``v25.12gl1`` or ``v0.11.2gl2``.
+# Group 1 is the dotted numeric base, group 2 the optional greenlight (``glN``)
+# revision.
+_VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+)*)\.?(?:gl(\d+))?$")
+
+
+def version_sort_key(tag: str) -> Optional[Tuple[Tuple[int, ...], int]]:
+    """Return a deterministic sort key for a CLN version tag.
+
+    The key is ``(base, glrev)`` where ``base`` is the tuple of numeric
+    version components and ``glrev`` is the greenlight suffix revision
+    (``-1`` when there is no ``glN`` suffix, so a plain upstream build sorts
+    just below its greenlight counterpart). Returns ``None`` for tags that
+    are not numbered releases, e.g. ``main``, so callers can skip them.
+    """
+    m = _VERSION_RE.match(tag)
+    if m is None:
+        return None
+    base = tuple(int(p) for p in m.group(1).split("."))
+    glrev = int(m.group(2)) if m.group(2) is not None else -1
+    return base, glrev
+
+
+def version_base(tag: str) -> Optional[Tuple[int, ...]]:
+    """Return the numeric base version, ignoring any ``glN`` suffix.
+
+    Used to compare against the supported-version bounds, which are
+    expressed without the greenlight suffix (the signer reports e.g.
+    ``v25.12``, which must match both ``v25.12`` and ``v25.12gl1``).
+    """
+    key = version_sort_key(tag)
+    return key[0] if key is not None else None
 
 
 def _get_cache_dir() -> Path:
@@ -250,11 +285,56 @@ class ClnVersionManager:
 
         return descriptor
 
+    def supported_versions(
+        self, lowest: str, highest: str
+    ) -> List[VersionDescriptor]:
+        """Return the supported versions, sorted ascending.
+
+        A version is supported when its base version (ignoring the ``glN``
+        suffix) lies within ``[lowest, highest]`` inclusive. Tags that are
+        not numbered releases (e.g. ``main``) are dropped.
+        """
+        low = version_base(lowest)
+        high = version_base(highest)
+        if low is None or high is None:
+            raise ValueError(
+                f"Invalid version bounds: lowest={lowest!r}, highest={highest!r}"
+            )
+
+        selected = []
+        for d in self.get_versions():
+            key = version_sort_key(d.tag)
+            if key is not None and low <= key[0] <= high:
+                selected.append((key, d))
+
+        selected.sort(key=lambda kd: kd[0])
+        return [d for _, d in selected]
+
+    def latest_supported(self, lowest: str, highest: str) -> NodeVersion:
+        """Return the newest supported version within ``[lowest, highest]``.
+
+        Deterministic: versions are ordered by ``(base, glrev)`` so the
+        greenlight build wins over the plain upstream build of the same base
+        version. Use this rather than :meth:`latest` so that newer-but-
+        unsupported releases present in the manifest are never picked up.
+        """
+        supported = self.supported_versions(lowest, highest)
+        if not supported:
+            raise ValueError(
+                f"No CLN version available in range [{lowest}, {highest}]"
+            )
+        return self.get(supported[-1])
+
     def latest(self) -> NodeVersion:
-        vs = [d.tag for d in self.get_versions()]
-        latest = max(vs)
-        descriptor = self.get_descriptor_from_tag(latest)
-        return self.get(descriptor)
+        candidates = []
+        for d in self.get_versions():
+            key = version_sort_key(d.tag)
+            if key is not None:
+                candidates.append((key, d))
+        if not candidates:
+            raise ValueError("No numbered CLN version available in the manifest")
+        _, latest = max(candidates, key=lambda kd: kd[0])
+        return self.get(latest)
 
     def get(self, cln_version: VersionDescriptor, force: bool = False) -> NodeVersion:
         """
