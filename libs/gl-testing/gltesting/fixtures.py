@@ -27,6 +27,7 @@ from decimal import Decimal
 from gltesting.grpcweb import GrpcWebProxy, NodeHandler
 from gltesting.lnurl_server import LnurlServer
 from clnvm import ClnVersionManager
+import glclient
 
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
@@ -34,6 +35,18 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 logging.getLogger("sh").setLevel(logging.ERROR)
 logging.getLogger("hpack").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
+
+
+# Bounds for selecting the default CLN version used by the test suite.
+#
+# The lowest is pinned explicitly: bump it as we drop support for old
+# releases. The highest is whatever the gl-client signer (libhsmd) supports,
+# so a newer release that has landed in the manifest but for which we are
+# still building client/signer support (e.g. v26.06gl1) is never picked up
+# automatically. The ``glN`` suffix is ignored when comparing, so the signer
+# reporting ``v25.12`` matches ``v25.12gl1``.
+LOWEST_SUPPORTED_VERSION = "v23.08"
+HIGHEST_SUPPORTED_VERSION = glclient.__version__
 
 
 @pytest.fixture(autouse=True)
@@ -47,14 +60,15 @@ def paths():
 
     """
     vm = ClnVersionManager()
-    versions = vm.get_versions()
 
     # Should be a no-op after the first run
     vm.get_all()
 
-    latest = [v for v in versions if "gl" in v.tag][-1]
+    latest = vm.latest_supported(
+        LOWEST_SUPPORTED_VERSION, HIGHEST_SUPPORTED_VERSION
+    )
 
-    os.environ["PATH"] += f":{vm.get_target_path(latest) / 'usr' / 'local' / 'bin'}"
+    os.environ["PATH"] += f":{latest.bin_path}"
 
     yield
 
@@ -187,7 +201,9 @@ def cln_path() -> Path:
     https://en.wikipedia.org/wiki/Elephant_in_Cairo
     """
     manager = ClnVersionManager()
-    v = manager.latest()
+    v = manager.latest_supported(
+        LOWEST_SUPPORTED_VERSION, HIGHEST_SUPPORTED_VERSION
+    )
     os.environ["PATH"] += f":{v.bin_path}"
     return v.bin_path
 
