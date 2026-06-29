@@ -7,10 +7,8 @@ use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
 use cln_rpc::Notification;
+use gl_client::metrics::{savings_percent, signer_state_request_wire_bytes};
 use gl_client::persist::{State, StateSketch};
-use gl_client::metrics::{
-    signer_state_request_wire_bytes, savings_percent,
-};
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -230,14 +228,12 @@ impl Node for PluginNodeServer {
         // We require capacity + 5% buffer to account for fees and routing.
         // Only check for specific amounts (not "any" amount invoices).
         if req.amount_msat > 0 {
-            let receivable = self
-                .get_receivable_capacity(&mut rpc)
-                .await
-                .unwrap_or(0);
+            let receivable = self.get_receivable_capacity(&mut rpc).await.unwrap_or(0);
 
             // Add 5% buffer: capacity >= amount * 1.05
             // Equivalent to: capacity * 100 >= amount * 105
-            let has_sufficient_capacity = req.amount_msat
+            let has_sufficient_capacity = req
+                .amount_msat
                 .saturating_mul(105)
                 .checked_div(100)
                 .map(|required| receivable >= required)
@@ -274,7 +270,10 @@ impl Node for PluginNodeServer {
                     bolt11: res.bolt11,
                     created_index: res.created_index.unwrap_or(0) as u32,
                     expires_at: res.expires_at as u32,
-                    payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(&res.payment_hash).to_vec(),
+                    payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(
+                        &res.payment_hash,
+                    )
+                    .to_vec(),
                     payment_secret: res.payment_secret.to_vec(),
                     opening_fee_msat: 0,
                 }));
@@ -446,9 +445,8 @@ impl Node for PluginNodeServer {
                 // the large state with them.
 
                 let state_snapshot = signer_state.lock().await.clone();
-                let state_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
-                    .omit_tombstones()
-                    .into();
+                let state_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    state_snapshot.omit_tombstones().into();
                 let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
                 let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
@@ -500,7 +498,6 @@ impl Node for PluginNodeServer {
                     req.request.request_id,
                     hsm_id
                 );
-
 
                 let state_snapshot = signer_state.lock().await.clone();
                 // Estimate the size of the full state to calculate the bandwidth savings of sending diffs
@@ -754,10 +751,7 @@ impl Node for PluginNodeServer {
                 if let Err(e) = address.require_network(network) {
                     return Err(Status::new(
                         Code::Unknown,
-                        format!(
-                            "Network validation failed: {}",
-                            e
-                        ),
+                        format!("Network validation failed: {}", e),
                     ));
                 }
             }
