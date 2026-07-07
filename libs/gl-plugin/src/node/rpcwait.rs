@@ -45,7 +45,7 @@ where
         let mut inner = std::mem::replace(&mut self.inner, clone);
         let path = self.rpc_path.clone();
         Box::pin(async move {
-            let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
+            let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(30);
             loop {
                 if deadline < tokio::time::Instant::now() {
                     // Break and let it fail in the `inner.call`
