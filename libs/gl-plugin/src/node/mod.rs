@@ -1010,7 +1010,7 @@ impl PluginNodeServer {
     /// Get the total receivable capacity across all active channels.
     ///
     /// Returns the sum of `receivable_msat` for all channels in
-    /// `CHANNELD_NORMAL` state with a connected peer.
+    /// `CHANNELD_NORMAL` state with a connected peer and meaningful receivable capacity.
     async fn get_receivable_capacity(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<u64, Error> {
         use cln_rpc::primitives::ChannelState;
 
@@ -1022,6 +1022,8 @@ impl PluginNodeServer {
             .channels
             .into_iter()
             .filter(|c| c.peer_connected && c.state == ChannelState::CHANNELD_NORMAL)
+            // Filter out channels without meaningful receivable capacity (max_to_us_msat = 0 or None)
+            .filter(|c| c.max_to_us_msat.is_some() && c.max_to_us_msat.as_ref().unwrap().msat() > 0)
             .filter_map(|c| c.receivable_msat)
             .map(|a| a.msat())
             .sum();
