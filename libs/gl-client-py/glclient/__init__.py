@@ -141,6 +141,9 @@ class Node(object):
         self.inner = native.Node(node_id=node_id, grpc_uri=grpc_uri, creds=creds)
         self.logger = logging.getLogger("glclient.Node")
 
+    def call(self, path: str, request: bytes) -> bytes:
+        return bytes(self.inner.call(path, bytes(request)))
+
     def get_info(self) -> clnpb.GetinfoResponse:
         uri = "/cln.Node/Getinfo"
         req = clnpb.GetinfoRequest().SerializeToString()

@@ -45,6 +45,10 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
         "/cln.Node/FundPsbt" => Request::FundPsbt(FundpsbtRequest::decode(p)?),
         "/cln.Node/SendPsbt" => Request::SendPsbt(SendpsbtRequest::decode(p)?),
         "/cln.Node/SignPsbt" => Request::SignPsbt(SignpsbtRequest::decode(p)?),
+        "/cln.Node/SpliceInit" => Request::SpliceInit(SpliceInitRequest::decode(p)?),
+        "/cln.Node/SpliceUpdate" => Request::SpliceUpdate(SpliceUpdateRequest::decode(p)?),
+        "/cln.Node/SpliceSigned" => Request::SpliceSigned(SpliceSignedRequest::decode(p)?),
+        "/cln.Node/DevSplice" => Request::DevSplice(DevspliceRequest::decode(p)?),
         "/cln.Node/UtxoPsbt" => Request::UtxoPsbt(UtxopsbtRequest::decode(p)?),
         "/cln.Node/TxDiscard" => Request::TxDiscard(TxdiscardRequest::decode(p)?),
         "/cln.Node/TxPrepare" => Request::TxPrepare(TxprepareRequest::decode(p)?),
@@ -69,4 +73,89 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
         }
         uri => return Err(anyhow!("Unknown URI {}, can't decode payload", uri)),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use prost::Message;
+
+    #[test]
+    fn decodes_splice_rpc_context_requests() {
+        let mut payload = Vec::new();
+        SpliceInitRequest {
+            channel_id: vec![1; 32],
+            relative_amount: 50_000,
+            initialpsbt: Some("init-psbt".to_string()),
+            feerate_per_kw: Some(253),
+            force_feerate: Some(false),
+        }
+        .encode(&mut payload)
+        .unwrap();
+        match decode_request("/cln.Node/SpliceInit", &payload).unwrap() {
+            Request::SpliceInit(req) => {
+                assert_eq!(req.channel_id, vec![1; 32]);
+                assert_eq!(req.relative_amount, 50_000);
+                assert_eq!(req.initialpsbt.as_deref(), Some("init-psbt"));
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+
+        payload.clear();
+        SpliceUpdateRequest {
+            channel_id: vec![2; 32],
+            psbt: "update-psbt".to_string(),
+        }
+        .encode(&mut payload)
+        .unwrap();
+        match decode_request("/cln.Node/SpliceUpdate", &payload).unwrap() {
+            Request::SpliceUpdate(req) => {
+                assert_eq!(req.channel_id, vec![2; 32]);
+                assert_eq!(req.psbt, "update-psbt");
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+
+        payload.clear();
+        SpliceSignedRequest {
+            channel_id: vec![3; 32],
+            psbt: "signed-psbt".to_string(),
+            sign_first: Some(true),
+        }
+        .encode(&mut payload)
+        .unwrap();
+        match decode_request("/cln.Node/SpliceSigned", &payload).unwrap() {
+            Request::SpliceSigned(req) => {
+                assert_eq!(req.channel_id, vec![3; 32]);
+                assert_eq!(req.psbt, "signed-psbt");
+                assert_eq!(req.sign_first, Some(true));
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+
+        payload.clear();
+        DevspliceRequest {
+            script_or_json: "script".to_string(),
+            dryrun: Some(true),
+            force_feerate: Some(false),
+            debug_log: Some(true),
+            dev_wetrun: Some(false),
+        }
+        .encode(&mut payload)
+        .unwrap();
+        match decode_request("/cln.Node/DevSplice", &payload).unwrap() {
+            Request::DevSplice(req) => {
+                assert_eq!(req.script_or_json, "script");
+                assert_eq!(req.dryrun, Some(true));
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn unknown_splice_rpc_context_request_fails_closed() {
+        let err = decode_request("/cln.Node/SpliceUnknown", &[]).unwrap_err();
+        assert!(err.to_string().contains("Unknown URI"));
+        assert!(err.to_string().contains("/cln.Node/SpliceUnknown"));
+    }
 }
