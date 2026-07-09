@@ -1,4 +1,6 @@
 mod canonical;
+#[allow(dead_code)]
+pub(crate) mod splice;
 
 use anyhow::anyhow;
 use lightning_signer::bitcoin::secp256k1::PublicKey;
