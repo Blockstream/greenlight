@@ -178,7 +178,28 @@ async fn on_peer_connected(plugin: Plugin, v: serde_json::Value) -> Result<serde
 
 async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_json::Value> {
     debug!("Received an openchannel request: {:?}", v);
-    let mut rpc = cln_rpc::ClnRpc::new(plugin.configuration().rpc_file).await?;
+
+    match get_configured_close_to_addr(plugin.configuration().rpc_file).await {
+        Some(addr) => Ok(json!({"result": "continue", "close_to": addr})),
+        None => Ok(json!({"result": "continue"})),
+    }
+}
+
+/// Return the `close_to` address configured via the `Configure` RPC,
+/// stored in the node's datastore under `glconf/request`, if any.
+pub async fn get_configured_close_to_addr(
+    rpc_file: impl AsRef<std::path::Path>,
+) -> Option<String> {
+    let mut rpc = match cln_rpc::ClnRpc::new(rpc_file).await {
+        Ok(rpc) => rpc,
+        Err(e) => {
+            debug!(
+                "Could not connect to lightningd while searching for a custom close_to address: {}",
+                e
+            );
+            return None;
+        }
+    };
 
     let req = cln_rpc::model::requests::ListdatastoreRequest {
         key: Some(vec!["glconf".to_string(), "request".to_string()]),
@@ -187,40 +208,37 @@ async fn on_openchannel(plugin: Plugin, v: serde_json::Value) -> Result<serde_js
     let res = rpc.call_typed(&req).await;
     debug!("ListdatastoreRequest response: {:?}", res);
 
-    match res {
-        Ok(res) => {
-            if !res.datastore.is_empty() {
-                match &res.datastore[0].string {
-                    Some(serialized_request) => {
-                        match _parse_gl_config_from_serialized_request(
-                            serialized_request.to_string(),
-                        ) {
-                            Some(gl_config) => {
-                                return Ok(
-                                    json!({"result": "continue", "close_to":  gl_config.close_to_addr}),
-                                );
-                            }
-                            None => {
-                                debug!("Failed to parse the GlConfig from the serialized request's payload");
-                            }
-                        }
-                    }
-                    None => {
-                        debug!("Got empty response from datastore for key glconf.request");
-                    }
-                }
-            }
-
-            return Ok(json!({"result": "continue"}));
-        }
+    let res = match res {
+        Ok(res) => res,
         Err(e) => {
             log::debug!(
                 "An error occurred while searching for a custom close_to address: {}",
                 e
             );
-            Ok(json!({"result": "continue"}))
+            return None;
         }
+    };
+
+    let serialized_request = match res.datastore.first().and_then(|e| e.string.clone()) {
+        Some(s) => s,
+        None => {
+            debug!("Got empty response from datastore for key glconf.request");
+            return None;
+        }
+    };
+
+    let gl_config = match _parse_gl_config_from_serialized_request(serialized_request) {
+        Some(c) => c,
+        None => {
+            debug!("Failed to parse the GlConfig from the serialized request's payload");
+            return None;
+        }
+    };
+
+    if gl_config.close_to_addr.is_empty() {
+        return None;
     }
+    Some(gl_config.close_to_addr)
 }
 
 fn _parse_gl_config_from_serialized_request(request: String) -> Option<pb::GlConfig> {
