@@ -1,5 +1,10 @@
+use super::canonical::canonical_json_bytes;
 use super::{State, StateEntry};
+use crate::bitcoin::consensus::encode::deserialize;
+use crate::bitcoin::psbt::Psbt;
+use crate::bitcoin::Transaction;
 use anyhow::{anyhow, bail};
+use base64::{engine::general_purpose, Engine as _};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +26,7 @@ fn wallet_psbt_key(psbt_shape_hash: &str) -> String {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum SpliceOrigin {
+pub enum SpliceOrigin {
     LocalInitiator,
     PeerInitiated,
     DevSpliceUnresolved,
@@ -29,7 +34,7 @@ pub(crate) enum SpliceOrigin {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum SplicePhase {
+pub enum SplicePhase {
     Negotiating,
     CommitmentsSecured,
     SignaturesExchanging,
@@ -40,7 +45,7 @@ pub(crate) enum SplicePhase {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum DeltaSource {
+pub enum DeltaSource {
     Vls,
     Cln,
     Unresolved,
@@ -54,7 +59,7 @@ impl Default for DeltaSource {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum WalletInputSource {
+pub enum WalletInputSource {
     FundPsbt,
     SignPsbt,
     Unknown,
@@ -62,30 +67,30 @@ pub(crate) enum WalletInputSource {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum SpliceTerminalReason {
+pub enum SpliceTerminalReason {
     Locked,
     Aborted,
     ChannelDeleted,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct FundingOutpoint {
-    pub(crate) txid: String,
-    pub(crate) vout: u32,
+pub struct FundingOutpoint {
+    pub txid: String,
+    pub vout: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct NormalizedRpcAuth {
-    pub(crate) schema: String,
-    pub(crate) schema_version: u16,
-    pub(crate) uri: String,
-    pub(crate) request_hash: String,
-    pub(crate) caller_pubkey_hex: String,
-    pub(crate) timestamp_ms: u64,
+pub struct NormalizedRpcAuth {
+    pub schema: String,
+    pub schema_version: u16,
+    pub uri: String,
+    pub request_hash: String,
+    pub caller_pubkey_hex: String,
+    pub timestamp_ms: u64,
 }
 
 impl NormalizedRpcAuth {
-    pub(crate) fn new(
+    pub fn new(
         uri: String,
         request_hash: String,
         caller_pubkey_hex: String,
@@ -103,77 +108,91 @@ impl NormalizedRpcAuth {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct PsbtShapeInputV1 {
-    pub(crate) prev_txid: String,
-    pub(crate) prev_vout: u32,
-    pub(crate) sequence: u32,
+pub struct PsbtShapeInputV1 {
+    pub prev_txid: String,
+    pub prev_vout: u32,
+    pub sequence: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct PsbtShapeOutputV1 {
-    pub(crate) value_sat: u64,
-    pub(crate) script_pubkey_hex: String,
-    pub(crate) script_pubkey_hash: String,
+pub struct PsbtShapeOutputV1 {
+    pub value_sat: u64,
+    pub script_pubkey_hex: String,
+    pub script_pubkey_hash: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct PsbtShapeV1 {
-    pub(crate) schema: String,
-    pub(crate) version: i32,
-    pub(crate) locktime: u32,
-    pub(crate) inputs: Vec<PsbtShapeInputV1>,
-    pub(crate) outputs: Vec<PsbtShapeOutputV1>,
+pub struct PsbtShapeV1 {
+    pub schema: String,
+    pub version: i32,
+    pub locktime: u32,
+    pub inputs: Vec<PsbtShapeInputV1>,
+    pub outputs: Vec<PsbtShapeOutputV1>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct OldSpliceState {
-    pub(crate) funding_outpoint: FundingOutpoint,
-    pub(crate) channel_value_sat: u64,
-    pub(crate) local_balance_sat: u64,
+pub struct OldSpliceState {
+    pub funding_outpoint: FundingOutpoint,
+    pub channel_value_sat: u64,
+    pub local_balance_sat: u64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceAuthState {
-    pub(crate) splice_init_auth: Option<NormalizedRpcAuth>,
-    pub(crate) latest_splice_update_auth: Option<NormalizedRpcAuth>,
-    pub(crate) splice_signed_auth: Option<NormalizedRpcAuth>,
+pub struct SpliceAuthState {
+    pub splice_init_auth: Option<NormalizedRpcAuth>,
+    pub latest_splice_update_auth: Option<NormalizedRpcAuth>,
+    pub splice_signed_auth: Option<NormalizedRpcAuth>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct FeePolicy {
-    pub(crate) feerate_per_kw: Option<u32>,
-    pub(crate) force_feerate: Option<bool>,
+pub struct FeePolicy {
+    pub feerate_per_kw: Option<u32>,
+    pub force_feerate: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceIntentState {
-    pub(crate) authorized_relative_amount_sat: Option<i64>,
-    pub(crate) fee_policy: FeePolicy,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SplicePsbtState {
-    pub(crate) candidate_psbt_shape_hash: Option<String>,
-    pub(crate) candidate_psbt_shape: Option<PsbtShapeV1>,
-    pub(crate) frozen_psbt_shape_hash: Option<String>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceCandidateState {
-    pub(crate) funding_outpoint: Option<FundingOutpoint>,
-    pub(crate) value_sat: Option<u64>,
-    pub(crate) script_pubkey_hash: Option<String>,
-    pub(crate) sign_splice_tx_input_index: Option<u32>,
-    pub(crate) remote_funding_key_hex: Option<String>,
+pub struct SpliceIntentState {
+    pub authorized_relative_amount_sat: Option<i64>,
+    pub fee_policy: FeePolicy,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct CandidateFundingFacts {
-    pub(crate) funding_outpoint: FundingOutpoint,
-    pub(crate) value_sat: u64,
-    pub(crate) script_pubkey_hash: String,
-    pub(crate) sign_splice_tx_input_index: u32,
-    pub(crate) remote_funding_key_hex: Option<String>,
+pub struct LocalSpliceIntent {
+    pub node_id_hex: String,
+    pub channel_id_hex: String,
+    pub node_channel_id_hex: String,
+    pub old: OldSpliceState,
+    pub splice_init_auth: NormalizedRpcAuth,
+    pub authorized_relative_amount_sat: i64,
+    pub fee_policy: FeePolicy,
+    pub initial_psbt_shape_hash: Option<String>,
+    pub initial_psbt_shape: Option<PsbtShapeV1>,
+    pub timestamp_ms: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SplicePsbtState {
+    pub candidate_psbt_shape_hash: Option<String>,
+    pub candidate_psbt_shape: Option<PsbtShapeV1>,
+    pub frozen_psbt_shape_hash: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpliceCandidateState {
+    pub funding_outpoint: Option<FundingOutpoint>,
+    pub value_sat: Option<u64>,
+    pub script_pubkey_hash: Option<String>,
+    pub sign_splice_tx_input_index: Option<u32>,
+    pub remote_funding_key_hex: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CandidateFundingFacts {
+    pub funding_outpoint: FundingOutpoint,
+    pub value_sat: u64,
+    pub script_pubkey_hash: String,
+    pub sign_splice_tx_input_index: u32,
+    pub remote_funding_key_hex: Option<String>,
 }
 
 impl From<CandidateFundingFacts> for SpliceCandidateState {
@@ -189,49 +208,49 @@ impl From<CandidateFundingFacts> for SpliceCandidateState {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceDeltaState {
-    pub(crate) computed: bool,
-    pub(crate) channel_delta_sat: i64,
-    pub(crate) wallet_input_delta_sat: i64,
-    pub(crate) wallet_output_delta_sat: i64,
-    pub(crate) fee_burden_sat: i64,
-    pub(crate) no_local_loss: bool,
-    pub(crate) source: DeltaSource,
+pub struct SpliceDeltaState {
+    pub computed: bool,
+    pub channel_delta_sat: i64,
+    pub wallet_input_delta_sat: i64,
+    pub wallet_output_delta_sat: i64,
+    pub fee_burden_sat: i64,
+    pub no_local_loss: bool,
+    pub source: DeltaSource,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SignerRequestRecord {
-    pub(crate) request_type: String,
-    pub(crate) request_hash: String,
-    pub(crate) phase: SplicePhase,
-    pub(crate) timestamp_ms: u64,
+pub struct SignerRequestRecord {
+    pub request_type: String,
+    pub request_hash: String,
+    pub phase: SplicePhase,
+    pub timestamp_ms: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceSessionV1 {
-    pub(crate) schema: String,
-    pub(crate) schema_version: u16,
-    pub(crate) origin: SpliceOrigin,
-    pub(crate) phase: SplicePhase,
-    pub(crate) node_id_hex: String,
-    pub(crate) channel_id_hex: String,
-    pub(crate) node_channel_id_hex: String,
-    pub(crate) old: OldSpliceState,
-    pub(crate) auth: SpliceAuthState,
-    pub(crate) intent: SpliceIntentState,
-    pub(crate) psbt: SplicePsbtState,
-    pub(crate) cand: SpliceCandidateState,
-    pub(crate) delta: SpliceDeltaState,
-    pub(crate) linked_wallet_psbt_shape_hashes: Vec<String>,
-    pub(crate) request_history: Vec<NormalizedRpcAuth>,
-    pub(crate) signer_request_history: Vec<SignerRequestRecord>,
-    pub(crate) created_at_ms: u64,
-    pub(crate) updated_at_ms: u64,
-    pub(crate) terminal_reason: Option<SpliceTerminalReason>,
+pub struct SpliceSessionV1 {
+    pub schema: String,
+    pub schema_version: u16,
+    pub origin: SpliceOrigin,
+    pub phase: SplicePhase,
+    pub node_id_hex: String,
+    pub channel_id_hex: String,
+    pub node_channel_id_hex: String,
+    pub old: OldSpliceState,
+    pub auth: SpliceAuthState,
+    pub intent: SpliceIntentState,
+    pub psbt: SplicePsbtState,
+    pub cand: SpliceCandidateState,
+    pub delta: SpliceDeltaState,
+    pub linked_wallet_psbt_shape_hashes: Vec<String>,
+    pub request_history: Vec<NormalizedRpcAuth>,
+    pub signer_request_history: Vec<SignerRequestRecord>,
+    pub created_at_ms: u64,
+    pub updated_at_ms: u64,
+    pub terminal_reason: Option<SpliceTerminalReason>,
 }
 
 impl SpliceSessionV1 {
-    pub(crate) fn new(
+    pub fn new(
         origin: SpliceOrigin,
         node_id_hex: String,
         channel_id_hex: String,
@@ -274,10 +293,10 @@ impl SpliceSessionV1 {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceOutpointIndexV1 {
-    pub(crate) schema: String,
-    pub(crate) schema_version: u16,
-    pub(crate) splice_session_key: String,
+pub struct SpliceOutpointIndexV1 {
+    pub schema: String,
+    pub schema_version: u16,
+    pub splice_session_key: String,
 }
 
 impl SpliceOutpointIndexV1 {
@@ -291,33 +310,33 @@ impl SpliceOutpointIndexV1 {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct WalletInput {
-    pub(crate) txid: String,
-    pub(crate) vout: u32,
-    pub(crate) value_sat: u64,
-    pub(crate) reserved_to_block: Option<u32>,
-    pub(crate) source: WalletInputSource,
+pub struct WalletInput {
+    pub txid: String,
+    pub vout: u32,
+    pub value_sat: u64,
+    pub reserved_to_block: Option<u32>,
+    pub source: WalletInputSource,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SpliceWalletPsbtContextV1 {
-    pub(crate) schema: String,
-    pub(crate) schema_version: u16,
-    pub(crate) psbt_shape_hash: String,
-    pub(crate) latest_psbt_shape: PsbtShapeV1,
-    pub(crate) fundpsbt_auth: Option<NormalizedRpcAuth>,
-    pub(crate) signpsbt_auth: Option<NormalizedRpcAuth>,
-    pub(crate) signonly: Vec<u32>,
-    pub(crate) wallet_inputs: Vec<WalletInput>,
-    pub(crate) change_outnum: Option<u32>,
-    pub(crate) linked_node_channel_id_hex: Option<String>,
-    pub(crate) linked_splice_psbt_shape_hash: Option<String>,
-    pub(crate) created_at_ms: u64,
-    pub(crate) updated_at_ms: u64,
+pub struct SpliceWalletPsbtContextV1 {
+    pub schema: String,
+    pub schema_version: u16,
+    pub psbt_shape_hash: String,
+    pub latest_psbt_shape: PsbtShapeV1,
+    pub fundpsbt_auth: Option<NormalizedRpcAuth>,
+    pub signpsbt_auth: Option<NormalizedRpcAuth>,
+    pub signonly: Vec<u32>,
+    pub wallet_inputs: Vec<WalletInput>,
+    pub change_outnum: Option<u32>,
+    pub linked_node_channel_id_hex: Option<String>,
+    pub linked_splice_psbt_shape_hash: Option<String>,
+    pub created_at_ms: u64,
+    pub updated_at_ms: u64,
 }
 
 impl SpliceWalletPsbtContextV1 {
-    pub(crate) fn new(
+    pub fn new(
         psbt_shape_hash: String,
         latest_psbt_shape: PsbtShapeV1,
         fundpsbt_auth: Option<NormalizedRpcAuth>,
@@ -341,6 +360,215 @@ impl SpliceWalletPsbtContextV1 {
             updated_at_ms: timestamp_ms,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletInputReservation {
+    pub txid: String,
+    pub vout: u32,
+    pub reserved_to_block: Option<u32>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FundPsbtResponseFacts {
+    pub psbt_shape_hash: String,
+    pub psbt_shape: PsbtShapeV1,
+    pub fundpsbt_auth: NormalizedRpcAuth,
+    pub wallet_inputs: Vec<WalletInput>,
+    pub change_outnum: Option<u32>,
+    pub timestamp_ms: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignPsbtResponseFacts {
+    pub psbt_shape_hash: String,
+    pub psbt_shape: PsbtShapeV1,
+    pub signpsbt_auth: NormalizedRpcAuth,
+    pub signonly: Vec<u32>,
+    pub timestamp_ms: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SpliceUpdateResponseFacts {
+    pub node_channel_id_hex: String,
+    pub psbt_shape_hash: String,
+    pub psbt_shape: PsbtShapeV1,
+    pub splice_update_auth: NormalizedRpcAuth,
+    pub commitments_secured: bool,
+    pub signatures_secured: Option<bool>,
+    pub timestamp_ms: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SpliceSignedResponseFacts {
+    pub node_channel_id_hex: String,
+    pub psbt_shape_hash: String,
+    pub psbt_shape: PsbtShapeV1,
+    pub splice_signed_auth: NormalizedRpcAuth,
+    pub candidate: Option<CandidateFundingFacts>,
+    pub timestamp_ms: u64,
+}
+
+fn tx_shape(tx: &Transaction) -> PsbtShapeV1 {
+    PsbtShapeV1 {
+        schema: "PsbtShapeV1".to_string(),
+        version: tx.version.0,
+        locktime: tx.lock_time.to_consensus_u32(),
+        inputs: tx
+            .input
+            .iter()
+            .map(|input| PsbtShapeInputV1 {
+                prev_txid: input.previous_output.txid.to_string(),
+                prev_vout: input.previous_output.vout,
+                sequence: input.sequence.to_consensus_u32(),
+            })
+            .collect(),
+        outputs: tx
+            .output
+            .iter()
+            .map(|output| {
+                let script_bytes = output.script_pubkey.as_bytes();
+                PsbtShapeOutputV1 {
+                    value_sat: output.value.to_sat(),
+                    script_pubkey_hex: hex::encode(script_bytes),
+                    script_pubkey_hash: sha256::digest(script_bytes),
+                }
+            })
+            .collect(),
+    }
+}
+
+pub fn psbt_shape_hash(shape: &PsbtShapeV1) -> anyhow::Result<String> {
+    let value = serde_json::to_value(shape)
+        .map_err(|e| anyhow!("failed to encode PSBT shape for hashing: {e}"))?;
+    let bytes = canonical_json_bytes(&value)?;
+    Ok(sha256::digest(bytes.as_slice()))
+}
+
+pub fn psbt_shape_from_base64(psbt: &str) -> anyhow::Result<(String, PsbtShapeV1)> {
+    let raw = general_purpose::STANDARD
+        .decode(psbt)
+        .map_err(|e| anyhow!("failed to decode PSBT base64: {e}"))?;
+    let psbt = Psbt::deserialize(&raw).map_err(|e| anyhow!("failed to parse PSBT: {e}"))?;
+    let shape = tx_shape(&psbt.unsigned_tx);
+    let hash = psbt_shape_hash(&shape)?;
+    Ok((hash, shape))
+}
+
+fn parse_psbt(psbt: &str) -> anyhow::Result<Psbt> {
+    let raw = general_purpose::STANDARD
+        .decode(psbt)
+        .map_err(|e| anyhow!("failed to decode PSBT base64: {e}"))?;
+    Psbt::deserialize(&raw).map_err(|e| anyhow!("failed to parse PSBT: {e}"))
+}
+
+fn psbt_input_value_sat(psbt: &Psbt, input_index: usize) -> anyhow::Result<u64> {
+    let input = psbt
+        .inputs
+        .get(input_index)
+        .ok_or_else(|| anyhow!("missing PSBT input {}", input_index))?;
+    if let Some(txout) = &input.witness_utxo {
+        return Ok(txout.value.to_sat());
+    }
+
+    let Some(prev_tx) = &input.non_witness_utxo else {
+        bail!(
+            "PSBT input {} has no witness_utxo or non_witness_utxo",
+            input_index
+        );
+    };
+    let vout = psbt.unsigned_tx.input[input_index].previous_output.vout as usize;
+    prev_tx
+        .output
+        .get(vout)
+        .map(|txout| txout.value.to_sat())
+        .ok_or_else(|| anyhow!("PSBT input {} non_witness_utxo missing vout", input_index))
+}
+
+pub fn wallet_inputs_from_psbt(
+    psbt: &str,
+    reservations: &[WalletInputReservation],
+    source: WalletInputSource,
+) -> anyhow::Result<Vec<WalletInput>> {
+    let psbt = parse_psbt(psbt)?;
+    psbt.unsigned_tx
+        .input
+        .iter()
+        .enumerate()
+        .map(|(index, input)| {
+            let txid = input.previous_output.txid.to_string();
+            let vout = input.previous_output.vout;
+            let reservation = reservations
+                .iter()
+                .find(|reservation| reservation.txid == txid && reservation.vout == vout);
+            Ok(WalletInput {
+                txid,
+                vout,
+                value_sat: psbt_input_value_sat(&psbt, index)?,
+                reserved_to_block: reservation
+                    .and_then(|reservation| reservation.reserved_to_block),
+                source: source.clone(),
+            })
+        })
+        .collect()
+}
+
+pub fn candidate_funding_facts_from_psbt(
+    psbt: &str,
+    funding_txid: &str,
+    funding_vout: u32,
+    old_funding_outpoint: &FundingOutpoint,
+) -> anyhow::Result<CandidateFundingFacts> {
+    let psbt = parse_psbt(psbt)?;
+    let old_input_index = psbt
+        .unsigned_tx
+        .input
+        .iter()
+        .position(|input| {
+            input.previous_output.txid.to_string() == old_funding_outpoint.txid
+                && input.previous_output.vout == old_funding_outpoint.vout
+        })
+        .ok_or_else(|| anyhow!("splice PSBT does not spend old funding outpoint"))?;
+    let output = psbt
+        .unsigned_tx
+        .output
+        .get(funding_vout as usize)
+        .ok_or_else(|| anyhow!("splice funding output index {} is missing", funding_vout))?;
+
+    Ok(CandidateFundingFacts {
+        funding_outpoint: FundingOutpoint {
+            txid: funding_txid.to_string(),
+            vout: funding_vout,
+        },
+        value_sat: output.value.to_sat(),
+        script_pubkey_hash: sha256::digest(output.script_pubkey.as_bytes()),
+        sign_splice_tx_input_index: old_input_index as u32,
+        remote_funding_key_hex: None,
+    })
+}
+
+pub fn candidate_funding_facts_from_tx(
+    tx: &[u8],
+    funding_txid: &str,
+    funding_vout: u32,
+    sign_splice_tx_input_index: u32,
+) -> anyhow::Result<CandidateFundingFacts> {
+    let tx: Transaction =
+        deserialize(tx).map_err(|e| anyhow!("failed to parse splice transaction: {e}"))?;
+    let output = tx
+        .output
+        .get(funding_vout as usize)
+        .ok_or_else(|| anyhow!("splice funding output index {} is missing", funding_vout))?;
+    Ok(CandidateFundingFacts {
+        funding_outpoint: FundingOutpoint {
+            txid: funding_txid.to_string(),
+            vout: funding_vout,
+        },
+        value_sat: output.value.to_sat(),
+        script_pubkey_hash: sha256::digest(output.script_pubkey.as_bytes()),
+        sign_splice_tx_input_index,
+        remote_funding_key_hex: None,
+    })
 }
 
 impl State {
@@ -374,7 +602,7 @@ impl State {
         Ok(())
     }
 
-    pub(crate) fn get_splice_session(
+    pub fn get_splice_session(
         &self,
         node_channel_id_hex: &str,
     ) -> anyhow::Result<Option<SpliceSessionV1>> {
@@ -412,10 +640,7 @@ impl State {
         self.put_splice_session(&session)
     }
 
-    pub(crate) fn create_local_splice_session(
-        &mut self,
-        session: SpliceSessionV1,
-    ) -> anyhow::Result<()> {
+    pub fn create_local_splice_session(&mut self, session: SpliceSessionV1) -> anyhow::Result<()> {
         if session.auth.splice_init_auth.is_none() {
             bail!("local splice sessions require splice_init_auth");
         }
@@ -425,10 +650,191 @@ impl State {
         self.create_new_splice_session(session, SpliceOrigin::LocalInitiator)
     }
 
-    pub(crate) fn create_peer_splice_session(
+    pub fn record_local_splice_intent(&mut self, intent: LocalSpliceIntent) -> anyhow::Result<()> {
+        match (
+            intent.initial_psbt_shape_hash.as_ref(),
+            intent.initial_psbt_shape.as_ref(),
+        ) {
+            (Some(_), Some(_)) | (None, None) => {}
+            _ => bail!("initial PSBT shape hash and shape must be recorded together"),
+        }
+
+        if let Some(mut session) = self.get_splice_session(&intent.node_channel_id_hex)? {
+            if session.origin != SpliceOrigin::LocalInitiator {
+                bail!(
+                    "cannot replace {:?} splice session with local intent",
+                    session.origin
+                );
+            }
+            if session.phase != SplicePhase::Negotiating {
+                bail!(
+                    "splice_init intent can only update negotiating session, current phase {:?}",
+                    session.phase
+                );
+            }
+            session.node_id_hex = intent.node_id_hex;
+            session.channel_id_hex = intent.channel_id_hex;
+            session.old = intent.old;
+            session.auth.splice_init_auth = Some(intent.splice_init_auth.clone());
+            session.intent.authorized_relative_amount_sat =
+                Some(intent.authorized_relative_amount_sat);
+            session.intent.fee_policy = intent.fee_policy;
+            session.psbt.candidate_psbt_shape_hash = intent.initial_psbt_shape_hash;
+            session.psbt.candidate_psbt_shape = intent.initial_psbt_shape;
+            session.request_history.push(intent.splice_init_auth);
+            session.updated_at_ms = intent.timestamp_ms;
+            return self.put_splice_session(&session);
+        }
+
+        let mut session = SpliceSessionV1::new(
+            SpliceOrigin::LocalInitiator,
+            intent.node_id_hex,
+            intent.channel_id_hex,
+            intent.node_channel_id_hex,
+            intent.old,
+            Some(intent.splice_init_auth),
+            Some(intent.authorized_relative_amount_sat),
+            intent.fee_policy,
+            intent.timestamp_ms,
+        );
+        session.psbt.candidate_psbt_shape_hash = intent.initial_psbt_shape_hash;
+        session.psbt.candidate_psbt_shape = intent.initial_psbt_shape;
+        self.create_local_splice_session(session)
+    }
+
+    pub fn record_fundpsbt_response(&mut self, facts: FundPsbtResponseFacts) -> anyhow::Result<()> {
+        let existing = self.get_splice_wallet_psbt_context(&facts.psbt_shape_hash)?;
+        let mut context = existing.unwrap_or_else(|| {
+            SpliceWalletPsbtContextV1::new(
+                facts.psbt_shape_hash.clone(),
+                facts.psbt_shape.clone(),
+                None,
+                None,
+                Vec::new(),
+                facts.timestamp_ms,
+            )
+        });
+        context.latest_psbt_shape = facts.psbt_shape;
+        context.fundpsbt_auth = Some(facts.fundpsbt_auth);
+        context.wallet_inputs = facts.wallet_inputs;
+        context.change_outnum = facts.change_outnum;
+        context.updated_at_ms = facts.timestamp_ms;
+        self.put_splice_wallet_psbt_context(context)
+    }
+
+    pub fn record_signpsbt_response(&mut self, facts: SignPsbtResponseFacts) -> anyhow::Result<()> {
+        let existing = self.get_splice_wallet_psbt_context(&facts.psbt_shape_hash)?;
+        let mut context = existing.unwrap_or_else(|| {
+            SpliceWalletPsbtContextV1::new(
+                facts.psbt_shape_hash.clone(),
+                facts.psbt_shape.clone(),
+                None,
+                None,
+                Vec::new(),
+                facts.timestamp_ms,
+            )
+        });
+        context.latest_psbt_shape = facts.psbt_shape;
+        context.signpsbt_auth = Some(facts.signpsbt_auth);
+        context.signonly = facts.signonly;
+        context.updated_at_ms = facts.timestamp_ms;
+        self.put_splice_wallet_psbt_context(context)
+    }
+
+    pub fn record_splice_update_response(
         &mut self,
-        session: SpliceSessionV1,
+        facts: SpliceUpdateResponseFacts,
     ) -> anyhow::Result<()> {
+        let mut session = self
+            .get_splice_session(&facts.node_channel_id_hex)?
+            .ok_or_else(|| {
+                anyhow!(
+                    "missing splice session for channel {}",
+                    facts.node_channel_id_hex
+                )
+            })?;
+
+        if matches!(session.phase, SplicePhase::Locked | SplicePhase::Aborted) {
+            bail!(
+                "splice_update cannot update terminal splice phase {:?}",
+                session.phase
+            );
+        }
+
+        session.auth.latest_splice_update_auth = Some(facts.splice_update_auth.clone());
+        session.request_history.push(facts.splice_update_auth);
+
+        if facts.commitments_secured {
+            session.psbt.frozen_psbt_shape_hash = Some(facts.psbt_shape_hash.clone());
+            session.psbt.candidate_psbt_shape_hash = Some(facts.psbt_shape_hash);
+            session.psbt.candidate_psbt_shape = Some(facts.psbt_shape);
+            session.phase = if facts.signatures_secured == Some(true) {
+                SplicePhase::SignaturesExchanging
+            } else {
+                SplicePhase::CommitmentsSecured
+            };
+        } else {
+            if session.phase != SplicePhase::Negotiating {
+                bail!(
+                    "candidate PSBT shape can only change while negotiating, current phase {:?}",
+                    session.phase
+                );
+            }
+            session.psbt.candidate_psbt_shape_hash = Some(facts.psbt_shape_hash);
+            session.psbt.candidate_psbt_shape = Some(facts.psbt_shape);
+        }
+
+        session.updated_at_ms = facts.timestamp_ms;
+        self.put_splice_session(&session)
+    }
+
+    pub fn record_splice_signed_response(
+        &mut self,
+        facts: SpliceSignedResponseFacts,
+    ) -> anyhow::Result<()> {
+        let mut session = self
+            .get_splice_session(&facts.node_channel_id_hex)?
+            .ok_or_else(|| {
+                anyhow!(
+                    "missing splice session for channel {}",
+                    facts.node_channel_id_hex
+                )
+            })?;
+        if !matches!(
+            session.phase,
+            SplicePhase::CommitmentsSecured
+                | SplicePhase::SignaturesExchanging
+                | SplicePhase::PendingLock
+        ) {
+            bail!(
+                "splice_signed response requires commitments secured, current phase {:?}",
+                session.phase
+            );
+        }
+
+        session.auth.splice_signed_auth = Some(facts.splice_signed_auth.clone());
+        session.request_history.push(facts.splice_signed_auth);
+        session.psbt.candidate_psbt_shape_hash = Some(facts.psbt_shape_hash.clone());
+        session.psbt.candidate_psbt_shape = Some(facts.psbt_shape);
+        if session.psbt.frozen_psbt_shape_hash.is_none() {
+            session.psbt.frozen_psbt_shape_hash = Some(facts.psbt_shape_hash.clone());
+        }
+        session.phase = SplicePhase::SignaturesExchanging;
+        session.updated_at_ms = facts.timestamp_ms;
+
+        if let Some(candidate) = facts.candidate {
+            let index = SpliceOutpointIndexV1::for_session(&facts.node_channel_id_hex);
+            let candidate_outpoint = candidate.funding_outpoint.clone();
+            session.phase = SplicePhase::PendingLock;
+            session.cand = candidate.into();
+            self.put_splice_session(&session)?;
+            return self.put_splice_outpoint_index(&candidate_outpoint, &index);
+        }
+
+        self.put_splice_session(&session)
+    }
+
+    pub fn create_peer_splice_session(&mut self, session: SpliceSessionV1) -> anyhow::Result<()> {
         if session.auth.splice_init_auth.is_some() {
             bail!("peer-initiated splice sessions must not include splice_init_auth");
         }
@@ -438,14 +844,11 @@ impl State {
         self.create_new_splice_session(session, SpliceOrigin::PeerInitiated)
     }
 
-    pub(crate) fn create_dev_splice_session(
-        &mut self,
-        session: SpliceSessionV1,
-    ) -> anyhow::Result<()> {
+    pub fn create_dev_splice_session(&mut self, session: SpliceSessionV1) -> anyhow::Result<()> {
         self.create_new_splice_session(session, SpliceOrigin::DevSpliceUnresolved)
     }
 
-    pub(crate) fn update_splice_candidate_shape(
+    pub fn update_splice_candidate_shape(
         &mut self,
         node_channel_id_hex: &str,
         psbt_shape_hash: String,
@@ -470,7 +873,7 @@ impl State {
         self.put_splice_session(&session)
     }
 
-    pub(crate) fn freeze_splice_candidate(
+    pub fn freeze_splice_candidate(
         &mut self,
         node_channel_id_hex: &str,
         frozen_psbt_shape_hash: String,
@@ -496,7 +899,7 @@ impl State {
         self.put_splice_outpoint_index(&candidate_outpoint, &index)
     }
 
-    pub(crate) fn mark_splice_signatures_exchanging(
+    pub fn mark_splice_signatures_exchanging(
         &mut self,
         node_channel_id_hex: &str,
         auth: NormalizedRpcAuth,
@@ -521,7 +924,7 @@ impl State {
         self.put_splice_session(&session)
     }
 
-    pub(crate) fn mark_splice_pending_lock(
+    pub fn mark_splice_pending_lock(
         &mut self,
         node_channel_id_hex: &str,
         updated_at_ms: u64,
@@ -545,7 +948,7 @@ impl State {
         self.put_splice_session(&session)
     }
 
-    pub(crate) fn put_splice_outpoint_index(
+    pub fn put_splice_outpoint_index(
         &mut self,
         candidate_outpoint: &FundingOutpoint,
         index: &SpliceOutpointIndexV1,
@@ -556,7 +959,7 @@ impl State {
         )
     }
 
-    pub(crate) fn get_splice_by_outpoint(
+    pub fn get_splice_by_outpoint(
         &self,
         txid: &str,
         vout: u32,
@@ -569,21 +972,21 @@ impl State {
         self.get_splice(&index.splice_session_key)
     }
 
-    pub(crate) fn put_splice_wallet_psbt_context(
+    pub fn put_splice_wallet_psbt_context(
         &mut self,
         context: SpliceWalletPsbtContextV1,
     ) -> anyhow::Result<()> {
         self.put_splice(&wallet_psbt_key(&context.psbt_shape_hash), &context)
     }
 
-    pub(crate) fn get_splice_wallet_psbt_context(
+    pub fn get_splice_wallet_psbt_context(
         &self,
         psbt_shape_hash: &str,
     ) -> anyhow::Result<Option<SpliceWalletPsbtContextV1>> {
         self.get_splice(&wallet_psbt_key(psbt_shape_hash))
     }
 
-    pub(crate) fn link_splice_wallet_psbt(
+    pub fn link_splice_wallet_psbt(
         &mut self,
         psbt_shape_hash: &str,
         node_channel_id_hex: &str,
@@ -623,10 +1026,7 @@ impl State {
         self.put_splice_session(&session)
     }
 
-    pub(crate) fn tombstone_splice_session(
-        &mut self,
-        node_channel_id_hex: &str,
-    ) -> anyhow::Result<()> {
+    pub fn tombstone_splice_session(&mut self, node_channel_id_hex: &str) -> anyhow::Result<()> {
         let Some(session) = self.get_splice_session(node_channel_id_hex)? else {
             return Ok(());
         };
@@ -653,8 +1053,15 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bitcoin::absolute::LockTime;
+    use crate::bitcoin::psbt::Psbt;
+    use crate::bitcoin::transaction::Version;
+    use crate::bitcoin::{
+        Amount, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
+    };
     use crate::pb::SignerStateEntry;
     use serde_json::json;
+    use std::str::FromStr;
 
     fn auth(uri: &str, request_hash: &str, timestamp_ms: u64) -> NormalizedRpcAuth {
         NormalizedRpcAuth::new(
@@ -690,6 +1097,42 @@ mod tests {
         }
     }
 
+    fn psbt_fixture(
+        prev_txid: &str,
+        prev_vout: u32,
+        input_value_sat: u64,
+        outputs: Vec<(u64, &str)>,
+    ) -> String {
+        let input_script =
+            ScriptBuf::from_hex("00140000000000000000000000000000000000000000").unwrap();
+        let tx = Transaction {
+            version: Version::TWO,
+            lock_time: LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: OutPoint {
+                    txid: Txid::from_str(prev_txid).unwrap(),
+                    vout: prev_vout,
+                },
+                script_sig: ScriptBuf::new(),
+                sequence: Sequence::MAX,
+                witness: Witness::new(),
+            }],
+            output: outputs
+                .into_iter()
+                .map(|(value_sat, script_hex)| TxOut {
+                    value: Amount::from_sat(value_sat),
+                    script_pubkey: ScriptBuf::from_hex(script_hex).unwrap(),
+                })
+                .collect(),
+        };
+        let mut psbt = Psbt::from_unsigned_tx(tx).unwrap();
+        psbt.inputs[0].witness_utxo = Some(TxOut {
+            value: Amount::from_sat(input_value_sat),
+            script_pubkey: input_script,
+        });
+        general_purpose::STANDARD.encode(psbt.serialize())
+    }
+
     fn local_session() -> SpliceSessionV1 {
         SpliceSessionV1::new(
             SpliceOrigin::LocalInitiator,
@@ -709,6 +1152,236 @@ mod tests {
             },
             1,
         )
+    }
+
+    #[test]
+    fn record_local_splice_intent_keeps_authority_out_of_psbt_shape() {
+        let mut state = State::new();
+
+        state
+            .record_local_splice_intent(LocalSpliceIntent {
+                node_id_hex: "02".repeat(33),
+                channel_id_hex: "33".repeat(32),
+                node_channel_id_hex: "44".repeat(32),
+                old: OldSpliceState {
+                    funding_outpoint: outpoint(&"55".repeat(32), 0),
+                    channel_value_sat: 1_000_000,
+                    local_balance_sat: 600_000,
+                },
+                splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 1),
+                authorized_relative_amount_sat: 50_000,
+                fee_policy: FeePolicy {
+                    feerate_per_kw: Some(253),
+                    force_feerate: Some(false),
+                },
+                initial_psbt_shape_hash: Some("shape-init".to_string()),
+                initial_psbt_shape: Some(shape("04")),
+                timestamp_ms: 1,
+            })
+            .unwrap();
+
+        let session = state.get_splice_session(&"44".repeat(32)).unwrap().unwrap();
+        assert_eq!(session.origin, SpliceOrigin::LocalInitiator);
+        assert_eq!(session.phase, SplicePhase::Negotiating);
+        assert_eq!(session.intent.authorized_relative_amount_sat, Some(50_000));
+        assert_eq!(session.intent.fee_policy.feerate_per_kw, Some(253));
+        assert_eq!(
+            session.auth.splice_init_auth.as_ref().unwrap().uri,
+            "/cln.Node/SpliceInit"
+        );
+        assert_eq!(
+            session.psbt.candidate_psbt_shape_hash.as_deref(),
+            Some("shape-init")
+        );
+
+        let psbt_shape_value =
+            serde_json::to_value(session.psbt.candidate_psbt_shape.as_ref().unwrap()).unwrap();
+        assert!(psbt_shape_value
+            .get("authorized_relative_amount_sat")
+            .is_none());
+        assert!(psbt_shape_value.get("fee_policy").is_none());
+        assert!(psbt_shape_value.get("splice_init_auth").is_none());
+        assert!(psbt_shape_value.get("request_hash").is_none());
+        assert!(psbt_shape_value.get("caller_pubkey_hex").is_none());
+    }
+
+    #[test]
+    fn record_local_splice_intent_rejects_half_recorded_initial_psbt_shape() {
+        let mut state = State::new();
+        let mut intent = LocalSpliceIntent {
+            node_id_hex: "02".repeat(33),
+            channel_id_hex: "33".repeat(32),
+            node_channel_id_hex: "44".repeat(32),
+            old: OldSpliceState {
+                funding_outpoint: outpoint(&"55".repeat(32), 0),
+                channel_value_sat: 1_000_000,
+                local_balance_sat: 600_000,
+            },
+            splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 1),
+            authorized_relative_amount_sat: 50_000,
+            fee_policy: FeePolicy {
+                feerate_per_kw: Some(253),
+                force_feerate: Some(false),
+            },
+            initial_psbt_shape_hash: Some("shape-init".to_string()),
+            initial_psbt_shape: None,
+            timestamp_ms: 1,
+        };
+
+        let err = state
+            .record_local_splice_intent(intent.clone())
+            .unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("initial PSBT shape hash and shape must be recorded together"));
+
+        intent.initial_psbt_shape_hash = None;
+        intent.initial_psbt_shape = Some(shape("05"));
+        let err = state.record_local_splice_intent(intent).unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("initial PSBT shape hash and shape must be recorded together"));
+    }
+
+    #[test]
+    fn psbt_shape_and_wallet_inputs_are_derived_from_psbt_without_authority() {
+        let prev_txid = "11".repeat(32);
+        let psbt = psbt_fixture(
+            &prev_txid,
+            7,
+            55_000,
+            vec![(50_000, "00142222222222222222222222222222222222222222")],
+        );
+
+        let (hash, parsed_shape) = psbt_shape_from_base64(&psbt).unwrap();
+        assert_eq!(hash, psbt_shape_hash(&parsed_shape).unwrap());
+        assert_eq!(parsed_shape.inputs[0].prev_txid, prev_txid);
+        assert_eq!(parsed_shape.inputs[0].prev_vout, 7);
+        assert_eq!(parsed_shape.outputs[0].value_sat, 50_000);
+
+        let wallet_inputs = wallet_inputs_from_psbt(
+            &psbt,
+            &[WalletInputReservation {
+                txid: "11".repeat(32),
+                vout: 7,
+                reserved_to_block: Some(42),
+            }],
+            WalletInputSource::FundPsbt,
+        )
+        .unwrap();
+        assert_eq!(wallet_inputs.len(), 1);
+        assert_eq!(wallet_inputs[0].value_sat, 55_000);
+        assert_eq!(wallet_inputs[0].reserved_to_block, Some(42));
+
+        let shape_value = serde_json::to_value(parsed_shape).unwrap();
+        assert!(shape_value.get("splice_init_auth").is_none());
+        assert!(shape_value.get("signpsbt_auth").is_none());
+    }
+
+    #[test]
+    fn records_fundpsbt_and_signpsbt_response_facts_by_shape_hash() {
+        let mut state = State::new();
+        let psbt = psbt_fixture(
+            &"11".repeat(32),
+            0,
+            25_000,
+            vec![(20_000, "00143333333333333333333333333333333333333333")],
+        );
+        let (shape_hash, parsed_shape) = psbt_shape_from_base64(&psbt).unwrap();
+        let wallet_inputs =
+            wallet_inputs_from_psbt(&psbt, &[], WalletInputSource::FundPsbt).unwrap();
+
+        state
+            .record_fundpsbt_response(FundPsbtResponseFacts {
+                psbt_shape_hash: shape_hash.clone(),
+                psbt_shape: parsed_shape.clone(),
+                fundpsbt_auth: auth("/cln.Node/FundPsbt", &"ab".repeat(32), 2),
+                wallet_inputs,
+                change_outnum: Some(0),
+                timestamp_ms: 2,
+            })
+            .unwrap();
+        state
+            .record_signpsbt_response(SignPsbtResponseFacts {
+                psbt_shape_hash: shape_hash.clone(),
+                psbt_shape: parsed_shape,
+                signpsbt_auth: auth("/cln.Node/SignPsbt", &"cd".repeat(32), 3),
+                signonly: vec![0],
+                timestamp_ms: 3,
+            })
+            .unwrap();
+
+        let context = state
+            .get_splice_wallet_psbt_context(&shape_hash)
+            .unwrap()
+            .unwrap();
+        assert!(context.fundpsbt_auth.is_some());
+        assert!(context.signpsbt_auth.is_some());
+        assert_eq!(context.signonly, vec![0]);
+        assert_eq!(context.change_outnum, Some(0));
+        assert_eq!(context.wallet_inputs[0].value_sat, 25_000);
+    }
+
+    #[test]
+    fn records_splice_update_and_signed_response_phase_facts() {
+        let mut state = State::new();
+        state.create_local_splice_session(local_session()).unwrap();
+        let old_txid = "55".repeat(32);
+        let psbt = psbt_fixture(
+            &old_txid,
+            0,
+            1_000_000,
+            vec![(1_050_000, "00144444444444444444444444444444444444444444")],
+        );
+        let (shape_hash, parsed_shape) = psbt_shape_from_base64(&psbt).unwrap();
+
+        state
+            .record_splice_update_response(SpliceUpdateResponseFacts {
+                node_channel_id_hex: "44".repeat(32),
+                psbt_shape_hash: shape_hash.clone(),
+                psbt_shape: parsed_shape.clone(),
+                splice_update_auth: auth("/cln.Node/SpliceUpdate", &"ef".repeat(32), 2),
+                commitments_secured: true,
+                signatures_secured: Some(false),
+                timestamp_ms: 2,
+            })
+            .unwrap();
+        let session = state.get_splice_session(&"44".repeat(32)).unwrap().unwrap();
+        assert_eq!(session.phase, SplicePhase::CommitmentsSecured);
+        assert_eq!(
+            session.psbt.frozen_psbt_shape_hash.as_deref(),
+            Some(shape_hash.as_str())
+        );
+        assert!(session.cand.funding_outpoint.is_none());
+
+        let candidate = candidate_funding_facts_from_psbt(
+            &psbt,
+            &"99".repeat(32),
+            0,
+            &session.old.funding_outpoint,
+        )
+        .unwrap();
+        state
+            .record_splice_signed_response(SpliceSignedResponseFacts {
+                node_channel_id_hex: "44".repeat(32),
+                psbt_shape_hash: shape_hash,
+                psbt_shape: parsed_shape,
+                splice_signed_auth: auth("/cln.Node/SpliceSigned", &"12".repeat(32), 3),
+                candidate: Some(candidate),
+                timestamp_ms: 3,
+            })
+            .unwrap();
+
+        let session = state.get_splice_session(&"44".repeat(32)).unwrap().unwrap();
+        assert_eq!(session.phase, SplicePhase::PendingLock);
+        assert_eq!(
+            session.cand.funding_outpoint.as_ref().unwrap().txid,
+            "99".repeat(32)
+        );
+        assert!(state
+            .get_splice_by_outpoint(&"99".repeat(32), 0)
+            .unwrap()
+            .is_some());
     }
 
     #[test]
