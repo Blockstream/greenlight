@@ -13,6 +13,7 @@ mod awaitables;
 pub mod config;
 pub mod events;
 pub mod hsm;
+mod lsp;
 pub mod messages;
 pub mod node;
 pub mod pb;
@@ -103,6 +104,7 @@ pub async fn init(
     };
 
     let inner = cln_plugin::Builder::new(tokio::io::stdin(), tokio::io::stdout())
+        .hook("htlc_accepted", lsp::on_htlc_accepted)
         .hook("invoice_payment", on_invoice_payment)
         .hook("peer_connected", on_peer_connected)
         .hook("openchannel", on_openchannel)
