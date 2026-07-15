@@ -124,7 +124,11 @@ impl Stage {
             .filter_map(|r| {
                 let head: [u16; 2] = [r.request.raw[0].into(), r.request.raw[1].into()];
                 let typ = head[0] << 8 | head[1];
-                if sticky_types.contains(&typ) { Some(typ) } else { None }
+                if sticky_types.contains(&typ) {
+                    Some(typ)
+                } else {
+                    None
+                }
             })
             .collect();
 

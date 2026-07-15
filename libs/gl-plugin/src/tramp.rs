@@ -231,15 +231,20 @@ pub async fn trampolinepay(
     // Extract the amount from the bolt11 or use the set amount field
     // Return an error if there is a mismatch.
     let decoded = rpc
-        .call_typed(&cln_rpc::model::requests::DecodepayRequest {
-            bolt11: req.bolt11.clone(),
-            description: None,
+        .call_typed(&cln_rpc::model::requests::DecodeRequest {
+            string: req.bolt11.clone(),
         })
         .await?;
+    let payment_hash = decoded.payment_hash.ok_or_else(|| {
+        error!(
+            TrampolineErrorCode::Internal,
+            "decoded bolt11 does not return a payment_hash"
+        )
+    })?;
 
     let send_pays = rpc
         .call_typed(&cln_rpc::model::requests::ListsendpaysRequest {
-            payment_hash: Some(decoded.payment_hash.clone()),
+            payment_hash: Some(payment_hash.clone()),
             bolt11: None,
             index: None,
             limit: None,
@@ -254,7 +259,7 @@ pub async fn trampolinepay(
     {
         let resp = rpc
             .call_typed(&cln_rpc::model::requests::WaitsendpayRequest {
-                payment_hash: decoded.payment_hash.clone(),
+                payment_hash: payment_hash.clone(),
                 groupid: None,
                 partid: None,
                 timeout: None,
@@ -514,7 +519,7 @@ pub async fn trampolinepay(
         let handle = tokio::spawn(async move {
             let payment_secret = decoded
                 .payment_secret
-                .map(|e| e[..].to_vec())
+                .map(|e| e.to_vec())
                 .ok_or(error!(
                     TrampolineErrorCode::InvalidInvoice,
                     "The invoice is invalid, missing payment secret"
@@ -537,7 +542,7 @@ pub async fn trampolinepay(
                 scid,
                 part_id,
                 group_id,
-                decoded.payment_hash,
+                payment_hash.clone(),
                 cln_rpc::primitives::Amount::from_msat(amount_msat),
                 payment_secret,
                 payload_hex,
@@ -566,14 +571,14 @@ pub async fn trampolinepay(
 
     if let Some(payment_preimage) = payment_preimage {
         Ok(cln_rpc::model::responses::PayResponse {
-            destination: Some(decoded.payee),
+            destination: decoded.payee,
             warning_partial_completion: None,
             status: cln_rpc::model::responses::PayStatus::COMPLETE,
             amount_msat: cln_rpc::primitives::Amount::from_msat(amount_msat),
             amount_sent_msat: cln_rpc::primitives::Amount::from_msat(amount_msat),
             created_at: 0.,
             parts: alloc.len() as u32,
-            payment_hash: decoded.payment_hash,
+            payment_hash: payment_hash,
             payment_preimage,
         })
     } else {

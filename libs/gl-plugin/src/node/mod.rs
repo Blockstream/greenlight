@@ -7,10 +7,8 @@ use anyhow::{Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
 use cln_rpc::Notification;
+use gl_client::metrics::{savings_percent, signer_state_request_wire_bytes};
 use gl_client::persist::{State, StateSketch};
-use gl_client::metrics::{
-    signer_state_request_wire_bytes, savings_percent,
-};
 use governor::{
     clock::MonotonicClock, state::direct::NotKeyed, state::InMemoryState, Quota, RateLimiter,
 };
@@ -230,14 +228,12 @@ impl Node for PluginNodeServer {
         // We require capacity + 5% buffer to account for fees and routing.
         // Only check for specific amounts (not "any" amount invoices).
         if req.amount_msat > 0 {
-            let receivable = self
-                .get_receivable_capacity(&mut rpc)
-                .await
-                .unwrap_or(0);
+            let receivable = self.get_receivable_capacity(&mut rpc).await.unwrap_or(0);
 
             // Add 5% buffer: capacity >= amount * 1.05
             // Equivalent to: capacity * 100 >= amount * 105
-            let has_sufficient_capacity = req.amount_msat
+            let has_sufficient_capacity = req
+                .amount_msat
                 .saturating_mul(105)
                 .checked_div(100)
                 .map(|required| receivable >= required)
@@ -274,7 +270,10 @@ impl Node for PluginNodeServer {
                     bolt11: res.bolt11,
                     created_index: res.created_index.unwrap_or(0) as u32,
                     expires_at: res.expires_at as u32,
-                    payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(&res.payment_hash).to_vec(),
+                    payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(
+                        &res.payment_hash,
+                    )
+                    .to_vec(),
                     payment_secret: res.payment_secret.to_vec(),
                     opening_fee_msat: 0,
                 }));
@@ -302,35 +301,42 @@ impl Node for PluginNodeServer {
 
         lsps.sort_by_key(|l| l.node_id.clone());
 
-        if lsps.len() < 1 {
+        if lsps.is_empty() {
             return Err(Status::not_found(
                 "Could not find an LSP peer to negotiate the LSPS2 channel for this invoice.",
             ));
         }
 
-        let lsp = &lsps[0];
-        log::info!("Selecting {:?} for invoice negotiation", lsp);
+        let (lsp_id, param) = select_opening_params(lsps).ok_or_else(|| {
+            Status::not_found("No opening params returned by any LSP, cannot create invoice.")
+        })?;
+
+        log::info!(
+            "Selecting LSP {} with params {:?} for invoice negotiation",
+            lsp_id,
+            param
+        );
 
         // Compute the expected opening fee from the LSP's fee parameters.
-        let opening_fee_msat = lsp.params.first().map_or(0, |p| {
-            let min_fee: u64 = p.min_fee_msat.parse().unwrap_or(0);
+        let opening_fee_msat = {
+            let min_fee: u64 = param.min_fee_msat.parse().unwrap_or(0);
             let proportional_fee = req
                 .amount_msat
-                .saturating_mul(p.proportional)
+                .saturating_mul(param.proportional)
                 .div_ceil(1_000_000);
             std::cmp::max(min_fee, proportional_fee)
-        });
+        };
 
         // Use the new RPC method name for versions > v25.05gl1
         let mut res = if *version > *"v25.05gl1" {
             let mut invreq: crate::requests::LspInvoiceRequestV2 = req.into();
-            invreq.lsp_id = lsp.node_id.to_owned();
+            invreq.lsp_id = lsp_id.to_owned();
             rpc.call_typed(&invreq)
                 .await
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
         } else {
             let mut invreq: crate::requests::LspInvoiceRequest = req.into();
-            invreq.lsp_id = lsp.node_id.to_owned();
+            invreq.lsp_id = lsp_id.to_owned();
             rpc.call_typed(&invreq)
                 .await
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
@@ -448,9 +454,8 @@ impl Node for PluginNodeServer {
                 // the large state with them.
 
                 let state_snapshot = signer_state.lock().await.clone();
-                let state_entries: Vec<gl_client::pb::SignerStateEntry> = state_snapshot
-                    .omit_tombstones()
-                    .into();
+                let state_entries: Vec<gl_client::pb::SignerStateEntry> =
+                    state_snapshot.omit_tombstones().into();
                 let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
                 let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
@@ -502,7 +507,6 @@ impl Node for PluginNodeServer {
                     req.request.request_id,
                     hsm_id
                 );
-
 
                 let state_snapshot = signer_state.lock().await.clone();
                 // Estimate the size of the full state to calculate the bandwidth savings of sending diffs
@@ -756,10 +760,7 @@ impl Node for PluginNodeServer {
                 if let Err(e) = address.require_network(network) {
                     return Err(Status::new(
                         Code::Unknown,
-                        format!(
-                            "Network validation failed: {}",
-                            e
-                        ),
+                        format!("Network validation failed: {}", e),
                     ));
                 }
             }
@@ -843,6 +844,22 @@ struct Lsps2Offer {
     node_id: String,
     #[allow(unused)]
     params: Vec<crate::responses::OpeningFeeParams>,
+}
+
+/// Select the LSP and opening fee params to use for an LSPS2 invoice
+/// negotiation.
+///
+/// We flatten the params across all LSPs and pick the first available
+/// pair. This way an LSP that got selected but returned an empty param
+/// set is skipped in favor of the next LSP that actually returned
+/// usable params, rather than ending up without valid opening params.
+/// Returns `None` if no LSP returned any params at all.
+fn select_opening_params(
+    lsps: Vec<Lsps2Offer>,
+) -> Option<(String, crate::responses::OpeningFeeParams)> {
+    lsps.into_iter()
+        .flat_map(|l| l.params.into_iter().map(move |p| (l.node_id.clone(), p)))
+        .next()
 }
 
 impl PluginNodeServer {
@@ -995,7 +1012,7 @@ impl PluginNodeServer {
     /// Get the total receivable capacity across all active channels.
     ///
     /// Returns the sum of `receivable_msat` for all channels in
-    /// `CHANNELD_NORMAL` state with a connected peer.
+    /// `CHANNELD_NORMAL` state with a connected peer and meaningful receivable capacity.
     async fn get_receivable_capacity(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<u64, Error> {
         use cln_rpc::primitives::ChannelState;
 
@@ -1007,6 +1024,8 @@ impl PluginNodeServer {
             .channels
             .into_iter()
             .filter(|c| c.peer_connected && c.state == ChannelState::CHANNELD_NORMAL)
+            // Filter out channels without meaningful receivable capacity (max_to_us_msat = 0 or None)
+            .filter(|c| c.max_to_us_msat.is_some() && c.max_to_us_msat.as_ref().unwrap().msat() > 0)
             .filter_map(|c| c.receivable_msat)
             .map(|a| a.msat())
             .sum();
@@ -1218,3 +1237,85 @@ where
 
 mod rpcwait;
 pub use rpcwait::RpcWaitService;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::responses::OpeningFeeParams;
+
+    fn param(min_fee_msat: &str) -> OpeningFeeParams {
+        OpeningFeeParams {
+            min_fee_msat: min_fee_msat.to_string(),
+            proportional: 0,
+            valid_until: "2100-01-01T00:00:00Z".to_string(),
+            min_lifetime: 144,
+            max_client_to_self_delay: 1024,
+            min_payment_size_msat: "0".to_string(),
+            max_payment_size_msat: "1000000000".to_string(),
+            promise: "promise".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_select_opening_params_empty() {
+        // No LSPs at all -> nothing to select.
+        assert!(select_opening_params(vec![]).is_none());
+    }
+
+    #[test]
+    fn test_select_opening_params_first_lsp_empty() {
+        // The first LSP got selected but returned an empty param set.
+        // We must skip it and fall back to the next LSP that actually
+        // returned usable params.
+        let lsps = vec![
+            Lsps2Offer {
+                node_id: "lsp_empty".to_string(),
+                params: vec![],
+            },
+            Lsps2Offer {
+                node_id: "lsp_good".to_string(),
+                params: vec![param("100")],
+            },
+        ];
+
+        let (lsp_id, p) = select_opening_params(lsps).expect("should fall back to second LSP");
+        assert_eq!(lsp_id, "lsp_good");
+        assert_eq!(p.min_fee_msat, "100");
+    }
+
+    #[test]
+    fn test_select_opening_params_all_empty() {
+        // Every LSP returned an empty param set -> nothing valid to pick.
+        let lsps = vec![
+            Lsps2Offer {
+                node_id: "lsp_empty_1".to_string(),
+                params: vec![],
+            },
+            Lsps2Offer {
+                node_id: "lsp_empty_2".to_string(),
+                params: vec![],
+            },
+        ];
+
+        assert!(select_opening_params(lsps).is_none());
+    }
+
+    #[test]
+    fn test_select_opening_params_prefers_first_nonempty() {
+        // When the first LSP does return params we keep using it.
+        let lsps = vec![
+            Lsps2Offer {
+                node_id: "lsp_first".to_string(),
+                params: vec![param("1"), param("2")],
+            },
+            Lsps2Offer {
+                node_id: "lsp_second".to_string(),
+                params: vec![param("3")],
+            },
+        ];
+
+        let (lsp_id, p) = select_opening_params(lsps).expect("first LSP has params");
+        assert_eq!(lsp_id, "lsp_first");
+        assert_eq!(p.min_fee_msat, "1");
+    }
+}
