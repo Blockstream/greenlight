@@ -2,11 +2,20 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::Error;
+use base64::{engine::general_purpose, Engine as _};
+use bytes::Buf;
 use cln_grpc;
 use cln_grpc::pb::{self, node_server::Node};
 use cln_rpc::primitives::ChannelState;
 use cln_rpc::{self};
+use gl_client::persist::{
+    candidate_funding_facts_from_psbt, psbt_shape_from_base64, wallet_inputs_from_psbt, FeePolicy,
+    FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState,
+    SignPsbtResponseFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
+    WalletInputReservation, WalletInputSource,
+};
 use log::debug;
+use prost::Message;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
@@ -377,7 +386,42 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::FundpsbtRequest>,
     ) -> Result<Response<pb::FundpsbtResponse>, Status> {
-        self.inner.fund_psbt(r).await
+        let auth = maybe_normalized_auth("/cln.Node/FundPsbt", &r)?;
+        let response = self.inner.fund_psbt(r).await?;
+        if let Some(auth) = auth {
+            let body = response.get_ref();
+            let (psbt_shape_hash, psbt_shape) =
+                psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+            let timestamp_ms = auth.timestamp_ms;
+            let change_outnum = body.change_outnum;
+            let reservations = body
+                .reservations
+                .iter()
+                .map(|reservation| WalletInputReservation {
+                    txid: hex::encode(&reservation.txid),
+                    vout: reservation.vout,
+                    reserved_to_block: reservation
+                        .reserved
+                        .then_some(reservation.reserved_to_block),
+                })
+                .collect::<Vec<_>>();
+            let wallet_inputs =
+                wallet_inputs_from_psbt(&body.psbt, &reservations, WalletInputSource::FundPsbt)
+                    .map_err(internal_status)?;
+
+            self.update_splice_state(|state| {
+                state.record_fundpsbt_response(FundPsbtResponseFacts {
+                    psbt_shape_hash,
+                    psbt_shape,
+                    fundpsbt_auth: auth,
+                    wallet_inputs,
+                    change_outnum,
+                    timestamp_ms,
+                })
+            })
+            .await?;
+        }
+        Ok(response)
     }
 
     async fn send_psbt(
@@ -391,7 +435,27 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::SignpsbtRequest>,
     ) -> Result<Response<pb::SignpsbtResponse>, Status> {
-        self.inner.sign_psbt(r).await
+        let auth = maybe_normalized_auth("/cln.Node/SignPsbt", &r)?;
+        let signonly = r.get_ref().signonly.clone();
+        let response = self.inner.sign_psbt(r).await?;
+        if let Some(auth) = auth {
+            let body = response.get_ref();
+            let (psbt_shape_hash, psbt_shape) =
+                psbt_shape_from_base64(&body.signed_psbt).map_err(internal_status)?;
+            let timestamp_ms = auth.timestamp_ms;
+
+            self.update_splice_state(|state| {
+                state.record_signpsbt_response(SignPsbtResponseFacts {
+                    psbt_shape_hash,
+                    psbt_shape,
+                    signpsbt_auth: auth,
+                    signonly,
+                    timestamp_ms,
+                })
+            })
+            .await?;
+        }
+        Ok(response)
     }
 
     async fn utxo_psbt(
@@ -810,21 +874,116 @@ impl Node for WrappedNodeServer {
         &self,
         request: tonic::Request<pb::SpliceInitRequest>,
     ) -> Result<tonic::Response<pb::SpliceInitResponse>, tonic::Status> {
-        self.inner.splice_init(request).await
+        let auth = normalized_auth("/cln.Node/SpliceInit", &request)?;
+        let request_body = request.get_ref().clone();
+        let node_id_hex = self.local_node_id_hex().await?;
+        let channel_id_hex = hex::encode(&request_body.channel_id);
+        let node_channel_id_hex = format!("{node_id_hex}{channel_id_hex}");
+        let old = self.old_splice_state(&request_body.channel_id).await?;
+
+        let response = self.inner.splice_init(request).await?;
+        let body = response.get_ref();
+        let (psbt_shape_hash, psbt_shape) =
+            psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+        let timestamp_ms = auth.timestamp_ms;
+        self.update_splice_state(|state| {
+            state.record_local_splice_intent(LocalSpliceIntent {
+                node_id_hex,
+                channel_id_hex,
+                node_channel_id_hex,
+                old,
+                splice_init_auth: auth,
+                authorized_relative_amount_sat: request_body.relative_amount,
+                fee_policy: FeePolicy {
+                    feerate_per_kw: request_body.feerate_per_kw,
+                    force_feerate: request_body.force_feerate,
+                },
+                initial_psbt_shape_hash: Some(psbt_shape_hash),
+                initial_psbt_shape: Some(psbt_shape),
+                timestamp_ms,
+            })
+        })
+        .await?;
+        Ok(response)
     }
 
     async fn splice_signed(
         &self,
         request: tonic::Request<pb::SpliceSignedRequest>,
     ) -> Result<tonic::Response<pb::SpliceSignedResponse>, tonic::Status> {
-        self.inner.splice_signed(request).await
+        let auth = normalized_auth("/cln.Node/SpliceSigned", &request)?;
+        let request_body = request.get_ref().clone();
+        let node_channel_id_hex = self.node_channel_id_hex(&request_body.channel_id).await?;
+
+        let response = self.inner.splice_signed(request).await?;
+        let body = response.get_ref();
+        let (psbt_shape_hash, psbt_shape) =
+            psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+        let response_psbt = body.psbt.clone();
+        let funding_txid = hex::encode(&body.txid);
+        let funding_outnum = body.outnum;
+        let timestamp_ms = auth.timestamp_ms;
+        self.update_splice_state(|state| {
+            let candidate = funding_outnum
+                .map(|outnum| {
+                    let session =
+                        state
+                            .get_splice_session(&node_channel_id_hex)?
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "missing splice session for channel {}",
+                                    node_channel_id_hex
+                                )
+                            })?;
+                    candidate_funding_facts_from_psbt(
+                        &response_psbt,
+                        &funding_txid,
+                        outnum,
+                        &session.old.funding_outpoint,
+                    )
+                })
+                .transpose()?;
+            state.record_splice_signed_response(SpliceSignedResponseFacts {
+                node_channel_id_hex,
+                psbt_shape_hash,
+                psbt_shape,
+                splice_signed_auth: auth,
+                candidate,
+                timestamp_ms,
+            })
+        })
+        .await?;
+        Ok(response)
     }
 
     async fn splice_update(
         &self,
         request: tonic::Request<pb::SpliceUpdateRequest>,
     ) -> Result<tonic::Response<pb::SpliceUpdateResponse>, tonic::Status> {
-        self.inner.splice_update(request).await
+        let auth = normalized_auth("/cln.Node/SpliceUpdate", &request)?;
+        let request_body = request.get_ref().clone();
+        let node_channel_id_hex = self.node_channel_id_hex(&request_body.channel_id).await?;
+
+        let response = self.inner.splice_update(request).await?;
+        let body = response.get_ref();
+        let (psbt_shape_hash, psbt_shape) =
+            psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+        let commitments_secured = body.commitments_secured;
+        let signatures_secured = body.signatures_secured;
+        let timestamp_ms = auth.timestamp_ms;
+        self.update_splice_state(|state| {
+            state.record_splice_update_response(SpliceUpdateResponseFacts {
+                node_channel_id_hex,
+                psbt_shape_hash,
+                psbt_shape,
+                splice_update_auth: auth,
+                commitments_secured,
+                signatures_secured,
+                timestamp_ms,
+            })
+        })
+        .await?;
+        Ok(response)
     }
 
     async fn dev_splice(
@@ -1116,7 +1275,143 @@ impl Node for WrappedNodeServer {
     }
 }
 
+fn internal_status(error: impl std::fmt::Display) -> Status {
+    Status::internal(error.to_string())
+}
+
+fn decode_auth_metadata<T>(request: &Request<T>, key: &'static str) -> Result<Vec<u8>, Status> {
+    let value = request
+        .metadata()
+        .get(key)
+        .ok_or_else(|| Status::unauthenticated(format!("missing {key} metadata")))?;
+    general_purpose::STANDARD_NO_PAD
+        .decode(value.as_bytes())
+        .map_err(|e| Status::unauthenticated(format!("invalid {key} metadata: {e}")))
+}
+
+fn normalized_auth<T: Message>(
+    uri: &str,
+    request: &Request<T>,
+) -> Result<NormalizedRpcAuth, Status> {
+    let caller_pubkey = decode_auth_metadata(request, "glauthpubkey")?;
+    let timestamp_bytes = decode_auth_metadata(request, "glts")?;
+    if timestamp_bytes.len() != 8 {
+        return Err(Status::unauthenticated(format!(
+            "invalid glts metadata length {}",
+            timestamp_bytes.len()
+        )));
+    }
+
+    let mut timestamp_slice = timestamp_bytes.as_slice();
+    let timestamp_ms = timestamp_slice.get_u64();
+    let mut payload = Vec::new();
+    request
+        .get_ref()
+        .encode(&mut payload)
+        .map_err(|e| Status::internal(format!("failed to encode request for auth hash: {e}")))?;
+
+    Ok(normalized_rpc_auth_from_payload(
+        uri,
+        &payload,
+        &caller_pubkey,
+        timestamp_ms,
+    ))
+}
+
+fn normalized_rpc_auth_from_payload(
+    uri: &str,
+    payload: &[u8],
+    caller_pubkey: &[u8],
+    timestamp_ms: u64,
+) -> NormalizedRpcAuth {
+    NormalizedRpcAuth::new(
+        uri.to_string(),
+        sha256::digest(payload),
+        hex::encode(caller_pubkey),
+        timestamp_ms,
+    )
+}
+
+fn maybe_normalized_auth<T: Message>(
+    uri: &str,
+    request: &Request<T>,
+) -> Result<Option<NormalizedRpcAuth>, Status> {
+    let has_auth_metadata =
+        request.metadata().contains_key("glauthpubkey") || request.metadata().contains_key("glts");
+    if !has_auth_metadata {
+        return Ok(None);
+    }
+
+    normalized_auth(uri, request).map(Some)
+}
+
+fn amount_sat(amount: Option<&pb::Amount>, field: &'static str) -> Result<u64, Status> {
+    amount
+        .map(|amount| amount.msat / 1000)
+        .ok_or_else(|| Status::failed_precondition(format!("channel is missing {field}")))
+}
+
 impl WrappedNodeServer {
+    async fn update_splice_state<F>(&self, update: F) -> Result<(), Status>
+    where
+        F: FnOnce(&mut gl_client::persist::State) -> anyhow::Result<()>,
+    {
+        let snapshot = {
+            let mut state = self.node_server.signer_state.lock().await;
+            update(&mut state).map_err(internal_status)?;
+            state.clone()
+        };
+        let store = self.node_server.signer_state_store.lock().await;
+        store.write(snapshot).await.map_err(internal_status)
+    }
+
+    async fn local_node_id_hex(&self) -> Result<String, Status> {
+        let response = self
+            .inner
+            .getinfo(Request::new(pb::GetinfoRequest {}))
+            .await?;
+        Ok(hex::encode(response.into_inner().id))
+    }
+
+    async fn node_channel_id_hex(&self, channel_id: &[u8]) -> Result<String, Status> {
+        let node_id_hex = self.local_node_id_hex().await?;
+        Ok(format!("{node_id_hex}{}", hex::encode(channel_id)))
+    }
+
+    async fn old_splice_state(&self, channel_id: &[u8]) -> Result<OldSpliceState, Status> {
+        let response = self
+            .inner
+            .list_peer_channels(Request::new(pb::ListpeerchannelsRequest { id: None }))
+            .await?;
+        let channel = response
+            .into_inner()
+            .channels
+            .into_iter()
+            .find(|channel| channel.channel_id.as_deref() == Some(channel_id))
+            .ok_or_else(|| {
+                Status::failed_precondition(format!(
+                    "missing channel {} for splice",
+                    hex::encode(channel_id)
+                ))
+            })?;
+
+        let funding_txid = channel
+            .funding_txid
+            .ok_or_else(|| Status::failed_precondition("channel is missing funding_txid"))?;
+        let funding_outnum = channel
+            .funding_outnum
+            .ok_or_else(|| Status::failed_precondition("channel is missing funding_outnum"))?;
+
+        Ok(OldSpliceState {
+            funding_outpoint: FundingOutpoint {
+                txid: hex::encode(funding_txid),
+                vout: funding_outnum,
+            },
+            channel_value_sat: amount_sat(channel.total_msat.as_ref(), "total_msat")?,
+            local_balance_sat: amount_sat(channel.to_us_msat.as_ref(), "to_us_msat")?,
+        })
+    }
+
     async fn get_routehints(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<Vec<pb::Routehint>, Error> {
         // Get a map of active channels to peers with a status of
         // "CHANNELD_NORMAL", and it aliases.
