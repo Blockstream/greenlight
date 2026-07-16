@@ -1,5 +1,5 @@
 use super::canonical::canonical_json_bytes;
-use super::{State, StateEntry};
+use super::{State, StateEntry, CHANNEL_PREFIX};
 use crate::bitcoin::consensus::encode::deserialize;
 use crate::bitcoin::psbt::Psbt;
 use crate::bitcoin::Transaction;
@@ -388,6 +388,8 @@ pub struct SignPsbtResponseFacts {
     pub timestamp_ms: u64,
 }
 
+pub type SignPsbtIntentFacts = SignPsbtResponseFacts;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpliceUpdateResponseFacts {
     pub node_channel_id_hex: String,
@@ -409,7 +411,7 @@ pub struct SpliceSignedResponseFacts {
     pub timestamp_ms: u64,
 }
 
-fn tx_shape(tx: &Transaction) -> PsbtShapeV1 {
+pub(crate) fn transaction_shape(tx: &Transaction) -> PsbtShapeV1 {
     PsbtShapeV1 {
         schema: "PsbtShapeV1".to_string(),
         version: tx.version.0,
@@ -450,7 +452,11 @@ pub fn psbt_shape_from_base64(psbt: &str) -> anyhow::Result<(String, PsbtShapeV1
         .decode(psbt)
         .map_err(|e| anyhow!("failed to decode PSBT base64: {e}"))?;
     let psbt = Psbt::deserialize(&raw).map_err(|e| anyhow!("failed to parse PSBT: {e}"))?;
-    let shape = tx_shape(&psbt.unsigned_tx);
+    psbt_shape_from_psbt(&psbt)
+}
+
+pub(crate) fn psbt_shape_from_psbt(psbt: &Psbt) -> anyhow::Result<(String, PsbtShapeV1)> {
+    let shape = transaction_shape(&psbt.unsigned_tx);
     let hash = psbt_shape_hash(&shape)?;
     Ok((hash, shape))
 }
@@ -572,6 +578,55 @@ pub fn candidate_funding_facts_from_tx(
 }
 
 impl State {
+    pub fn node_channel_id_for_funding_outpoint(
+        &self,
+        node_id_hex: &str,
+        funding_outpoint: &FundingOutpoint,
+    ) -> anyhow::Result<Option<String>> {
+        let node_id = hex::decode(node_id_hex)
+            .map_err(|e| anyhow!("invalid node id hex for channel lookup: {e}"))?;
+        if node_id.len() != 33 {
+            bail!(
+                "invalid node id length for channel lookup: expected 33 bytes, got {}",
+                node_id.len()
+            );
+        }
+
+        let key_prefix = format!("{CHANNEL_PREFIX}/{node_id_hex}");
+        let mut matches = Vec::new();
+        for (key, entry) in self.values.iter() {
+            if !key.starts_with(&key_prefix) || self.is_tombstone(key) {
+                continue;
+            }
+            let channel: vls_persist::model::ChannelEntry =
+                serde_json::from_value(entry.value.clone()).map_err(|e| {
+                    anyhow!("failed to decode channel state value for key {key}: {e}")
+                })?;
+            let Some(setup) = channel.channel_setup else {
+                continue;
+            };
+            if setup.funding_outpoint.txid.to_string() == funding_outpoint.txid
+                && setup.funding_outpoint.vout == funding_outpoint.vout
+            {
+                matches.push(
+                    key.strip_prefix(&format!("{CHANNEL_PREFIX}/"))
+                        .expect("channel key prefix checked")
+                        .to_string(),
+                );
+            }
+        }
+
+        match matches.as_slice() {
+            [] => Ok(None),
+            [node_channel_id_hex] => Ok(Some(node_channel_id_hex.clone())),
+            _ => bail!(
+                "multiple channels match funding outpoint {}:{}",
+                funding_outpoint.txid,
+                funding_outpoint.vout
+            ),
+        }
+    }
+
     fn get_splice<T>(&self, key: &str) -> anyhow::Result<Option<T>>
     where
         T: DeserializeOwned,
@@ -611,6 +666,61 @@ impl State {
 
     fn put_splice_session(&mut self, session: &SpliceSessionV1) -> anyhow::Result<()> {
         self.put_splice(&splice_session_key(&session.node_channel_id_hex), session)
+    }
+
+    fn link_splice_shape_context(
+        &mut self,
+        session: &mut SpliceSessionV1,
+        psbt_shape_hash: &str,
+        psbt_shape: &PsbtShapeV1,
+        updated_at_ms: u64,
+    ) -> anyhow::Result<()> {
+        let source_shape_hashes = session.linked_wallet_psbt_shape_hashes.clone();
+        let mut context = self
+            .get_splice_wallet_psbt_context(psbt_shape_hash)?
+            .unwrap_or_else(|| {
+                SpliceWalletPsbtContextV1::new(
+                    psbt_shape_hash.to_string(),
+                    psbt_shape.clone(),
+                    None,
+                    None,
+                    Vec::new(),
+                    updated_at_ms,
+                )
+            });
+        if let Some(linked_channel) = context.linked_node_channel_id_hex.as_deref() {
+            if linked_channel != session.node_channel_id_hex {
+                bail!(
+                    "PSBT shape {} is already linked to splice channel {}",
+                    psbt_shape_hash,
+                    linked_channel
+                );
+            }
+        }
+
+        context.latest_psbt_shape = psbt_shape.clone();
+        context.linked_node_channel_id_hex = Some(session.node_channel_id_hex.clone());
+        context.linked_splice_psbt_shape_hash = Some(psbt_shape_hash.to_string());
+        context.updated_at_ms = updated_at_ms;
+        if !session
+            .linked_wallet_psbt_shape_hashes
+            .iter()
+            .any(|hash| hash == psbt_shape_hash)
+        {
+            session
+                .linked_wallet_psbt_shape_hashes
+                .push(psbt_shape_hash.to_string());
+        }
+        self.put_splice_wallet_psbt_context(context)?;
+        for source_shape_hash in source_shape_hashes {
+            self.inherit_splice_wallet_context(
+                &source_shape_hash,
+                psbt_shape_hash,
+                &session.node_channel_id_hex,
+                updated_at_ms,
+            )?;
+        }
+        Ok(())
     }
 
     fn create_new_splice_session(
@@ -683,6 +793,12 @@ impl State {
             session.psbt.candidate_psbt_shape = intent.initial_psbt_shape;
             session.request_history.push(intent.splice_init_auth);
             session.updated_at_ms = intent.timestamp_ms;
+            if let (Some(hash), Some(shape)) = (
+                session.psbt.candidate_psbt_shape_hash.clone(),
+                session.psbt.candidate_psbt_shape.clone(),
+            ) {
+                self.link_splice_shape_context(&mut session, &hash, &shape, intent.timestamp_ms)?;
+            }
             return self.put_splice_session(&session);
         }
 
@@ -699,6 +815,12 @@ impl State {
         );
         session.psbt.candidate_psbt_shape_hash = intent.initial_psbt_shape_hash;
         session.psbt.candidate_psbt_shape = intent.initial_psbt_shape;
+        if let (Some(hash), Some(shape)) = (
+            session.psbt.candidate_psbt_shape_hash.clone(),
+            session.psbt.candidate_psbt_shape.clone(),
+        ) {
+            self.link_splice_shape_context(&mut session, &hash, &shape, intent.timestamp_ms)?;
+        }
         self.create_local_splice_session(session)
     }
 
@@ -741,10 +863,16 @@ impl State {
         self.put_splice_wallet_psbt_context(context)
     }
 
+    pub fn record_signpsbt_intent(&mut self, facts: SignPsbtIntentFacts) -> anyhow::Result<()> {
+        self.record_signpsbt_response(facts)
+    }
+
     pub fn record_splice_update_response(
         &mut self,
         facts: SpliceUpdateResponseFacts,
     ) -> anyhow::Result<()> {
+        let linked_psbt_shape_hash = facts.psbt_shape_hash.clone();
+        let linked_psbt_shape = facts.psbt_shape.clone();
         let mut session = self
             .get_splice_session(&facts.node_channel_id_hex)?
             .ok_or_else(|| {
@@ -785,6 +913,12 @@ impl State {
         }
 
         session.updated_at_ms = facts.timestamp_ms;
+        self.link_splice_shape_context(
+            &mut session,
+            &linked_psbt_shape_hash,
+            &linked_psbt_shape,
+            facts.timestamp_ms,
+        )?;
         self.put_splice_session(&session)
     }
 
@@ -792,6 +926,8 @@ impl State {
         &mut self,
         facts: SpliceSignedResponseFacts,
     ) -> anyhow::Result<()> {
+        let linked_psbt_shape_hash = facts.psbt_shape_hash.clone();
+        let linked_psbt_shape = facts.psbt_shape.clone();
         let mut session = self
             .get_splice_session(&facts.node_channel_id_hex)?
             .ok_or_else(|| {
@@ -821,6 +957,13 @@ impl State {
         }
         session.phase = SplicePhase::SignaturesExchanging;
         session.updated_at_ms = facts.timestamp_ms;
+
+        self.link_splice_shape_context(
+            &mut session,
+            &linked_psbt_shape_hash,
+            &linked_psbt_shape,
+            facts.timestamp_ms,
+        )?;
 
         if let Some(candidate) = facts.candidate {
             let index = SpliceOutpointIndexV1::for_session(&facts.node_channel_id_hex);
@@ -1026,6 +1169,54 @@ impl State {
         self.put_splice_session(&session)
     }
 
+    pub fn inherit_splice_wallet_context(
+        &mut self,
+        source_psbt_shape_hash: &str,
+        candidate_psbt_shape_hash: &str,
+        node_channel_id_hex: &str,
+        updated_at_ms: u64,
+    ) -> anyhow::Result<()> {
+        if source_psbt_shape_hash == candidate_psbt_shape_hash {
+            return Ok(());
+        }
+        let Some(source) = self.get_splice_wallet_psbt_context(source_psbt_shape_hash)? else {
+            return Ok(());
+        };
+        let mut candidate = self
+            .get_splice_wallet_psbt_context(candidate_psbt_shape_hash)?
+            .ok_or_else(|| {
+                anyhow!(
+                    "missing splice candidate PSBT context {}",
+                    candidate_psbt_shape_hash
+                )
+            })?;
+        if candidate.linked_node_channel_id_hex.as_deref() != Some(node_channel_id_hex) {
+            bail!(
+                "splice candidate PSBT context {} is not linked to channel {}",
+                candidate_psbt_shape_hash,
+                node_channel_id_hex
+            );
+        }
+
+        if candidate.fundpsbt_auth.is_none() {
+            candidate.fundpsbt_auth = source.fundpsbt_auth;
+        }
+        for wallet_input in source.wallet_inputs {
+            let remains_in_candidate = candidate.latest_psbt_shape.inputs.iter().any(|input| {
+                input.prev_txid == wallet_input.txid && input.prev_vout == wallet_input.vout
+            });
+            let already_known = candidate
+                .wallet_inputs
+                .iter()
+                .any(|input| input.txid == wallet_input.txid && input.vout == wallet_input.vout);
+            if remains_in_candidate && !already_known {
+                candidate.wallet_inputs.push(wallet_input);
+            }
+        }
+        candidate.updated_at_ms = updated_at_ms;
+        self.put_splice_wallet_psbt_context(candidate)
+    }
+
     pub fn tombstone_splice_session(&mut self, node_channel_id_hex: &str) -> anyhow::Result<()> {
         let Some(session) = self.get_splice_session(node_channel_id_hex)? else {
             return Ok(());
@@ -1055,11 +1246,18 @@ mod tests {
     use super::*;
     use crate::bitcoin::absolute::LockTime;
     use crate::bitcoin::psbt::Psbt;
+    use crate::bitcoin::secp256k1::{PublicKey, Secp256k1, SecretKey};
     use crate::bitcoin::transaction::Version;
     use crate::bitcoin::{
         Amount, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
     };
+    use crate::lightning::ln::chan_utils::ChannelPublicKeys;
+    use crate::lightning::ln::channel_keys::{
+        DelayedPaymentBasepoint, HtlcBasepoint, RevocationBasepoint,
+    };
     use crate::pb::SignerStateEntry;
+    use lightning_signer::channel::{ChannelSetup, CommitmentType};
+    use lightning_signer::policy::validator::EnforcementState;
     use serde_json::json;
     use std::str::FromStr;
 
@@ -1076,6 +1274,38 @@ mod tests {
         FundingOutpoint {
             txid: txid.to_string(),
             vout,
+        }
+    }
+
+    fn channel_entry(txid: &str, vout: u32) -> vls_persist::model::ChannelEntry {
+        let secret = SecretKey::from_slice(&[1; 32]).unwrap();
+        let pubkey = PublicKey::from_secret_key(&Secp256k1::signing_only(), &secret);
+        vls_persist::model::ChannelEntry {
+            channel_value_satoshis: 1_000_000,
+            channel_setup: Some(ChannelSetup {
+                is_outbound: true,
+                channel_value_sat: 1_000_000,
+                push_value_msat: 0,
+                funding_outpoint: OutPoint {
+                    txid: Txid::from_str(txid).unwrap(),
+                    vout,
+                },
+                holder_selected_contest_delay: 6,
+                holder_shutdown_script: None,
+                counterparty_points: ChannelPublicKeys {
+                    funding_pubkey: pubkey,
+                    revocation_basepoint: RevocationBasepoint(pubkey),
+                    payment_point: pubkey,
+                    delayed_payment_basepoint: DelayedPaymentBasepoint(pubkey),
+                    htlc_basepoint: HtlcBasepoint(pubkey),
+                },
+                counterparty_selected_contest_delay: 6,
+                counterparty_shutdown_script: None,
+                commitment_type: CommitmentType::StaticRemoteKey,
+            }),
+            id: None,
+            enforcement_state: EnforcementState::new(600_000),
+            blockheight: None,
         }
     }
 
@@ -1155,6 +1385,54 @@ mod tests {
     }
 
     #[test]
+    fn resolves_canonical_node_channel_id_from_old_funding_outpoint() {
+        let mut state = State::new();
+        let node_id_hex = "02".repeat(33);
+        let channel_id = format!("{}{}", node_id_hex, "03".repeat(41));
+        let funding_txid = "11".repeat(32);
+        state
+            .insert_channel(&channel_id, channel_entry(&funding_txid, 7))
+            .unwrap();
+
+        let resolved = state
+            .node_channel_id_for_funding_outpoint(
+                &node_id_hex,
+                &FundingOutpoint {
+                    txid: funding_txid,
+                    vout: 7,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(resolved.as_deref(), Some(channel_id.as_str()));
+    }
+
+    #[test]
+    fn rejects_ambiguous_node_channel_id_for_funding_outpoint() {
+        let mut state = State::new();
+        let node_id_hex = "02".repeat(33);
+        let funding_txid = "11".repeat(32);
+        for suffix in ["03", "04"] {
+            let channel_id = format!("{}{}", node_id_hex, suffix.repeat(41));
+            state
+                .insert_channel(&channel_id, channel_entry(&funding_txid, 7))
+                .unwrap();
+        }
+
+        let error = state
+            .node_channel_id_for_funding_outpoint(
+                &node_id_hex,
+                &FundingOutpoint {
+                    txid: funding_txid,
+                    vout: 7,
+                },
+            )
+            .unwrap_err();
+
+        assert!(error.to_string().contains("multiple channels"));
+    }
+
+    #[test]
     fn record_local_splice_intent_keeps_authority_out_of_psbt_shape() {
         let mut state = State::new();
 
@@ -1192,6 +1470,14 @@ mod tests {
         assert_eq!(
             session.psbt.candidate_psbt_shape_hash.as_deref(),
             Some("shape-init")
+        );
+        let wallet_context = state
+            .get_splice_wallet_psbt_context("shape-init")
+            .unwrap()
+            .expect("splice candidate creates a linked PSBT context");
+        assert_eq!(
+            wallet_context.linked_node_channel_id_hex.as_deref(),
+            Some("4444444444444444444444444444444444444444444444444444444444444444")
         );
 
         let psbt_shape_value =
@@ -1320,6 +1606,130 @@ mod tests {
         assert_eq!(context.signonly, vec![0]);
         assert_eq!(context.change_outnum, Some(0));
         assert_eq!(context.wallet_inputs[0].value_sat, 25_000);
+    }
+
+    #[test]
+    fn signpsbt_intent_preserves_existing_splice_link() {
+        let mut state = State::new();
+        state
+            .record_local_splice_intent(LocalSpliceIntent {
+                node_id_hex: "02".repeat(33),
+                channel_id_hex: "33".repeat(32),
+                node_channel_id_hex: "44".repeat(32),
+                old: OldSpliceState {
+                    funding_outpoint: outpoint(&"55".repeat(32), 0),
+                    channel_value_sat: 1_000_000,
+                    local_balance_sat: 600_000,
+                },
+                splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 1),
+                authorized_relative_amount_sat: 50_000,
+                fee_policy: FeePolicy::default(),
+                initial_psbt_shape_hash: Some("shape-a".to_string()),
+                initial_psbt_shape: Some(shape("06")),
+                timestamp_ms: 1,
+            })
+            .unwrap();
+
+        state
+            .record_signpsbt_intent(SignPsbtIntentFacts {
+                psbt_shape_hash: "shape-a".to_string(),
+                psbt_shape: shape("06"),
+                signpsbt_auth: auth("/cln.Node/SignPsbt", &"77".repeat(32), 2),
+                signonly: vec![0],
+                timestamp_ms: 2,
+            })
+            .unwrap();
+
+        let context = state
+            .get_splice_wallet_psbt_context("shape-a")
+            .unwrap()
+            .unwrap();
+        assert!(context.signpsbt_auth.is_some());
+        assert_eq!(context.signonly, vec![0]);
+        assert_eq!(
+            context.linked_node_channel_id_hex.as_deref(),
+            Some("4444444444444444444444444444444444444444444444444444444444444444")
+        );
+    }
+
+    #[test]
+    fn splice_candidate_inherits_wallet_inputs_from_initial_psbt() {
+        let mut state = State::new();
+        let source_shape = shape("07");
+        let mut candidate_shape = source_shape.clone();
+        candidate_shape.outputs.push(PsbtShapeOutputV1 {
+            value_sat: 50_000,
+            script_pubkey_hex: "0014".to_string(),
+            script_pubkey_hash: "bb".repeat(32),
+        });
+        state
+            .record_fundpsbt_response(FundPsbtResponseFacts {
+                psbt_shape_hash: "source-shape".to_string(),
+                psbt_shape: source_shape.clone(),
+                fundpsbt_auth: auth("/cln.Node/FundPsbt", &"77".repeat(32), 1),
+                wallet_inputs: vec![WalletInput {
+                    txid: source_shape.inputs[0].prev_txid.clone(),
+                    vout: source_shape.inputs[0].prev_vout,
+                    value_sat: 25_000,
+                    reserved_to_block: Some(100),
+                    source: WalletInputSource::FundPsbt,
+                }],
+                change_outnum: None,
+                timestamp_ms: 1,
+            })
+            .unwrap();
+        state
+            .record_local_splice_intent(LocalSpliceIntent {
+                node_id_hex: "02".repeat(33),
+                channel_id_hex: "33".repeat(32),
+                node_channel_id_hex: "44".repeat(32),
+                old: OldSpliceState {
+                    funding_outpoint: outpoint(&"55".repeat(32), 0),
+                    channel_value_sat: 1_000_000,
+                    local_balance_sat: 600_000,
+                },
+                splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 2),
+                authorized_relative_amount_sat: 50_000,
+                fee_policy: FeePolicy::default(),
+                initial_psbt_shape_hash: Some("candidate-shape".to_string()),
+                initial_psbt_shape: Some(candidate_shape),
+                timestamp_ms: 2,
+            })
+            .unwrap();
+
+        state
+            .inherit_splice_wallet_context("source-shape", "candidate-shape", &"44".repeat(32), 2)
+            .unwrap();
+
+        let candidate = state
+            .get_splice_wallet_psbt_context("candidate-shape")
+            .unwrap()
+            .unwrap();
+        assert!(candidate.fundpsbt_auth.is_some());
+        assert_eq!(candidate.wallet_inputs.len(), 1);
+        assert_eq!(candidate.wallet_inputs[0].reserved_to_block, Some(100));
+
+        let mut updated_shape = candidate.latest_psbt_shape.clone();
+        updated_shape.outputs[0].value_sat += 1;
+        state
+            .record_splice_update_response(SpliceUpdateResponseFacts {
+                node_channel_id_hex: "44".repeat(32),
+                psbt_shape_hash: "updated-shape".to_string(),
+                psbt_shape: updated_shape,
+                splice_update_auth: auth("/cln.Node/SpliceUpdate", &"88".repeat(32), 3),
+                commitments_secured: false,
+                signatures_secured: None,
+                timestamp_ms: 3,
+            })
+            .unwrap();
+
+        let updated = state
+            .get_splice_wallet_psbt_context("updated-shape")
+            .unwrap()
+            .unwrap();
+        assert!(updated.fundpsbt_auth.is_some());
+        assert_eq!(updated.wallet_inputs.len(), 1);
+        assert_eq!(updated.wallet_inputs[0].reserved_to_block, Some(100));
     }
 
     #[test]
