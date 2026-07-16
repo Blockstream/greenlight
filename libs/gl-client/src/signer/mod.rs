@@ -59,6 +59,7 @@ pub use backup::{
 pub mod model;
 mod report;
 mod resolve;
+mod splice_policy;
 
 const VERSION: &str = "v26.06";
 const GITHASH: &str = env!("GIT_HASH");
@@ -154,6 +155,18 @@ pub enum Error {
     #[error("resolver error: request {0:?}, context: {1:?}")]
     Resolver(Vec<u8>, Vec<crate::signer::model::Request>),
 
+    #[error("splice policy rejected {operation}: {violation}")]
+    SplicePolicy {
+        operation: String,
+        violation: String,
+    },
+
+    #[error("splice request {operation} requires unavailable VLS proof: {required_proof}")]
+    VlsSpliceUnavailable {
+        operation: String,
+        required_proof: String,
+    },
+
     #[error("error asking node to be upgraded: {0}")]
     Upgrade(tonic::Status),
 
@@ -165,6 +178,15 @@ pub enum Error {
 
     #[error("could not approve pairing request: {0}")]
     ApprovePairingRequestError(String),
+}
+
+impl Error {
+    fn is_splice_hard_stop(&self) -> bool {
+        matches!(
+            self,
+            Self::SplicePolicy { .. } | Self::VlsSpliceUnavailable { .. }
+        )
+    }
 }
 
 impl Signer {
@@ -752,16 +774,25 @@ impl Signer {
     fn authenticate_request(
         &self,
         msg: &vls_protocol::msgs::Message,
-        reqs: &Vec<model::Request>,
+        reqs: &[model::Request],
+        hsm_context: Option<&HsmRequestContext>,
     ) -> Result<(), Error> {
         log::trace!(
             "Resolving signature request against pending grpc commands: {:?}",
             reqs
         );
 
-        // Quick path out of here: we can't find a resolution for a
-        // request, then abort!
-        Resolver::try_resolve(msg, &reqs)?;
+        let state = self.state.lock().map_err(|e| {
+            if let Some(operation) = splice_policy::operation(msg) {
+                Error::SplicePolicy {
+                    operation: operation.as_str().to_string(),
+                    violation: format!("failed to acquire signer state lock: {e:?}"),
+                }
+            } else {
+                Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
+            }
+        })?;
+        Resolver::try_resolve(msg, reqs, &state, &self.id, hsm_context)?;
 
         Ok(())
     }
@@ -778,7 +809,6 @@ impl Signer {
 
         let incoming_state = crate::persist::State::try_from(req.signer_state.as_slice())
             .map_err(|e| Error::Other(anyhow!("Failed to decode signer state: {e}")))?;
-
 
         // Create sketch from incoming state (nodelet's view) so we can
         // send back any entries the nodelet doesn't know about yet,
@@ -843,7 +873,7 @@ impl Signer {
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", prestate_log);
 
-        if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
+        if let Err(e) = self.authenticate_request(&msg, &ctxrequests, req.context.as_ref()) {
             report::Reporter::report(crate::pb::scheduler::SignerRejection {
                 msg: e.to_string(),
                 request: Some(req.clone()),
@@ -851,8 +881,12 @@ impl Signer {
                 node_id: self.node_id(),
             })
             .await;
+            // The permissive fallback must not reach VLS handlers without splice proofs.
+            if e.is_splice_hard_stop() {
+                return Err(e);
+            }
             #[cfg(not(feature = "permissive"))]
-            return Err(Error::Resolver(req.raw, ctxrequests));
+            return Err(e);
         };
 
         // If present, add the close_to_addr to the allowlist

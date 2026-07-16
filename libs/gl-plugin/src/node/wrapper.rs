@@ -11,7 +11,7 @@ use cln_rpc::{self};
 use gl_client::persist::{
     candidate_funding_facts_from_psbt, psbt_shape_from_base64, wallet_inputs_from_psbt, FeePolicy,
     FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState,
-    SignPsbtResponseFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
+    SignPsbtIntentFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
     WalletInputReservation, WalletInputSource,
 };
 use log::debug;
@@ -436,16 +436,15 @@ impl Node for WrappedNodeServer {
         r: Request<pb::SignpsbtRequest>,
     ) -> Result<Response<pb::SignpsbtResponse>, Status> {
         let auth = maybe_normalized_auth("/cln.Node/SignPsbt", &r)?;
-        let signonly = r.get_ref().signonly.clone();
-        let response = self.inner.sign_psbt(r).await?;
         if let Some(auth) = auth {
-            let body = response.get_ref();
+            let body = r.get_ref();
             let (psbt_shape_hash, psbt_shape) =
-                psbt_shape_from_base64(&body.signed_psbt).map_err(internal_status)?;
+                psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
             let timestamp_ms = auth.timestamp_ms;
+            let signonly = body.signonly.clone();
 
             self.update_splice_state(|state| {
-                state.record_signpsbt_response(SignPsbtResponseFacts {
+                state.record_signpsbt_intent(SignPsbtIntentFacts {
                     psbt_shape_hash,
                     psbt_shape,
                     signpsbt_auth: auth,
@@ -455,7 +454,7 @@ impl Node for WrappedNodeServer {
             })
             .await?;
         }
-        Ok(response)
+        self.inner.sign_psbt(r).await
     }
 
     async fn utxo_psbt(
@@ -878,19 +877,29 @@ impl Node for WrappedNodeServer {
         let request_body = request.get_ref().clone();
         let node_id_hex = self.local_node_id_hex().await?;
         let channel_id_hex = hex::encode(&request_body.channel_id);
-        let node_channel_id_hex = format!("{node_id_hex}{channel_id_hex}");
         let old = self.old_splice_state(&request_body.channel_id).await?;
+        let node_channel_id_hex = self
+            .node_channel_id_hex_for_outpoint(&node_id_hex, &old.funding_outpoint)
+            .await?;
+        let source_wallet_psbt_shape_hash = request_body
+            .initialpsbt
+            .as_deref()
+            .map(psbt_shape_from_base64)
+            .transpose()
+            .map_err(internal_status)?
+            .map(|(hash, _)| hash);
 
         let response = self.inner.splice_init(request).await?;
         let body = response.get_ref();
         let (psbt_shape_hash, psbt_shape) =
             psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+        let candidate_psbt_shape_hash = psbt_shape_hash.clone();
         let timestamp_ms = auth.timestamp_ms;
         self.update_splice_state(|state| {
             state.record_local_splice_intent(LocalSpliceIntent {
                 node_id_hex,
                 channel_id_hex,
-                node_channel_id_hex,
+                node_channel_id_hex: node_channel_id_hex.clone(),
                 old,
                 splice_init_auth: auth,
                 authorized_relative_amount_sat: request_body.relative_amount,
@@ -901,7 +910,16 @@ impl Node for WrappedNodeServer {
                 initial_psbt_shape_hash: Some(psbt_shape_hash),
                 initial_psbt_shape: Some(psbt_shape),
                 timestamp_ms,
-            })
+            })?;
+            if let Some(source_psbt_shape_hash) = source_wallet_psbt_shape_hash.as_deref() {
+                state.inherit_splice_wallet_context(
+                    source_psbt_shape_hash,
+                    &candidate_psbt_shape_hash,
+                    &node_channel_id_hex,
+                    timestamp_ms,
+                )?;
+            }
+            Ok(())
         })
         .await?;
         Ok(response)
@@ -1356,13 +1374,10 @@ impl WrappedNodeServer {
     where
         F: FnOnce(&mut gl_client::persist::State) -> anyhow::Result<()>,
     {
-        let snapshot = {
-            let mut state = self.node_server.signer_state.lock().await;
-            update(&mut state).map_err(internal_status)?;
-            state.clone()
-        };
+        let mut state = self.node_server.signer_state.lock().await;
+        update(&mut state).map_err(internal_status)?;
         let store = self.node_server.signer_state_store.lock().await;
-        store.write(snapshot).await.map_err(internal_status)
+        store.write(state.clone()).await.map_err(internal_status)
     }
 
     async fn local_node_id_hex(&self) -> Result<String, Status> {
@@ -1375,7 +1390,26 @@ impl WrappedNodeServer {
 
     async fn node_channel_id_hex(&self, channel_id: &[u8]) -> Result<String, Status> {
         let node_id_hex = self.local_node_id_hex().await?;
-        Ok(format!("{node_id_hex}{}", hex::encode(channel_id)))
+        let old = self.old_splice_state(channel_id).await?;
+        self.node_channel_id_hex_for_outpoint(&node_id_hex, &old.funding_outpoint)
+            .await
+    }
+
+    async fn node_channel_id_hex_for_outpoint(
+        &self,
+        node_id_hex: &str,
+        funding_outpoint: &FundingOutpoint,
+    ) -> Result<String, Status> {
+        let state = self.node_server.signer_state.lock().await;
+        state
+            .node_channel_id_for_funding_outpoint(node_id_hex, funding_outpoint)
+            .map_err(internal_status)?
+            .ok_or_else(|| {
+                Status::failed_precondition(format!(
+                    "missing signer channel for funding outpoint {}:{}",
+                    funding_outpoint.txid, funding_outpoint.vout
+                ))
+            })
     }
 
     async fn old_splice_state(&self, channel_id: &[u8]) -> Result<OldSpliceState, Status> {
