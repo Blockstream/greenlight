@@ -4,6 +4,9 @@ version = "0.3.0"
 edition = "2021"
 description = "CLI wrapper for gl-sdk"
 
+[features]
+experimental-splicing = ["glsdk/experimental-splicing"]
+
 [[bin]]
 name = "glsdk"
 path = "src/bin/glsdk.rs"

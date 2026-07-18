@@ -447,12 +447,341 @@ pub fn psbt_shape_hash(shape: &PsbtShapeV1) -> anyhow::Result<String> {
     Ok(sha256::digest(bytes.as_slice()))
 }
 
+#[derive(Clone, Copy)]
+struct PsbtMapEntry<'a> {
+    key_type: u8,
+    key_data: &'a [u8],
+    value: &'a [u8],
+}
+
+struct PsbtCursor<'a> {
+    raw: &'a [u8],
+    position: usize,
+}
+
+impl<'a> PsbtCursor<'a> {
+    fn new(raw: &'a [u8]) -> Self {
+        Self { raw, position: 0 }
+    }
+
+    fn remaining(&self) -> usize {
+        self.raw.len() - self.position
+    }
+
+    fn read_exact(&mut self, length: usize) -> anyhow::Result<&'a [u8]> {
+        let end = self
+            .position
+            .checked_add(length)
+            .ok_or_else(|| anyhow!("PSBT field length overflow"))?;
+        if end > self.raw.len() {
+            bail!("unexpected end of PSBT");
+        }
+        let value = &self.raw[self.position..end];
+        self.position = end;
+        Ok(value)
+    }
+
+    fn read_compact_size(&mut self) -> anyhow::Result<u64> {
+        let prefix = self.read_exact(1)?[0];
+        let (value, minimum) = match prefix {
+            0x00..=0xfc => return Ok(prefix as u64),
+            0xfd => (
+                u16::from_le_bytes(self.read_exact(2)?.try_into().unwrap()) as u64,
+                0xfd,
+            ),
+            0xfe => (
+                u32::from_le_bytes(self.read_exact(4)?.try_into().unwrap()) as u64,
+                0x1_0000,
+            ),
+            0xff => (
+                u64::from_le_bytes(self.read_exact(8)?.try_into().unwrap()),
+                0x1_0000_0000,
+            ),
+        };
+        if value < minimum {
+            bail!("non-canonical CompactSize value in PSBT");
+        }
+        Ok(value)
+    }
+
+    fn read_map(&mut self, map_name: &str) -> anyhow::Result<Vec<PsbtMapEntry<'a>>> {
+        let mut entries = Vec::new();
+        loop {
+            let key_length = usize::try_from(self.read_compact_size()?)
+                .map_err(|_| anyhow!("{map_name} key is too large"))?;
+            if key_length == 0 {
+                return Ok(entries);
+            }
+
+            let key = self.read_exact(key_length)?;
+            let (&key_type, key_data) = key
+                .split_first()
+                .ok_or_else(|| anyhow!("{map_name} contains an empty key"))?;
+            if entries.iter().any(|entry: &PsbtMapEntry<'_>| {
+                entry.key_type == key_type && entry.key_data == key_data
+            }) {
+                bail!("{map_name} contains a duplicate key");
+            }
+
+            let value_length = usize::try_from(self.read_compact_size()?)
+                .map_err(|_| anyhow!("{map_name} value is too large"))?;
+            entries.push(PsbtMapEntry {
+                key_type,
+                key_data,
+                value: self.read_exact(value_length)?,
+            });
+        }
+    }
+}
+
+fn psbt_map_value<'a>(
+    entries: &[PsbtMapEntry<'a>],
+    key_type: u8,
+    field_name: &str,
+) -> anyhow::Result<Option<&'a [u8]>> {
+    let mut value = None;
+    for entry in entries.iter().filter(|entry| entry.key_type == key_type) {
+        if !entry.key_data.is_empty() {
+            bail!("{field_name} must not contain key data");
+        }
+        if value.replace(entry.value).is_some() {
+            bail!("duplicate {field_name}");
+        }
+    }
+    Ok(value)
+}
+
+fn required_psbt_map_value<'a>(
+    entries: &[PsbtMapEntry<'a>],
+    key_type: u8,
+    field_name: &str,
+) -> anyhow::Result<&'a [u8]> {
+    psbt_map_value(entries, key_type, field_name)?
+        .ok_or_else(|| anyhow!("missing required {field_name}"))
+}
+
+fn psbt_u32(value: &[u8], field_name: &str) -> anyhow::Result<u32> {
+    let bytes: [u8; 4] = value
+        .try_into()
+        .map_err(|_| anyhow!("{field_name} must be four bytes"))?;
+    Ok(u32::from_le_bytes(bytes))
+}
+
+fn psbt_i32(value: &[u8], field_name: &str) -> anyhow::Result<i32> {
+    let bytes: [u8; 4] = value
+        .try_into()
+        .map_err(|_| anyhow!("{field_name} must be four bytes"))?;
+    Ok(i32::from_le_bytes(bytes))
+}
+
+fn psbt_compact_size(value: &[u8], field_name: &str) -> anyhow::Result<u64> {
+    let mut cursor = PsbtCursor::new(value);
+    let result = cursor.read_compact_size()?;
+    if cursor.remaining() != 0 {
+        bail!("{field_name} contains trailing bytes");
+    }
+    Ok(result)
+}
+
+fn psbt_v2_locktime(
+    fallback_locktime: u32,
+    requirements: &[(Option<u32>, Option<u32>)],
+) -> anyhow::Result<u32> {
+    let constrained: Vec<_> = requirements
+        .iter()
+        .filter(|(required_time, required_height)| {
+            required_time.is_some() || required_height.is_some()
+        })
+        .collect();
+    if constrained.is_empty() {
+        return Ok(fallback_locktime);
+    }
+
+    if constrained
+        .iter()
+        .all(|(_, required_height)| required_height.is_some())
+    {
+        return constrained
+            .iter()
+            .filter_map(|(_, required_height)| *required_height)
+            .max()
+            .ok_or_else(|| anyhow!("PSBTv2 required height locktime is missing"));
+    }
+    if constrained
+        .iter()
+        .all(|(required_time, _)| required_time.is_some())
+    {
+        return constrained
+            .iter()
+            .filter_map(|(required_time, _)| *required_time)
+            .max()
+            .ok_or_else(|| anyhow!("PSBTv2 required time locktime is missing"));
+    }
+
+    bail!("PSBTv2 inputs contain incompatible required locktimes")
+}
+
+fn psbt_v2_shape(raw: &[u8]) -> anyhow::Result<PsbtShapeV1> {
+    const PSBT_MAGIC: &[u8] = b"psbt\xff";
+    const PSBT_GLOBAL_UNSIGNED_TX: u8 = 0x00;
+    const PSBT_GLOBAL_TX_VERSION: u8 = 0x02;
+    const PSBT_GLOBAL_FALLBACK_LOCKTIME: u8 = 0x03;
+    const PSBT_GLOBAL_INPUT_COUNT: u8 = 0x04;
+    const PSBT_GLOBAL_OUTPUT_COUNT: u8 = 0x05;
+    const PSBT_GLOBAL_VERSION: u8 = 0xfb;
+    const PSBT_IN_PREVIOUS_TXID: u8 = 0x0e;
+    const PSBT_IN_OUTPUT_INDEX: u8 = 0x0f;
+    const PSBT_IN_SEQUENCE: u8 = 0x10;
+    const PSBT_IN_REQUIRED_TIME_LOCKTIME: u8 = 0x11;
+    const PSBT_IN_REQUIRED_HEIGHT_LOCKTIME: u8 = 0x12;
+    const PSBT_OUT_AMOUNT: u8 = 0x03;
+    const PSBT_OUT_SCRIPT: u8 = 0x04;
+    const LOCKTIME_THRESHOLD: u32 = 500_000_000;
+
+    let mut cursor = PsbtCursor::new(raw);
+    if cursor.read_exact(PSBT_MAGIC.len())? != PSBT_MAGIC {
+        bail!("invalid PSBT magic bytes");
+    }
+
+    let globals = cursor.read_map("PSBT global map")?;
+    if psbt_map_value(&globals, PSBT_GLOBAL_UNSIGNED_TX, "PSBT_GLOBAL_UNSIGNED_TX")?.is_some() {
+        bail!("PSBTv2 must not contain PSBT_GLOBAL_UNSIGNED_TX");
+    }
+    let psbt_version = psbt_u32(
+        required_psbt_map_value(&globals, PSBT_GLOBAL_VERSION, "PSBT_GLOBAL_VERSION")?,
+        "PSBT_GLOBAL_VERSION",
+    )?;
+    if psbt_version != 2 {
+        bail!("expected PSBT version 2, got {psbt_version}");
+    }
+    let transaction_version = psbt_i32(
+        required_psbt_map_value(&globals, PSBT_GLOBAL_TX_VERSION, "PSBT_GLOBAL_TX_VERSION")?,
+        "PSBT_GLOBAL_TX_VERSION",
+    )?;
+    let fallback_locktime = psbt_map_value(
+        &globals,
+        PSBT_GLOBAL_FALLBACK_LOCKTIME,
+        "PSBT_GLOBAL_FALLBACK_LOCKTIME",
+    )?
+    .map(|value| psbt_u32(value, "PSBT_GLOBAL_FALLBACK_LOCKTIME"))
+    .transpose()?
+    .unwrap_or(0);
+    let input_count = psbt_compact_size(
+        required_psbt_map_value(&globals, PSBT_GLOBAL_INPUT_COUNT, "PSBT_GLOBAL_INPUT_COUNT")?,
+        "PSBT_GLOBAL_INPUT_COUNT",
+    )?;
+    let output_count = psbt_compact_size(
+        required_psbt_map_value(
+            &globals,
+            PSBT_GLOBAL_OUTPUT_COUNT,
+            "PSBT_GLOBAL_OUTPUT_COUNT",
+        )?,
+        "PSBT_GLOBAL_OUTPUT_COUNT",
+    )?;
+    let map_count = input_count
+        .checked_add(output_count)
+        .ok_or_else(|| anyhow!("PSBTv2 input and output count overflow"))?;
+    if map_count > cursor.remaining() as u64 {
+        bail!("PSBTv2 input and output counts exceed the remaining data");
+    }
+    let input_count = usize::try_from(input_count)
+        .map_err(|_| anyhow!("PSBT_GLOBAL_INPUT_COUNT is too large"))?;
+    let output_count = usize::try_from(output_count)
+        .map_err(|_| anyhow!("PSBT_GLOBAL_OUTPUT_COUNT is too large"))?;
+
+    let mut inputs = Vec::with_capacity(input_count);
+    let mut locktime_requirements = Vec::with_capacity(input_count);
+    for input_index in 0..input_count {
+        let map_name = format!("PSBT input map {input_index}");
+        let input = cursor.read_map(&map_name)?;
+        let previous_txid =
+            required_psbt_map_value(&input, PSBT_IN_PREVIOUS_TXID, "PSBT_IN_PREVIOUS_TXID")?;
+        if previous_txid.len() != 32 {
+            bail!("PSBT_IN_PREVIOUS_TXID must be 32 bytes");
+        }
+        let previous_vout = psbt_u32(
+            required_psbt_map_value(&input, PSBT_IN_OUTPUT_INDEX, "PSBT_IN_OUTPUT_INDEX")?,
+            "PSBT_IN_OUTPUT_INDEX",
+        )?;
+        let sequence = psbt_map_value(&input, PSBT_IN_SEQUENCE, "PSBT_IN_SEQUENCE")?
+            .map(|value| psbt_u32(value, "PSBT_IN_SEQUENCE"))
+            .transpose()?
+            .unwrap_or(u32::MAX);
+        let required_time = psbt_map_value(
+            &input,
+            PSBT_IN_REQUIRED_TIME_LOCKTIME,
+            "PSBT_IN_REQUIRED_TIME_LOCKTIME",
+        )?
+        .map(|value| psbt_u32(value, "PSBT_IN_REQUIRED_TIME_LOCKTIME"))
+        .transpose()?;
+        if required_time.is_some_and(|locktime| locktime < LOCKTIME_THRESHOLD) {
+            bail!("PSBT_IN_REQUIRED_TIME_LOCKTIME must be a time-based locktime");
+        }
+        let required_height = psbt_map_value(
+            &input,
+            PSBT_IN_REQUIRED_HEIGHT_LOCKTIME,
+            "PSBT_IN_REQUIRED_HEIGHT_LOCKTIME",
+        )?
+        .map(|value| psbt_u32(value, "PSBT_IN_REQUIRED_HEIGHT_LOCKTIME"))
+        .transpose()?;
+        if required_height.is_some_and(|locktime| locktime == 0 || locktime >= LOCKTIME_THRESHOLD) {
+            bail!("PSBT_IN_REQUIRED_HEIGHT_LOCKTIME must be a block height");
+        }
+
+        let mut display_txid = previous_txid.to_vec();
+        display_txid.reverse();
+        inputs.push(PsbtShapeInputV1 {
+            prev_txid: hex::encode(display_txid),
+            prev_vout: previous_vout,
+            sequence,
+        });
+        locktime_requirements.push((required_time, required_height));
+    }
+
+    let mut outputs = Vec::with_capacity(output_count);
+    for output_index in 0..output_count {
+        let map_name = format!("PSBT output map {output_index}");
+        let output = cursor.read_map(&map_name)?;
+        let amount_bytes: [u8; 8] =
+            required_psbt_map_value(&output, PSBT_OUT_AMOUNT, "PSBT_OUT_AMOUNT")?
+                .try_into()
+                .map_err(|_| anyhow!("PSBT_OUT_AMOUNT must be eight bytes"))?;
+        let amount = i64::from_le_bytes(amount_bytes);
+        if amount < 0 {
+            bail!("PSBT_OUT_AMOUNT must not be negative");
+        }
+        let script = required_psbt_map_value(&output, PSBT_OUT_SCRIPT, "PSBT_OUT_SCRIPT")?;
+        outputs.push(PsbtShapeOutputV1 {
+            value_sat: amount as u64,
+            script_pubkey_hex: hex::encode(script),
+            script_pubkey_hash: sha256::digest(script),
+        });
+    }
+    if cursor.remaining() != 0 {
+        bail!("PSBTv2 contains trailing data");
+    }
+
+    Ok(PsbtShapeV1 {
+        schema: "PsbtShapeV1".to_string(),
+        version: transaction_version,
+        locktime: psbt_v2_locktime(fallback_locktime, &locktime_requirements)?,
+        inputs,
+        outputs,
+    })
+}
+
 pub fn psbt_shape_from_base64(psbt: &str) -> anyhow::Result<(String, PsbtShapeV1)> {
     let raw = general_purpose::STANDARD
         .decode(psbt)
         .map_err(|e| anyhow!("failed to decode PSBT base64: {e}"))?;
-    let psbt = Psbt::deserialize(&raw).map_err(|e| anyhow!("failed to parse PSBT: {e}"))?;
-    psbt_shape_from_psbt(&psbt)
+    let shape = match Psbt::deserialize(&raw) {
+        Ok(psbt) => transaction_shape(&psbt.unsigned_tx),
+        Err(v0_error) => psbt_v2_shape(&raw).map_err(|v2_error| {
+            anyhow!("failed to parse PSBT as v0 ({v0_error}) or v2 ({v2_error})")
+        })?,
+    };
+    let hash = psbt_shape_hash(&shape)?;
+    Ok((hash, shape))
 }
 
 pub(crate) fn psbt_shape_from_psbt(psbt: &Psbt) -> anyhow::Result<(String, PsbtShapeV1)> {
@@ -525,19 +854,17 @@ pub fn candidate_funding_facts_from_psbt(
     funding_vout: u32,
     old_funding_outpoint: &FundingOutpoint,
 ) -> anyhow::Result<CandidateFundingFacts> {
-    let psbt = parse_psbt(psbt)?;
-    let old_input_index = psbt
-        .unsigned_tx
-        .input
+    let (_, shape) = psbt_shape_from_base64(psbt)?;
+    let old_input_index = shape
+        .inputs
         .iter()
         .position(|input| {
-            input.previous_output.txid.to_string() == old_funding_outpoint.txid
-                && input.previous_output.vout == old_funding_outpoint.vout
+            input.prev_txid == old_funding_outpoint.txid
+                && input.prev_vout == old_funding_outpoint.vout
         })
         .ok_or_else(|| anyhow!("splice PSBT does not spend old funding outpoint"))?;
-    let output = psbt
-        .unsigned_tx
-        .output
+    let output = shape
+        .outputs
         .get(funding_vout as usize)
         .ok_or_else(|| anyhow!("splice funding output index {} is missing", funding_vout))?;
 
@@ -546,8 +873,8 @@ pub fn candidate_funding_facts_from_psbt(
             txid: funding_txid.to_string(),
             vout: funding_vout,
         },
-        value_sat: output.value.to_sat(),
-        script_pubkey_hash: sha256::digest(output.script_pubkey.as_bytes()),
+        value_sat: output.value_sat,
+        script_pubkey_hash: output.script_pubkey_hash.clone(),
         sign_splice_tx_input_index: old_input_index as u32,
         remote_funding_key_hex: None,
     })
@@ -1562,6 +1889,62 @@ mod tests {
         let shape_value = serde_json::to_value(parsed_shape).unwrap();
         assert!(shape_value.get("splice_init_auth").is_none());
         assert!(shape_value.get("signpsbt_auth").is_none());
+    }
+
+    #[test]
+    fn psbt_v2_shape_is_derived_from_required_fields() {
+        const PSBT_V2: &str = "cHNidP8BAgQCAAAAAQQBAQEFAQIB+wQCAAAAAAEOIAsK2SFBnByHGXNdctxzn56p4GONH+TB7vD5lECEgV/IAQ8EAAAAAAABAwgACK8vAAAAAAEEFgAUxDD2TEdW2jENvRoIVXLvKZkmJywAAQMIi73rCwAAAAABBBYAFE3Rk6yWSlasG54cyoRU/i9HT4UTAA==";
+
+        let (hash, shape) = psbt_shape_from_base64(PSBT_V2).unwrap();
+
+        assert_eq!(hash, psbt_shape_hash(&shape).unwrap());
+        assert_eq!(shape.schema, "PsbtShapeV1");
+        assert_eq!(shape.version, 2);
+        assert_eq!(shape.locktime, 0);
+        assert_eq!(shape.inputs.len(), 1);
+        assert_eq!(
+            shape.inputs[0].prev_txid,
+            "c85f81844094f9f0eec1e41f8d63e0a99e9f73dc725d7319871c9c4121d90a0b"
+        );
+        assert_eq!(shape.inputs[0].prev_vout, 0);
+        assert_eq!(shape.inputs[0].sequence, u32::MAX);
+        assert_eq!(shape.outputs.len(), 2);
+        assert_eq!(shape.outputs[0].value_sat, 800_000_000);
+        assert_eq!(shape.outputs[1].value_sat, 199_998_859);
+        assert_eq!(
+            shape.outputs[0].script_pubkey_hex,
+            "0014c430f64c4756da310dbd1a085572ef299926272c"
+        );
+        assert_eq!(
+            shape.outputs[1].script_pubkey_hex,
+            "00144dd193ac964a56ac1b9e1cca8454fe2f474f8513"
+        );
+
+        let candidate = candidate_funding_facts_from_psbt(
+            PSBT_V2,
+            &"99".repeat(32),
+            0,
+            &FundingOutpoint {
+                txid: shape.inputs[0].prev_txid.clone(),
+                vout: 0,
+            },
+        )
+        .unwrap();
+        assert_eq!(candidate.value_sat, 800_000_000);
+        assert_eq!(candidate.sign_splice_tx_input_index, 0);
+        assert_eq!(
+            candidate.script_pubkey_hash,
+            shape.outputs[0].script_pubkey_hash
+        );
+    }
+
+    #[test]
+    fn psbt_v2_shape_requires_global_input_count() {
+        const PSBT_V2_WITHOUT_INPUT_COUNT: &str = "cHNidP8BAgQCAAAAAQMEAAAAAAEFAQIB+wQCAAAAAAEAUgIAAAABwaolbiFLlqGCL5PeQr/ztfP/jQUZMG41FddRWl6AWxIAAAAAAP////8BGMaaOwAAAAAWABSwo68UQghBJpPKfRZoUrUtsK7wbgAAAAABAR8Yxpo7AAAAABYAFLCjrxRCCEEmk8p9FmhStS2wrvBuAQ4gCwrZIUGcHIcZc11y3HOfnqngY40f5MHu8PmUQISBX8gBDwQAAAAAARAE/v///wAiAgLWAfhIRqZ1X3dr4A49nej7EKzJNfuDxF+wFi1MrVq3khj2nYc+VAAAgAEAAIAAAACAAAAAACoAAAABAwgACK8vAAAAAAEEFgAUxDD2TEdW2jENvRoIVXLvKZkmJywAIgIC42+/9T3VNAcM+P05ZhRoDzV6m4Xbc0C/HPp0XSrXs0AY9p2HPlQAAIABAACAAAAAgAEAAABkAAAAAQMIi73rCwAAAAABBBYAFE3Rk6yWSlasG54cyoRU/i9HT4UTAA==";
+
+        let err = psbt_shape_from_base64(PSBT_V2_WITHOUT_INPUT_COUNT).unwrap_err();
+
+        assert!(err.to_string().contains("PSBT_GLOBAL_INPUT_COUNT"));
     }
 
     #[test]

@@ -4,6 +4,9 @@ version = "0.2.0"
 edition = "2021"
 license = "MIT"
 
+[features]
+experimental-splicing = ["glsdk/experimental-splicing"]
+
 [lib]
 crate-type = ["cdylib"]
 

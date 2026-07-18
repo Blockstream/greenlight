@@ -36,3 +36,4 @@ thiserror = "1"
 [features]
 default = ["permissive"]
 permissive = ["gl-client/permissive"]
+experimental-splicing = ["gl-client/experimental-splicing"]
