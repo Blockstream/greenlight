@@ -182,6 +182,7 @@ mod tests {
 
     #[test]
     fn required_vls_proof_stops_at_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let result = Resolver::enforce_splice_decision(
             SpliceOperation::SignSpliceTx,
             SplicePolicyDecision::RequiresVlsProof(VlsProof::SpliceSigning),
@@ -198,6 +199,7 @@ mod tests {
 
     #[test]
     fn unresolved_peer_proof_stops_at_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let result = Resolver::enforce_splice_decision(
             SpliceOperation::SignSpliceTx,
             SplicePolicyDecision::RequiresVlsProof(VlsProof::NoLocalLoss),

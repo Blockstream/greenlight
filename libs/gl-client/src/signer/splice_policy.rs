@@ -278,6 +278,31 @@ fn pending_splice_psbt_matches(
     })
 }
 
+fn pending_splice_update_psbt_matches(
+    pending_requests: &[Request],
+    session: &SpliceSessionV1,
+    expected_shape_hash: &str,
+) -> bool {
+    pending_requests.iter().any(|pending| {
+        let Request::SpliceUpdate(request) = pending else {
+            return false;
+        };
+        let pending_channel_id_hex = hex::encode(&request.channel_id);
+        let pending_shape_hash = psbt_shape_from_base64(&request.psbt)
+            .map(|(shape_hash, _)| shape_hash)
+            .ok();
+        log::debug!(
+            "matching negotiating splice_update: channel_match={}, shape_match={}, pending_shape_hash={:?}, expected_shape_hash={}",
+            pending_channel_id_hex == session.channel_id_hex,
+            pending_shape_hash.as_deref() == Some(expected_shape_hash),
+            pending_shape_hash,
+            expected_shape_hash,
+        );
+        pending_channel_id_hex == session.channel_id_hex
+            && pending_shape_hash.as_deref() == Some(expected_shape_hash)
+    })
+}
+
 fn classify_sign_splice_tx(
     request: &SignSpliceTx,
     pending_requests: &[Request],
@@ -298,6 +323,7 @@ fn classify_sign_splice_tx(
     if let Some(violation) = session_violation(
         &session,
         &[
+            SplicePhase::Negotiating,
             SplicePhase::CommitmentsSecured,
             SplicePhase::SignaturesExchanging,
         ],
@@ -319,6 +345,12 @@ fn classify_sign_splice_tx(
         || session.psbt.candidate_psbt_shape.as_ref() != Some(&psbt_shape)
     {
         return reject(SplicePolicyViolation::PsbtShapeMismatch);
+    }
+    if session.phase == SplicePhase::Negotiating
+        && session.origin == SpliceOrigin::LocalInitiator
+        && !pending_splice_update_psbt_matches(pending_requests, &session, &shape_hash)
+    {
+        return reject(SplicePolicyViolation::InvalidPhase);
     }
     if session.origin == SpliceOrigin::LocalInitiator
         && !pending_splice_psbt_matches(pending_requests, &session, &shape_hash)
@@ -472,6 +504,9 @@ fn classify_sign_withdrawal(
     let Some(session) = state.get_splice_session(node_channel_id_hex)? else {
         return reject(SplicePolicyViolation::MissingSpliceSession);
     };
+    if context.signpsbt_auth.is_none() {
+        return reject(SplicePolicyViolation::MissingSignPsbtAuth);
+    }
     if let Some(violation) = session_violation(
         &session,
         &[
@@ -480,9 +515,6 @@ fn classify_sign_withdrawal(
         ],
     ) {
         return reject(violation);
-    }
-    if context.signpsbt_auth.is_none() {
-        return reject(SplicePolicyViolation::MissingSignPsbtAuth);
     }
     if context.psbt_shape_hash != shape_hash
         || context.latest_psbt_shape != shape
@@ -564,7 +596,7 @@ mod tests {
         WalletInputSource,
     };
     use crate::signer::model::{
-        cln::{SignpsbtRequest, SpliceSignedRequest},
+        cln::{SignpsbtRequest, SpliceSignedRequest, SpliceUpdateRequest},
         Request,
     };
     use base64::{engine::general_purpose, Engine as _};
@@ -766,10 +798,54 @@ mod tests {
         })
     }
 
+    fn set_negotiating_local_update(fixture: &mut SpliceSigningFixture) {
+        let session = fixture
+            .state
+            .get_splice_session(&fixture.node_channel_id_hex)
+            .unwrap()
+            .unwrap();
+        let Request::SpliceSigned(signed) = fixture.pending[0].clone() else {
+            unreachable!();
+        };
+        let (shape_hash, shape) = psbt_shape_from_base64(&signed.psbt).unwrap();
+        let mut state = State::new();
+        state
+            .record_local_splice_intent(LocalSpliceIntent {
+                node_id_hex: session.node_id_hex,
+                channel_id_hex: session.channel_id_hex,
+                node_channel_id_hex: session.node_channel_id_hex.clone(),
+                old: session.old,
+                splice_init_auth: auth("/cln.Node/SpliceInit", "55", 1),
+                authorized_relative_amount_sat: 20_000,
+                fee_policy: FeePolicy::default(),
+                initial_psbt_shape_hash: Some(shape_hash.clone()),
+                initial_psbt_shape: Some(shape.clone()),
+                timestamp_ms: 1,
+            })
+            .unwrap();
+        state
+            .record_splice_update_response(SpliceUpdateResponseFacts {
+                node_channel_id_hex: session.node_channel_id_hex,
+                psbt_shape_hash: shape_hash,
+                psbt_shape: shape,
+                splice_update_auth: auth("/cln.Node/SpliceUpdate", "66", 2),
+                commitments_secured: false,
+                signatures_secured: Some(false),
+                timestamp_ms: 2,
+            })
+            .unwrap();
+        fixture.state = state;
+        fixture.pending = vec![Request::SpliceUpdate(SpliceUpdateRequest {
+            channel_id: signed.channel_id,
+            psbt: signed.psbt,
+        })];
+    }
+
     fn sign_withdrawal_fixture_for_origin(
         origin: SpliceOrigin,
         delta_computed: bool,
         no_local_loss: bool,
+        commitments_secured: bool,
     ) -> (Message, Vec<Request>, State) {
         let old_txid = Txid::from_str(&"11".repeat(32)).unwrap();
         let wallet_txid = Txid::from_str(&"22".repeat(32)).unwrap();
@@ -881,7 +957,7 @@ mod tests {
                 psbt_shape_hash: shape_hash.clone(),
                 psbt_shape: shape.clone(),
                 splice_update_auth: auth("/cln.Node/SpliceUpdate", "77", 3),
-                commitments_secured: true,
+                commitments_secured,
                 signatures_secured: Some(false),
                 timestamp_ms: 3,
             })
@@ -917,7 +993,7 @@ mod tests {
     }
 
     fn sign_withdrawal_fixture() -> (Message, Vec<Request>, State) {
-        sign_withdrawal_fixture_for_origin(SpliceOrigin::LocalInitiator, false, false)
+        sign_withdrawal_fixture_for_origin(SpliceOrigin::LocalInitiator, false, false, true)
     }
 
     #[test]
@@ -941,6 +1017,7 @@ mod tests {
 
     #[test]
     fn matching_splice_signwithdrawal_reaches_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let (message, pending, state) = sign_withdrawal_fixture();
 
         assert_eq!(
@@ -962,6 +1039,27 @@ mod tests {
     #[test]
     fn splice_signwithdrawal_with_fundpsbt_only_rejects() {
         let (message, pending, mut state) = sign_withdrawal_fixture();
+        let Message::SignWithdrawal(request) = &message else {
+            unreachable!();
+        };
+        let (shape_hash, _) = psbt_shape_from_psbt(&request.psbt.0.psbt.inner).unwrap();
+        let mut context = state
+            .get_splice_wallet_psbt_context(&shape_hash)
+            .unwrap()
+            .unwrap();
+        context.signpsbt_auth = None;
+        state.put_splice_wallet_psbt_context(context).unwrap();
+
+        assert_eq!(
+            classify(&message, &pending, &state, &[], None).unwrap(),
+            SplicePolicyDecision::Rejected(SplicePolicyViolation::MissingSignPsbtAuth)
+        );
+    }
+
+    #[test]
+    fn negotiating_splice_signwithdrawal_with_fundpsbt_only_rejects_missing_auth() {
+        let (message, pending, mut state) =
+            sign_withdrawal_fixture_for_origin(SpliceOrigin::LocalInitiator, false, false, false);
         let Message::SignWithdrawal(request) = &message else {
             unreachable!();
         };
@@ -1021,8 +1119,9 @@ mod tests {
 
     #[test]
     fn unresolved_peer_signwithdrawal_requires_no_local_loss_proof() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let (message, pending, state) =
-            sign_withdrawal_fixture_for_origin(SpliceOrigin::PeerInitiated, false, false);
+            sign_withdrawal_fixture_for_origin(SpliceOrigin::PeerInitiated, false, false, true);
 
         assert_eq!(
             classify(&message, &pending, &state, &[], None).unwrap(),
@@ -1033,7 +1132,7 @@ mod tests {
     #[test]
     fn peer_signwithdrawal_with_local_loss_rejects() {
         let (message, pending, state) =
-            sign_withdrawal_fixture_for_origin(SpliceOrigin::PeerInitiated, true, false);
+            sign_withdrawal_fixture_for_origin(SpliceOrigin::PeerInitiated, true, false, true);
 
         assert_eq!(
             classify(&message, &pending, &state, &[], None).unwrap(),
@@ -1043,8 +1142,12 @@ mod tests {
 
     #[test]
     fn unresolved_dev_splice_signwithdrawal_rejects() {
-        let (message, pending, state) =
-            sign_withdrawal_fixture_for_origin(SpliceOrigin::DevSpliceUnresolved, false, false);
+        let (message, pending, state) = sign_withdrawal_fixture_for_origin(
+            SpliceOrigin::DevSpliceUnresolved,
+            false,
+            false,
+            true,
+        );
 
         assert_eq!(
             classify(&message, &pending, &state, &[], None).unwrap(),
@@ -1054,6 +1157,7 @@ mod tests {
 
     #[test]
     fn matching_local_sign_splice_tx_reaches_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
 
         assert_eq!(
@@ -1066,6 +1170,25 @@ mod tests {
             )
             .unwrap(),
             SplicePolicyDecision::RequiresVlsProof(VlsProof::SpliceSigning)
+        );
+    }
+
+    #[test]
+    fn final_splice_update_signing_reaches_candidate_funding_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
+        let mut fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
+        set_negotiating_local_update(&mut fixture);
+
+        assert_eq!(
+            classify(
+                &fixture.message,
+                &fixture.pending,
+                &fixture.state,
+                &fixture.local_node_id,
+                Some(&fixture.context),
+            )
+            .unwrap(),
+            SplicePolicyDecision::RequiresVlsProof(VlsProof::CandidateFunding)
         );
     }
 
@@ -1148,6 +1271,7 @@ mod tests {
 
     #[test]
     fn unresolved_peer_sign_splice_tx_requires_no_local_loss_proof() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let fixture = splice_signing_fixture(SpliceOrigin::PeerInitiated, false, false);
 
         assert_eq!(
@@ -1182,6 +1306,7 @@ mod tests {
 
     #[test]
     fn matching_splice_setup_channel_reaches_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
         let message = setup_channel_message(&fixture);
 
@@ -1240,6 +1365,7 @@ mod tests {
 
     #[test]
     fn known_splice_check_outpoint_reaches_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let mut fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
         fixture
             .state
@@ -1271,6 +1397,7 @@ mod tests {
 
     #[test]
     fn known_splice_lock_outpoint_reaches_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let mut fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
         fixture
             .state

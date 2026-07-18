@@ -39,7 +39,9 @@ use tokio::time::{sleep, Duration};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::{Endpoint, Uri};
 use tonic::{Code, Request};
-use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
+#[cfg(any(feature = "experimental-splicing", test))]
+use vls_protocol::msgs::SignSpliceTx;
+use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4, SerBolt};
 use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
@@ -70,6 +72,18 @@ const STATE_DERIVATION_SECRET: &str = "greenlight/state-signing/v1";
 const STATE_SIGNING_DOMAIN: &[u8] = b"greenlight/state-signing/v1\0";
 const STATE_SIGNATURE_OVERRIDE_ACK: &str = "I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE";
 const COMPACT_SIGNATURE_LEN: usize = 64;
+#[cfg(any(feature = "experimental-splicing", test))]
+const SIGN_SPLICE_TX_CAPABILITY: u32 = SignSpliceTx::TYPE as u32;
+
+#[cfg(feature = "experimental-splicing")]
+fn advertise_experimental_splicing(mut init: HsmdInitReplyV4) -> HsmdInitReplyV4 {
+    // TODO: Remove this shim once VLS advertises SignSpliceTx itself.
+    if !init.hsm_capabilities.0.contains(&SIGN_SPLICE_TX_CAPABILITY) {
+        warn!("Advertising SignSpliceTx while VLS splice support remains fail-closed");
+        init.hsm_capabilities.0.push(SIGN_SPLICE_TX_CAPABILITY);
+    }
+    init
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StateSignatureMode {
@@ -178,15 +192,6 @@ pub enum Error {
 
     #[error("could not approve pairing request: {0}")]
     ApprovePairingRequestError(String),
-}
-
-impl Error {
-    fn is_splice_hard_stop(&self) -> bool {
-        matches!(
-            self,
-            Self::SplicePolicy { .. } | Self::VlsSpliceUnavailable { .. }
-        )
-    }
 }
 
 impl Signer {
@@ -339,8 +344,10 @@ impl Signer {
         let init = HsmdInitReplyV4::from_vec(init)
             .map_err(|e| anyhow!("Failed to parse init message as HsmdInitReplyV4: {:?}", e))?;
 
+        #[cfg(feature = "experimental-splicing")]
+        let init = advertise_experimental_splicing(init);
+
         let id = init.node_id.0.to_vec();
-        use vls_protocol::msgs::SerBolt;
         let init = init.as_vec();
 
         // Init master rune. We create the rune seed from the nodes
@@ -782,16 +789,10 @@ impl Signer {
             reqs
         );
 
-        let state = self.state.lock().map_err(|e| {
-            if let Some(operation) = splice_policy::operation(msg) {
-                Error::SplicePolicy {
-                    operation: operation.as_str().to_string(),
-                    violation: format!("failed to acquire signer state lock: {e:?}"),
-                }
-            } else {
-                Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
-            }
-        })?;
+        let state = self
+            .state
+            .lock()
+            .map_err(|e| Error::Other(anyhow!("Failed to acquire state lock: {:?}", e)))?;
         Resolver::try_resolve(msg, reqs, &state, &self.id, hsm_context)?;
 
         Ok(())
@@ -881,10 +882,6 @@ impl Signer {
                 node_id: self.node_id(),
             })
             .await;
-            // The permissive fallback must not reach VLS handlers without splice proofs.
-            if e.is_splice_hard_stop() {
-                return Err(e);
-            }
             #[cfg(not(feature = "permissive"))]
             return Err(e);
         };
@@ -1709,6 +1706,31 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[cfg(not(feature = "experimental-splicing"))]
+    #[test]
+    fn splice_signing_capability_is_not_advertised_by_default() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let init = HsmdInitReplyV4::from_vec(signer.get_init()).unwrap();
+
+        assert!(!init.hsm_capabilities.0.contains(&SIGN_SPLICE_TX_CAPABILITY));
+    }
+
+    #[cfg(feature = "experimental-splicing")]
+    #[test]
+    fn splice_signing_capability_is_advertised_once() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let init = HsmdInitReplyV4::from_vec(signer.get_init()).unwrap();
+
+        assert_eq!(
+            init.hsm_capabilities
+                .0
+                .iter()
+                .filter(|capability| **capability == SIGN_SPLICE_TX_CAPABILITY)
+                .count(),
+            1
+        );
     }
 
     fn heartbeat_raw() -> Vec<u8> {
