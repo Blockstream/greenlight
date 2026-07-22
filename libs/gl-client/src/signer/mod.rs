@@ -39,7 +39,9 @@ use tokio::time::{sleep, Duration};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::{Endpoint, Uri};
 use tonic::{Code, Request};
-use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4};
+#[cfg(any(feature = "experimental-splicing", test))]
+use vls_protocol::msgs::SignSpliceTx;
+use vls_protocol::msgs::{DeBolt, HsmdInitReplyV4, SerBolt};
 use vls_protocol::serde_bolt::Octets;
 use vls_protocol_signer::approver::{Approve, MemoApprover};
 use vls_protocol_signer::handler;
@@ -59,6 +61,7 @@ pub use backup::{
 pub mod model;
 mod report;
 mod resolve;
+mod splice_policy;
 
 const VERSION: &str = "v26.06";
 const GITHASH: &str = env!("GIT_HASH");
@@ -69,6 +72,18 @@ const STATE_DERIVATION_SECRET: &str = "greenlight/state-signing/v1";
 const STATE_SIGNING_DOMAIN: &[u8] = b"greenlight/state-signing/v1\0";
 const STATE_SIGNATURE_OVERRIDE_ACK: &str = "I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE";
 const COMPACT_SIGNATURE_LEN: usize = 64;
+#[cfg(any(feature = "experimental-splicing", test))]
+const SIGN_SPLICE_TX_CAPABILITY: u32 = SignSpliceTx::TYPE as u32;
+
+#[cfg(feature = "experimental-splicing")]
+fn advertise_experimental_splicing(mut init: HsmdInitReplyV4) -> HsmdInitReplyV4 {
+    // TODO: Remove this shim once VLS advertises SignSpliceTx itself.
+    if !init.hsm_capabilities.0.contains(&SIGN_SPLICE_TX_CAPABILITY) {
+        warn!("Advertising SignSpliceTx while VLS splice support remains fail-closed");
+        init.hsm_capabilities.0.push(SIGN_SPLICE_TX_CAPABILITY);
+    }
+    init
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StateSignatureMode {
@@ -153,6 +168,18 @@ pub enum Error {
 
     #[error("resolver error: request {0:?}, context: {1:?}")]
     Resolver(Vec<u8>, Vec<crate::signer::model::Request>),
+
+    #[error("splice policy rejected {operation}: {violation}")]
+    SplicePolicy {
+        operation: String,
+        violation: String,
+    },
+
+    #[error("splice request {operation} requires unavailable VLS proof: {required_proof}")]
+    VlsSpliceUnavailable {
+        operation: String,
+        required_proof: String,
+    },
 
     #[error("error asking node to be upgraded: {0}")]
     Upgrade(tonic::Status),
@@ -317,8 +344,10 @@ impl Signer {
         let init = HsmdInitReplyV4::from_vec(init)
             .map_err(|e| anyhow!("Failed to parse init message as HsmdInitReplyV4: {:?}", e))?;
 
+        #[cfg(feature = "experimental-splicing")]
+        let init = advertise_experimental_splicing(init);
+
         let id = init.node_id.0.to_vec();
-        use vls_protocol::msgs::SerBolt;
         let init = init.as_vec();
 
         // Init master rune. We create the rune seed from the nodes
@@ -752,16 +781,19 @@ impl Signer {
     fn authenticate_request(
         &self,
         msg: &vls_protocol::msgs::Message,
-        reqs: &Vec<model::Request>,
+        reqs: &[model::Request],
+        hsm_context: Option<&HsmRequestContext>,
     ) -> Result<(), Error> {
         log::trace!(
             "Resolving signature request against pending grpc commands: {:?}",
             reqs
         );
 
-        // Quick path out of here: we can't find a resolution for a
-        // request, then abort!
-        Resolver::try_resolve(msg, &reqs)?;
+        let state = self
+            .state
+            .lock()
+            .map_err(|e| Error::Other(anyhow!("Failed to acquire state lock: {:?}", e)))?;
+        Resolver::try_resolve(msg, reqs, &state, &self.id, hsm_context)?;
 
         Ok(())
     }
@@ -778,7 +810,6 @@ impl Signer {
 
         let incoming_state = crate::persist::State::try_from(req.signer_state.as_slice())
             .map_err(|e| Error::Other(anyhow!("Failed to decode signer state: {e}")))?;
-
 
         // Create sketch from incoming state (nodelet's view) so we can
         // send back any entries the nodelet doesn't know about yet,
@@ -843,7 +874,7 @@ impl Signer {
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", prestate_log);
 
-        if let Err(e) = self.authenticate_request(&msg, &ctxrequests) {
+        if let Err(e) = self.authenticate_request(&msg, &ctxrequests, req.context.as_ref()) {
             report::Reporter::report(crate::pb::scheduler::SignerRejection {
                 msg: e.to_string(),
                 request: Some(req.clone()),
@@ -852,7 +883,7 @@ impl Signer {
             })
             .await;
             #[cfg(not(feature = "permissive"))]
-            return Err(Error::Resolver(req.raw, ctxrequests));
+            return Err(e);
         };
 
         // If present, add the close_to_addr to the allowlist
@@ -1675,6 +1706,31 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[cfg(not(feature = "experimental-splicing"))]
+    #[test]
+    fn splice_signing_capability_is_not_advertised_by_default() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let init = HsmdInitReplyV4::from_vec(signer.get_init()).unwrap();
+
+        assert!(!init.hsm_capabilities.0.contains(&SIGN_SPLICE_TX_CAPABILITY));
+    }
+
+    #[cfg(feature = "experimental-splicing")]
+    #[test]
+    fn splice_signing_capability_is_advertised_once() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let init = HsmdInitReplyV4::from_vec(signer.get_init()).unwrap();
+
+        assert_eq!(
+            init.hsm_capabilities
+                .0
+                .iter()
+                .filter(|capability| **capability == SIGN_SPLICE_TX_CAPABILITY)
+                .count(),
+            1
+        );
     }
 
     fn heartbeat_raw() -> Vec<u8> {

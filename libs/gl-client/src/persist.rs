@@ -1,4 +1,18 @@
 mod canonical;
+#[allow(dead_code)]
+mod splice;
+
+pub use splice::{
+    candidate_funding_facts_from_psbt, psbt_shape_from_base64, wallet_inputs_from_psbt, FeePolicy,
+    FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState,
+    SignPsbtIntentFacts, SignPsbtResponseFacts, SpliceSignedResponseFacts,
+    SpliceUpdateResponseFacts, WalletInputReservation, WalletInputSource,
+};
+pub(crate) use splice::{
+    psbt_shape_from_psbt, transaction_shape, SpliceOrigin, SplicePhase, SpliceSessionV1,
+};
+#[cfg(test)]
+pub(crate) use splice::{CandidateFundingFacts, WalletInput};
 
 use anyhow::anyhow;
 use lightning_signer::bitcoin::secp256k1::PublicKey;
