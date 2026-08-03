@@ -21,8 +21,8 @@ jobs:
 
     - name: Install Task
       uses: arduino/setup-task@v2
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v5
