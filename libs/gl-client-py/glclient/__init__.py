@@ -141,6 +141,9 @@ class Node(object):
         self.inner = native.Node(node_id=node_id, grpc_uri=grpc_uri, creds=creds)
         self.logger = logging.getLogger("glclient.Node")
 
+    def call(self, path: str, request: bytes) -> bytes:
+        return bytes(self.inner.call(path, bytes(request)))
+
     def get_info(self) -> clnpb.GetinfoResponse:
         uri = "/cln.Node/Getinfo"
         req = clnpb.GetinfoRequest().SerializeToString()
@@ -279,16 +282,11 @@ class Node(object):
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
     def decodepay(
-        self, bolt11: str, description: Optional[str]
-    ) -> clnpb.DecodepayResponse:
-        uri = "/cln.Node/DecodePay"
-        res = clnpb.DecodepayResponse
-        req = clnpb.DecodepayRequest(
-            bolt11=bolt11,
-            description=description,
-        ).SerializeToString()
-
-        return res.FromString(bytes(self.inner.call(uri, bytes(req))))
+        self, bolt11: str, description: Optional[str] = None
+    ) -> clnpb.DecodeResponse:
+        if description is not None:
+            raise ValueError("CLN's Decode RPC does not accept a description")
+        return self.decode(bolt11)
 
     def disconnect_peer(self, peer_id: str, force=False) -> clnpb.DisconnectResponse:
         uri = "/cln.Node/Disconnect"

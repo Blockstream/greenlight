@@ -142,16 +142,13 @@ impl PluginNodeServer {
             loop {
                 match peer_events.recv().await {
                     Ok(super::Event::PeerConnected(peer)) => {
-                        let snapshot = {
-                            let mut state = signer_state.lock().await;
-                            if let Err(e) = state.insert_or_update_peer(peer) {
-                                warn!("Failed to update signer peer state: {e}");
-                                continue;
-                            }
-                            state.clone()
-                        };
+                        let mut state = signer_state.lock().await;
+                        if let Err(e) = state.insert_or_update_peer(peer) {
+                            warn!("Failed to update signer peer state: {e}");
+                            continue;
+                        }
                         let store = signer_state_store.lock().await;
-                        if let Err(e) = store.write(snapshot).await {
+                        if let Err(e) = store.write(state.clone()).await {
                             warn!("Failed to persist signer peer state: {e}");
                         }
                     }

@@ -12,6 +12,9 @@ categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
 license = "MIT"
 readme = "README.md"
 
+[features]
+experimental-splicing = ["gl-client/experimental-splicing"]
+
 [[bin]]
 name = "glcli"
 test = true

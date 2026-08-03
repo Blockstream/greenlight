@@ -1,19 +1,57 @@
 //! Resolver utilities to match incoming requests against the request
 //! context and find a justifications.
 
+use crate::pb::HsmRequestContext;
+use crate::persist::State;
+use crate::signer::splice_policy::{self, SpliceOperation, SplicePolicyDecision};
 use crate::signer::{model::Request, Error};
 use vls_protocol::msgs::Message;
 pub struct Resolver {}
 
 impl Resolver {
+    #[allow(clippy::result_large_err)]
+    fn enforce_splice_decision(
+        operation: SpliceOperation,
+        decision: SplicePolicyDecision,
+    ) -> Result<(), Error> {
+        match decision {
+            SplicePolicyDecision::NotSpliceRelated => Ok(()),
+            SplicePolicyDecision::Rejected(violation) => Err(Error::SplicePolicy {
+                operation: operation.as_str().to_string(),
+                violation: format!("{violation:?}"),
+            }),
+            SplicePolicyDecision::RequiresVlsProof(proof) => Err(Error::VlsSpliceUnavailable {
+                operation: operation.as_str().to_string(),
+                required_proof: proof.as_str().to_string(),
+            }),
+        }
+    }
+
     /// Attempt to find a resolution for a given request. We default
     /// to failing, and allowlist individual matches between pending
     /// context requests and the signer request being resolved. Where
     /// possible we also verify the contents of the request against
     /// the contents of the context request. TODOs in here may
     /// indicate ways to strengthen the verification.
-    pub fn try_resolve(req: &Message, reqctx: &Vec<Request>) -> Result<(), Error> {
+    pub fn try_resolve(
+        req: &Message,
+        reqctx: &[Request],
+        state: &State,
+        local_node_id: &[u8],
+        hsm_context: Option<&HsmRequestContext>,
+    ) -> Result<(), Error> {
         log::trace!("Resolving {:?}", req);
+        if let Some(operation) = splice_policy::operation(req) {
+            let splice_decision =
+                splice_policy::classify(req, reqctx, state, local_node_id, hsm_context).map_err(
+                    |e| Error::SplicePolicy {
+                        operation: operation.as_str().to_string(),
+                        violation: format!("classification failed: {e}"),
+                    },
+                )?;
+            Self::enforce_splice_decision(operation, splice_decision)?;
+        }
+
         // Some requests do not need a justification. For example we
         // reconnect automatically, so there may not even be a context
         // request pending which would skip the entire stack below, so
@@ -82,10 +120,10 @@ impl Resolver {
                     // later on
                 }
                 (Message::SignInvoice(_l), Request::LspInvoice(_r)) => {
-		    // TODO: This could also need some
-		    // strengthening. See below.
-		    true
-		}
+                    // TODO: This could also need some
+                    // strengthening. See below.
+                    true
+                }
                 (Message::SignInvoice(_l), Request::Invoice(_r)) => {
                     // TODO: This could be strengthened by parsing the
                     // invoice from `l.u5bytes` and verify the
@@ -116,5 +154,72 @@ impl Resolver {
 
         let ser = req.inner().as_vec();
         Err(Error::Resolver(ser, reqctx.to_vec()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::signer::splice_policy::{
+        SpliceOperation, SplicePolicyDecision, SplicePolicyViolation, VlsProof,
+    };
+
+    #[test]
+    fn rejected_splice_decision_is_a_policy_error() {
+        let result = Resolver::enforce_splice_decision(
+            SpliceOperation::SignSpliceTx,
+            SplicePolicyDecision::Rejected(SplicePolicyViolation::CandidateMismatch),
+        );
+
+        assert!(matches!(
+            result,
+            Err(Error::SplicePolicy {
+                operation,
+                violation,
+            }) if operation == "sign_splice_tx" && violation == "CandidateMismatch"
+        ));
+    }
+
+    #[test]
+    fn required_vls_proof_stops_at_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
+        let result = Resolver::enforce_splice_decision(
+            SpliceOperation::SignSpliceTx,
+            SplicePolicyDecision::RequiresVlsProof(VlsProof::SpliceSigning),
+        );
+
+        assert!(matches!(
+            result,
+            Err(Error::VlsSpliceUnavailable {
+                operation,
+                required_proof,
+            }) if operation == "sign_splice_tx" && required_proof == "splice_signing"
+        ));
+    }
+
+    #[test]
+    fn unresolved_peer_proof_stops_at_vls_boundary() {
+        // TODO: Remove this stub-boundary test once VLS splice support is in place.
+        let result = Resolver::enforce_splice_decision(
+            SpliceOperation::SignSpliceTx,
+            SplicePolicyDecision::RequiresVlsProof(VlsProof::NoLocalLoss),
+        );
+
+        assert!(matches!(
+            result,
+            Err(Error::VlsSpliceUnavailable {
+                operation,
+                required_proof,
+            }) if operation == "sign_splice_tx" && required_proof == "no_local_loss"
+        ));
+    }
+
+    #[test]
+    fn unrelated_decision_continues_through_legacy_resolver() {
+        Resolver::enforce_splice_decision(
+            SpliceOperation::SignSpliceTx,
+            SplicePolicyDecision::NotSpliceRelated,
+        )
+        .unwrap();
     }
 }
