@@ -1553,6 +1553,7 @@ dependencies = [
  "pin-project",
  "prost",
  "prost-derive",
+ "psbt-v2",
  "rand",
  "rcgen",
  "reqwest",
@@ -2458,6 +2459,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
+name = "miniscript"
+version = "12.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8343cc1ef1408bd9bdbf69f7aef47017dfab7e6349ec26fddf62e0e9fb5a4cf"
+dependencies = [
+ "bech32 0.11.1",
+ "bitcoin 0.32.9",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3191,6 +3202,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9091c90b0a32608e984ff2fa4091273cbdd755d54935c51d520887f4a1dbd5b0"
 dependencies = [
  "prost",
+]
+
+[[package]]
+name = "psbt-v2"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e075616cae99e29d70960a6374c2757dff4dd6b646dd0398ce1012666231c7aa"
+dependencies = [
+ "bitcoin 0.32.9",
+ "miniscript",
 ]
 
 [[package]]
