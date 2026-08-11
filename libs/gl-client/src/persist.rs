@@ -2,10 +2,10 @@ mod canonical;
 mod splice;
 
 pub use splice::{
-    candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt,
-    FeePolicy, FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth,
-    OldSpliceState, PsbtCaptureFacts, SignPsbtIntentFacts, SpliceSignedResponseFacts,
-    SpliceUpdateResponseFacts, WalletInputReservation,
+    candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt, FeePolicy,
+    FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, OldSpliceState, PsbtCaptureFacts,
+    SignPsbtIntentFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
+    WalletInputReservation,
 };
 #[cfg(test)]
 pub(crate) use splice::{CandidateFundingFacts, WalletInput};
