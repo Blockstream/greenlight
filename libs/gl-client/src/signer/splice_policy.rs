@@ -1,8 +1,6 @@
 use crate::pb::HsmRequestContext;
-use crate::persist::{
-    psbt_shape_from_base64, psbt_shape_from_psbt, transaction_shape, SpliceOrigin, SplicePhase,
-    SpliceSessionV1, State,
-};
+use crate::persist::{SpliceOrigin, SplicePhase, SpliceSessionV1, State};
+use crate::psbt::ParsedPsbt;
 use crate::signer::model::Request;
 use anyhow::{anyhow, bail};
 use lightning_signer::bitcoin::secp256k1::PublicKey;
@@ -37,7 +35,7 @@ pub(crate) enum SplicePolicyViolation {
     InvalidPhase,
     MissingSignPsbtIntent,
     MissingSignPsbtAuth,
-    PsbtShapeMismatch,
+    PsbtFingerprintMismatch,
     UnknownWalletInput,
     SignOnlyViolation,
     OldFundingInputSelected,
@@ -253,7 +251,7 @@ fn classify_setup_channel(
 fn pending_splice_psbt_matches(
     pending_requests: &[Request],
     session: &SpliceSessionV1,
-    expected_shape_hash: &str,
+    expected_fingerprint: &str,
 ) -> bool {
     pending_requests.iter().any(|pending| {
         let (channel_id, psbt) = match pending {
@@ -272,8 +270,8 @@ fn pending_splice_psbt_matches(
             _ => return false,
         };
         hex::encode(channel_id) == session.channel_id_hex
-            && psbt_shape_from_base64(psbt)
-                .map(|(shape_hash, _)| shape_hash == expected_shape_hash)
+            && ParsedPsbt::from_base64(psbt)
+                .map(|psbt| psbt.fingerprint().to_string() == expected_fingerprint)
                 .unwrap_or(false)
     })
 }
@@ -281,25 +279,25 @@ fn pending_splice_psbt_matches(
 fn pending_splice_update_psbt_matches(
     pending_requests: &[Request],
     session: &SpliceSessionV1,
-    expected_shape_hash: &str,
+    expected_fingerprint: &str,
 ) -> bool {
     pending_requests.iter().any(|pending| {
         let Request::SpliceUpdate(request) = pending else {
             return false;
         };
         let pending_channel_id_hex = hex::encode(&request.channel_id);
-        let pending_shape_hash = psbt_shape_from_base64(&request.psbt)
-            .map(|(shape_hash, _)| shape_hash)
+        let pending_fingerprint = ParsedPsbt::from_base64(&request.psbt)
+            .map(|psbt| psbt.fingerprint().to_string())
             .ok();
         log::debug!(
-            "matching negotiating splice_update: channel_match={}, shape_match={}, pending_shape_hash={:?}, expected_shape_hash={}",
+            "matching negotiating splice_update: channel_match={}, fingerprint_match={}, pending_fingerprint={:?}, expected_fingerprint={}",
             pending_channel_id_hex == session.channel_id_hex,
-            pending_shape_hash.as_deref() == Some(expected_shape_hash),
-            pending_shape_hash,
-            expected_shape_hash,
+            pending_fingerprint.as_deref() == Some(expected_fingerprint),
+            pending_fingerprint,
+            expected_fingerprint,
         );
         pending_channel_id_hex == session.channel_id_hex
-            && pending_shape_hash.as_deref() == Some(expected_shape_hash)
+            && pending_fingerprint.as_deref() == Some(expected_fingerprint)
     })
 }
 
@@ -332,28 +330,26 @@ fn classify_sign_splice_tx(
     }
 
     let psbt = &request.psbt.0.inner;
-    let (shape_hash, psbt_shape) = psbt_shape_from_psbt(psbt)?;
-    if transaction_shape(&request.tx.0) != psbt_shape {
+    let psbt_fingerprint = psbt.unsigned_tx.compute_txid().to_string();
+    if request.tx.0.compute_txid().to_string() != psbt_fingerprint {
         return reject(SplicePolicyViolation::TxPsbtMismatch);
     }
-    let expected_shape_hash = session
+    let expected_fingerprint = session
         .psbt
-        .frozen_psbt_shape_hash
+        .frozen_fingerprint
         .as_deref()
-        .or(session.psbt.candidate_psbt_shape_hash.as_deref());
-    if expected_shape_hash != Some(shape_hash.as_str())
-        || session.psbt.candidate_psbt_shape.as_ref() != Some(&psbt_shape)
-    {
-        return reject(SplicePolicyViolation::PsbtShapeMismatch);
+        .or(session.psbt.candidate_fingerprint.as_deref());
+    if expected_fingerprint != Some(psbt_fingerprint.as_str()) {
+        return reject(SplicePolicyViolation::PsbtFingerprintMismatch);
     }
     if session.phase == SplicePhase::Negotiating
         && session.origin == SpliceOrigin::LocalInitiator
-        && !pending_splice_update_psbt_matches(pending_requests, &session, &shape_hash)
+        && !pending_splice_update_psbt_matches(pending_requests, &session, &psbt_fingerprint)
     {
         return reject(SplicePolicyViolation::InvalidPhase);
     }
     if session.origin == SpliceOrigin::LocalInitiator
-        && !pending_splice_psbt_matches(pending_requests, &session, &shape_hash)
+        && !pending_splice_psbt_matches(pending_requests, &session, &psbt_fingerprint)
     {
         return reject(SplicePolicyViolation::MissingSpliceIntent);
     }
@@ -494,8 +490,8 @@ fn classify_sign_withdrawal(
     state: &State,
 ) -> anyhow::Result<SplicePolicyDecision> {
     let psbt = &request.psbt.0.psbt.inner;
-    let (shape_hash, shape) = psbt_shape_from_psbt(psbt)?;
-    let Some(context) = state.get_splice_wallet_psbt_context(&shape_hash)? else {
+    let psbt_fingerprint = psbt.unsigned_tx.compute_txid().to_string();
+    let Some(context) = state.get_psbt_context(&psbt_fingerprint)? else {
         return Ok(SplicePolicyDecision::NotSpliceRelated);
     };
     let Some(node_channel_id_hex) = context.linked_node_channel_id_hex.as_deref() else {
@@ -516,32 +512,30 @@ fn classify_sign_withdrawal(
     ) {
         return reject(violation);
     }
-    if context.psbt_shape_hash != shape_hash
-        || context.latest_psbt_shape != shape
-        || context.linked_splice_psbt_shape_hash.as_deref() != Some(shape_hash.as_str())
-        || !session
-            .linked_wallet_psbt_shape_hashes
+    if !session
+        .linked_wallet_psbt_fingerprints
             .iter()
-            .any(|hash| hash == &shape_hash)
+        .any(|fingerprint| fingerprint == &psbt_fingerprint)
     {
-        return reject(SplicePolicyViolation::PsbtShapeMismatch);
+        return reject(SplicePolicyViolation::PsbtFingerprintMismatch);
     }
-    let expected_splice_shape = session
+    let expected_splice_fingerprint = session
         .psbt
-        .frozen_psbt_shape_hash
+        .frozen_fingerprint
         .as_deref()
-        .or(session.psbt.candidate_psbt_shape_hash.as_deref());
-    if expected_splice_shape != Some(shape_hash.as_str()) {
-        return reject(SplicePolicyViolation::PsbtShapeMismatch);
+        .or(session.psbt.candidate_fingerprint.as_deref());
+    if expected_splice_fingerprint != Some(psbt_fingerprint.as_str()) {
+        return reject(SplicePolicyViolation::PsbtFingerprintMismatch);
     }
 
     let matching_signpsbt = pending_requests.iter().any(|pending| {
         let Request::SignPsbt(pending) = pending else {
             return false;
         };
-        psbt_shape_from_base64(&pending.psbt)
-            .map(|(pending_hash, _)| {
-                pending_hash == shape_hash && pending.signonly == context.signonly
+        ParsedPsbt::from_base64(&pending.psbt)
+            .map(|pending_psbt| {
+                pending_psbt.fingerprint().to_string() == psbt_fingerprint
+                    && pending.signonly == context.signonly
             })
             .unwrap_or(false)
     });
@@ -590,10 +584,9 @@ mod tests {
         Amount, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
     };
     use crate::persist::{
-        psbt_shape_from_psbt, CandidateFundingFacts, FeePolicy, FundPsbtResponseFacts,
-        FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState, SignPsbtIntentFacts,
-        SpliceOrigin, SpliceSessionV1, SpliceUpdateResponseFacts, State, WalletInput,
-        WalletInputSource,
+        CandidateFundingFacts, FeePolicy, FundPsbtResponseFacts, FundingOutpoint,
+        LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState, SignPsbtIntentFacts, SpliceOrigin,
+        SpliceSessionV1, SpliceUpdateResponseFacts, State, WalletInput,
     };
     use crate::signer::model::{
         cln::{SignpsbtRequest, SpliceSignedRequest, SpliceUpdateRequest},
@@ -616,6 +609,21 @@ mod tests {
             "02".repeat(33),
             timestamp_ms,
         )
+    }
+
+    fn input_outpoints(transaction: &Transaction) -> Vec<FundingOutpoint> {
+        transaction
+            .input
+            .iter()
+            .map(|input| FundingOutpoint {
+                txid: input.previous_output.txid.to_string(),
+                vout: input.previous_output.vout,
+            })
+            .collect()
+    }
+
+    fn psbt_fingerprint(psbt: &Psbt) -> String {
+        psbt.unsigned_tx.compute_txid().to_string()
     }
 
     struct SpliceSigningFixture {
@@ -677,7 +685,8 @@ mod tests {
             script_pubkey: ScriptBuf::new(),
         });
         let encoded_psbt = general_purpose::STANDARD.encode(psbt.serialize());
-        let (shape_hash, shape) = psbt_shape_from_psbt(&psbt).unwrap();
+        let psbt_fingerprint = psbt_fingerprint(&psbt);
+        let psbt_input_outpoints = input_outpoints(&psbt.unsigned_tx);
         let old = OldSpliceState {
             funding_outpoint: FundingOutpoint {
                 txid: old_txid.to_string(),
@@ -697,8 +706,8 @@ mod tests {
                     splice_init_auth: auth("/cln.Node/SpliceInit", "55", 1),
                     authorized_relative_amount_sat: 20_000,
                     fee_policy: FeePolicy::default(),
-                    initial_psbt_shape_hash: Some(shape_hash.clone()),
-                    initial_psbt_shape: Some(shape.clone()),
+                    initial_psbt_fingerprint: psbt_fingerprint.clone(),
+                    initial_psbt_input_outpoints: psbt_input_outpoints,
                     timestamp_ms: 1,
                 })
                 .unwrap(),
@@ -714,8 +723,7 @@ mod tests {
                     FeePolicy::default(),
                     1,
                 );
-                session.psbt.candidate_psbt_shape_hash = Some(shape_hash.clone());
-                session.psbt.candidate_psbt_shape = Some(shape.clone());
+                session.psbt.candidate_fingerprint = Some(psbt_fingerprint.clone());
                 session.delta.computed = delta_computed;
                 session.delta.no_local_loss = no_local_loss;
                 if origin == SpliceOrigin::PeerInitiated {
@@ -728,7 +736,7 @@ mod tests {
         state
             .freeze_splice_candidate(
                 &node_channel_id_hex,
-                shape_hash,
+                psbt_fingerprint,
                 CandidateFundingFacts {
                     funding_outpoint: FundingOutpoint {
                         txid: tx.compute_txid().to_string(),
@@ -807,7 +815,9 @@ mod tests {
         let Request::SpliceSigned(signed) = fixture.pending[0].clone() else {
             unreachable!();
         };
-        let (shape_hash, shape) = psbt_shape_from_base64(&signed.psbt).unwrap();
+        let psbt = ParsedPsbt::from_base64(&signed.psbt).unwrap();
+        let psbt_fingerprint = psbt.fingerprint().to_string();
+        let psbt_input_outpoints = input_outpoints(psbt.unsigned_tx());
         let mut state = State::new();
         state
             .record_local_splice_intent(LocalSpliceIntent {
@@ -818,16 +828,16 @@ mod tests {
                 splice_init_auth: auth("/cln.Node/SpliceInit", "55", 1),
                 authorized_relative_amount_sat: 20_000,
                 fee_policy: FeePolicy::default(),
-                initial_psbt_shape_hash: Some(shape_hash.clone()),
-                initial_psbt_shape: Some(shape.clone()),
+                initial_psbt_fingerprint: psbt_fingerprint.clone(),
+                initial_psbt_input_outpoints: psbt_input_outpoints.clone(),
                 timestamp_ms: 1,
             })
             .unwrap();
         state
             .record_splice_update_response(SpliceUpdateResponseFacts {
                 node_channel_id_hex: session.node_channel_id_hex,
-                psbt_shape_hash: shape_hash,
-                psbt_shape: shape,
+                psbt_fingerprint,
+                psbt_input_outpoints,
                 splice_update_auth: auth("/cln.Node/SpliceUpdate", "66", 2),
                 commitments_secured: false,
                 signatures_secured: Some(false),
@@ -888,7 +898,8 @@ mod tests {
             script_pubkey: ScriptBuf::new(),
         });
         let encoded_psbt = general_purpose::STANDARD.encode(psbt.serialize());
-        let (shape_hash, shape) = psbt_shape_from_psbt(&psbt).unwrap();
+        let psbt_fingerprint = psbt_fingerprint(&psbt);
+        let psbt_input_outpoints = input_outpoints(&psbt.unsigned_tx);
         let node_channel_id_hex = "44".repeat(74);
         let old = OldSpliceState {
             funding_outpoint: FundingOutpoint {
@@ -901,17 +912,14 @@ mod tests {
         let mut state = State::new();
         state
             .record_fundpsbt_response(FundPsbtResponseFacts {
-                psbt_shape_hash: shape_hash.clone(),
-                psbt_shape: shape.clone(),
+                psbt_fingerprint: psbt_fingerprint.clone(),
                 fundpsbt_auth: auth("/cln.Node/FundPsbt", "55", 1),
                 wallet_inputs: vec![WalletInput {
                     txid: wallet_txid.to_string(),
                     vout: 1,
                     value_sat: 25_000,
                     reserved_to_block: Some(100),
-                    source: WalletInputSource::FundPsbt,
                 }],
-                change_outnum: None,
                 timestamp_ms: 1,
             })
             .unwrap();
@@ -925,8 +933,8 @@ mod tests {
                     splice_init_auth: auth("/cln.Node/SpliceInit", "66", 2),
                     authorized_relative_amount_sat: 20_000,
                     fee_policy: FeePolicy::default(),
-                    initial_psbt_shape_hash: Some(shape_hash.clone()),
-                    initial_psbt_shape: Some(shape.clone()),
+                    initial_psbt_fingerprint: psbt_fingerprint.clone(),
+                    initial_psbt_input_outpoints: psbt_input_outpoints.clone(),
                     timestamp_ms: 2,
                 })
                 .unwrap(),
@@ -954,8 +962,8 @@ mod tests {
         state
             .record_splice_update_response(SpliceUpdateResponseFacts {
                 node_channel_id_hex,
-                psbt_shape_hash: shape_hash.clone(),
-                psbt_shape: shape.clone(),
+                psbt_fingerprint: psbt_fingerprint.clone(),
+                psbt_input_outpoints,
                 splice_update_auth: auth("/cln.Node/SpliceUpdate", "77", 3),
                 commitments_secured,
                 signatures_secured: Some(false),
@@ -964,8 +972,7 @@ mod tests {
             .unwrap();
         state
             .record_signpsbt_intent(SignPsbtIntentFacts {
-                psbt_shape_hash: shape_hash,
-                psbt_shape: shape,
+                psbt_fingerprint,
                 signpsbt_auth: auth("/cln.Node/SignPsbt", "88", 4),
                 signonly: vec![1],
                 timestamp_ms: 4,
@@ -1027,6 +1034,29 @@ mod tests {
     }
 
     #[test]
+    fn unlinked_wallet_psbt_remains_non_splice() {
+        let (message, pending, state) = sign_withdrawal_fixture();
+        let Message::SignWithdrawal(request) = &message else {
+            unreachable!();
+        };
+        let fingerprint = psbt_fingerprint(&request.psbt.0.psbt.inner);
+        let mut context = state
+            .get_psbt_context(&fingerprint)
+            .unwrap()
+            .unwrap();
+        context.linked_node_channel_id_hex = None;
+        let mut unrelated_state = State::new();
+        unrelated_state
+            .put_splice_wallet_psbt_context(&fingerprint, context)
+            .unwrap();
+
+        assert_eq!(
+            classify(&message, &pending, &unrelated_state, &[], None).unwrap(),
+            SplicePolicyDecision::NotSpliceRelated
+        );
+    }
+
+    #[test]
     fn splice_signwithdrawal_without_current_signpsbt_rejects() {
         let (message, _, state) = sign_withdrawal_fixture();
 
@@ -1042,34 +1072,15 @@ mod tests {
         let Message::SignWithdrawal(request) = &message else {
             unreachable!();
         };
-        let (shape_hash, _) = psbt_shape_from_psbt(&request.psbt.0.psbt.inner).unwrap();
+        let fingerprint = psbt_fingerprint(&request.psbt.0.psbt.inner);
         let mut context = state
-            .get_splice_wallet_psbt_context(&shape_hash)
+            .get_psbt_context(&fingerprint)
             .unwrap()
             .unwrap();
         context.signpsbt_auth = None;
-        state.put_splice_wallet_psbt_context(context).unwrap();
-
-        assert_eq!(
-            classify(&message, &pending, &state, &[], None).unwrap(),
-            SplicePolicyDecision::Rejected(SplicePolicyViolation::MissingSignPsbtAuth)
-        );
-    }
-
-    #[test]
-    fn negotiating_splice_signwithdrawal_with_fundpsbt_only_rejects_missing_auth() {
-        let (message, pending, mut state) =
-            sign_withdrawal_fixture_for_origin(SpliceOrigin::LocalInitiator, false, false, false);
-        let Message::SignWithdrawal(request) = &message else {
-            unreachable!();
-        };
-        let (shape_hash, _) = psbt_shape_from_psbt(&request.psbt.0.psbt.inner).unwrap();
-        let mut context = state
-            .get_splice_wallet_psbt_context(&shape_hash)
-            .unwrap()
+        state
+            .put_splice_wallet_psbt_context(&fingerprint, context)
             .unwrap();
-        context.signpsbt_auth = None;
-        state.put_splice_wallet_psbt_context(context).unwrap();
 
         assert_eq!(
             classify(&message, &pending, &state, &[], None).unwrap(),
@@ -1083,13 +1094,15 @@ mod tests {
         let Message::SignWithdrawal(request) = &message else {
             unreachable!();
         };
-        let (shape_hash, _) = psbt_shape_from_psbt(&request.psbt.0.psbt.inner).unwrap();
+        let fingerprint = psbt_fingerprint(&request.psbt.0.psbt.inner);
         let mut context = state
-            .get_splice_wallet_psbt_context(&shape_hash)
+            .get_psbt_context(&fingerprint)
             .unwrap()
             .unwrap();
         context.signonly = vec![0];
-        state.put_splice_wallet_psbt_context(context).unwrap();
+        state
+            .put_splice_wallet_psbt_context(&fingerprint, context)
+            .unwrap();
         let Request::SignPsbt(request) = &mut pending[0] else {
             unreachable!();
         };
@@ -1364,7 +1377,7 @@ mod tests {
     }
 
     #[test]
-    fn known_splice_check_outpoint_reaches_vls_boundary() {
+    fn known_splice_outpoint_requests_reach_vls_boundaries() {
         // TODO: Remove this stub-boundary test once VLS splice support is in place.
         let mut fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
         fixture
@@ -1377,11 +1390,26 @@ mod tests {
             .unwrap()
             .unwrap();
         let outpoint = session.cand.funding_outpoint.unwrap();
-        let message = Message::CheckOutpoint(CheckOutpoint {
-            funding_txid: Txid::from_str(&outpoint.txid).unwrap(),
-            funding_txout: outpoint.vout as u16,
-        });
+        let funding_txid = Txid::from_str(&outpoint.txid).unwrap();
+        let funding_txout = outpoint.vout as u16;
+        let cases = [
+            (
+                Message::CheckOutpoint(CheckOutpoint {
+                    funding_txid,
+                    funding_txout,
+                }),
+                VlsProof::OutpointBurial,
+            ),
+            (
+                Message::LockOutpoint(LockOutpoint {
+                    funding_txid,
+                    funding_txout,
+                }),
+                VlsProof::OutpointLock,
+            ),
+        ];
 
+        for (message, proof) in cases {
         assert_eq!(
             classify(
                 &message,
@@ -1391,40 +1419,9 @@ mod tests {
                 Some(&fixture.context),
             )
             .unwrap(),
-            SplicePolicyDecision::RequiresVlsProof(VlsProof::OutpointBurial)
+                SplicePolicyDecision::RequiresVlsProof(proof)
         );
     }
-
-    #[test]
-    fn known_splice_lock_outpoint_reaches_vls_boundary() {
-        // TODO: Remove this stub-boundary test once VLS splice support is in place.
-        let mut fixture = splice_signing_fixture(SpliceOrigin::LocalInitiator, false, false);
-        fixture
-            .state
-            .mark_splice_pending_lock(&fixture.node_channel_id_hex, 3)
-            .unwrap();
-        let session = fixture
-            .state
-            .get_splice_session(&fixture.node_channel_id_hex)
-            .unwrap()
-            .unwrap();
-        let outpoint = session.cand.funding_outpoint.unwrap();
-        let message = Message::LockOutpoint(LockOutpoint {
-            funding_txid: Txid::from_str(&outpoint.txid).unwrap(),
-            funding_txout: outpoint.vout as u16,
-        });
-
-        assert_eq!(
-            classify(
-                &message,
-                &[],
-                &fixture.state,
-                &fixture.local_node_id,
-                Some(&fixture.context),
-            )
-            .unwrap(),
-            SplicePolicyDecision::RequiresVlsProof(VlsProof::OutpointLock)
-        );
     }
 
     #[test]

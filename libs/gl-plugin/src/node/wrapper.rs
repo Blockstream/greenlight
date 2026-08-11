@@ -9,10 +9,10 @@ use cln_grpc::pb::{self, node_server::Node};
 use cln_rpc::primitives::ChannelState;
 use cln_rpc::{self};
 use gl_client::persist::{
-    candidate_funding_facts_from_psbt, psbt_shape_from_base64, wallet_inputs_from_psbt, FeePolicy,
-    FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState,
-    SignPsbtIntentFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
-    WalletInputReservation, WalletInputSource,
+    candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt,
+    FeePolicy, FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth,
+    OldSpliceState, SignPsbtIntentFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
+    WalletInputReservation,
 };
 use log::debug;
 use prost::Message;
@@ -390,10 +390,8 @@ impl Node for WrappedNodeServer {
         let response = self.inner.fund_psbt(r).await?;
         if let Some(auth) = auth {
             let body = response.get_ref();
-            let (psbt_shape_hash, psbt_shape) =
-                psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+            let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
             let timestamp_ms = auth.timestamp_ms;
-            let change_outnum = body.change_outnum;
             let reservations = body
                 .reservations
                 .iter()
@@ -406,16 +404,13 @@ impl Node for WrappedNodeServer {
                 })
                 .collect::<Vec<_>>();
             let wallet_inputs =
-                wallet_inputs_from_psbt(&body.psbt, &reservations, WalletInputSource::FundPsbt)
-                    .map_err(internal_status)?;
+                wallet_inputs_from_psbt(&body.psbt, &reservations).map_err(internal_status)?;
 
             self.update_splice_state(|state| {
                 state.record_fundpsbt_response(FundPsbtResponseFacts {
-                    psbt_shape_hash,
-                    psbt_shape,
+                    psbt_fingerprint: psbt.fingerprint,
                     fundpsbt_auth: auth,
                     wallet_inputs,
-                    change_outnum,
                     timestamp_ms,
                 })
             })
@@ -438,15 +433,13 @@ impl Node for WrappedNodeServer {
         let auth = maybe_normalized_auth("/cln.Node/SignPsbt", &r)?;
         if let Some(auth) = auth {
             let body = r.get_ref();
-            let (psbt_shape_hash, psbt_shape) =
-                psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+            let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
             let timestamp_ms = auth.timestamp_ms;
             let signonly = body.signonly.clone();
 
             self.update_splice_state(|state| {
                 state.record_signpsbt_intent(SignPsbtIntentFacts {
-                    psbt_shape_hash,
-                    psbt_shape,
+                    psbt_fingerprint: psbt.fingerprint,
                     signpsbt_auth: auth,
                     signonly,
                     timestamp_ms,
@@ -881,19 +874,18 @@ impl Node for WrappedNodeServer {
         let node_channel_id_hex = self
             .node_channel_id_hex_for_outpoint(&node_id_hex, &old.funding_outpoint)
             .await?;
-        let source_wallet_psbt_shape_hash = request_body
+        let source_wallet_psbt_fingerprint = request_body
             .initialpsbt
             .as_deref()
-            .map(psbt_shape_from_base64)
+            .map(parse_base64_psbt)
             .transpose()
             .map_err(internal_status)?
-            .map(|(hash, _)| hash);
+            .map(|psbt| psbt.fingerprint);
 
         let response = self.inner.splice_init(request).await?;
         let body = response.get_ref();
-        let (psbt_shape_hash, psbt_shape) =
-            psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
-        let candidate_psbt_shape_hash = psbt_shape_hash.clone();
+        let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
+        let candidate_psbt_fingerprint = psbt.fingerprint.clone();
         let timestamp_ms = auth.timestamp_ms;
         self.update_splice_state(|state| {
             state.record_local_splice_intent(LocalSpliceIntent {
@@ -907,14 +899,15 @@ impl Node for WrappedNodeServer {
                     feerate_per_kw: request_body.feerate_per_kw,
                     force_feerate: request_body.force_feerate,
                 },
-                initial_psbt_shape_hash: Some(psbt_shape_hash),
-                initial_psbt_shape: Some(psbt_shape),
+                initial_psbt_fingerprint: psbt.fingerprint.clone(),
+                initial_psbt_input_outpoints: psbt.input_outpoints.clone(),
                 timestamp_ms,
             })?;
-            if let Some(source_psbt_shape_hash) = source_wallet_psbt_shape_hash.as_deref() {
+            if let Some(source_psbt_fingerprint) = source_wallet_psbt_fingerprint.as_deref() {
                 state.inherit_splice_wallet_context(
-                    source_psbt_shape_hash,
-                    &candidate_psbt_shape_hash,
+                    source_psbt_fingerprint,
+                    &candidate_psbt_fingerprint,
+                    &psbt.input_outpoints,
                     &node_channel_id_hex,
                     timestamp_ms,
                 )?;
@@ -935,8 +928,7 @@ impl Node for WrappedNodeServer {
 
         let response = self.inner.splice_signed(request).await?;
         let body = response.get_ref();
-        let (psbt_shape_hash, psbt_shape) =
-            psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+        let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
         let response_psbt = body.psbt.clone();
         let funding_txid = hex::encode(&body.txid);
         let funding_outnum = body.outnum;
@@ -963,8 +955,8 @@ impl Node for WrappedNodeServer {
                 .transpose()?;
             state.record_splice_signed_response(SpliceSignedResponseFacts {
                 node_channel_id_hex,
-                psbt_shape_hash,
-                psbt_shape,
+                psbt_fingerprint: psbt.fingerprint,
+                psbt_input_outpoints: psbt.input_outpoints,
                 splice_signed_auth: auth,
                 candidate,
                 timestamp_ms,
@@ -984,16 +976,15 @@ impl Node for WrappedNodeServer {
 
         let response = self.inner.splice_update(request).await?;
         let body = response.get_ref();
-        let (psbt_shape_hash, psbt_shape) =
-            psbt_shape_from_base64(&body.psbt).map_err(internal_status)?;
+        let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
         let commitments_secured = body.commitments_secured;
         let signatures_secured = body.signatures_secured;
         let timestamp_ms = auth.timestamp_ms;
         self.update_splice_state(|state| {
             state.record_splice_update_response(SpliceUpdateResponseFacts {
                 node_channel_id_hex,
-                psbt_shape_hash,
-                psbt_shape,
+                psbt_fingerprint: psbt.fingerprint,
+                psbt_input_outpoints: psbt.input_outpoints,
                 splice_update_auth: auth,
                 commitments_secured,
                 signatures_secured,

@@ -1,18 +1,15 @@
 mod canonical;
-#[allow(dead_code)]
 mod splice;
 
 pub use splice::{
-    candidate_funding_facts_from_psbt, psbt_shape_from_base64, wallet_inputs_from_psbt, FeePolicy,
-    FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState,
-    SignPsbtIntentFacts, SignPsbtResponseFacts, SpliceSignedResponseFacts,
-    SpliceUpdateResponseFacts, WalletInputReservation, WalletInputSource,
-};
-pub(crate) use splice::{
-    psbt_shape_from_psbt, transaction_shape, SpliceOrigin, SplicePhase, SpliceSessionV1,
+    candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt,
+    FeePolicy, FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth,
+    OldSpliceState, PsbtCaptureFacts, SignPsbtIntentFacts, SpliceSignedResponseFacts,
+    SpliceUpdateResponseFacts, WalletInputReservation,
 };
 #[cfg(test)]
 pub(crate) use splice::{CandidateFundingFacts, WalletInput};
+pub(crate) use splice::{SpliceOrigin, SplicePhase, SpliceSessionV1};
 
 use anyhow::anyhow;
 use lightning_signer::bitcoin::secp256k1::PublicKey;
@@ -1106,10 +1103,13 @@ mod tests {
 
     #[test]
     fn state_entry_canonical_value_bytes_sorts_nested_object_keys() {
-        let entry = StateEntry::new(0, json!({
+        let entry = StateEntry::new(
+            0,
+            json!({
             "z": {"b": 1, "a": 2},
             "a": [{"d": 4, "c": 3}]
-        }));
+            }),
+        );
 
         let bytes = entry.canonical_value_bytes().unwrap();
 

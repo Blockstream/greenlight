@@ -36,6 +36,7 @@ picky-asn1-der = "0.4"
 pin-project = "1.1.5"
 prost = "0.12"
 prost-derive = "0.12"
+psbt-v2 = { version = "0.3.0", default-features = false, features = ["std"] }
 # `rustls-tls-webpki-roots` compiles Mozilla's CA bundle into the
 # binary. Identical TLS behaviour on every platform — Android, iOS,
 # desktop — with no runtime OS root-store discovery. We previously
