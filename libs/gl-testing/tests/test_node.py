@@ -52,6 +52,34 @@ def test_node_signer(clients, executor):
     h.shutdown()
 
 
+def test_node_signmessage_rejected(clients):
+    """`signmessage` is rejected outright and does not wedge the node.
+
+    The signer refuses `SIGN_MESSAGE` (hsmd type 23) by design, so
+    forwarding the RPC to the node would leave a request pending in the
+    serial hsmd queue forever, blocking all subsequent signing
+    operations.
+    """
+    c = clients.new()
+    c.register(configure=True)
+    n = c.node()
+    h = c.signer().run_in_thread()
+
+    req = clnpb.SignmessageRequest(message="hello world").SerializeToString()
+    with pytest.raises(ValueError, match="not supported by Greenlight"):
+        n.inner.call("/cln.Node/SignMessage", req)
+
+    # The rejection must not have consumed a slot in the hsmd queue,
+    # so signing operations still work afterwards.
+    inv = n.invoice(
+        label="test",
+        amount_msat=clnpb.AmountOrAny(amount=clnpb.Amount(msat=42000)),
+        description="desc",
+    )
+    assert inv.bolt11
+    h.shutdown()
+
+
 @pytest.mark.skip(reason="routehints seem to be missing in regtest")
 def test_node_network(node_factory, clients, bitcoind):
     """Setup a small network and check that we can send/receive payments.
