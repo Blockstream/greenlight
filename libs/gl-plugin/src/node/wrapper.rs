@@ -1,21 +1,18 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Error;
-use base64::{engine::general_purpose, Engine as _};
-use bytes::Buf;
 use cln_grpc;
 use cln_grpc::pb::{self, node_server::Node};
 use cln_rpc::primitives::ChannelState;
 use cln_rpc::{self};
 use gl_client::persist::{
-    candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt,
-    FeePolicy, FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, NormalizedRpcAuth,
-    OldSpliceState, SignPsbtIntentFacts, SpliceSignedResponseFacts, SpliceUpdateResponseFacts,
-    WalletInputReservation,
+    candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt, FeePolicy,
+    FundPsbtResponseFacts, FundingOutpoint, LocalSpliceIntent, OldSpliceState, SignPsbtIntentFacts,
+    SpliceSignedResponseFacts, SpliceUpdateResponseFacts, WalletInputReservation,
 };
 use log::debug;
-use prost::Message;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
@@ -386,12 +383,11 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::FundpsbtRequest>,
     ) -> Result<Response<pb::FundpsbtResponse>, Status> {
-        let auth = maybe_normalized_auth("/cln.Node/FundPsbt", &r)?;
+        let captured_at_ms = rpc_context_timestamp_ms(&r)?;
         let response = self.inner.fund_psbt(r).await?;
-        if let Some(auth) = auth {
+        if let Some(timestamp_ms) = captured_at_ms {
             let body = response.get_ref();
             let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
-            let timestamp_ms = auth.timestamp_ms;
             let reservations = body
                 .reservations
                 .iter()
@@ -409,7 +405,6 @@ impl Node for WrappedNodeServer {
             self.update_splice_state(|state| {
                 state.record_fundpsbt_response(FundPsbtResponseFacts {
                     psbt_fingerprint: psbt.fingerprint,
-                    fundpsbt_auth: auth,
                     wallet_inputs,
                     timestamp_ms,
                 })
@@ -430,17 +425,15 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::SignpsbtRequest>,
     ) -> Result<Response<pb::SignpsbtResponse>, Status> {
-        let auth = maybe_normalized_auth("/cln.Node/SignPsbt", &r)?;
-        if let Some(auth) = auth {
+        let captured_at_ms = rpc_context_timestamp_ms(&r)?;
+        if let Some(timestamp_ms) = captured_at_ms {
             let body = r.get_ref();
             let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
-            let timestamp_ms = auth.timestamp_ms;
             let signonly = body.signonly.clone();
 
             self.update_splice_state(|state| {
                 state.record_signpsbt_intent(SignPsbtIntentFacts {
                     psbt_fingerprint: psbt.fingerprint,
-                    signpsbt_auth: auth,
                     signonly,
                     timestamp_ms,
                 })
@@ -866,7 +859,7 @@ impl Node for WrappedNodeServer {
         &self,
         request: tonic::Request<pb::SpliceInitRequest>,
     ) -> Result<tonic::Response<pb::SpliceInitResponse>, tonic::Status> {
-        let auth = normalized_auth("/cln.Node/SpliceInit", &request)?;
+        let timestamp_ms = require_rpc_context_timestamp_ms(&request)?;
         let request_body = request.get_ref().clone();
         let node_id_hex = self.local_node_id_hex().await?;
         let channel_id_hex = hex::encode(&request_body.channel_id);
@@ -886,14 +879,12 @@ impl Node for WrappedNodeServer {
         let body = response.get_ref();
         let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
         let candidate_psbt_fingerprint = psbt.fingerprint.clone();
-        let timestamp_ms = auth.timestamp_ms;
         self.update_splice_state(|state| {
             state.record_local_splice_intent(LocalSpliceIntent {
                 node_id_hex,
                 channel_id_hex,
                 node_channel_id_hex: node_channel_id_hex.clone(),
                 old,
-                splice_init_auth: auth,
                 authorized_relative_amount_sat: request_body.relative_amount,
                 fee_policy: FeePolicy {
                     feerate_per_kw: request_body.feerate_per_kw,
@@ -922,7 +913,7 @@ impl Node for WrappedNodeServer {
         &self,
         request: tonic::Request<pb::SpliceSignedRequest>,
     ) -> Result<tonic::Response<pb::SpliceSignedResponse>, tonic::Status> {
-        let auth = normalized_auth("/cln.Node/SpliceSigned", &request)?;
+        let timestamp_ms = require_rpc_context_timestamp_ms(&request)?;
         let request_body = request.get_ref().clone();
         let node_channel_id_hex = self.node_channel_id_hex(&request_body.channel_id).await?;
 
@@ -932,7 +923,6 @@ impl Node for WrappedNodeServer {
         let response_psbt = body.psbt.clone();
         let funding_txid = hex::encode(&body.txid);
         let funding_outnum = body.outnum;
-        let timestamp_ms = auth.timestamp_ms;
         self.update_splice_state(|state| {
             let candidate = funding_outnum
                 .map(|outnum| {
@@ -957,7 +947,6 @@ impl Node for WrappedNodeServer {
                 node_channel_id_hex,
                 psbt_fingerprint: psbt.fingerprint,
                 psbt_input_outpoints: psbt.input_outpoints,
-                splice_signed_auth: auth,
                 candidate,
                 timestamp_ms,
             })
@@ -970,7 +959,7 @@ impl Node for WrappedNodeServer {
         &self,
         request: tonic::Request<pb::SpliceUpdateRequest>,
     ) -> Result<tonic::Response<pb::SpliceUpdateResponse>, tonic::Status> {
-        let auth = normalized_auth("/cln.Node/SpliceUpdate", &request)?;
+        let timestamp_ms = require_rpc_context_timestamp_ms(&request)?;
         let request_body = request.get_ref().clone();
         let node_channel_id_hex = self.node_channel_id_hex(&request_body.channel_id).await?;
 
@@ -979,13 +968,11 @@ impl Node for WrappedNodeServer {
         let psbt = parse_base64_psbt(&body.psbt).map_err(internal_status)?;
         let commitments_secured = body.commitments_secured;
         let signatures_secured = body.signatures_secured;
-        let timestamp_ms = auth.timestamp_ms;
         self.update_splice_state(|state| {
             state.record_splice_update_response(SpliceUpdateResponseFacts {
                 node_channel_id_hex,
                 psbt_fingerprint: psbt.fingerprint,
                 psbt_input_outpoints: psbt.input_outpoints,
-                splice_update_auth: auth,
                 commitments_secured,
                 signatures_secured,
                 timestamp_ms,
@@ -1288,70 +1275,34 @@ fn internal_status(error: impl std::fmt::Display) -> Status {
     Status::internal(error.to_string())
 }
 
-fn decode_auth_metadata<T>(request: &Request<T>, key: &'static str) -> Result<Vec<u8>, Status> {
-    let value = request
-        .metadata()
-        .get(key)
-        .ok_or_else(|| Status::unauthenticated(format!("missing {key} metadata")))?;
-    general_purpose::STANDARD_NO_PAD
-        .decode(value.as_bytes())
-        .map_err(|e| Status::unauthenticated(format!("invalid {key} metadata: {e}")))
+// Metadata presence controls fact capture only; the signer verifies the live request context.
+const RPC_CONTEXT_KEYS: [&str; 4] = ["glauthpubkey", "glauthsig", "glts", "glrune"];
+
+fn now_ms() -> Result<u64, Status> {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(internal_status)?
+        .as_millis();
+    u64::try_from(millis).map_err(internal_status)
 }
 
-fn normalized_auth<T: Message>(
-    uri: &str,
-    request: &Request<T>,
-) -> Result<NormalizedRpcAuth, Status> {
-    let caller_pubkey = decode_auth_metadata(request, "glauthpubkey")?;
-    let timestamp_bytes = decode_auth_metadata(request, "glts")?;
-    if timestamp_bytes.len() != 8 {
-        return Err(Status::unauthenticated(format!(
-            "invalid glts metadata length {}",
-            timestamp_bytes.len()
-        )));
+fn rpc_context_timestamp_ms<T>(request: &Request<T>) -> Result<Option<u64>, Status> {
+    let present = RPC_CONTEXT_KEYS
+        .iter()
+        .filter(|key| request.metadata().contains_key(**key))
+        .count();
+    match present {
+        0 => Ok(None),
+        4 => now_ms().map(Some),
+        _ => Err(Status::unauthenticated(
+            "incomplete Greenlight RPC context metadata",
+        )),
     }
-
-    let mut timestamp_slice = timestamp_bytes.as_slice();
-    let timestamp_ms = timestamp_slice.get_u64();
-    let mut payload = Vec::new();
-    request
-        .get_ref()
-        .encode(&mut payload)
-        .map_err(|e| Status::internal(format!("failed to encode request for auth hash: {e}")))?;
-
-    Ok(normalized_rpc_auth_from_payload(
-        uri,
-        &payload,
-        &caller_pubkey,
-        timestamp_ms,
-    ))
 }
 
-fn normalized_rpc_auth_from_payload(
-    uri: &str,
-    payload: &[u8],
-    caller_pubkey: &[u8],
-    timestamp_ms: u64,
-) -> NormalizedRpcAuth {
-    NormalizedRpcAuth::new(
-        uri.to_string(),
-        sha256::digest(payload),
-        hex::encode(caller_pubkey),
-        timestamp_ms,
-    )
-}
-
-fn maybe_normalized_auth<T: Message>(
-    uri: &str,
-    request: &Request<T>,
-) -> Result<Option<NormalizedRpcAuth>, Status> {
-    let has_auth_metadata =
-        request.metadata().contains_key("glauthpubkey") || request.metadata().contains_key("glts");
-    if !has_auth_metadata {
-        return Ok(None);
-    }
-
-    normalized_auth(uri, request).map(Some)
+fn require_rpc_context_timestamp_ms<T>(request: &Request<T>) -> Result<u64, Status> {
+    rpc_context_timestamp_ms(request)?
+        .ok_or_else(|| Status::unauthenticated("missing Greenlight RPC context metadata"))
 }
 
 fn amount_sat(amount: Option<&pb::Amount>, field: &'static str) -> Result<u64, Status> {

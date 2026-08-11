@@ -34,7 +34,6 @@ pub(crate) enum SplicePolicyViolation {
     MissingSpliceIntent,
     InvalidPhase,
     MissingSignPsbtIntent,
-    MissingSignPsbtAuth,
     PsbtFingerprintMismatch,
     UnknownWalletInput,
     SignOnlyViolation,
@@ -171,8 +170,7 @@ fn session_violation(
         return Some(SplicePolicyViolation::InvalidPhase);
     }
     if session.origin == SpliceOrigin::LocalInitiator
-        && (session.auth.splice_init_auth.is_none()
-            || session.intent.authorized_relative_amount_sat.is_none())
+        && session.intent.authorized_relative_amount_sat.is_none()
     {
         return Some(SplicePolicyViolation::MissingSpliceIntent);
     }
@@ -500,9 +498,6 @@ fn classify_sign_withdrawal(
     let Some(session) = state.get_splice_session(node_channel_id_hex)? else {
         return reject(SplicePolicyViolation::MissingSpliceSession);
     };
-    if context.signpsbt_auth.is_none() {
-        return reject(SplicePolicyViolation::MissingSignPsbtAuth);
-    }
     if let Some(violation) = session_violation(
         &session,
         &[
@@ -585,8 +580,8 @@ mod tests {
     };
     use crate::persist::{
         CandidateFundingFacts, FeePolicy, FundPsbtResponseFacts, FundingOutpoint,
-        LocalSpliceIntent, NormalizedRpcAuth, OldSpliceState, SignPsbtIntentFacts, SpliceOrigin,
-        SpliceSessionV1, SpliceUpdateResponseFacts, State, WalletInput,
+        LocalSpliceIntent, OldSpliceState, SignPsbtIntentFacts, SpliceOrigin, SpliceSessionV1,
+        SpliceUpdateResponseFacts, State, WalletInput,
     };
     use crate::signer::model::{
         cln::{SignpsbtRequest, SpliceSignedRequest, SpliceUpdateRequest},
@@ -601,15 +596,6 @@ mod tests {
     };
     use vls_protocol::psbt::{PsbtWrapper, StreamedPSBT};
     use vls_protocol::serde_bolt::{Array, Octets, WithSize};
-
-    fn auth(uri: &str, byte: &str, timestamp_ms: u64) -> NormalizedRpcAuth {
-        NormalizedRpcAuth::new(
-            uri.to_string(),
-            byte.repeat(32),
-            "02".repeat(33),
-            timestamp_ms,
-        )
-    }
 
     fn input_outpoints(transaction: &Transaction) -> Vec<FundingOutpoint> {
         transaction
@@ -703,7 +689,6 @@ mod tests {
                     channel_id_hex: hex::encode(&channel_id),
                     node_channel_id_hex: node_channel_id_hex.clone(),
                     old: old.clone(),
-                    splice_init_auth: auth("/cln.Node/SpliceInit", "55", 1),
                     authorized_relative_amount_sat: 20_000,
                     fee_policy: FeePolicy::default(),
                     initial_psbt_fingerprint: psbt_fingerprint.clone(),
@@ -718,7 +703,6 @@ mod tests {
                     hex::encode(&channel_id),
                     node_channel_id_hex.clone(),
                     old.clone(),
-                    None,
                     None,
                     FeePolicy::default(),
                     1,
@@ -825,7 +809,6 @@ mod tests {
                 channel_id_hex: session.channel_id_hex,
                 node_channel_id_hex: session.node_channel_id_hex.clone(),
                 old: session.old,
-                splice_init_auth: auth("/cln.Node/SpliceInit", "55", 1),
                 authorized_relative_amount_sat: 20_000,
                 fee_policy: FeePolicy::default(),
                 initial_psbt_fingerprint: psbt_fingerprint.clone(),
@@ -838,7 +821,6 @@ mod tests {
                 node_channel_id_hex: session.node_channel_id_hex,
                 psbt_fingerprint,
                 psbt_input_outpoints,
-                splice_update_auth: auth("/cln.Node/SpliceUpdate", "66", 2),
                 commitments_secured: false,
                 signatures_secured: Some(false),
                 timestamp_ms: 2,
@@ -913,7 +895,6 @@ mod tests {
         state
             .record_fundpsbt_response(FundPsbtResponseFacts {
                 psbt_fingerprint: psbt_fingerprint.clone(),
-                fundpsbt_auth: auth("/cln.Node/FundPsbt", "55", 1),
                 wallet_inputs: vec![WalletInput {
                     txid: wallet_txid.to_string(),
                     vout: 1,
@@ -930,7 +911,6 @@ mod tests {
                     channel_id_hex: "33".repeat(32),
                     node_channel_id_hex: node_channel_id_hex.clone(),
                     old: old.clone(),
-                    splice_init_auth: auth("/cln.Node/SpliceInit", "66", 2),
                     authorized_relative_amount_sat: 20_000,
                     fee_policy: FeePolicy::default(),
                     initial_psbt_fingerprint: psbt_fingerprint.clone(),
@@ -945,7 +925,6 @@ mod tests {
                     "33".repeat(32),
                     node_channel_id_hex.clone(),
                     old,
-                    None,
                     None,
                     FeePolicy::default(),
                     2,
@@ -964,7 +943,6 @@ mod tests {
                 node_channel_id_hex,
                 psbt_fingerprint: psbt_fingerprint.clone(),
                 psbt_input_outpoints,
-                splice_update_auth: auth("/cln.Node/SpliceUpdate", "77", 3),
                 commitments_secured,
                 signatures_secured: Some(false),
                 timestamp_ms: 3,
@@ -973,7 +951,6 @@ mod tests {
         state
             .record_signpsbt_intent(SignPsbtIntentFacts {
                 psbt_fingerprint,
-                signpsbt_auth: auth("/cln.Node/SignPsbt", "88", 4),
                 signonly: vec![1],
                 timestamp_ms: 4,
             })
@@ -1063,28 +1040,6 @@ mod tests {
         assert_eq!(
             classify(&message, &[], &state, &[], None).unwrap(),
             SplicePolicyDecision::Rejected(SplicePolicyViolation::MissingSignPsbtIntent)
-        );
-    }
-
-    #[test]
-    fn splice_signwithdrawal_with_fundpsbt_only_rejects() {
-        let (message, pending, mut state) = sign_withdrawal_fixture();
-        let Message::SignWithdrawal(request) = &message else {
-            unreachable!();
-        };
-        let fingerprint = psbt_fingerprint(&request.psbt.0.psbt.inner);
-        let mut context = state
-            .get_psbt_context(&fingerprint)
-            .unwrap()
-            .unwrap();
-        context.signpsbt_auth = None;
-        state
-            .put_splice_wallet_psbt_context(&fingerprint, context)
-            .unwrap();
-
-        assert_eq!(
-            classify(&message, &pending, &state, &[], None).unwrap(),
-            SplicePolicyDecision::Rejected(SplicePolicyViolation::MissingSignPsbtAuth)
         );
     }
 

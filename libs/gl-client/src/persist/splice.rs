@@ -70,45 +70,10 @@ pub struct FundingOutpoint {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NormalizedRpcAuth {
-    pub schema: String,
-    pub schema_version: u16,
-    pub uri: String,
-    pub request_hash: String,
-    pub caller_pubkey_hex: String,
-    pub timestamp_ms: u64,
-}
-
-impl NormalizedRpcAuth {
-    pub fn new(
-        uri: String,
-        request_hash: String,
-        caller_pubkey_hex: String,
-        timestamp_ms: u64,
-    ) -> Self {
-        Self {
-            schema: "NormalizedRpcAuth".to_string(),
-            schema_version: 1,
-            uri,
-            request_hash,
-            caller_pubkey_hex,
-            timestamp_ms,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OldSpliceState {
     pub funding_outpoint: FundingOutpoint,
     pub channel_value_sat: u64,
     pub local_balance_sat: u64,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SpliceAuthState {
-    pub splice_init_auth: Option<NormalizedRpcAuth>,
-    pub latest_splice_update_auth: Option<NormalizedRpcAuth>,
-    pub splice_signed_auth: Option<NormalizedRpcAuth>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -129,7 +94,6 @@ pub struct LocalSpliceIntent {
     pub channel_id_hex: String,
     pub node_channel_id_hex: String,
     pub old: OldSpliceState,
-    pub splice_init_auth: NormalizedRpcAuth,
     pub authorized_relative_amount_sat: i64,
     pub fee_policy: FeePolicy,
     pub initial_psbt_fingerprint: String,
@@ -194,7 +158,8 @@ pub struct SignerRequestRecord {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 // TODO: Reconsider these fields once the VLS splice integration shape is settled.
-// Keep Greenlight-owned authorization and intent here, and move protocol state to VLS.
+// Keep observed Greenlight request facts here, and move authenticated intent and protocol
+// state to the signer/VLS integration boundary.
 pub struct SpliceSessionV1 {
     pub schema: String,
     pub schema_version: u16,
@@ -204,13 +169,11 @@ pub struct SpliceSessionV1 {
     pub channel_id_hex: String,
     pub node_channel_id_hex: String,
     pub old: OldSpliceState,
-    pub auth: SpliceAuthState,
     pub intent: SpliceIntentState,
     pub psbt: SplicePsbtState,
     pub cand: SpliceCandidateState,
     pub delta: SpliceDeltaState,
     pub linked_wallet_psbt_fingerprints: Vec<String>,
-    pub request_history: Vec<NormalizedRpcAuth>,
     pub signer_request_history: Vec<SignerRequestRecord>,
     pub created_at_ms: u64,
     pub updated_at_ms: u64,
@@ -224,7 +187,6 @@ impl SpliceSessionV1 {
         channel_id_hex: String,
         node_channel_id_hex: String,
         old: OldSpliceState,
-        splice_init_auth: Option<NormalizedRpcAuth>,
         authorized_relative_amount_sat: Option<i64>,
         fee_policy: FeePolicy,
         timestamp_ms: u64,
@@ -238,11 +200,6 @@ impl SpliceSessionV1 {
             channel_id_hex,
             node_channel_id_hex,
             old,
-            auth: SpliceAuthState {
-                splice_init_auth: splice_init_auth.clone(),
-                latest_splice_update_auth: None,
-                splice_signed_auth: None,
-            },
             intent: SpliceIntentState {
                 authorized_relative_amount_sat,
                 fee_policy,
@@ -251,7 +208,6 @@ impl SpliceSessionV1 {
             cand: SpliceCandidateState::default(),
             delta: SpliceDeltaState::default(),
             linked_wallet_psbt_fingerprints: Vec::new(),
-            request_history: splice_init_auth.into_iter().collect(),
             signer_request_history: Vec::new(),
             created_at_ms: timestamp_ms,
             updated_at_ms: timestamp_ms,
@@ -291,8 +247,6 @@ pub struct WalletInput {
 pub struct SpliceWalletPsbtContextV1 {
     pub schema: String,
     pub schema_version: u16,
-    pub fundpsbt_auth: Option<NormalizedRpcAuth>,
-    pub signpsbt_auth: Option<NormalizedRpcAuth>,
     pub signonly: Vec<u32>,
     pub wallet_inputs: Vec<WalletInput>,
     pub linked_node_channel_id_hex: Option<String>,
@@ -301,17 +255,10 @@ pub struct SpliceWalletPsbtContextV1 {
 }
 
 impl SpliceWalletPsbtContextV1 {
-    pub fn new(
-        fundpsbt_auth: Option<NormalizedRpcAuth>,
-        signpsbt_auth: Option<NormalizedRpcAuth>,
-        wallet_inputs: Vec<WalletInput>,
-        timestamp_ms: u64,
-    ) -> Self {
+    pub fn new(wallet_inputs: Vec<WalletInput>, timestamp_ms: u64) -> Self {
         Self {
             schema: "SpliceWalletPsbtContextV1".to_string(),
             schema_version: 1,
-            fundpsbt_auth,
-            signpsbt_auth,
             signonly: Vec::new(),
             wallet_inputs,
             linked_node_channel_id_hex: None,
@@ -331,7 +278,6 @@ pub struct WalletInputReservation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FundPsbtResponseFacts {
     pub psbt_fingerprint: String,
-    pub fundpsbt_auth: NormalizedRpcAuth,
     pub wallet_inputs: Vec<WalletInput>,
     pub timestamp_ms: u64,
 }
@@ -339,7 +285,6 @@ pub struct FundPsbtResponseFacts {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignPsbtIntentFacts {
     pub psbt_fingerprint: String,
-    pub signpsbt_auth: NormalizedRpcAuth,
     pub signonly: Vec<u32>,
     pub timestamp_ms: u64,
 }
@@ -349,7 +294,6 @@ pub struct SpliceUpdateResponseFacts {
     pub node_channel_id_hex: String,
     pub psbt_fingerprint: String,
     pub psbt_input_outpoints: Vec<FundingOutpoint>,
-    pub splice_update_auth: NormalizedRpcAuth,
     pub commitments_secured: bool,
     pub signatures_secured: Option<bool>,
     pub timestamp_ms: u64,
@@ -360,7 +304,6 @@ pub struct SpliceSignedResponseFacts {
     pub node_channel_id_hex: String,
     pub psbt_fingerprint: String,
     pub psbt_input_outpoints: Vec<FundingOutpoint>,
-    pub splice_signed_auth: NormalizedRpcAuth,
     pub candidate: Option<CandidateFundingFacts>,
     pub timestamp_ms: u64,
 }
@@ -541,9 +484,7 @@ impl State {
         let source_fingerprints = session.linked_wallet_psbt_fingerprints.clone();
         let mut context = self
             .get_psbt_context(psbt_fingerprint)?
-            .unwrap_or_else(|| {
-                SpliceWalletPsbtContextV1::new(None, None, Vec::new(), updated_at_ms)
-            });
+            .unwrap_or_else(|| SpliceWalletPsbtContextV1::new(Vec::new(), updated_at_ms));
         if let Some(linked_channel) = context.linked_node_channel_id_hex.as_deref() {
             if linked_channel != session.node_channel_id_hex {
                 bail!(
@@ -606,9 +547,6 @@ impl State {
     }
 
     pub fn create_local_splice_session(&mut self, session: SpliceSessionV1) -> anyhow::Result<()> {
-        if session.auth.splice_init_auth.is_none() {
-            bail!("local splice sessions require splice_init_auth");
-        }
         if session.intent.authorized_relative_amount_sat.is_none() {
             bail!("local splice sessions require authorized relative amount");
         }
@@ -635,12 +573,10 @@ impl State {
             session.node_id_hex = intent.node_id_hex;
             session.channel_id_hex = intent.channel_id_hex;
             session.old = intent.old;
-            session.auth.splice_init_auth = Some(intent.splice_init_auth.clone());
             session.intent.authorized_relative_amount_sat =
                 Some(intent.authorized_relative_amount_sat);
             session.intent.fee_policy = intent.fee_policy;
             session.psbt.candidate_fingerprint = Some(psbt_fingerprint.clone());
-            session.request_history.push(intent.splice_init_auth);
             session.updated_at_ms = intent.timestamp_ms;
             self.link_splice_psbt_context(
                 &mut session,
@@ -657,7 +593,6 @@ impl State {
             intent.channel_id_hex,
             intent.node_channel_id_hex,
             intent.old,
-            Some(intent.splice_init_auth),
             Some(intent.authorized_relative_amount_sat),
             intent.fee_policy,
             intent.timestamp_ms,
@@ -674,10 +609,8 @@ impl State {
 
     pub fn record_fundpsbt_response(&mut self, facts: FundPsbtResponseFacts) -> anyhow::Result<()> {
         let existing = self.get_psbt_context(&facts.psbt_fingerprint)?;
-        let mut context = existing.unwrap_or_else(|| {
-            SpliceWalletPsbtContextV1::new(None, None, Vec::new(), facts.timestamp_ms)
-        });
-        context.fundpsbt_auth = Some(facts.fundpsbt_auth);
+        let mut context = existing
+            .unwrap_or_else(|| SpliceWalletPsbtContextV1::new(Vec::new(), facts.timestamp_ms));
         context.wallet_inputs = facts.wallet_inputs;
         context.updated_at_ms = facts.timestamp_ms;
         self.put_splice_wallet_psbt_context(&facts.psbt_fingerprint, context)
@@ -685,10 +618,8 @@ impl State {
 
     pub fn record_signpsbt_intent(&mut self, facts: SignPsbtIntentFacts) -> anyhow::Result<()> {
         let existing = self.get_psbt_context(&facts.psbt_fingerprint)?;
-        let mut context = existing.unwrap_or_else(|| {
-            SpliceWalletPsbtContextV1::new(None, None, Vec::new(), facts.timestamp_ms)
-        });
-        context.signpsbt_auth = Some(facts.signpsbt_auth);
+        let mut context = existing
+            .unwrap_or_else(|| SpliceWalletPsbtContextV1::new(Vec::new(), facts.timestamp_ms));
         context.signonly = facts.signonly;
         context.updated_at_ms = facts.timestamp_ms;
         self.put_splice_wallet_psbt_context(&facts.psbt_fingerprint, context)
@@ -715,9 +646,6 @@ impl State {
                 session.phase
             );
         }
-
-        session.auth.latest_splice_update_auth = Some(facts.splice_update_auth.clone());
-        session.request_history.push(facts.splice_update_auth);
 
         if facts.commitments_secured {
             session.psbt.frozen_fingerprint = Some(facts.psbt_fingerprint.clone());
@@ -773,8 +701,6 @@ impl State {
             );
         }
 
-        session.auth.splice_signed_auth = Some(facts.splice_signed_auth.clone());
-        session.request_history.push(facts.splice_signed_auth);
         session.psbt.candidate_fingerprint = Some(facts.psbt_fingerprint.clone());
         if session.psbt.frozen_fingerprint.is_none() {
             session.psbt.frozen_fingerprint = Some(facts.psbt_fingerprint);
@@ -802,9 +728,6 @@ impl State {
     }
 
     pub fn create_peer_splice_session(&mut self, session: SpliceSessionV1) -> anyhow::Result<()> {
-        if session.auth.splice_init_auth.is_some() {
-            bail!("peer-initiated splice sessions must not include splice_init_auth");
-        }
         if session.intent.authorized_relative_amount_sat.is_some() {
             bail!("peer-initiated splice sessions must not include local relative amount intent");
         }
@@ -819,7 +742,6 @@ impl State {
         &mut self,
         node_channel_id_hex: &str,
         psbt_fingerprint: String,
-        auth: NormalizedRpcAuth,
         updated_at_ms: u64,
     ) -> anyhow::Result<()> {
         let mut session = self
@@ -831,9 +753,7 @@ impl State {
                 session.phase
             );
         }
-        session.auth.latest_splice_update_auth = Some(auth.clone());
         session.psbt.candidate_fingerprint = Some(psbt_fingerprint);
-        session.request_history.push(auth);
         session.updated_at_ms = updated_at_ms;
         self.put_splice_session(&session)
     }
@@ -996,9 +916,6 @@ impl State {
             );
         }
 
-        if candidate.fundpsbt_auth.is_none() {
-            candidate.fundpsbt_auth = source.fundpsbt_auth;
-        }
         for wallet_input in source.wallet_inputs {
             let remains_in_candidate = candidate_input_outpoints.iter().any(|outpoint| {
                 outpoint.txid == wallet_input.txid && outpoint.vout == wallet_input.vout
@@ -1061,15 +978,6 @@ mod tests {
     use std::str::FromStr;
 
     use crate::psbt::CLN_PSBT_V2;
-
-    fn auth(uri: &str, request_hash: &str, timestamp_ms: u64) -> NormalizedRpcAuth {
-        NormalizedRpcAuth::new(
-            uri.to_string(),
-            request_hash.to_string(),
-            "02".repeat(33),
-            timestamp_ms,
-        )
-    }
 
     fn outpoint(txid: &str, vout: u32) -> FundingOutpoint {
         FundingOutpoint {
@@ -1157,7 +1065,6 @@ mod tests {
                 channel_value_sat: 1_000_000,
                 local_balance_sat: 600_000,
             },
-            Some(auth("/cln.Node/SpliceInit", &"66".repeat(32), 1)),
             Some(50_000),
             FeePolicy {
                 feerate_per_kw: Some(253),
@@ -1216,7 +1123,7 @@ mod tests {
     }
 
     #[test]
-    fn record_local_splice_intent_persists_auth_and_fingerprint() {
+    fn record_local_splice_intent_persists_facts_and_fingerprint() {
         let mut state = State::new();
         let fingerprint = "77".repeat(32);
 
@@ -1230,7 +1137,6 @@ mod tests {
                     channel_value_sat: 1_000_000,
                     local_balance_sat: 600_000,
                 },
-                splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 1),
                 authorized_relative_amount_sat: 50_000,
                 fee_policy: FeePolicy {
                     feerate_per_kw: Some(253),
@@ -1248,10 +1154,6 @@ mod tests {
         assert_eq!(session.intent.authorized_relative_amount_sat, Some(50_000));
         assert_eq!(session.intent.fee_policy.feerate_per_kw, Some(253));
         assert_eq!(
-            session.auth.splice_init_auth.as_ref().unwrap().uri,
-            "/cln.Node/SpliceInit"
-        );
-        assert_eq!(
             session.psbt.candidate_fingerprint.as_deref(),
             Some(fingerprint.as_str())
         );
@@ -1264,10 +1166,9 @@ mod tests {
             Some("4444444444444444444444444444444444444444444444444444444444444444")
         );
 
-        let psbt_value = serde_json::to_value(session.psbt).unwrap();
-        assert!(psbt_value.get("splice_init_auth").is_none());
-        assert!(psbt_value.get("request_hash").is_none());
-        assert!(psbt_value.get("caller_pubkey_hex").is_none());
+        let session_value = serde_json::to_value(session).unwrap();
+        assert!(session_value.get("auth").is_none());
+        assert!(session_value.get("request_history").is_none());
     }
 
     #[test]
@@ -1337,7 +1238,6 @@ mod tests {
         state
             .record_fundpsbt_response(FundPsbtResponseFacts {
                 psbt_fingerprint: psbt.fingerprint.clone(),
-                fundpsbt_auth: auth("/cln.Node/FundPsbt", &"ab".repeat(32), 2),
                 wallet_inputs,
                 timestamp_ms: 2,
             })
@@ -1345,20 +1245,17 @@ mod tests {
         state
             .record_signpsbt_intent(SignPsbtIntentFacts {
                 psbt_fingerprint: psbt.fingerprint.clone(),
-                signpsbt_auth: auth("/cln.Node/SignPsbt", &"cd".repeat(32), 3),
                 signonly: vec![0],
                 timestamp_ms: 3,
             })
             .unwrap();
 
-        let context = state
-            .get_psbt_context(&psbt.fingerprint)
-            .unwrap()
-            .unwrap();
-        assert!(context.fundpsbt_auth.is_some());
-        assert!(context.signpsbt_auth.is_some());
+        let context = state.get_psbt_context(&psbt.fingerprint).unwrap().unwrap();
         assert_eq!(context.signonly, vec![0]);
         assert_eq!(context.wallet_inputs[0].value_sat, 25_000);
+        let value = serde_json::to_value(context).unwrap();
+        assert!(value.get("fundpsbt_auth").is_none());
+        assert!(value.get("signpsbt_auth").is_none());
     }
 
     #[test]
@@ -1374,7 +1271,6 @@ mod tests {
                     channel_value_sat: 1_000_000,
                     local_balance_sat: 600_000,
                 },
-                splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 1),
                 authorized_relative_amount_sat: 50_000,
                 fee_policy: FeePolicy::default(),
                 initial_psbt_fingerprint: "aa".repeat(32),
@@ -1386,17 +1282,12 @@ mod tests {
         state
             .record_signpsbt_intent(SignPsbtIntentFacts {
                 psbt_fingerprint: "aa".repeat(32),
-                signpsbt_auth: auth("/cln.Node/SignPsbt", &"77".repeat(32), 2),
                 signonly: vec![0],
                 timestamp_ms: 2,
             })
             .unwrap();
 
-        let context = state
-            .get_psbt_context(&"aa".repeat(32))
-            .unwrap()
-            .unwrap();
-        assert!(context.signpsbt_auth.is_some());
+        let context = state.get_psbt_context(&"aa".repeat(32)).unwrap().unwrap();
         assert_eq!(context.signonly, vec![0]);
         assert_eq!(
             context.linked_node_channel_id_hex.as_deref(),
@@ -1414,7 +1305,6 @@ mod tests {
         state
             .record_fundpsbt_response(FundPsbtResponseFacts {
                 psbt_fingerprint: source_fingerprint.clone(),
-                fundpsbt_auth: auth("/cln.Node/FundPsbt", &"77".repeat(32), 1),
                 wallet_inputs: vec![WalletInput {
                     txid: wallet_outpoint.txid.clone(),
                     vout: wallet_outpoint.vout,
@@ -1434,7 +1324,6 @@ mod tests {
                     channel_value_sat: 1_000_000,
                     local_balance_sat: 600_000,
                 },
-                splice_init_auth: auth("/cln.Node/SpliceInit", &"66".repeat(32), 2),
                 authorized_relative_amount_sat: 50_000,
                 fee_policy: FeePolicy::default(),
                 initial_psbt_fingerprint: candidate_fingerprint.clone(),
@@ -1457,7 +1346,6 @@ mod tests {
             .get_psbt_context(&candidate_fingerprint)
             .unwrap()
             .unwrap();
-        assert!(candidate.fundpsbt_auth.is_some());
         assert_eq!(candidate.wallet_inputs.len(), 1);
         assert_eq!(candidate.wallet_inputs[0].reserved_to_block, Some(100));
 
@@ -1466,7 +1354,6 @@ mod tests {
                 node_channel_id_hex: "44".repeat(32),
                 psbt_fingerprint: updated_fingerprint.clone(),
                 psbt_input_outpoints: vec![wallet_outpoint],
-                splice_update_auth: auth("/cln.Node/SpliceUpdate", &"88".repeat(32), 3),
                 commitments_secured: false,
                 signatures_secured: None,
                 timestamp_ms: 3,
@@ -1477,7 +1364,6 @@ mod tests {
             .get_psbt_context(&updated_fingerprint)
             .unwrap()
             .unwrap();
-        assert!(updated.fundpsbt_auth.is_some());
         assert_eq!(updated.wallet_inputs.len(), 1);
         assert_eq!(updated.wallet_inputs[0].reserved_to_block, Some(100));
     }
@@ -1500,7 +1386,6 @@ mod tests {
                 node_channel_id_hex: "44".repeat(32),
                 psbt_fingerprint: psbt.fingerprint.clone(),
                 psbt_input_outpoints: psbt.input_outpoints.clone(),
-                splice_update_auth: auth("/cln.Node/SpliceUpdate", &"ef".repeat(32), 2),
                 commitments_secured: true,
                 signatures_secured: Some(false),
                 timestamp_ms: 2,
@@ -1526,7 +1411,6 @@ mod tests {
                 node_channel_id_hex: "44".repeat(32),
                 psbt_fingerprint: psbt.fingerprint,
                 psbt_input_outpoints: psbt.input_outpoints,
-                splice_signed_auth: auth("/cln.Node/SpliceSigned", &"12".repeat(32), 3),
                 candidate: Some(candidate),
                 timestamp_ms: 3,
             })
@@ -1545,7 +1429,7 @@ mod tests {
     }
 
     #[test]
-    fn session_roundtrips_through_grouped_schema() {
+    fn session_schema_omits_unverifiable_rpc_auth() {
         let mut session = local_session();
         session.psbt.candidate_fingerprint = Some("candidate".to_string());
         session.psbt.frozen_fingerprint = Some("frozen".to_string());
@@ -1554,19 +1438,16 @@ mod tests {
 
         assert_eq!(value["schema"], json!("SpliceSessionV1"));
         assert!(value.get("old").is_some());
-        assert!(value.get("auth").is_some());
+        assert!(value.get("auth").is_none());
         assert!(value.get("intent").is_some());
         assert!(value.get("psbt").is_some());
         assert!(value.get("cand").is_some());
         assert!(value.get("delta").is_some());
         assert!(value.get("linked_wallet_psbt_fingerprints").is_some());
+        assert!(value.get("request_history").is_none());
         assert!(value.get("old_funding_outpoint").is_none());
         assert!(value.get("splice_init_auth").is_none());
         assert!(value.get("candidate_funding_outpoint").is_none());
-        assert_eq!(
-            value["auth"]["splice_init_auth"]["uri"],
-            json!("/cln.Node/SpliceInit")
-        );
         assert_eq!(
             value["psbt"],
             json!({
@@ -1574,8 +1455,6 @@ mod tests {
                 "frozen_fingerprint": "frozen",
             })
         );
-        assert!(value["auth"]["splice_init_auth"].get("request").is_none());
-        assert!(value["auth"]["splice_init_auth"].get("payload").is_none());
         assert_eq!(
             serde_json::from_value::<SpliceSessionV1>(value).unwrap(),
             session
@@ -1588,23 +1467,10 @@ mod tests {
         let fingerprint = "aa".repeat(32);
         state.create_local_splice_session(local_session()).unwrap();
         state
-            .update_splice_candidate(
-                &"44".repeat(32),
-                fingerprint.clone(),
-                auth("/cln.Node/SpliceUpdate", &"dd".repeat(32), 2),
-                2,
-            )
+            .update_splice_candidate(&"44".repeat(32), fingerprint.clone(), 2)
             .unwrap();
         state
-            .put_splice_wallet_psbt_context(
-                &fingerprint,
-                SpliceWalletPsbtContextV1::new(
-            Some(auth("/cln.Node/FundPsbt", &"aa".repeat(32), 2)),
-            None,
-                    vec![],
-            2,
-                ),
-            )
+            .put_splice_wallet_psbt_context(&fingerprint, SpliceWalletPsbtContextV1::new(vec![], 2))
             .unwrap();
         state
             .link_splice_wallet_psbt(&fingerprint, &"44".repeat(32), 2)
@@ -1631,10 +1497,7 @@ mod tests {
             .get_splice_by_outpoint(&"ee".repeat(32), 2)
             .unwrap()
             .is_some());
-        assert!(restored
-            .get_psbt_context(&fingerprint)
-            .unwrap()
-            .is_some());
+        assert!(restored.get_psbt_context(&fingerprint).unwrap().is_some());
 
         state.tombstone_splice_session(&"44".repeat(32)).unwrap();
         state.merge(&stale_state).unwrap();
@@ -1647,9 +1510,6 @@ mod tests {
             .get_splice_by_outpoint(&"ee".repeat(32), 2)
             .unwrap()
             .is_none());
-        assert!(state
-            .get_psbt_context(&fingerprint)
-            .unwrap()
-            .is_none());
+        assert!(state.get_psbt_context(&fingerprint).unwrap().is_none());
     }
 }
