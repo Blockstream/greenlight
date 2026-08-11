@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+ - Fixed `signmessage` hanging forever and blocking all subsequent signing operations. The signer refuses `SIGN_MESSAGE` requests by design, so the node now rejects the RPC with an `Unimplemented` ("not supported") error instead of forwarding it to the serial hsmd queue. ([#739](https://github.com/Blockstream/greenlight/issues/739))
+
 ## [0.4.0] - 2026-05-21
 
 ### Fixed

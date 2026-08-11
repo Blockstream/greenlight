@@ -547,11 +547,22 @@ impl Node for WrappedNodeServer {
         self.inner.set_channel(r).await
     }
 
+    /// `signmessage` is not part of the API we support: the signer
+    /// refuses `SIGN_MESSAGE` (hsmd type 23) by design, since we use
+    /// that message to attest TLS certificates. Forwarding the call to
+    /// the node would enqueue an hsmd request that never gets a
+    /// response, and since hsmd is a serial queue that blocks all
+    /// subsequent signing operations until the node restarts. We
+    /// therefore reject the call here, before it can reach hsmd.
     async fn sign_message(
         &self,
-        r: Request<pb::SignmessageRequest>,
+        _r: Request<pb::SignmessageRequest>,
     ) -> Result<Response<pb::SignmessageResponse>, Status> {
-        self.inner.sign_message(r).await
+        Err(Status::unimplemented(
+            "signmessage is not supported by Greenlight: the signer \
+             refuses to sign arbitrary messages, so the call can never \
+             complete.",
+        ))
     }
 
     async fn stop(
