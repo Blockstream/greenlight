@@ -552,6 +552,11 @@ void uniffi_glsdk_fn_free_scheduler(void*_Nonnull ptr, RustCallStatus *_Nonnull 
 void*_Nonnull uniffi_glsdk_fn_constructor_scheduler_new(RustBuffer network, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_SCHEDULER_LIGHTNING_AVAILABLE
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_SCHEDULER_LIGHTNING_AVAILABLE
+int8_t uniffi_glsdk_fn_method_scheduler_lightning_available(void*_Nonnull ptr, RustBuffer node_id, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_SCHEDULER_RECOVER
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_SCHEDULER_RECOVER
 void*_Nonnull uniffi_glsdk_fn_method_scheduler_recover(void*_Nonnull ptr, void*_Nonnull signer, RustCallStatus *_Nonnull out_status
@@ -1131,6 +1136,12 @@ uint16_t uniffi_glsdk_checksum_method_nodebuilder_with_event_listener(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODEEVENTSTREAM_NEXT
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_NODEEVENTSTREAM_NEXT
 uint16_t uniffi_glsdk_checksum_method_nodeeventstream_next(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_SCHEDULER_LIGHTNING_AVAILABLE
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_SCHEDULER_LIGHTNING_AVAILABLE
+uint16_t uniffi_glsdk_checksum_method_scheduler_lightning_available(void
     
 );
 #endif

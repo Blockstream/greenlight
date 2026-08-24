@@ -2320,6 +2320,26 @@ public func FfiConverterTypeNodeEventStream_lower(_ value: NodeEventStream) -> U
 
 public protocol SchedulerProtocol: AnyObject, Sendable {
     
+    /**
+     * Asks whether the Lightning account backed by `node_id` may be
+     * surfaced to the user.
+     *
+     * This is a feature gate for applications that offer Lightning
+     * alongside other account types. Greenlight relays the question
+     * to its Lightning Service Provider, which answers based on
+     * whether it has previously granted this node a slot, or has the
+     * capacity to grant one now.
+     *
+     * Deliberately callable before `register()`, since an
+     * application has to decide whether to offer Lightning at all
+     * before it creates a node. It needs no credentials, and the
+     * `node_id` is passed explicitly.
+     *
+     * The answer is advisory and may change over time. Treat an
+     * error as "unknown" rather than as a negative answer.
+     */
+    func lightningAvailable(nodeId: Data) throws  -> Bool
+    
     func recover(signer: Signer) throws  -> Credentials
     
     func register(signer: Signer, code: String?) throws  -> Credentials
@@ -2398,6 +2418,32 @@ public convenience init(network: Network)throws  {
 
     
 
+    
+    /**
+     * Asks whether the Lightning account backed by `node_id` may be
+     * surfaced to the user.
+     *
+     * This is a feature gate for applications that offer Lightning
+     * alongside other account types. Greenlight relays the question
+     * to its Lightning Service Provider, which answers based on
+     * whether it has previously granted this node a slot, or has the
+     * capacity to grant one now.
+     *
+     * Deliberately callable before `register()`, since an
+     * application has to decide whether to offer Lightning at all
+     * before it creates a node. It needs no credentials, and the
+     * `node_id` is passed explicitly.
+     *
+     * The answer is advisory and may change over time. Treat an
+     * error as "unknown" rather than as a negative answer.
+     */
+open func lightningAvailable(nodeId: Data)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_method_scheduler_lightning_available(self.uniffiClonePointer(),
+        FfiConverterData.lower(nodeId),$0
+    )
+})
+}
     
 open func recover(signer: Signer)throws  -> Credentials  {
     return try  FfiConverterTypeCredentials_lift(try rustCallWithError(FfiConverterTypeError_lift) {
@@ -9672,6 +9718,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_scheduler_recover() != 55514) {
