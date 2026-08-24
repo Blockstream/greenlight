@@ -51,8 +51,10 @@ class SchedulerStub:
     Users are authenticated using mTLS authentication. Applications are
     provisioned with an anonymous keypair that is not bound to a node,
     allowing access only to the unauthenticated endpoints
-    `Scheduler.GetChallenge`, `Scheduler.Register` and
-    `Scheduler.Recover`. This allows them to register or recover a
+    `Scheduler.GetChallenge`, `Scheduler.Register`,
+    `Scheduler.Recover` and
+    `Scheduler.CheckLightningAvailability`. This allows them to
+    register or recover a
     node, but doesn't give access to the node itself. Upon registering
     or recovering an account the user receives a keypair that is bound
     to the specific node. Once the user receives their personal mTLS
@@ -110,6 +112,25 @@ class SchedulerStub:
     they have been issued for. Attempting to reuse a challenge
     or use a challenge with a different scope will result in an
     error being returned.
+    """
+    CheckLightningAvailability: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.CheckLightningAvailabilityRequest, _scheduler_pb2.CheckLightningAvailabilityResponse]
+    """Reports whether the Lightning account backed by `node_id` may
+    be surfaced to the user. This is a feature gate for downstream
+    applications: greenlight relays the question to its Lightning
+    Service Provider, which answers based on whether it has
+    previously granted this node a slot (grants are sticky) or has
+    the capacity to grant one now.
+
+    Unlike the other node-scoped calls this one is deliberately
+    available *before* registration, since an application has to
+    decide whether to offer Lightning at all before it creates a
+    node. There is therefore no mTLS identity to derive the node
+    from, and the caller names the `node_id` it is asking about.
+
+    The answer is advisory and may change: a node that is not
+    available today may become available once the LSP has capacity
+    again. Applications should treat an error as "unknown" rather
+    than as a negative answer.
     """
     Schedule: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ScheduleRequest, _scheduler_pb2.NodeInfoResponse]
     """Scheduling takes a previously registered node, locates a
@@ -216,8 +237,10 @@ class SchedulerAsyncStub(SchedulerStub):
     Users are authenticated using mTLS authentication. Applications are
     provisioned with an anonymous keypair that is not bound to a node,
     allowing access only to the unauthenticated endpoints
-    `Scheduler.GetChallenge`, `Scheduler.Register` and
-    `Scheduler.Recover`. This allows them to register or recover a
+    `Scheduler.GetChallenge`, `Scheduler.Register`,
+    `Scheduler.Recover` and
+    `Scheduler.CheckLightningAvailability`. This allows them to
+    register or recover a
     node, but doesn't give access to the node itself. Upon registering
     or recovering an account the user receives a keypair that is bound
     to the specific node. Once the user receives their personal mTLS
@@ -272,6 +295,25 @@ class SchedulerAsyncStub(SchedulerStub):
     they have been issued for. Attempting to reuse a challenge
     or use a challenge with a different scope will result in an
     error being returned.
+    """
+    CheckLightningAvailability: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.CheckLightningAvailabilityRequest, _scheduler_pb2.CheckLightningAvailabilityResponse]  # type: ignore[assignment]
+    """Reports whether the Lightning account backed by `node_id` may
+    be surfaced to the user. This is a feature gate for downstream
+    applications: greenlight relays the question to its Lightning
+    Service Provider, which answers based on whether it has
+    previously granted this node a slot (grants are sticky) or has
+    the capacity to grant one now.
+
+    Unlike the other node-scoped calls this one is deliberately
+    available *before* registration, since an application has to
+    decide whether to offer Lightning at all before it creates a
+    node. There is therefore no mTLS identity to derive the node
+    from, and the caller names the `node_id` it is asking about.
+
+    The answer is advisory and may change: a node that is not
+    available today may become available once the LSP has capacity
+    again. Applications should treat an error as "unknown" rather
+    than as a negative answer.
     """
     Schedule: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ScheduleRequest, _scheduler_pb2.NodeInfoResponse]  # type: ignore[assignment]
     """Scheduling takes a previously registered node, locates a
@@ -377,8 +419,10 @@ class SchedulerServicer(metaclass=_abc_1.ABCMeta):
     Users are authenticated using mTLS authentication. Applications are
     provisioned with an anonymous keypair that is not bound to a node,
     allowing access only to the unauthenticated endpoints
-    `Scheduler.GetChallenge`, `Scheduler.Register` and
-    `Scheduler.Recover`. This allows them to register or recover a
+    `Scheduler.GetChallenge`, `Scheduler.Register`,
+    `Scheduler.Recover` and
+    `Scheduler.CheckLightningAvailability`. This allows them to
+    register or recover a
     node, but doesn't give access to the node itself. Upon registering
     or recovering an account the user receives a keypair that is bound
     to the specific node. Once the user receives their personal mTLS
@@ -449,6 +493,31 @@ class SchedulerServicer(metaclass=_abc_1.ABCMeta):
         they have been issued for. Attempting to reuse a challenge
         or use a challenge with a different scope will result in an
         error being returned.
+        """
+
+    @_abc_1.abstractmethod
+    def CheckLightningAvailability(
+        self,
+        request: _scheduler_pb2.CheckLightningAvailabilityRequest,
+        context: _ServicerContext,
+    ) -> _typing.Union[_scheduler_pb2.CheckLightningAvailabilityResponse, _abc.Awaitable[_scheduler_pb2.CheckLightningAvailabilityResponse]]:
+        """Reports whether the Lightning account backed by `node_id` may
+        be surfaced to the user. This is a feature gate for downstream
+        applications: greenlight relays the question to its Lightning
+        Service Provider, which answers based on whether it has
+        previously granted this node a slot (grants are sticky) or has
+        the capacity to grant one now.
+
+        Unlike the other node-scoped calls this one is deliberately
+        available *before* registration, since an application has to
+        decide whether to offer Lightning at all before it creates a
+        node. There is therefore no mTLS identity to derive the node
+        from, and the caller names the `node_id` it is asking about.
+
+        The answer is advisory and may change: a node that is not
+        available today may become available once the LSP has capacity
+        again. Applications should treat an error as "unknown" rather
+        than as a negative answer.
         """
 
     @_abc_1.abstractmethod

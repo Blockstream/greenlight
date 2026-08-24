@@ -6,7 +6,7 @@ import warnings
 from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 from glclient import scheduler_pb2 as glclient_dot_scheduler__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.83.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -26,7 +26,7 @@ if _version_not_supported:
     )
 
 
-class SchedulerStub(object):
+class SchedulerStub:
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -50,8 +50,10 @@ class SchedulerStub(object):
     Users are authenticated using mTLS authentication. Applications are
     provisioned with an anonymous keypair that is not bound to a node,
     allowing access only to the unauthenticated endpoints
-    `Scheduler.GetChallenge`, `Scheduler.Register` and
-    `Scheduler.Recover`. This allows them to register or recover a
+    `Scheduler.GetChallenge`, `Scheduler.Register`,
+    `Scheduler.Recover` and
+    `Scheduler.CheckLightningAvailability`. This allows them to
+    register or recover a
     node, but doesn't give access to the node itself. Upon registering
     or recovering an account the user receives a keypair that is bound
     to the specific node. Once the user receives their personal mTLS
@@ -82,6 +84,11 @@ class SchedulerStub(object):
                 '/scheduler.Scheduler/GetChallenge',
                 request_serializer=glclient_dot_scheduler__pb2.ChallengeRequest.SerializeToString,
                 response_deserializer=glclient_dot_scheduler__pb2.ChallengeResponse.FromString,
+                _registered_method=True)
+        self.CheckLightningAvailability = channel.unary_unary(
+                '/scheduler.Scheduler/CheckLightningAvailability',
+                request_serializer=glclient_dot_scheduler__pb2.CheckLightningAvailabilityRequest.SerializeToString,
+                response_deserializer=glclient_dot_scheduler__pb2.CheckLightningAvailabilityResponse.FromString,
                 _registered_method=True)
         self.Schedule = channel.unary_unary(
                 '/scheduler.Scheduler/Schedule',
@@ -135,7 +142,7 @@ class SchedulerStub(object):
                 _registered_method=True)
 
 
-class SchedulerServicer(object):
+class SchedulerServicer:
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -159,8 +166,10 @@ class SchedulerServicer(object):
     Users are authenticated using mTLS authentication. Applications are
     provisioned with an anonymous keypair that is not bound to a node,
     allowing access only to the unauthenticated endpoints
-    `Scheduler.GetChallenge`, `Scheduler.Register` and
-    `Scheduler.Recover`. This allows them to register or recover a
+    `Scheduler.GetChallenge`, `Scheduler.Register`,
+    `Scheduler.Recover` and
+    `Scheduler.CheckLightningAvailability`. This allows them to
+    register or recover a
     node, but doesn't give access to the node itself. Upon registering
     or recovering an account the user receives a keypair that is bound
     to the specific node. Once the user receives their personal mTLS
@@ -223,6 +232,29 @@ class SchedulerServicer(object):
         they have been issued for. Attempting to reuse a challenge
         or use a challenge with a different scope will result in an
         error being returned.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CheckLightningAvailability(self, request, context):
+        """Reports whether the Lightning account backed by `node_id` may
+        be surfaced to the user. This is a feature gate for downstream
+        applications: greenlight relays the question to its Lightning
+        Service Provider, which answers based on whether it has
+        previously granted this node a slot (grants are sticky) or has
+        the capacity to grant one now.
+
+        Unlike the other node-scoped calls this one is deliberately
+        available *before* registration, since an application has to
+        decide whether to offer Lightning at all before it creates a
+        node. There is therefore no mTLS identity to derive the node
+        from, and the caller names the `node_id` it is asking about.
+
+        The answer is advisory and may change: a node that is not
+        available today may become available once the LSP has capacity
+        again. Applications should treat an error as "unknown" rather
+        than as a negative answer.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -369,6 +401,11 @@ def add_SchedulerServicer_to_server(servicer, server):
                     request_deserializer=glclient_dot_scheduler__pb2.ChallengeRequest.FromString,
                     response_serializer=glclient_dot_scheduler__pb2.ChallengeResponse.SerializeToString,
             ),
+            'CheckLightningAvailability': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckLightningAvailability,
+                    request_deserializer=glclient_dot_scheduler__pb2.CheckLightningAvailabilityRequest.FromString,
+                    response_serializer=glclient_dot_scheduler__pb2.CheckLightningAvailabilityResponse.SerializeToString,
+            ),
             'Schedule': grpc.unary_unary_rpc_method_handler(
                     servicer.Schedule,
                     request_deserializer=glclient_dot_scheduler__pb2.ScheduleRequest.FromString,
@@ -427,7 +464,7 @@ def add_SchedulerServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Scheduler(object):
+class Scheduler:
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -451,8 +488,10 @@ class Scheduler(object):
     Users are authenticated using mTLS authentication. Applications are
     provisioned with an anonymous keypair that is not bound to a node,
     allowing access only to the unauthenticated endpoints
-    `Scheduler.GetChallenge`, `Scheduler.Register` and
-    `Scheduler.Recover`. This allows them to register or recover a
+    `Scheduler.GetChallenge`, `Scheduler.Register`,
+    `Scheduler.Recover` and
+    `Scheduler.CheckLightningAvailability`. This allows them to
+    register or recover a
     node, but doesn't give access to the node itself. Upon registering
     or recovering an account the user receives a keypair that is bound
     to the specific node. Once the user receives their personal mTLS
@@ -534,6 +573,33 @@ class Scheduler(object):
             '/scheduler.Scheduler/GetChallenge',
             glclient_dot_scheduler__pb2.ChallengeRequest.SerializeToString,
             glclient_dot_scheduler__pb2.ChallengeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckLightningAvailability(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/scheduler.Scheduler/CheckLightningAvailability',
+            glclient_dot_scheduler__pb2.CheckLightningAvailabilityRequest.SerializeToString,
+            glclient_dot_scheduler__pb2.CheckLightningAvailabilityResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -815,7 +881,7 @@ class Scheduler(object):
             _registered_method=True)
 
 
-class DebugStub(object):
+class DebugStub:
     """A service to collect debugging information from clients.
     """
 
@@ -832,7 +898,7 @@ class DebugStub(object):
                 _registered_method=True)
 
 
-class DebugServicer(object):
+class DebugServicer:
     """A service to collect debugging information from clients.
     """
 
@@ -865,7 +931,7 @@ def add_DebugServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Debug(object):
+class Debug:
     """A service to collect debugging information from clients.
     """
 
@@ -897,7 +963,7 @@ class Debug(object):
             _registered_method=True)
 
 
-class PairingStub(object):
+class PairingStub:
     """A service to pair signer-less clients with an existing signer.
     """
 
@@ -924,7 +990,7 @@ class PairingStub(object):
                 _registered_method=True)
 
 
-class PairingServicer(object):
+class PairingServicer:
     """A service to pair signer-less clients with an existing signer.
     """
 
@@ -981,7 +1047,7 @@ def add_PairingServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Pairing(object):
+class Pairing:
     """A service to pair signer-less clients with an existing signer.
     """
 

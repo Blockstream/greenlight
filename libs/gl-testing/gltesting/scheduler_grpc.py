@@ -13,6 +13,9 @@ class SchedulerServicer(purerpc.Servicer):
     async def GetChallenge(self, input_message):
         raise NotImplementedError()
 
+    async def CheckLightningAvailability(self, input_message):
+        raise NotImplementedError()
+
     async def Schedule(self, input_message):
         raise NotImplementedError()
 
@@ -73,6 +76,15 @@ class SchedulerServicer(purerpc.Servicer):
                 purerpc.Cardinality.UNARY_UNARY,
                 glclient_dot_scheduler__pb2.ChallengeRequest,
                 glclient_dot_scheduler__pb2.ChallengeResponse,
+            )
+        )
+        service_obj.add_method(
+            "CheckLightningAvailability",
+            self.CheckLightningAvailability,
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.CheckLightningAvailabilityRequest,
+                glclient_dot_scheduler__pb2.CheckLightningAvailabilityResponse,
             )
         )
         service_obj.add_method(
@@ -196,6 +208,14 @@ class SchedulerStub:
                 purerpc.Cardinality.UNARY_UNARY,
                 glclient_dot_scheduler__pb2.ChallengeRequest,
                 glclient_dot_scheduler__pb2.ChallengeResponse,
+            )
+        )
+        self.CheckLightningAvailability = self._client.get_method_stub(
+            "CheckLightningAvailability",
+            purerpc.RPCSignature(
+                purerpc.Cardinality.UNARY_UNARY,
+                glclient_dot_scheduler__pb2.CheckLightningAvailabilityRequest,
+                glclient_dot_scheduler__pb2.CheckLightningAvailabilityResponse,
             )
         )
         self.Schedule = self._client.get_method_stub(
