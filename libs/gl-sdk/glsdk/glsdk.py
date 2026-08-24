@@ -534,6 +534,8 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_register() != 20821:
@@ -994,6 +996,12 @@ _UniffiLib.uniffi_glsdk_fn_constructor_scheduler_new.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_scheduler_new.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_scheduler_lightning_available.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_scheduler_lightning_available.restype = ctypes.c_int8
 _UniffiLib.uniffi_glsdk_fn_method_scheduler_recover.argtypes = (
     ctypes.c_void_p,
     ctypes.c_void_p,
@@ -1457,6 +1465,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_nodebuilder_with_event_listener.restype 
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_nodeeventstream_next.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_scheduler_lightning_available.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_scheduler_lightning_available.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_scheduler_recover.restype = ctypes.c_uint16
@@ -8589,6 +8600,27 @@ class _UniffiConverterTypeNodeEventStream:
     def write(cls, value: NodeEventStreamProtocol, buf: _UniffiRustBuffer):
         buf.write_u64(cls.lower(value))
 class SchedulerProtocol(typing.Protocol):
+    def lightning_available(self, node_id: "bytes"):
+        """
+        Asks whether the Lightning account backed by `node_id` may be
+        surfaced to the user.
+
+        This is a feature gate for applications that offer Lightning
+        alongside other account types. Greenlight relays the question
+        to its Lightning Service Provider, which answers based on
+        whether it has previously granted this node a slot, or has the
+        capacity to grant one now.
+
+        Deliberately callable before `register()`, since an
+        application has to decide whether to offer Lightning at all
+        before it creates a node. It needs no credentials, and the
+        `node_id` is passed explicitly.
+
+        The answer is advisory and may change over time. Treat an
+        error as "unknown" rather than as a negative answer.
+        """
+
+        raise NotImplementedError
     def recover(self, signer: "Signer"):
         raise NotImplementedError
     def register(self, signer: "Signer",code: "typing.Optional[str]"):
@@ -8635,6 +8667,37 @@ class Scheduler():
         inst = cls.__new__(cls)
         inst._pointer = pointer
         return inst
+
+
+    def lightning_available(self, node_id: "bytes") -> "bool":
+        """
+        Asks whether the Lightning account backed by `node_id` may be
+        surfaced to the user.
+
+        This is a feature gate for applications that offer Lightning
+        alongside other account types. Greenlight relays the question
+        to its Lightning Service Provider, which answers based on
+        whether it has previously granted this node a slot, or has the
+        capacity to grant one now.
+
+        Deliberately callable before `register()`, since an
+        application has to decide whether to offer Lightning at all
+        before it creates a node. It needs no credentials, and the
+        `node_id` is passed explicitly.
+
+        The answer is advisory and may change over time. Treat an
+        error as "unknown" rather than as a negative answer.
+        """
+
+        _UniffiConverterBytes.check_lower(node_id)
+        
+        return _UniffiConverterBool.lift(
+            _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_scheduler_lightning_available,self._uniffi_clone_pointer(),
+        _UniffiConverterBytes.lower(node_id))
+        )
+
+
+
 
 
     def recover(self, signer: "Signer") -> "Credentials":
