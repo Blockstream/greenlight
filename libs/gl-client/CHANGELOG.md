@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- `Scheduler::check_lightning_availability(node_id)` and the corresponding `Scheduler.CheckLightningAvailability` RPC — reports whether the Lightning account backed by `node_id` may be surfaced to the user. Unauthenticated and callable before the node is registered, so the `node_id` is passed explicitly rather than taken from the credentials.
+
 ### Changed
 
 - Signer version updated from `v25.12` to `v26.06` (VLS 0.14.0 / CLN v26.06.1)
