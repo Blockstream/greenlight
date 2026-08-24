@@ -97,6 +97,38 @@ where
 }
 
 impl<Creds> Scheduler<Creds> {
+    /// Asks whether the Lightning account backed by `node_id` may be
+    /// surfaced to the user.
+    ///
+    /// This is a feature gate for applications that offer Lightning
+    /// alongside other account types: greenlight relays the question
+    /// to its Lightning Service Provider, which answers based on
+    /// whether it has previously granted this node a slot, or has the
+    /// capacity to grant one now.
+    ///
+    /// Unlike the other node-scoped calls this one does not require
+    /// the node to be registered, and does not require authenticated
+    /// credentials, since an application has to decide whether to
+    /// offer Lightning before it creates a node. The `node_id` is
+    /// therefore passed explicitly rather than taken from the
+    /// credentials.
+    ///
+    /// The answer is advisory and may change over time. Treat an
+    /// error as "unknown" rather than as a negative answer.
+    pub async fn check_lightning_availability(
+        &self,
+        node_id: Vec<u8>,
+    ) -> Result<pb::scheduler::CheckLightningAvailabilityResponse> {
+        let res = self
+            .client
+            .clone()
+            .check_lightning_availability(pb::scheduler::CheckLightningAvailabilityRequest {
+                node_id,
+            })
+            .await?;
+        Ok(res.into_inner())
+    }
+
     /// Registers a new node with the scheduler service.
     ///
     /// # Arguments
