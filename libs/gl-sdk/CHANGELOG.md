@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- `Scheduler.lightning_available(node_id)` — asks whether the Lightning account backed by `node_id` may be surfaced to the user. Intended as a feature gate for applications that offer Lightning alongside other account types. Callable before `register()` and without credentials, since the decision has to be made before a node exists. The answer is advisory; treat an error as "unknown" rather than as a negative answer. Greenlight currently reports every account as unavailable while the backing Lightning Service Provider integration is being built.
+
 ## [0.4.0] - 2026-05-21
 
 ### Added

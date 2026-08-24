@@ -872,6 +872,8 @@ internal open class UniffiVTableCallbackInterfaceNodeEventListener(
 
 
 
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -960,6 +962,8 @@ fun uniffi_glsdk_checksum_method_nodebuilder_register_or_recover(
 fun uniffi_glsdk_checksum_method_nodebuilder_with_event_listener(
 ): Short
 fun uniffi_glsdk_checksum_method_nodeeventstream_next(
+): Short
+fun uniffi_glsdk_checksum_method_scheduler_lightning_available(
 ): Short
 fun uniffi_glsdk_checksum_method_scheduler_recover(
 ): Short
@@ -1150,6 +1154,8 @@ fun uniffi_glsdk_fn_free_scheduler(`ptr`: Pointer,uniffi_out_err: UniffiRustCall
 ): Unit
 fun uniffi_glsdk_fn_constructor_scheduler_new(`network`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Pointer
+fun uniffi_glsdk_fn_method_scheduler_lightning_available(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
 fun uniffi_glsdk_fn_method_scheduler_recover(`ptr`: Pointer,`signer`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): Pointer
 fun uniffi_glsdk_fn_method_scheduler_register(`ptr`: Pointer,`signer`: Pointer,`code`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1417,6 +1423,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514.toShort()) {
@@ -4608,6 +4617,26 @@ public object FfiConverterTypeNodeEventStream: FfiConverter<NodeEventStream, Poi
 
 public interface SchedulerInterface {
     
+    /**
+     * Asks whether the Lightning account backed by `node_id` may be
+     * surfaced to the user.
+     *
+     * This is a feature gate for applications that offer Lightning
+     * alongside other account types. Greenlight relays the question
+     * to its Lightning Service Provider, which answers based on
+     * whether it has previously granted this node a slot, or has the
+     * capacity to grant one now.
+     *
+     * Deliberately callable before `register()`, since an
+     * application has to decide whether to offer Lightning at all
+     * before it creates a node. It needs no credentials, and the
+     * `node_id` is passed explicitly.
+     *
+     * The answer is advisory and may change over time. Treat an
+     * error as "unknown" rather than as a negative answer.
+     */
+    fun `lightningAvailable`(`nodeId`: kotlin.ByteArray): kotlin.Boolean
+    
     fun `recover`(`signer`: Signer): Credentials
     
     fun `register`(`signer`: Signer, `code`: kotlin.String?): Credentials
@@ -4717,6 +4746,37 @@ open class Scheduler: Disposable, AutoCloseable, SchedulerInterface
             UniffiLib.INSTANCE.uniffi_glsdk_fn_clone_scheduler(pointer!!, status)
         }
     }
+
+    
+    /**
+     * Asks whether the Lightning account backed by `node_id` may be
+     * surfaced to the user.
+     *
+     * This is a feature gate for applications that offer Lightning
+     * alongside other account types. Greenlight relays the question
+     * to its Lightning Service Provider, which answers based on
+     * whether it has previously granted this node a slot, or has the
+     * capacity to grant one now.
+     *
+     * Deliberately callable before `register()`, since an
+     * application has to decide whether to offer Lightning at all
+     * before it creates a node. It needs no credentials, and the
+     * `node_id` is passed explicitly.
+     *
+     * The answer is advisory and may change over time. Treat an
+     * error as "unknown" rather than as a negative answer.
+     */
+    @Throws(Exception::class)override fun `lightningAvailable`(`nodeId`: kotlin.ByteArray): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(Exception) { _status ->
+    UniffiLib.INSTANCE.uniffi_glsdk_fn_method_scheduler_lightning_available(
+        it, FfiConverterByteArray.lower(`nodeId`),_status)
+}
+    }
+    )
+    }
+    
 
     
     @Throws(Exception::class)override fun `recover`(`signer`: Signer): Credentials {

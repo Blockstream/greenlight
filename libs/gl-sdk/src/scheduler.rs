@@ -52,6 +52,38 @@ impl Scheduler {
         }
     }
 
+    /// Asks whether the Lightning account backed by `node_id` may be
+    /// surfaced to the user.
+    ///
+    /// This is a feature gate for applications that offer Lightning
+    /// alongside other account types. Greenlight relays the question
+    /// to its Lightning Service Provider, which answers based on
+    /// whether it has previously granted this node a slot, or has the
+    /// capacity to grant one now.
+    ///
+    /// Deliberately callable before `register()`, since an
+    /// application has to decide whether to offer Lightning at all
+    /// before it creates a node. It needs no credentials, and the
+    /// `node_id` is passed explicitly.
+    ///
+    /// The answer is advisory and may change over time. Treat an
+    /// error as "unknown" rather than as a negative answer.
+    pub fn lightning_available(&self, node_id: Vec<u8>) -> Result<bool, Error> {
+        let nobody = self.nobody();
+        exec(async move {
+            let inner = gl_client::scheduler::Scheduler::new(self.network, nobody)
+                .await
+                .map_err(|e| Error::other(e.to_string()))?;
+
+            let res = inner
+                .check_lightning_availability(node_id)
+                .await
+                .map_err(|e| Error::rpc(e.to_string()))?;
+
+            Ok(res.available)
+        })
+    }
+
     pub fn register(&self, signer: &Signer, code: Option<String>) -> Result<Credentials, Error> {
         let nobody = self.nobody();
         exec(async move {
