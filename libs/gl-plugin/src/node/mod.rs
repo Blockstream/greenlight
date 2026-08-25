@@ -1,12 +1,12 @@
 use crate::config::Config;
 use crate::pb::{self, node_server::Node};
-use crate::storage::StateStore;
+use crate::storage::{LspInvoiceMeta, StateStore};
 use crate::{messages, Event};
 use crate::{stager, tramp};
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use base64::{engine::general_purpose, Engine as _};
 use bytes::BufMut;
-use cln_rpc::Notification;
+use cln_rpc::{ClnRpc, Notification};
 use gl_client::metrics::{savings_percent, signer_state_request_wire_bytes};
 use gl_client::persist::{State, StateSketch};
 use governor::{
@@ -266,6 +266,16 @@ impl Node for PluginNodeServer {
                     .await
                     .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
 
+                let meta = LspInvoiceMeta {
+                    label: req.label.clone(),
+                    payment_hash: res.payment_hash.to_string(),
+                    requested_amount_msat: req.amount_msat,
+                    bolt11: res.bolt11.clone(),
+                };
+
+                write_lsp_invoice_meta(rpc, meta).await
+                    .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+
                 return Ok(Response::new(pb::LspInvoiceResponse {
                     bolt11: res.bolt11,
                     created_index: res.created_index.unwrap_or(0) as u32,
@@ -326,6 +336,9 @@ impl Node for PluginNodeServer {
                 .div_ceil(1_000_000);
             std::cmp::max(min_fee, proportional_fee)
         };
+        
+        let requested_amount_msat = req.amount_msat.clone();
+        let invoice_label = req.label.clone();
 
         // Use the new RPC method name for versions > v25.05gl1
         let mut res = if *version > *"v25.05gl1" {
@@ -343,6 +356,20 @@ impl Node for PluginNodeServer {
         };
 
         res.opening_fee_msat = opening_fee_msat;
+
+        // A JIT channel has now been negotiated with the LSP for this
+        // invoice. So, we're storing some data with the original requested
+        // amount.
+        let meta = LspInvoiceMeta {
+            label: invoice_label.clone(),
+            payment_hash: res.payment_hash.clone(),
+            requested_amount_msat,
+            bolt11: res.bolt11.clone(),
+        };
+
+        write_lsp_invoice_meta(rpc, meta).await
+            .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+
         Ok(Response::new(res.into()))
     }
 
@@ -835,6 +862,33 @@ impl Node for PluginNodeServer {
                 err.into()
             })
     }
+}
+
+/// Writes `LspInvoiceMeta` using datastore request. `LspInvoiceMeta` is useful for defining
+/// some additional information regarding invoice being requested trough Greenlight.
+async fn write_lsp_invoice_meta(mut rpc: tokio::sync::MutexGuard<'_, ClnRpc>, meta: LspInvoiceMeta)
+                                -> Result<()> {
+    let record_serialized = serde_json::to_string(&meta)
+        .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+
+    let datastore_req = cln_rpc::model::requests::DatastoreRequest {
+        key: vec![
+            "gl".to_string(),
+            "jit_channels".to_string(),
+            meta.label,
+        ],
+        string: Some(record_serialized),
+        hex: None,
+        mode: Some(cln_rpc::model::requests::DatastoreMode::CREATE_OR_REPLACE),
+        generation: None,
+    };
+
+    rpc.call_typed(&datastore_req).await.map_err(
+        |e|
+            anyhow!("Failed to store JIT channel negotiation data in datastore: {}", e)
+    )?;
+
+    Ok(())
 }
 
 use cln_grpc::pb::node_server::NodeServer;
