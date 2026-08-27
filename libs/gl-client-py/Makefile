@@ -10,6 +10,19 @@ PYVERSION=$(shell cd libs && cargo metadata --format-version 1 | jq -r '.package
 PYDIR=${REPO}/libs/gl-client-py
 PROTODIR=${REPO}/libs/proto
 
+# The protobuf gencode embeds a hard assertion that the runtime is at
+# least as new as the protoc that produced it, so regenerating with a
+# newer toolchain than the deployed runtime breaks every consumer at
+# import time. Pin the generator and run it isolated from the ambient
+# venv, so the checked-in stubs do not depend on who regenerated them.
+# Bump deliberately, together with the `protobuf` runtime bound in
+# pyproject.toml.
+PROTOC_TOOLCHAIN = \
+	uv run --no-project \
+	--with grpcio-tools==1.78.0 \
+	--with mypy-protobuf==5.0.0 \
+	python -m grpc_tools.protoc
+
 PYPROTOC_OPTS = \
 	-I ${PROTODIR} \
 	--python_out=${PYDIR} \
@@ -35,8 +48,8 @@ ${PYPROTOS}: pygrpc
 pygrpc: ${PROTOSRC}
 	cp ${PYDIR}/../proto/glclient/scheduler.proto ${PYDIR}/glclient/
 	cp ${PYDIR}/../proto/glclient/greenlight.proto ${PYDIR}/glclient/
-	cd ${PYDIR}; uv run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/scheduler.proto
-	cd ${PYDIR}; uv run python -m grpc_tools.protoc ${PYPROTOC_OPTS} glclient/greenlight.proto
+	cd ${PYDIR}; ${PROTOC_TOOLCHAIN} ${PYPROTOC_OPTS} glclient/scheduler.proto
+	cd ${PYDIR}; ${PROTOC_TOOLCHAIN} ${PYPROTOC_OPTS} glclient/greenlight.proto
 
 check-py:
 	#uv run --reinstall-package='gl-sdk' --all-packages mypy ${PYDIR}/glclient
