@@ -6,7 +6,7 @@ import warnings
 from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 from glclient import scheduler_pb2 as glclient_dot_scheduler__pb2
 
-GRPC_GENERATED_VERSION = '1.83.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -26,7 +26,7 @@ if _version_not_supported:
     )
 
 
-class SchedulerStub:
+class SchedulerStub(object):
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -142,7 +142,7 @@ class SchedulerStub:
                 _registered_method=True)
 
 
-class SchedulerServicer:
+class SchedulerServicer(object):
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -464,7 +464,7 @@ def add_SchedulerServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Scheduler:
+class Scheduler(object):
     """The scheduler service is the endpoint which allows users to
     register a new node with greenlight, recover access to an existing
     node if the owner lost its credentials, schedule the node to be run
@@ -881,7 +881,7 @@ class Scheduler:
             _registered_method=True)
 
 
-class DebugStub:
+class DebugStub(object):
     """A service to collect debugging information from clients.
     """
 
@@ -898,7 +898,7 @@ class DebugStub:
                 _registered_method=True)
 
 
-class DebugServicer:
+class DebugServicer(object):
     """A service to collect debugging information from clients.
     """
 
@@ -931,7 +931,7 @@ def add_DebugServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Debug:
+class Debug(object):
     """A service to collect debugging information from clients.
     """
 
@@ -963,7 +963,7 @@ class Debug:
             _registered_method=True)
 
 
-class PairingStub:
+class PairingStub(object):
     """A service to pair signer-less clients with an existing signer.
     """
 
@@ -990,7 +990,7 @@ class PairingStub:
                 _registered_method=True)
 
 
-class PairingServicer:
+class PairingServicer(object):
     """A service to pair signer-less clients with an existing signer.
     """
 
@@ -1047,7 +1047,7 @@ def add_PairingServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Pairing:
+class Pairing(object):
     """A service to pair signer-less clients with an existing signer.
     """
 
