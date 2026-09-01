@@ -270,11 +270,14 @@ impl Node for PluginNodeServer {
                     label: req.label.clone(),
                     payment_hash: res.payment_hash.to_string(),
                     requested_amount_msat: req.amount_msat,
+                    expected_amount_msat: 0,
                     bolt11: res.bolt11.clone(),
+                    lsp_id: "".to_string(),
                 };
 
-                write_lsp_invoice_meta(rpc, meta).await
-                    .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+                if let Err(e) = write_lsp_invoice_meta(&mut rpc, meta).await {
+                    warn!("Failed to write LSP invoice meta: {}", e);
+                }
 
                 return Ok(Response::new(pb::LspInvoiceResponse {
                     bolt11: res.bolt11,
@@ -364,11 +367,14 @@ impl Node for PluginNodeServer {
             label: invoice_label.clone(),
             payment_hash: res.payment_hash.clone(),
             requested_amount_msat,
+            expected_amount_msat: requested_amount_msat.saturating_sub(opening_fee_msat),
             bolt11: res.bolt11.clone(),
+            lsp_id,
         };
 
-        write_lsp_invoice_meta(rpc, meta).await
-            .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+        if let Err(e) = write_lsp_invoice_meta(&mut rpc, meta).await {
+            warn!("Failed to write LSP invoice meta: {}", e);
+        }
 
         Ok(Response::new(res.into()))
     }
@@ -866,10 +872,10 @@ impl Node for PluginNodeServer {
 
 /// Writes `LspInvoiceMeta` using datastore request. `LspInvoiceMeta` is useful for defining
 /// some additional information regarding invoice being requested trough Greenlight.
-async fn write_lsp_invoice_meta(mut rpc: tokio::sync::MutexGuard<'_, ClnRpc>, meta: LspInvoiceMeta)
+async fn write_lsp_invoice_meta(rpc: &mut ClnRpc, meta: LspInvoiceMeta)
                                 -> Result<()> {
-    let record_serialized = serde_json::to_string(&meta)
-        .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
+    let record_serialized =
+        serde_json::to_string(&meta).context("failed to serialize LspInvoiceMeta")?;
 
     let datastore_req = cln_rpc::model::requests::DatastoreRequest {
         key: vec![
