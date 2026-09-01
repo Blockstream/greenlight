@@ -84,5 +84,7 @@ pub struct LspInvoiceMeta {
     pub label: String,
     pub payment_hash: String,
     pub requested_amount_msat: u64,
+    pub expected_amount_msat: u64,
     pub bolt11: String,
+    pub lsp_id: String,
 }
