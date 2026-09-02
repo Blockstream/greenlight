@@ -97,10 +97,14 @@ service Scheduler {
 	// node. There is therefore no mTLS identity to derive the node
 	// from, and the caller names the `node_id` it is asking about.
 	//
-	// The answer is advisory and may change: a node that is not
-	// available today may become available once the LSP has capacity
-	// again. Applications should treat an error as "unknown" rather
-	// than as a negative answer.
+	// The answer is monotonic: once a node has been registered
+	// with greenlight it is reported as available, and stays
+	// available regardless of the node's status or of the LSP's
+	// current capacity. Before registration the answer is
+	// advisory and may change: a node that is not available today
+	// may become available once the LSP has capacity again.
+	// Applications should treat an error as "unknown" rather than
+	// as a negative answer.
 	rpc CheckLightningAvailability(CheckLightningAvailabilityRequest) returns (CheckLightningAvailabilityResponse) {}
 
 	// Scheduling takes a previously registered node, locates a

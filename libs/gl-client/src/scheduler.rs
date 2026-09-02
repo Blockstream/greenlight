@@ -113,8 +113,12 @@ impl<Creds> Scheduler<Creds> {
     /// therefore passed explicitly rather than taken from the
     /// credentials.
     ///
-    /// The answer is advisory and may change over time. Treat an
-    /// error as "unknown" rather than as a negative answer.
+    /// The answer is monotonic: once the node has been registered
+    /// it is reported as available, and stays available regardless
+    /// of the node's status or the provider's current capacity.
+    /// Before registration the answer is advisory and may change
+    /// over time. Treat an error as "unknown" rather than as a
+    /// negative answer.
     pub async fn check_lightning_availability(
         &self,
         node_id: Vec<u8>,
