@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::pb::{self, node_server::Node};
-use crate::storage::{LspInvoiceMeta, StateStore};
+use crate::storage::{JitRequestMeta, StateStore};
 use crate::{messages, Event};
 use crate::{stager, tramp};
 use anyhow::{anyhow, Context, Error, Result};
@@ -350,7 +350,7 @@ impl Node for PluginNodeServer {
         // A JIT channel has now been negotiated with the LSP for this
         // invoice. So, we're storing some data with the original requested
         // amount.
-        let meta = LspInvoiceMeta {
+        let meta = JitRequestMeta {
             label: invoice_label.clone(),
             payment_hash: res.payment_hash.clone(),
             requested_amount_msat,
@@ -859,7 +859,7 @@ impl Node for PluginNodeServer {
 
 /// Writes `LspInvoiceMeta` using datastore request. `LspInvoiceMeta` is useful for defining
 /// some additional information regarding invoice being requested trough Greenlight.
-async fn write_lsp_invoice_meta(rpc: &mut ClnRpc, meta: LspInvoiceMeta)
+async fn write_lsp_invoice_meta(rpc: &mut ClnRpc, meta: JitRequestMeta)
                                 -> Result<()> {
     let record_serialized =
         serde_json::to_string(&meta).context("failed to serialize LspInvoiceMeta")?;
