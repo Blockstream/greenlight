@@ -66,8 +66,12 @@ impl Scheduler {
     /// before it creates a node. It needs no credentials, and the
     /// `node_id` is passed explicitly.
     ///
-    /// The answer is advisory and may change over time. Treat an
-    /// error as "unknown" rather than as a negative answer.
+    /// The answer is monotonic: once the node has been registered
+    /// it is reported as available, and stays available regardless
+    /// of the node's status or the provider's current capacity.
+    /// Before registration the answer is advisory and may change
+    /// over time. Treat an error as "unknown" rather than as a
+    /// negative answer.
     pub fn lightning_available(&self, node_id: Vec<u8>) -> Result<bool, Error> {
         let nobody = self.nobody();
         exec(async move {

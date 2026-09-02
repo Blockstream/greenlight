@@ -127,10 +127,14 @@ class SchedulerStub:
     node. There is therefore no mTLS identity to derive the node
     from, and the caller names the `node_id` it is asking about.
 
-    The answer is advisory and may change: a node that is not
-    available today may become available once the LSP has capacity
-    again. Applications should treat an error as "unknown" rather
-    than as a negative answer.
+    The answer is monotonic: once a node has been registered
+    with greenlight it is reported as available, and stays
+    available regardless of the node's status or of the LSP's
+    current capacity. Before registration the answer is
+    advisory and may change: a node that is not available today
+    may become available once the LSP has capacity again.
+    Applications should treat an error as "unknown" rather than
+    as a negative answer.
     """
     Schedule: _grpc.UnaryUnaryMultiCallable[_scheduler_pb2.ScheduleRequest, _scheduler_pb2.NodeInfoResponse]
     """Scheduling takes a previously registered node, locates a
@@ -310,10 +314,14 @@ class SchedulerAsyncStub(SchedulerStub):
     node. There is therefore no mTLS identity to derive the node
     from, and the caller names the `node_id` it is asking about.
 
-    The answer is advisory and may change: a node that is not
-    available today may become available once the LSP has capacity
-    again. Applications should treat an error as "unknown" rather
-    than as a negative answer.
+    The answer is monotonic: once a node has been registered
+    with greenlight it is reported as available, and stays
+    available regardless of the node's status or of the LSP's
+    current capacity. Before registration the answer is
+    advisory and may change: a node that is not available today
+    may become available once the LSP has capacity again.
+    Applications should treat an error as "unknown" rather than
+    as a negative answer.
     """
     Schedule: _aio.UnaryUnaryMultiCallable[_scheduler_pb2.ScheduleRequest, _scheduler_pb2.NodeInfoResponse]  # type: ignore[assignment]
     """Scheduling takes a previously registered node, locates a
@@ -514,10 +522,14 @@ class SchedulerServicer(metaclass=_abc_1.ABCMeta):
         node. There is therefore no mTLS identity to derive the node
         from, and the caller names the `node_id` it is asking about.
 
-        The answer is advisory and may change: a node that is not
-        available today may become available once the LSP has capacity
-        again. Applications should treat an error as "unknown" rather
-        than as a negative answer.
+        The answer is monotonic: once a node has been registered
+        with greenlight it is reported as available, and stays
+        available regardless of the node's status or of the LSP's
+        current capacity. Before registration the answer is
+        advisory and may change: a node that is not available today
+        may become available once the LSP has capacity again.
+        Applications should treat an error as "unknown" rather than
+        as a negative answer.
         """
 
     @_abc_1.abstractmethod
