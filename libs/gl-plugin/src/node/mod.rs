@@ -266,19 +266,6 @@ impl Node for PluginNodeServer {
                     .await
                     .map_err(|e| Status::new(Code::Internal, e.to_string()))?;
 
-                let meta = LspInvoiceMeta {
-                    label: req.label.clone(),
-                    payment_hash: res.payment_hash.to_string(),
-                    requested_amount_msat: req.amount_msat,
-                    expected_amount_msat: 0,
-                    bolt11: res.bolt11.clone(),
-                    lsp_id: "".to_string(),
-                };
-
-                if let Err(e) = write_lsp_invoice_meta(&mut rpc, meta).await {
-                    warn!("Failed to write LSP invoice meta: {}", e);
-                }
-
                 return Ok(Response::new(pb::LspInvoiceResponse {
                     bolt11: res.bolt11,
                     created_index: res.created_index.unwrap_or(0) as u32,
