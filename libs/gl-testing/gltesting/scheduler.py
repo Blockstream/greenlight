@@ -87,8 +87,10 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
         self.versions = enumerate_cln_versions()
         self.bitcoind = bitcoind
         self.invite_codes: List[str] = []
-        # Answer given to CheckLightningAvailability. Defaults to the
-        # production behaviour while no LSP is wired up: unavailable.
+        # Answer given to CheckLightningAvailability for nodes that
+        # are not registered. Defaults to the production behaviour
+        # while no LSP is wired up: unavailable. Registered nodes are
+        # always available, mirroring the real scheduler.
         self.lightning_available: bool = False
         self.next_webhook_id: int = 1
         self.received_invite_code = None
@@ -371,9 +373,13 @@ class AsyncScheduler(schedgrpc.SchedulerServicer):
     async def CheckLightningAvailability(
         self, req
     ) -> schedpb.CheckLightningAvailabilityResponse:
-        # Mirrors the real scheduler, which relays this to an LSP and
-        # reports unavailable while none is configured. Tests that care
-        # flip `lightning_available` on the fixture.
+        # Mirrors the real scheduler: a registered node is always
+        # available, so the answer never flips back once an
+        # application has acted on it. Anything else is relayed to an
+        # LSP, and reported unavailable while none is configured.
+        # Tests that care flip `lightning_available` on the fixture.
+        if any(n.node_id == req.node_id for n in self.nodes):
+            return schedpb.CheckLightningAvailabilityResponse(available=True)
         return schedpb.CheckLightningAvailabilityResponse(
             available=self.lightning_available
         )
