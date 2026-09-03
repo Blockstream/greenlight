@@ -2,6 +2,7 @@
 
 pub use gl_client::persist::State;
 use log::debug;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tonic::async_trait;
 
@@ -65,4 +66,32 @@ impl StateStore for SledStateStore {
             .map(|_v| ())
             .map_err(|e| e.into())
     }
+}
+
+/// A structure that is used for storing JIT channel requests metadata that is
+/// requested through [Node::lsp_invoice](pb::node_server::Node::lsp_invoice)
+/// RPC call.
+///
+/// This structure is stored in CLN datastore. The reason of why do we need this
+/// structure instead of querying invoices table is that we want to distinguish
+/// incomming payments whether they were for JIT channel opening or just a simple
+/// payment. Currently, CLN does not allow this, that's why this workaround
+/// exists.
+#[derive(Serialize, Deserialize)]
+pub struct JitRequestMeta {
+    /// A label of the requested invoice.
+    pub label: String,
+    /// Payment hash of the requested invoice.
+    pub payment_hash: String,
+    /// The requested amount of msats.
+    pub requested_amount_msat: u64,
+    /// The expected (reduced) amount if msats.
+    ///
+    /// Note that expected_amount_msat <= requested_amount_msat since
+    /// expected_amount_msat = requested_amount_msat + lsp_fee.
+    pub expected_amount_msat: u64,
+    /// Original Bolt11 invoice which includes requested_amount_msat.
+    pub bolt11: String,
+    /// ID of the LSP through which the invoice was requested.
+    pub lsp_id: String,
 }
