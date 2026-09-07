@@ -52,6 +52,35 @@ def test_node_signer(clients, executor):
     h.shutdown()
 
 
+def test_node_info_signer_count(clients):
+    """The node reports its Greenlight state over GetNodeInfo.
+
+    The signer count reflects whether the app's signer is attached
+    to the node: zero while the node runs without one, one after
+    attaching, and back to zero after detaching. The session id is
+    stable for the lifetime of the node process.
+    """
+    c = clients.new()
+    c.register(configure=True)
+    n = c.node()
+
+    info = n.get_node_info()
+    assert info.node_id == c.node_id
+    assert info.signer_count == 0
+    session_id = info.session_id
+    assert session_id != 0
+
+    # The session id stays stable for the lifetime of the process.
+    assert n.get_node_info().session_id == session_id
+
+    # Attach the signer and observe the count change.
+    s = c.signer().run_in_thread()
+    wait_for(lambda: n.get_node_info().signer_count == 1)
+
+    s.shutdown()
+    wait_for(lambda: n.get_node_info().signer_count == 0)
+
+
 @pytest.mark.skip(reason="routehints seem to be missing in regtest")
 def test_node_network(node_factory, clients, bitcoind):
     """Setup a small network and check that we can send/receive payments.
