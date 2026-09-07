@@ -68,6 +68,11 @@ service Node {
 	rpc Configure(GlConfig) returns (Empty) {}
 
 	rpc TrampolinePay(TrampolinePayRequest) returns (TrampolinePayResponse) {}
+
+	// Query the Greenlight-specific state of the node, such as how
+	// many signers are attached and how many HSM requests are
+	// pending.
+	rpc GetNodeInfo(Empty) returns (NodeInfo) {}
 }
 
 message HsmRequestContext {
@@ -234,6 +239,22 @@ message TrampolinePayResponse {
 	uint64 amount_msat = 5;
 	uint64 amount_sent_msat = 6;
 	bytes destination = 7;
+}
+
+// Greenlight-specific state of a node, as reported by the node's
+// gl-plugin.
+message NodeInfo {
+  // The 33-byte node public key.
+  bytes node_id = 1;
+  // The number of signers currently attached to the node's HSM
+  // request stream.
+  uint32 signer_count = 2;
+  // The number of HSM requests handed out and not yet answered by
+  // any signer.
+  uint32 pending_hsm_requests = 3;
+  // An identifier for this node process. It changes whenever the
+  // node is (re)started on a new process.
+  uint64 session_id = 4;
 }
 
 message LspInvoiceRequest {

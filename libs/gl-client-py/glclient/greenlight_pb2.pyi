@@ -528,6 +528,45 @@ class TrampolinePayResponse(_message.Message):
 Global___TrampolinePayResponse: _TypeAlias = TrampolinePayResponse  # noqa: Y015
 
 @_typing.final
+class NodeInfo(_message.Message):
+    """Greenlight-specific state of a node, as reported by the node's
+    gl-plugin.
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    NODE_ID_FIELD_NUMBER: _builtins.int
+    SIGNER_COUNT_FIELD_NUMBER: _builtins.int
+    PENDING_HSM_REQUESTS_FIELD_NUMBER: _builtins.int
+    SESSION_ID_FIELD_NUMBER: _builtins.int
+    node_id: _builtins.bytes
+    """The 33-byte node public key."""
+    signer_count: _builtins.int
+    """The number of signers currently attached to the node's HSM
+    request stream.
+    """
+    pending_hsm_requests: _builtins.int
+    """The number of HSM requests handed out and not yet answered by
+    any signer.
+    """
+    session_id: _builtins.int
+    """An identifier for this node process. It changes whenever the
+    node is (re)started on a new process.
+    """
+    def __init__(
+        self,
+        *,
+        node_id: _builtins.bytes = ...,
+        signer_count: _builtins.int = ...,
+        pending_hsm_requests: _builtins.int = ...,
+        session_id: _builtins.int = ...,
+    ) -> None: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["node_id", b"node_id", "pending_hsm_requests", b"pending_hsm_requests", "session_id", b"session_id", "signer_count", b"signer_count"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+
+Global___NodeInfo: _TypeAlias = NodeInfo  # noqa: Y015
+
+@_typing.final
 class LspInvoiceRequest(_message.Message):
     DESCRIPTOR: _descriptor.Descriptor
 

@@ -94,6 +94,11 @@ class NodeStub(object):
                 request_serializer=glclient_dot_greenlight__pb2.TrampolinePayRequest.SerializeToString,
                 response_deserializer=glclient_dot_greenlight__pb2.TrampolinePayResponse.FromString,
                 _registered_method=True)
+        self.GetNodeInfo = channel.unary_unary(
+                '/greenlight.Node/GetNodeInfo',
+                request_serializer=glclient_dot_greenlight__pb2.Empty.SerializeToString,
+                response_deserializer=glclient_dot_greenlight__pb2.NodeInfo.FromString,
+                _registered_method=True)
 
 
 class NodeServicer(object):
@@ -202,6 +207,15 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetNodeInfo(self, request, context):
+        """Query the Greenlight-specific state of the node, such as how
+        many signers are attached and how many HSM requests are
+        pending.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NodeServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -249,6 +263,11 @@ def add_NodeServicer_to_server(servicer, server):
                     servicer.TrampolinePay,
                     request_deserializer=glclient_dot_greenlight__pb2.TrampolinePayRequest.FromString,
                     response_serializer=glclient_dot_greenlight__pb2.TrampolinePayResponse.SerializeToString,
+            ),
+            'GetNodeInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetNodeInfo,
+                    request_deserializer=glclient_dot_greenlight__pb2.Empty.FromString,
+                    response_serializer=glclient_dot_greenlight__pb2.NodeInfo.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -509,6 +528,33 @@ class Node(object):
             '/greenlight.Node/TrampolinePay',
             glclient_dot_greenlight__pb2.TrampolinePayRequest.SerializeToString,
             glclient_dot_greenlight__pb2.TrampolinePayResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetNodeInfo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/greenlight.Node/GetNodeInfo',
+            glclient_dot_greenlight__pb2.Empty.SerializeToString,
+            glclient_dot_greenlight__pb2.NodeInfo.FromString,
             options,
             channel_credentials,
             insecure,

@@ -97,6 +97,11 @@ class NodeStub:
     RespondHsmRequest: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.HsmResponse, _greenlight_pb2.Empty]
     Configure: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.GlConfig, _greenlight_pb2.Empty]
     TrampolinePay: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.TrampolinePayRequest, _greenlight_pb2.TrampolinePayResponse]
+    GetNodeInfo: _grpc.UnaryUnaryMultiCallable[_greenlight_pb2.Empty, _greenlight_pb2.NodeInfo]
+    """Query the Greenlight-specific state of the node, such as how
+    many signers are attached and how many HSM requests are
+    pending.
+    """
 
 @_typing.type_check_only
 class NodeAsyncStub(NodeStub):
@@ -167,6 +172,11 @@ class NodeAsyncStub(NodeStub):
     RespondHsmRequest: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.HsmResponse, _greenlight_pb2.Empty]  # type: ignore[assignment]
     Configure: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.GlConfig, _greenlight_pb2.Empty]  # type: ignore[assignment]
     TrampolinePay: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.TrampolinePayRequest, _greenlight_pb2.TrampolinePayResponse]  # type: ignore[assignment]
+    GetNodeInfo: _aio.UnaryUnaryMultiCallable[_greenlight_pb2.Empty, _greenlight_pb2.NodeInfo]  # type: ignore[assignment]
+    """Query the Greenlight-specific state of the node, such as how
+    many signers are attached and how many HSM requests are
+    pending.
+    """
 
 class NodeServicer(metaclass=_abc_1.ABCMeta):
     """The node service represents your node running on greenlight's
@@ -288,6 +298,17 @@ class NodeServicer(metaclass=_abc_1.ABCMeta):
         request: _greenlight_pb2.TrampolinePayRequest,
         context: _ServicerContext,
     ) -> _typing.Union[_greenlight_pb2.TrampolinePayResponse, _abc.Awaitable[_greenlight_pb2.TrampolinePayResponse]]: ...
+
+    @_abc_1.abstractmethod
+    def GetNodeInfo(
+        self,
+        request: _greenlight_pb2.Empty,
+        context: _ServicerContext,
+    ) -> _typing.Union[_greenlight_pb2.NodeInfo, _abc.Awaitable[_greenlight_pb2.NodeInfo]]:
+        """Query the Greenlight-specific state of the node, such as how
+        many signers are attached and how many HSM requests are
+        pending.
+        """
 
 def add_NodeServicer_to_server(servicer: NodeServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...
 
