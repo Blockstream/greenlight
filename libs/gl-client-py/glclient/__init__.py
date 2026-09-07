@@ -510,6 +510,15 @@ class Node(object):
 
         return self.inner.configure(req)
 
+    def get_node_info(self) -> nodepb.NodeInfo:
+        """Query the Greenlight-specific state of the node.
+
+        Returns a `NodeInfo` with the node id, the number of
+        signers currently attached, the number of pending HSM
+        requests, and the session id of the node process.
+        """
+        return nodepb.NodeInfo.FromString(bytes(self.inner.get_node_info()))
+
     def wait_blockheight(
         self,
         blockheight: int,

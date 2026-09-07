@@ -100,6 +100,18 @@ impl Node {
         return Ok(());
     }
 
+    fn get_node_info(&self) -> PyResult<Vec<u8>> {
+        let res = exec(async {
+            self.client
+                .clone()
+                .get_node_info(pb::Empty::default())
+                .await
+        })
+        .map_err(error_calling_remote_method)?
+        .into_inner();
+        convert(Ok(res))
+    }
+
     fn lsps_invoice(
         &self,
         label: String,
