@@ -97,6 +97,12 @@ impl Stage {
         }
     }
 
+    /// Returns the number of HSM requests that have been handed out
+    /// and not yet answered by any signer.
+    pub async fn pending(&self) -> usize {
+        self.requests.lock().await.len()
+    }
+
     /// Returns the HSM request types currently queued that block node progress.
     /// An empty vec means the node is not stuck.
     pub async fn stuck_request_types(&self) -> Vec<u16> {
@@ -259,5 +265,66 @@ mod test {
         drop(stage);
         f1.await.unwrap();
         f2.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_pending() {
+        let stage = Stage::new();
+
+        assert_eq!(stage.pending().await, 0);
+
+        let mut r1 = stage
+            .send(pb::HsmRequest {
+                request_id: 1,
+                context: None,
+                raw: vec![],
+                signer_state: vec![],
+                requests: vec![],
+            })
+            .await
+            .unwrap();
+
+        let mut r2 = stage
+            .send(pb::HsmRequest {
+                request_id: 2,
+                context: None,
+                raw: vec![],
+                signer_state: vec![],
+                requests: vec![],
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(stage.pending().await, 2);
+
+        stage
+            .respond(pb::HsmResponse {
+                request_id: 1,
+                raw: vec![],
+                signer_state: vec![],
+                error: "".into(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(stage.pending().await, 1);
+
+        stage
+            .respond(pb::HsmResponse {
+                request_id: 2,
+                raw: vec![],
+                signer_state: vec![],
+                error: "".into(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(stage.pending().await, 0);
+
+        let resp1 = r1.recv().await.unwrap();
+        assert_eq!(resp1.request_id, 1);
+
+        let resp2 = r2.recv().await.unwrap();
+        assert_eq!(resp2.request_id, 2);
     }
 }

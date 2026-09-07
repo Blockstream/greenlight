@@ -90,6 +90,8 @@ pub struct PluginNodeServer {
     signer_state_store: Arc<Mutex<Box<dyn StateStore>>>,
     pub ctx: crate::context::Context,
     notifications: tokio::sync::broadcast::Sender<Notification>,
+    node_id: Vec<u8>,
+    session_id: u64,
 }
 
 impl PluginNodeServer {
@@ -133,6 +135,8 @@ impl PluginNodeServer {
             signer_state_store: Arc::new(Mutex::new(signer_state_store)),
             grpc_binding: config.node_grpc_binding,
             notifications,
+            node_id: config.node_info.node_id.clone(),
+            session_id: Self::new_session_id(),
         };
 
         let signer_state = s.signer_state.clone();
@@ -206,6 +210,17 @@ impl PluginNodeServer {
             .await;
 
         limiter.until_ready().await
+    }
+
+    /// A unique identifier for this node process. It is derived from
+    /// the process id and the startup time, so it changes whenever
+    /// the node is (re)started.
+    fn new_session_id() -> u64 {
+        let started = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos() as u64)
+            .unwrap_or(0);
+        started ^ (std::process::id() as u64).rotate_left(32)
     }
 }
 
@@ -492,15 +507,31 @@ impl Node for PluginNodeServer {
             }
 
             loop {
-                let mut req = match stream.next().await {
-                    Err(e) => {
+                let mut req = match tokio::time::timeout(
+                    Duration::from_secs(1),
+                    stream.next(),
+                )
+                .await
+                {
+                    Ok(Err(e)) => {
                         error!(
                             "Could not get next request from stage: {:?} for hsm_id={}",
                             e, hsm_id
                         );
                         break;
                     }
-                    Ok(r) => r,
+                    Ok(Ok(r)) => r,
+                    // The stage was idle for a while. A signer can
+                    // detach while no requests are being streamed, and
+                    // that only shows up as a closed outgoing channel,
+                    // so probe for it on every idle window to keep the
+                    // signer count accurate.
+                    Err(_) => {
+                        if tx.is_closed() {
+                            break;
+                        }
+                        continue;
+                    }
                 };
                 trace!(
                     "Sending request={} to hsm_id={}",
@@ -834,6 +865,18 @@ impl Node for PluginNodeServer {
                 debug!("Trampoline payment failed: {}", err);
                 err.into()
             })
+    }
+
+    async fn get_node_info(
+        &self,
+        _request: Request<pb::Empty>,
+    ) -> Result<Response<pb::NodeInfo>, Status> {
+        Ok(Response::new(pb::NodeInfo {
+            node_id: self.node_id.clone(),
+            signer_count: SIGNER_COUNT.load(Ordering::SeqCst) as u32,
+            pending_hsm_requests: self.stage.pending().await as u32,
+            session_id: self.session_id,
+        }))
     }
 }
 

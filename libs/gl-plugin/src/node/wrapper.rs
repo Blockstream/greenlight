@@ -1268,6 +1268,13 @@ impl GlNode for WrappedNodeServer {
         self.node_server.trampoline_pay(request).await
     }
 
+    async fn get_node_info(
+        &self,
+        request: tonic::Request<Empty>,
+    ) -> Result<tonic::Response<crate::pb::NodeInfo>, Status> {
+        self.node_server.get_node_info(request).await
+    }
+
     async fn stream_node_events(
         &self,
         req: tonic::Request<NodeEventsRequest>,
