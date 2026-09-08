@@ -19,7 +19,7 @@ PROTODIR=${REPO}/libs/proto
 # pyproject.toml.
 PROTOC_TOOLCHAIN = \
 	uv run --no-project \
-	--with grpcio-tools==1.78.0 \
+	--with grpcio-tools==1.81.1 \
 	--with mypy-protobuf==5.0.0 \
 	python -m grpc_tools.protoc
 

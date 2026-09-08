@@ -4,8 +4,12 @@ version = "0.3.4"
 description = ""
 readme = "README.md"
 requires-python = ">=3.8,<4"
+# The checked-in stubs assert protobuf >= 6.33.5 and grpcio >= 1.81.1 at
+# import time; bump these together with the regenerated protos and the
+# grpcio-tools pin in Makefile's PROTOC_TOOLCHAIN.
 dependencies = [
-    "protobuf>=6,<7",
+    "protobuf>=6.33.5,<7",
+    "grpcio>=1.81.1",
     "pyln-grpc-proto>=0.1",
 ]
 authors = [
@@ -22,12 +26,12 @@ module-name = "glclient"
 [dependency-groups]
 dev = [
     "gl-testing",
-    "grpcio>=1.67",
+    "grpcio>=1.81.1",
     "maturin>=1",
     "mypy>=1.14.1",
     "mypy-protobuf>=3.6.0",
     "patchelf>=0.17.2.2",
-    "protobuf>=6,<7",
+    "protobuf>=6.33.5,<7",
     "pyln-grpc-proto>=0.1.2",
     "python-kacl>=0.6.7",
     "types-protobuf>=5.29.1.20241207",

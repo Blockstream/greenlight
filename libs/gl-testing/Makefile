@@ -27,7 +27,7 @@ check-testing-py:
 # grpcio-tools version in step with that one.
 TESTPROTOC_TOOLCHAIN = \
 	uv run --no-project \
-	--with grpcio-tools==1.78.0 \
+	--with grpcio-tools==1.81.1 \
 	--with purerpc \
 	python -m grpc_tools.protoc
 
@@ -36,6 +36,8 @@ testgrpc: ${REPO_ROOT}/libs/proto/glclient/scheduler.proto
 	mv ${TESTINGDIR}/gltesting/glclient/scheduler_grpc.py ${TESTINGDIR}/gltesting/scheduler_grpc.py
 	rm -rf ${TESTINGDIR}/gltesting/glclient
 
+# Uses the same pinned, isolated toolchain as testgrpc so the checked-in
+# stubs do not depend on the ambient venv.
 protoc:
-	uv run python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --purerpc_out=. --grpc_python_out=. gltesting/test.proto
+	cd ${TESTINGDIR}; ${TESTPROTOC_TOOLCHAIN} -I. --python_out=. --pyi_out=. --purerpc_out=. --grpc_python_out=. gltesting/test.proto
 

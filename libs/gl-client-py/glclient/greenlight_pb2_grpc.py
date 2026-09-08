@@ -5,7 +5,7 @@ import warnings
 
 from glclient import greenlight_pb2 as glclient_dot_greenlight__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.81.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class NodeStub(object):
+class NodeStub:
     """The node service represents your node running on greenlight's
     infrastructure. You can use the exposed RPC methods to interact
     with your node. The URI used to connect to the node depends on
@@ -96,7 +96,7 @@ class NodeStub(object):
                 _registered_method=True)
 
 
-class NodeServicer(object):
+class NodeServicer:
     """The node service represents your node running on greenlight's
     infrastructure. You can use the exposed RPC methods to interact
     with your node. The URI used to connect to the node depends on
@@ -258,7 +258,7 @@ def add_NodeServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Node(object):
+class Node:
     """The node service represents your node running on greenlight's
     infrastructure. You can use the exposed RPC methods to interact
     with your node. The URI used to connect to the node depends on
@@ -520,7 +520,7 @@ class Node(object):
             _registered_method=True)
 
 
-class HsmStub(object):
+class HsmStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -541,7 +541,7 @@ class HsmStub(object):
                 _registered_method=True)
 
 
-class HsmServicer(object):
+class HsmServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Request(self, request, context):
@@ -577,7 +577,7 @@ def add_HsmServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class Hsm(object):
+class Hsm:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
