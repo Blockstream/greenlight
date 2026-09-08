@@ -22,9 +22,7 @@ impl ToJsonHex for cln::GetinfoResponse {
             "lightning_dir": self.lightning_dir.clone(),
             "fees_collected_msat": self.fees_collected_msat.clone().map_or(0, |amt| amt.msat),
         });
-        if let Some(alias) = &self.alias {
-            j["alias"] = json!(alias);
-        }
+        j["alias"] = json!(&self.alias);
         if let Some(feat) = &self.our_features {
             j["our_features"] = json!({
                 "init": hex::encode(&feat.init),
@@ -51,9 +49,7 @@ impl ToJsonHex for cln::InvoiceResponse {
             "payment_secret": hex::encode(&self.payment_secret),
             "expires_at": self.expires_at,
         });
-        if let Some(x) = self.created_index {
-            j["created_index"] = json!(x);
-        }
+        j["created_index"] = json!(self.created_index);
         if let Some(x) = &self.warning_capacity {
             j["warning_capacity"] = json!(x);
         }
@@ -189,11 +185,11 @@ impl ToJsonHex for cln::CloseResponse {
         let mut j = json!({
             "item_type": self.item_type,
         });
-        if let Some(x) = &self.tx {
-            j["tx"] = json!(hex::encode(x));
+        if !self.txs.is_empty() {
+            j["txs"] = json!(self.txs.iter().map(hex::encode).collect::<Vec<_>>());
         }
-        if let Some(x) = &self.txid {
-            j["txid"] = json!(hex::encode(x));
+        if !self.txids.is_empty() {
+            j["txids"] = json!(self.txids.iter().map(hex::encode).collect::<Vec<_>>());
         }
 
         j
@@ -263,9 +259,7 @@ impl ToJsonHex for cln::ListfundsChannels {
             "connected": self.connected,
             "state": self.state,
         });
-        if let Some(x) = &self.channel_id {
-            j["channel_id"] = json!(hex::encode(x));
-        }
+        j["channel_id"] = json!(hex::encode(&self.channel_id));
         if let Some(x) = &self.short_channel_id {
             j["short_channel_id"] = json!(x);
         }

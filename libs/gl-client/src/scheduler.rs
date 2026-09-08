@@ -188,13 +188,13 @@ impl<Creds> Scheduler<Creds> {
         log::trace!("Got a challenge: {}", hex::encode(&challenge.challenge));
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
-        let device_cert = tls::generate_self_signed_device_cert(
+        let (device_cert, key_pair) = tls::generate_self_signed_device_cert(
             &hex::encode(signer.node_id()),
             "default",
             vec!["localhost".into()],
             None,
         );
-        let device_csr = device_cert.serialize_request_pem()?;
+        let device_csr = device_cert.params().serialize_request(&key_pair)?.pem()?;
         debug!("Requesting registration with csr:\n{}", device_csr);
 
         let startupmsgs = signer
@@ -230,10 +230,10 @@ impl<Creds> Scheduler<Creds> {
             // We intercept the response and replace the private key with the
             // private key of the device_cert. This private key has been generated
             // on and has never left the client device.
-            res.device_key = device_cert.serialize_private_key_pem();
+            res.device_key = key_pair.serialize_pem();
         }
 
-        let public_key = device_cert.get_key_pair().public_key_raw();
+        let public_key = key_pair.public_key_raw();
         debug!(
             "Asking signer to create a rune for public key {}",
             hex::encode(public_key)
@@ -297,13 +297,13 @@ impl<Creds> Scheduler<Creds> {
 
         let signature = signer.sign_challenge(challenge.challenge.clone())?;
         let name = format!("recovered-{}", hex::encode(&challenge.challenge[0..8]));
-        let device_cert = tls::generate_self_signed_device_cert(
+        let (device_cert, key_pair) = tls::generate_self_signed_device_cert(
             &hex::encode(signer.node_id()),
             &name,
             vec!["localhost".into()],
             None,
         );
-        let device_csr = device_cert.serialize_request_pem()?;
+        let device_csr = device_cert.params().serialize_request(&key_pair)?.pem()?;
         debug!("Requesting recovery with csr:\n{}", device_csr);
 
         let mut res = self
@@ -327,10 +327,10 @@ impl<Creds> Scheduler<Creds> {
             // We intercept the response and replace the private key with the
             // private key of the device_cert. This private key has been generated
             // on and has never left the client device.
-            res.device_key = device_cert.serialize_private_key_pem();
+            res.device_key = key_pair.serialize_pem();
         }
 
-        let public_key = device_cert.get_key_pair().public_key_raw();
+        let public_key = key_pair.public_key_raw();
         debug!(
             "Asking signer to create a rune for public key {}",
             hex::encode(public_key)

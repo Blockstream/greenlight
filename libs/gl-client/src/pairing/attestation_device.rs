@@ -126,14 +126,20 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> 
         // Sign data.
         let key = {
             let mut key = std::io::Cursor::new(&tls_key);
-            pemfile::pkcs8_private_keys(&mut key)
+            let key_item = pemfile::pkcs8_private_keys(&mut key)
+                .next()
+                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "no pkcs8 private key"));
+            key_item
                 .map_err(into_approve_pairing_error)?
-                .remove(0)
+                .map_err(into_approve_pairing_error)?
         };
-        let kp =
-            EcdsaKeyPair::from_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key.as_ref())
-                .map_err(into_approve_pairing_error)?;
         let rng = rand::SystemRandom::new();
+        let kp = EcdsaKeyPair::from_pkcs8(
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+            key.secret_pkcs8_der(),
+            &rng,
+        )
+        .map_err(into_approve_pairing_error)?;
         let sig = kp
             .sign(&rng, &buf)
             .map_err(into_approve_pairing_error)?
@@ -226,14 +232,19 @@ pub mod tests {
     #[test]
     fn test_verify_pairing_data() {
         let kp = tls::generate_ecdsa_key_pair();
-        let device_cert = tls::generate_self_signed_device_cert(
+        let (device_cert, key_pair) = tls::generate_self_signed_device_cert(
             &hex::encode("00"),
             "my-device",
             vec!["localhost".into()],
             Some(kp),
         );
-        let csr = device_cert.serialize_request_pem().unwrap();
-        let pk = hex::encode(device_cert.get_key_pair().public_key_raw());
+        let csr = device_cert
+            .params()
+            .serialize_request(&key_pair)
+            .unwrap()
+            .pem()
+            .unwrap();
+        let pk = hex::encode(key_pair.public_key_raw());
 
         // Check with public key as session id.
         let pd = GetPairingDataResponse {

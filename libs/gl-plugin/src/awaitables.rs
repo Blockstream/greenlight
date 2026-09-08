@@ -309,7 +309,11 @@ async fn billboard(
     let mut rpc = connect(rpc_path).await?;
     if *version >= *"v23.05gl1" {
         Ok(rpc
-            .call_typed(&ListpeerchannelsRequest { id: Some(peer_id) })
+            .call_typed(&ListpeerchannelsRequest {
+                channel_id: None,
+                id: Some(peer_id),
+                short_channel_id: None,
+            })
             .await
             .map_err(|e| Error::Rpc(e))?
             .channels
@@ -360,7 +364,11 @@ async fn spendable_msat(
     let mut rpc = connect(rpc_path).await?;
     if *version >= *"v23.05gl1" {
         Ok(rpc
-            .call_typed(&ListpeerchannelsRequest { id: Some(peer_id) })
+            .call_typed(&ListpeerchannelsRequest {
+                channel_id: None,
+                id: Some(peer_id),
+                short_channel_id: None,
+            })
             .await
             .map_err(|e| Error::Rpc(e))?
             .channels

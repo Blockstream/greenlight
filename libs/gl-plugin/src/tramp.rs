@@ -395,7 +395,11 @@ pub async fn trampolinepay(
     debug!("overpay={}, total_amt={}", overpay as u64, amount_msat);
 
     let channels: Vec<Channel> = rpc
-        .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })
+        .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest {
+                channel_id: None,
+                id: Some(node_id),
+                short_channel_id: None,
+            })
         .await?
         .channels
         .into_iter()

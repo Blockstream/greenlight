@@ -1,19 +1,16 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use bech32::{FromBase32, ToBase32};
+use bech32::Hrp;
 
 use crate::lightning_invoice::Bolt11Invoice;
 
 /// Decode an LNURL bech32 string into the underlying URL (LUD-01).
 pub fn parse_lnurl(lnurl: &str) -> Result<String> {
-    let (_hrp, data, _variant) =
+    let (_hrp, data) =
         bech32::decode(lnurl).map_err(|e| anyhow!("Failed to decode lnurl: {}", e))?;
 
-    let vec = Vec::<u8>::from_base32(&data)
-        .map_err(|e| anyhow!("Failed to base32 decode data: {}", e))?;
-
-    let url = String::from_utf8(vec).map_err(|e| anyhow!("Failed to convert to utf-8: {}", e))?;
+    let url = String::from_utf8(data).map_err(|e| anyhow!("Failed to convert to utf-8: {}", e))?;
     Ok(url)
 }
 
@@ -21,8 +18,8 @@ pub fn parse_lnurl(lnurl: &str) -> Result<String> {
 ///
 /// Returns uppercase by convention (for QR code compatibility).
 pub fn lnurl_encode(url: &str) -> Result<String> {
-    let data = url.as_bytes().to_base32();
-    bech32::encode("lnurl", data, bech32::Variant::Bech32)
+    let hrp = Hrp::parse("lnurl").map_err(|e| anyhow!("Failed to parse hrp: {}", e))?;
+    bech32::encode::<bech32::Bech32>(hrp, url.as_bytes())
         .map(|s| s.to_uppercase())
         .map_err(|e| anyhow!("Failed to encode lnurl: {}", e))
 }
