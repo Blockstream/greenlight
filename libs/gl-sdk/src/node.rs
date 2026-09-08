@@ -2805,8 +2805,7 @@ mod tests {
             mutual_close: None,
             unilateral_close: None,
             unilateral_anchor_close: None,
-            delayed_to_us: None,
-            htlc_resolution: None,
+            splice: None,
             penalty: None,
             estimates: estimates
                 .into_iter()
@@ -2816,7 +2815,7 @@ mod tests {
                     smoothed_feerate: feerate,
                 })
                 .collect(),
-            floor: None,
+            floor: 0,
         }
     }
 

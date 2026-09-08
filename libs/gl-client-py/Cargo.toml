@@ -21,7 +21,7 @@ gl-client = { path = "../gl-client", default-features = false, features = [
 hex = "*"
 log = "*"
 once_cell = "*"
-prost = "0.12"
+prost = "0.14"
 pyo3 = { version = "0.18", features = [
     "extension-module",
     "serde",
@@ -29,7 +29,7 @@ pyo3 = { version = "0.18", features = [
 ] }
 runeauth = "0.1"
 tokio = { version = "1", features = ["full"] }
-tonic = { version = "0.11", features = ["tls", "transport"] }
+tonic = { version = "0.14", features = ["tls-ring", "transport"] }
 serde_json = "^1.0"
 thiserror = "1"
 

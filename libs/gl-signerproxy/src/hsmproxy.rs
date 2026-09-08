@@ -12,6 +12,7 @@ use std::sync::atomic;
 use std::sync::Arc;
 use tokio::net::UnixStream;
 use tonic::transport::{Endpoint, Uri};
+use hyper_util::rt::TokioIo;
 use tower::service_fn;
 use which::which;
 
@@ -133,7 +134,13 @@ async fn grpc_connect() -> Result<GrpcClient, Error> {
             path.push(&sock_path);
             let path = path.to_str().unwrap().to_string();
             info!("Connecting to hsmserver at {}", path);
-            tokio::net::UnixStream::connect(path)
+            // hyper 1.0 no longer implements its IO traits for tokio's
+            // types directly, so the stream has to be wrapped.
+            async move {
+                Ok::<_, std::io::Error>(TokioIo::new(
+                    tokio::net::UnixStream::connect(path).await?,
+                ))
+            }
         }))
         .await
         .context("could not connect to the socket file")?;

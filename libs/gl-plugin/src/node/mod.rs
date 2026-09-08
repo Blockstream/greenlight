@@ -1117,9 +1117,9 @@ pub struct SignatureContextService<S> {
     ctx: crate::context::Context,
 }
 
-impl<S> Service<hyper::Request<hyper::Body>> for SignatureContextService<S>
+impl<S> Service<http::Request<tonic::body::Body>> for SignatureContextService<S>
 where
-    S: Service<hyper::Request<hyper::Body>, Response = hyper::Response<tonic::body::BoxBody>>
+    S: Service<http::Request<tonic::body::Body>, Response = http::Response<tonic::body::Body>>
         + Clone
         + Send
         + 'static,
@@ -1137,7 +1137,8 @@ where
         self.inner.poll_ready(cx).map_err(Into::into)
     }
 
-    fn call(&mut self, request: hyper::Request<hyper::Body>) -> Self::Future {
+    fn call(&mut self, request: http::Request<tonic::body::Body>) -> Self::Future {
+        use http_body_util::BodyExt;
         // This is necessary because tonic internally uses `tower::buffer::Buffer`.
         // See https://github.com/tower-rs/tower/issues/547#issuecomment-767629149
         // for details on why this is necessary
@@ -1180,8 +1181,15 @@ where
                 // Now that we know we'll be adding this to the
                 // context we can start buffering the request.
                 let mut buf = Vec::new();
-                while let Some(chunk) = body.data().await {
-                    let chunk = chunk.unwrap();
+                // http-body 1.0 exposes frames rather than data chunks; skip
+                // trailer frames and keep the incremental size check.
+                while let Some(frame) = body.frame().await {
+                    let Ok(chunk) = frame.map(|f| f.into_data()) else {
+                        break;
+                    };
+                    let Ok(chunk) = chunk else {
+                        continue;
+                    };
                     // We check on the MAX_MESSAGE_SIZE to avoid an unlimited sized
                     // message buffer
                     if buf.len() + chunk.len() > MAX_MESSAGE_SIZE {
@@ -1190,7 +1198,7 @@ where
                             tonic::Code::InvalidArgument,
                             format!("payload too large"),
                         )
-                        .to_http());
+                        .into_http());
                     }
                     buf.put(chunk);
                 }
@@ -1214,8 +1222,8 @@ where
 
                 reqctx.add_request(req.clone()).await;
 
-                let body: hyper::Body = buf.into();
-                let request = hyper::Request::from_parts(parts, body);
+                let body = tonic::body::Body::new(http_body_util::Full::new(bytes::Bytes::from(buf)));
+                let request = http::Request::from_parts(parts, body);
                 let res = inner.call(request).await;
 
                 // Defer cleanup into a separate task, otherwise we'd
@@ -1229,7 +1237,7 @@ where
             } else {
                 // No point in buffering the request, we're not going
                 // to add it to the `HsmRequestContext`
-                let request = hyper::Request::from_parts(parts, body);
+                let request = http::Request::from_parts(parts, body);
                 inner.call(request).await.map_err(Into::into)
             }
         })

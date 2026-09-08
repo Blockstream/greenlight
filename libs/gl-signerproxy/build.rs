@@ -1,7 +1,7 @@
 fn main() {
-    tonic_build::configure()
+    tonic_prost_build::configure()
         .build_client(true)
-        .compile(
+        .compile_protos(
             &[".resources/proto/glclient/greenlight.proto"],
             &[".resources/proto/glclient"],
         )

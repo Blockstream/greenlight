@@ -26,11 +26,13 @@ gl-client = { version = "^0.6.0", path = "../gl-client" }
 gl-util = { version = "0.1", path = "../gl-util" }
 governor = { version = "0.5", default-features = false, features = ["std"] }
 hex = "0.4"
-hyper = "0.14.28"
+http = "1"
+http-body-util = "0.1"
 lazy_static = "^1.4.0"
 linemux = "0.2"
 log = "0.4"
-prost = "0.12"
+prost = "0.14"
+tonic-prost = "0.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 sled = "0.34"
@@ -38,9 +40,9 @@ thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tonic = { version = "0.11", features = ["tls", "transport"] }
-tower = { version = "0.4" }
+tonic = { version = "0.14", features = ["tls-ring", "transport"] }
+tower = { version = "0.5" }
 vls-protocol = { workspace = true }
 
 [build-dependencies]
-tonic-build = "0.11"
+tonic-prost-build = "0.14"

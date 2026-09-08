@@ -5,8 +5,7 @@ use rustls_pemfile as pemfile;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tonic::body::BoxBody;
-use tonic::transport::Body;
+use tonic::body::Body;
 use tonic::transport::Channel;
 use tower::{Layer, Service};
 
@@ -71,7 +70,7 @@ pub struct AuthService {
     inner: Channel,
     rune: String,
 }
-impl Service<Request<BoxBody>> for AuthService {
+impl Service<Request<Body>> for AuthService {
     type Response = Response<Body>;
     type Error = Box<dyn std::error::Error + Send + Sync>;
     #[allow(clippy::type_complexity)]
@@ -80,7 +79,7 @@ impl Service<Request<BoxBody>> for AuthService {
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx).map_err(Into::into)
     }
-    fn call(&mut self, request: Request<BoxBody>) -> Self::Future {
+    fn call(&mut self, request: Request<Body>) -> Self::Future {
         use base64::Engine;
         let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
 
@@ -103,7 +102,7 @@ impl Service<Request<BoxBody>> for AuthService {
         Box::pin(async move {
             use bytes::BufMut;
             use std::convert::TryInto;
-            use tonic::codegen::Body;
+            use http_body_util::BodyExt;
 
             // Returns UTC on all platforms, no need to handle
             // timezones.
@@ -113,7 +112,10 @@ impl Service<Request<BoxBody>> for AuthService {
 
             let (mut parts, mut body) = request.into_parts();
 
-            let data = body.data().await.unwrap().unwrap();
+            // http-body 1.0 drops `data()`; collect the whole body rather
+            // than just the first frame, which is also what the signature
+            // below is meant to cover.
+            let data = body.collect().await?.to_bytes();
 
             // Copy used to create the signature (payload + associated data)
             let mut buf = data.to_vec();

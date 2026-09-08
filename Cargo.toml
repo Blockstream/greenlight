@@ -28,10 +28,10 @@ members = [
 [workspace.dependencies]
 anyhow = "1"
 env_logger = "0.11"
-cln-grpc = "0.6"
-cln-rpc = "0.6"
-cln-plugin = "0.6"
-tonic = "0.11"
+cln-grpc = "0.7"
+cln-rpc = "0.7"
+cln-plugin = "0.7"
+tonic = { version = "0.14", features = ["tls-ring", "transport"] }
 
 vls-core = "^0.14"
 vls-persist = "^0.14"

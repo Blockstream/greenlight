@@ -61,12 +61,12 @@ fn main() {
     println!("cargo:rerun-if-env-changed=GL_CUSTOM_NOBODY_CERT");
     println!("cargo:rerun-if-env-changed=GL_CUSTOM_NOBODY_KEY");
 
-    let builder = tonic_build::configure();
+    let builder = tonic_prost_build::configure();
 
     builder
         .type_attribute(".", "#[derive(serde::Serialize,serde::Deserialize)]")
         .protoc_arg("--experimental_allow_proto3_optional")
-        .compile(
+        .compile_protos(
             &[
                 ".resources/proto/glclient/greenlight.proto",
                 ".resources/proto/glclient/scheduler.proto",

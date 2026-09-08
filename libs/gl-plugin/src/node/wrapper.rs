@@ -1357,6 +1357,243 @@ impl Node for WrappedNodeServer {
         // TODO: Implement this once `cln_grpc::server::NotificationStream is public
         unimplemented!();
     }
+
+    async fn splice_in(
+        &self,
+        request: tonic::Request<pb::SpliceinRequest>,
+    ) -> Result<tonic::Response<pb::SpliceinResponse>, tonic::Status> {
+        self.inner.splice_in(request).await
+    }
+
+    async fn splice_out(
+        &self,
+        request: tonic::Request<pb::SpliceoutRequest>,
+    ) -> Result<tonic::Response<pb::SpliceoutResponse>, tonic::Status> {
+        self.inner.splice_out(request).await
+    }
+
+    async fn bkpr_report(
+        &self,
+        request: tonic::Request<pb::BkprreportRequest>,
+    ) -> Result<tonic::Response<pb::BkprreportResponse>, tonic::Status> {
+        self.inner.bkpr_report(request).await
+    }
+
+    async fn ask_rene_remove_channel_update(
+        &self,
+        request: tonic::Request<pb::AskreneremovechannelupdateRequest>,
+    ) -> Result<tonic::Response<pb::AskreneremovechannelupdateResponse>, tonic::Status> {
+        self.inner.ask_rene_remove_channel_update(request).await
+    }
+
+    async fn send_amount(
+        &self,
+        request: tonic::Request<pb::SendamountRequest>,
+    ) -> Result<tonic::Response<pb::SendamountResponse>, tonic::Status> {
+        self.inner.send_amount(request).await
+    }
+
+    async fn create_proof(
+        &self,
+        request: tonic::Request<pb::CreateproofRequest>,
+    ) -> Result<tonic::Response<pb::CreateproofResponse>, tonic::Status> {
+        self.inner.create_proof(request).await
+    }
+
+    async fn xkeysend(
+        &self,
+        request: tonic::Request<pb::XkeysendRequest>,
+    ) -> Result<tonic::Response<pb::XkeysendResponse>, tonic::Status> {
+        self.inner.xkeysend(request).await
+    }
+
+    async fn graceful(
+        &self,
+        request: tonic::Request<pb::GracefulRequest>,
+    ) -> Result<tonic::Response<pb::GracefulResponse>, tonic::Status> {
+        self.inner.graceful(request).await
+    }
+
+    type SubscribeBalanceSnapshotStream =
+        ReceiverStream<Result<pb::BalanceSnapshotNotification, tonic::Status>>;
+    async fn subscribe_balance_snapshot(
+        &self,
+        _request: tonic::Request<pb::StreamBalanceSnapshotRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeBalanceSnapshotStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeCoinMovementStream =
+        ReceiverStream<Result<pb::CoinMovementNotification, tonic::Status>>;
+    async fn subscribe_coin_movement(
+        &self,
+        _request: tonic::Request<pb::StreamCoinMovementRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeCoinMovementStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeDeprecatedOneshotStream =
+        ReceiverStream<Result<pb::DeprecatedOneshotNotification, tonic::Status>>;
+    async fn subscribe_deprecated_oneshot(
+        &self,
+        _request: tonic::Request<pb::StreamDeprecatedOneshotRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeDeprecatedOneshotStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeDisconnectStream =
+        ReceiverStream<Result<pb::DisconnectNotification, tonic::Status>>;
+    async fn subscribe_disconnect(
+        &self,
+        _request: tonic::Request<pb::StreamDisconnectRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeDisconnectStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeForwardEventStream =
+        ReceiverStream<Result<pb::ForwardEventNotification, tonic::Status>>;
+    async fn subscribe_forward_event(
+        &self,
+        _request: tonic::Request<pb::StreamForwardEventRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeForwardEventStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeInvoiceCreationStream =
+        ReceiverStream<Result<pb::InvoiceCreationNotification, tonic::Status>>;
+    async fn subscribe_invoice_creation(
+        &self,
+        _request: tonic::Request<pb::StreamInvoiceCreationRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeInvoiceCreationStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeInvoicePaymentStream =
+        ReceiverStream<Result<pb::InvoicePaymentNotification, tonic::Status>>;
+    async fn subscribe_invoice_payment(
+        &self,
+        _request: tonic::Request<pb::StreamInvoicePaymentRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeInvoicePaymentStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeLogStream =
+        ReceiverStream<Result<pb::LogNotification, tonic::Status>>;
+    async fn subscribe_log(
+        &self,
+        _request: tonic::Request<pb::StreamLogRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeLogStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeOnionMessageForwardFailStream =
+        ReceiverStream<Result<pb::OnionMessageForwardFailNotification, tonic::Status>>;
+    async fn subscribe_onion_message_forward_fail(
+        &self,
+        _request: tonic::Request<pb::StreamOnionMessageForwardFailRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeOnionMessageForwardFailStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeOpenChannelPeerSigsStream =
+        ReceiverStream<Result<pb::OpenChannelPeerSigsNotification, tonic::Status>>;
+    async fn subscribe_open_channel_peer_sigs(
+        &self,
+        _request: tonic::Request<pb::StreamOpenChannelPeerSigsRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeOpenChannelPeerSigsStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribePluginStartedStream =
+        ReceiverStream<Result<pb::PluginStartedNotification, tonic::Status>>;
+    async fn subscribe_plugin_started(
+        &self,
+        _request: tonic::Request<pb::StreamPluginStartedRequest>,
+    ) -> Result<tonic::Response<Self::SubscribePluginStartedStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribePluginStoppedStream =
+        ReceiverStream<Result<pb::PluginStoppedNotification, tonic::Status>>;
+    async fn subscribe_plugin_stopped(
+        &self,
+        _request: tonic::Request<pb::StreamPluginStoppedRequest>,
+    ) -> Result<tonic::Response<Self::SubscribePluginStoppedStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeSendPayFailureStream =
+        ReceiverStream<Result<pb::SendPayFailureNotification, tonic::Status>>;
+    async fn subscribe_send_pay_failure(
+        &self,
+        _request: tonic::Request<pb::StreamSendPayFailureRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeSendPayFailureStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeSendPaySuccessStream =
+        ReceiverStream<Result<pb::SendPaySuccessNotification, tonic::Status>>;
+    async fn subscribe_send_pay_success(
+        &self,
+        _request: tonic::Request<pb::StreamSendPaySuccessRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeSendPaySuccessStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeShutdownStream =
+        ReceiverStream<Result<pb::ShutdownNotification, tonic::Status>>;
+    async fn subscribe_shutdown(
+        &self,
+        _request: tonic::Request<pb::StreamShutdownRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeShutdownStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribeWarningStream =
+        ReceiverStream<Result<pb::WarningNotification, tonic::Status>>;
+    async fn subscribe_warning(
+        &self,
+        _request: tonic::Request<pb::StreamWarningRequest>,
+    ) -> Result<tonic::Response<Self::SubscribeWarningStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribePayPartEndStream =
+        ReceiverStream<Result<pb::PayPartEndNotification, tonic::Status>>;
+    async fn subscribe_pay_part_end(
+        &self,
+        _request: tonic::Request<pb::StreamPayPartEndRequest>,
+    ) -> Result<tonic::Response<Self::SubscribePayPartEndStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
+    type SubscribePayPartStartStream =
+        ReceiverStream<Result<pb::PayPartStartNotification, tonic::Status>>;
+    async fn subscribe_pay_part_start(
+        &self,
+        _request: tonic::Request<pb::StreamPayPartStartRequest>,
+    ) -> Result<tonic::Response<Self::SubscribePayPartStartStream>, tonic::Status> {
+        // TODO: Implement this once `cln_grpc::server::NotificationStream is public
+        unimplemented!();
+    }
+
 }
 
 fn internal_status(error: impl std::fmt::Display) -> Status {

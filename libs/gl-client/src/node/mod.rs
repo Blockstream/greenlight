@@ -170,14 +170,13 @@ pub use generic::GenericClient;
 
 mod stasher {
     use bytes::Bytes;
-    use http::HeaderMap;
-    use http_body::Body;
+    use http_body::{Body, Frame};
     use pin_project::pin_project;
     use std::{
         pin::Pin,
         task::{Context, Poll},
     };
-    use tonic::body::BoxBody;
+    use tonic::body::Body as TonicBody;
     use tonic::Status;
 
     #[pin_project]
@@ -200,24 +199,17 @@ mod stasher {
             self.value.is_none()
         }
 
-        fn poll_data(
+        fn poll_frame(
             self: Pin<&mut Self>,
             _cx: &mut Context<'_>,
-        ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
-            Poll::Ready(self.project().value.take().map(Ok))
-        }
-
-        fn poll_trailers(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Result<Option<HeaderMap>, Status>> {
-            Poll::Ready(Ok(None))
+        ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+            Poll::Ready(self.project().value.take().map(|v| Ok(Frame::data(v))))
         }
     }
 
-    impl From<StashBody> for BoxBody {
-        fn from(v: StashBody) -> BoxBody {
-            BoxBody::new(v)
+    impl From<StashBody> for TonicBody {
+        fn from(v: StashBody) -> TonicBody {
+            TonicBody::new(v)
         }
     }
 }
