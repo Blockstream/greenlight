@@ -265,7 +265,7 @@ impl Node for PluginNodeServer {
 
                 return Ok(Response::new(pb::LspInvoiceResponse {
                     bolt11: res.bolt11,
-                    created_index: res.created_index.unwrap_or(0) as u32,
+                    created_index: res.created_index as u32,
                     expires_at: res.expires_at as u32,
                     payment_hash: <cln_rpc::primitives::Sha256 as Borrow<[u8]>>::borrow(
                         &res.payment_hash,
@@ -1014,7 +1014,11 @@ impl PluginNodeServer {
         use cln_rpc::primitives::ChannelState;
 
         let res = rpc
-            .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: None })
+            .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest {
+                channel_id: None,
+                id: None,
+                short_channel_id: None,
+            })
             .await?;
 
         let total: u64 = res

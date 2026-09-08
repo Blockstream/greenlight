@@ -166,18 +166,95 @@ impl Node for WrappedNodeServer {
         self.inner.list_funds(r).await
     }
 
-    async fn decode_pay(
-        &self,
-        r: Request<pb::DecodepayRequest>,
-    ) -> Result<Response<pb::DecodepayResponse>, Status> {
-        self.inner.decode_pay(r).await
-    }
-
     async fn decode(
         &self,
         r: Request<pb::DecodeRequest>,
     ) -> Result<Response<pb::DecodeResponse>, Status> {
         self.inner.decode(r).await
+    }
+
+    async fn fetch_bip353(
+        &self,
+        r: Request<pb::Fetchbip353Request>,
+    ) -> Result<Response<pb::Fetchbip353Response>, Status> {
+        self.inner.fetch_bip353(r).await
+    }
+
+    async fn cancel_recurring_invoice(
+        &self,
+        r: Request<pb::CancelrecurringinvoiceRequest>,
+    ) -> Result<Response<pb::CancelrecurringinvoiceResponse>, Status> {
+        self.inner.cancel_recurring_invoice(r).await
+    }
+
+    async fn askrene_bias_node(
+        &self,
+        r: Request<pb::AskrenebiasnodeRequest>,
+    ) -> Result<Response<pb::AskrenebiasnodeResponse>, Status> {
+        self.inner.askrene_bias_node(r).await
+    }
+
+    async fn sign_message_with_key(
+        &self,
+        r: Request<pb::SignmessagewithkeyRequest>,
+    ) -> Result<Response<pb::SignmessagewithkeyResponse>, Status> {
+        self.inner.sign_message_with_key(r).await
+    }
+
+    async fn list_channel_moves(
+        &self,
+        r: Request<pb::ListchannelmovesRequest>,
+    ) -> Result<Response<pb::ListchannelmovesResponse>, Status> {
+        self.inner.list_channel_moves(r).await
+    }
+
+    async fn list_chain_moves(
+        &self,
+        r: Request<pb::ListchainmovesRequest>,
+    ) -> Result<Response<pb::ListchainmovesResponse>, Status> {
+        self.inner.list_chain_moves(r).await
+    }
+
+    async fn list_network_events(
+        &self,
+        r: Request<pb::ListnetworkeventsRequest>,
+    ) -> Result<Response<pb::ListnetworkeventsResponse>, Status> {
+        self.inner.list_network_events(r).await
+    }
+
+    async fn del_network_event(
+        &self,
+        r: Request<pb::DelnetworkeventRequest>,
+    ) -> Result<Response<pb::DelnetworkeventResponse>, Status> {
+        self.inner.del_network_event(r).await
+    }
+
+    async fn clnrest_register_path(
+        &self,
+        r: Request<pb::ClnrestregisterpathRequest>,
+    ) -> Result<Response<pb::ClnrestregisterpathResponse>, Status> {
+        self.inner.clnrest_register_path(r).await
+    }
+
+    async fn list_currency_rates(
+        &self,
+        r: Request<pb::ListcurrencyratesRequest>,
+    ) -> Result<Response<pb::ListcurrencyratesResponse>, Status> {
+        self.inner.list_currency_rates(r).await
+    }
+
+    async fn currency_convert(
+        &self,
+        r: Request<pb::CurrencyconvertRequest>,
+    ) -> Result<Response<pb::CurrencyconvertResponse>, Status> {
+        self.inner.currency_convert(r).await
+    }
+
+    async fn currency_rate(
+        &self,
+        r: Request<pb::CurrencyrateRequest>,
+    ) -> Result<Response<pb::CurrencyrateResponse>, Status> {
+        self.inner.currency_rate(r).await
     }
 
     async fn sign_invoice(
@@ -1406,7 +1483,11 @@ impl WrappedNodeServer {
         // `short_channel_id`, whereas we're supposed to use the remote alias if
         // the channel is unannounced. This patches the issue in GL, and should
         // work transparently once we fix `listincoming`.
-        let req = cln_rpc::model::requests::ListpeerchannelsRequest { id: None };
+        let req = cln_rpc::model::requests::ListpeerchannelsRequest {
+                channel_id: None,
+                id: None,
+                short_channel_id: None,
+            };
         let res = rpc.call_typed(&req).await?;
         let active_channels: HashMap<
             cln_rpc::primitives::ShortChannelId,

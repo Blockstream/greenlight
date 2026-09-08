@@ -27,19 +27,23 @@ impl AuthLayer {
         // when we need it.
         let key = {
             let mut key = std::io::Cursor::new(&pem[..]);
-            match pemfile::pkcs8_private_keys(&mut key) {
-                Ok(v) => v,
-                Err(e) => {
-                    return Err(anyhow!(
-                        "Could not decode PEM string into PKCS#8 format: {}",
-                        e
-                    ))
-                }
-            }
-            .remove(0)
+            let der = pemfile::pkcs8_private_keys(&mut key)
+                .next()
+                .ok_or_else(|| {
+                    anyhow!("Could not decode PEM string into PKCS#8 format: no key found")
+                })?
+                .map_err(|e| {
+                    anyhow!("Could not decode PEM string into PKCS#8 format: {}", e)
+                })?;
+            der.secret_pkcs8_der().to_vec()
         };
 
-        match EcdsaKeyPair::from_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key.as_ref()) {
+        let rng = rand::SystemRandom::new();
+        match EcdsaKeyPair::from_pkcs8(
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+            key.as_ref(),
+            &rng,
+        ) {
             Ok(_) => trace!("Successfully decoded keypair from PEM string"),
             Err(e) => return Err(anyhow!("Could not decide keypair from PEM string: {}", e)),
         };
@@ -86,9 +90,11 @@ impl Service<Request<BoxBody>> for AuthService {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
+        let rng = rand::SystemRandom::new();
         let keypair = EcdsaKeyPair::from_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             self.key.as_ref(),
+            &rng,
         )
         .unwrap();
 

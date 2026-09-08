@@ -470,7 +470,11 @@ impl Node {
             };
             tokio::join!(
                 c_funds.list_funds(clnpb::ListfundsRequest { spent: None }),
-                c_channels.list_peer_channels(clnpb::ListpeerchannelsRequest { id: None }),
+                c_channels.list_peer_channels(clnpb::ListpeerchannelsRequest {
+                channel_id: None,
+                id: None,
+                short_channel_id: None,
+            }),
                 c_probe.fund_psbt(probe_req),
             )
         });
@@ -638,7 +642,11 @@ impl Node {
         self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
 
-        let req = clnpb::ListpeerchannelsRequest { id: None };
+        let req = clnpb::ListpeerchannelsRequest {
+                channel_id: None,
+                id: None,
+                short_channel_id: None,
+            };
 
         let res = exec(cln_client.list_peer_channels(req))
             .map_err(|e| Error::rpc(e.to_string()))?
@@ -676,7 +684,11 @@ impl Node {
             let mut c_funds = cln_client.clone();
             tokio::join!(
                 c_info.getinfo(clnpb::GetinfoRequest {}),
-                c_channels.list_peer_channels(clnpb::ListpeerchannelsRequest { id: None }),
+                c_channels.list_peer_channels(clnpb::ListpeerchannelsRequest {
+                channel_id: None,
+                id: None,
+                short_channel_id: None,
+            }),
                 c_funds.list_funds(clnpb::ListfundsRequest { spent: None }),
             )
         });
@@ -1779,7 +1791,7 @@ impl From<clnpb::GetinfoResponse> for GetInfoResponse {
     fn from(other: clnpb::GetinfoResponse) -> Self {
         Self {
             id: hex::encode(&other.id),
-            alias: other.alias,
+            alias: Some(other.alias),
             color: hex::encode(&other.color),
             num_peers: other.num_peers,
             num_pending_channels: other.num_pending_channels,
@@ -1829,7 +1841,7 @@ impl From<clnpb::ListpeersPeers> for Peer {
         Self {
             id: hex::encode(&other.id),
             connected: other.connected,
-            num_channels: other.num_channels,
+            num_channels: Some(other.num_channels),
             netaddr: other.netaddr,
             remote_addr: other.remote_addr,
             features: other.features,
@@ -2099,7 +2111,11 @@ impl From<clnpb::ListfundsChannels> for FundChannel {
             connected: other.connected,
             state,
             short_channel_id: other.short_channel_id,
-            channel_id: other.channel_id.as_deref().map(hex::encode),
+            channel_id: if other.channel_id.is_empty() {
+                None
+            } else {
+                Some(hex::encode(&other.channel_id))
+            },
         }
     }
 }

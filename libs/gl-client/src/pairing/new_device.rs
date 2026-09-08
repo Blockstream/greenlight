@@ -70,14 +70,18 @@ impl Client<Connected> {
         let kp = tls::generate_ecdsa_key_pair();
 
         // Generate csr.
-        let device_cert = tls::generate_self_signed_device_cert(
+        let (device_cert, key_pair) = tls::generate_self_signed_device_cert(
             &hex::encode("00"), // We don't know the node id yet, this is to be filled out by the attestation device.
             name,
             vec!["localhost".into()],
             Some(kp),
         );
-        let device_id = hex::encode(device_cert.get_key_pair().public_key_raw());
-        let csr = device_cert.serialize_request_pem()?;
+        let device_id = hex::encode(key_pair.public_key_raw());
+        let csr = device_cert.params().serialize_request(&key_pair)?.pem()?;
+
+        // The private key never leaves the device, so pre-serialize it for
+        // the worker that injects it into the pairing response.
+        let private_key_pem = key_pair.serialize_pem();
 
         // Restrictions should always contain the pubkey field to bind them to
         // the private key of the device.
@@ -117,7 +121,7 @@ impl Client<Connected> {
             let _ = match request.await {
                 Ok(r) => {
                     let mut res = r.into_inner();
-                    res.device_key = device_cert.serialize_private_key_pem();
+                    res.device_key = private_key_pem;
                     let creds = Device::with(
                         res.device_cert.clone().into_bytes(),
                         res.device_key.clone().into_bytes(),

@@ -160,9 +160,10 @@ pub fn generate_self_signed_device_cert(
     device: &str,
     subject_alt_names: Vec<String>,
     key_pair: Option<rcgen::KeyPair>,
-) -> rcgen::Certificate {
+) -> (rcgen::Certificate, rcgen::KeyPair) {
     // Configure the certificate.
-    let mut params = cert_params_from_template(subject_alt_names);
+    let mut params = cert_params_from_template(subject_alt_names)
+        .expect("subject alt names must be valid");
 
     // Is a leaf certificate only so it is not allowed to sign child
     // certificates.
@@ -173,14 +174,22 @@ pub fn generate_self_signed_device_cert(
     );
 
     // Start from an empty key pair.
-    params.key_pair = key_pair;
-    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+    let key_pair = key_pair.unwrap_or_else(generate_ecdsa_key_pair);
 
-    rcgen::Certificate::from_params(params).unwrap()
+    // Since rcgen 0.13 the certificate no longer retains the key pair, so it
+    // is returned alongside the certificate for CSR generation and key
+    // serialization.
+    let cert = params
+        .self_signed(&key_pair)
+        .expect("creating self-signed device certificate");
+
+    (cert, key_pair)
 }
 
-fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::CertificateParams {
-    let mut params = rcgen::CertificateParams::new(subject_alt_names);
+fn cert_params_from_template(
+    subject_alt_names: Vec<String>,
+) -> Result<rcgen::CertificateParams, rcgen::Error> {
+    let mut params = rcgen::CertificateParams::new(subject_alt_names)?;
 
     // Certificate can be used to issue unlimited sub certificates for devices.
     params
@@ -200,11 +209,11 @@ fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::Certifica
         "CertificateAuthority",
     );
 
-    params
+    Ok(params)
 }
 
 pub fn generate_ecdsa_key_pair() -> rcgen::KeyPair {
-    rcgen::KeyPair::generate(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap()
+    rcgen::KeyPair::generate().unwrap()
 }
 
 #[cfg(test)]
@@ -215,27 +224,26 @@ pub mod tests {
 
     #[test]
     fn test_generate_self_signed_device_cert() {
-        let device_cert =
+        let (device_cert, key_pair) =
             generate_self_signed_device_cert("mynodeid", "device", vec!["localhost".into()], None);
         assert!(device_cert
-            .serialize_pem()
-            .unwrap()
+            .pem()
             .starts_with("-----BEGIN CERTIFICATE-----"));
-        assert!(device_cert
-            .serialize_private_key_pem()
+        assert!(key_pair
+            .serialize_pem()
             .starts_with("-----BEGIN PRIVATE KEY-----"));
     }
 
     #[test]
     fn test_generate_self_signed_device_cert_from_pem() {
         let kp = generate_ecdsa_key_pair();
-        let keys = KeyPair::from_der(kp.serialized_der()).unwrap();
-        let cert = generate_self_signed_device_cert(
+        let keys = KeyPair::from_pem(&kp.serialize_pem()).unwrap();
+        let (_, key) = generate_self_signed_device_cert(
             "mynodeid",
             "device",
             vec!["localhost".into()],
             Some(keys),
         );
-        assert!(kp.serialize_pem() == cert.get_key_pair().serialize_pem());
+        assert!(kp.serialize_pem() == key.serialize_pem());
     }
 }
