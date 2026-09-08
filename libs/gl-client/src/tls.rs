@@ -166,8 +166,11 @@ pub fn generate_self_signed_device_cert(
         .expect("subject alt names must be valid");
 
     // Is a leaf certificate only so it is not allowed to sign child
-    // certificates.
-    params.is_ca = rcgen::IsCa::ExplicitNoCa;
+    // certificates. This must stay `NoCa` rather than `ExplicitNoCa`:
+    // these params are turned into a CSR by the registration and pairing
+    // flows, and since rcgen 0.13 `serialize_request` rejects any
+    // basicConstraints in a CSR with `UnsupportedInCsr`.
+    params.is_ca = rcgen::IsCa::NoCa;
     params.distinguished_name.push(
         rcgen::DnType::CommonName,
         format!("/users/{}/{}", node_id, device),

@@ -357,7 +357,13 @@ mod tests {
         let lnurl = "LNURL1111111111111111111111111111111111111111111111111111111111111111111";
 
         let result = resolve_lnurl_to_invoice(&mock_http_client, lnurl, 100000, None).await;
-        assert!(result.unwrap_err().to_string().contains("Failed to decode lnurl: invalid length"));
+        // Assert on our own wrapper text rather than bech32's wording, which
+        // changes between releases (0.9 said "invalid length", 0.11 reports a
+        // checksum failure for this input).
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Failed to decode lnurl"));
     }
 
     #[tokio::test]
