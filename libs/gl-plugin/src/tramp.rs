@@ -609,11 +609,18 @@ async fn do_pay(
     payment_metadata: String,
     max_delay: Option<u32>,
 ) -> Result<cln_rpc::model::responses::WaitsendpayResponse> {
+    // cln-rpc 0.7 made every SendpayRoute field optional and added the
+    // newer `*_out` / `short_channel_id_dir` hop representation alongside
+    // the legacy one. We keep describing the hop the legacy way.
     let route = cln_rpc::model::requests::SendpayRoute {
-        amount_msat: cln_rpc::primitives::Amount::from_msat(part_amt),
-        id: node_id.clone(),
-        delay: max_delay.unwrap_or(MAX_DELAY_DEFAULT),
-        channel: scid,
+        amount_msat: Some(cln_rpc::primitives::Amount::from_msat(part_amt)),
+        id: Some(node_id.clone()),
+        delay: Some(max_delay.unwrap_or(MAX_DELAY_DEFAULT)),
+        channel: Some(scid),
+        amount_out_msat: None,
+        cltv_out: None,
+        node_id_out: None,
+        short_channel_id_dir: None,
     };
 
     debug!(

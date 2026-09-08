@@ -30,7 +30,7 @@ pub struct GenericClient<T> {
 
 impl<T> GenericClient<T>
 where
-    T: tonic::client::GrpcService<tonic::body::BoxBody>,
+    T: tonic::client::GrpcService<tonic::body::Body>,
     T::ResponseBody: http_body::Body<Data = bytes::Bytes> + Send + 'static,
     T::Error: Into<StdError>,
     T::ResponseBody: Body<Data = Bytes> + Send + 'static,
@@ -69,7 +69,7 @@ where
 
     pub fn max_decoding_message_size(mut self, limit: usize) -> Self
     where
-        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T: tonic::client::GrpcService<tonic::body::Body>,
     {
         self.inner = self.inner.max_decoding_message_size(limit);
         self

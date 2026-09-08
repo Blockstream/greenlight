@@ -18,9 +18,9 @@ impl<S> RpcWaitService<S> {
     }
 }
 
-impl<S> Service<hyper::Request<hyper::Body>> for RpcWaitService<S>
+impl<S> Service<http::Request<tonic::body::Body>> for RpcWaitService<S>
 where
-    S: Service<hyper::Request<hyper::Body>, Response = hyper::Response<tonic::body::BoxBody>>
+    S: Service<http::Request<tonic::body::Body>, Response = http::Response<tonic::body::Body>>
         + Clone
         + Send
         + 'static,
@@ -37,7 +37,7 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, request: hyper::Request<hyper::Body>) -> Self::Future {
+    fn call(&mut self, request: http::Request<tonic::body::Body>) -> Self::Future {
         // This is necessary because tonic internally uses `tower::buffer::Buffer`.
         // See https://github.com/tower-rs/tower/issues/547#issuecomment-767629149
         // for details on why this is necessary
