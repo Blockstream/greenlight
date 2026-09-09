@@ -1682,7 +1682,14 @@ impl WrappedNodeServer {
     async fn old_splice_state(&self, channel_id: &[u8]) -> Result<OldSpliceState, Status> {
         let response = self
             .inner
-            .list_peer_channels(Request::new(pb::ListpeerchannelsRequest { id: None }))
+            .list_peer_channels(Request::new(pb::ListpeerchannelsRequest {
+                id: None,
+                // New server-side filters in cln 0.7. Left unset: this call
+                // lists every channel and filters by channel_id below, and a
+                // dependency bump is not the place to change that.
+                channel_id: None,
+                short_channel_id: None,
+            }))
             .await?;
         let channel = response
             .into_inner()
