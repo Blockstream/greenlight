@@ -28,6 +28,9 @@ members = [
 [workspace.dependencies]
 anyhow = "1"
 env_logger = "0.11"
+hex = "0.4"
+log = "0.4"
+once_cell = "1"
 cln-grpc = "0.7"
 cln-rpc = "0.7"
 cln-plugin = "0.7"

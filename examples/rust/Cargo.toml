@@ -8,7 +8,7 @@ gl-client = { path = "../../libs/gl-client" }
 rand = "0.8"
 bip39 = { version = "2", features = ["rand_core"] }
 tokio = { version = "1.29.1", features = ["rt", "macros"] }
-hex = "0.4.3"
+hex = { workspace = true }
 runeauth = "0.1"
 anyhow.workspace = true
 

@@ -19,17 +19,17 @@ experimental-splicing = []
 
 [dependencies]
 aes = "0.8"
-anyhow = "1.0.82"
+anyhow = { workspace = true }
 base64 = "0.22"
 bech32 = "0.11"
 cbc = { version = "0.1", features = ["alloc"] }
 bytes = "1.2.1"
 chrono = "0.4.31"
-hex = "0.4.3"
+hex = { workspace = true }
 http = "1"
 http-body = "1"
 http-body-util = "0.1"
-log = "^0.4"
+log = { workspace = true }
 # Only the x509 bits are used (Pem, Csr). The default features also pull in
 # jose and picky's http_trait_impl, the latter dragging http 0.2 into a tree
 # that is otherwise entirely on http 1.

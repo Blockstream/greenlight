@@ -24,7 +24,7 @@ tokio = { version = "1", features = ["rt", "net", "io-util"] }
 tonic = { version = "0.14", features = ["tls-ring", "transport"] }
 prost = "0.14"
 tonic-prost = "0.14"
-log = "*"
+log = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 which = "4.4.2"

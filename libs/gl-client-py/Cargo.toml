@@ -18,9 +18,9 @@ env_logger = { workspace = true }
 gl-client = { path = "../gl-client", default-features = false, features = [
     "export",
 ] }
-hex = "*"
-log = "*"
-once_cell = "*"
+hex = { workspace = true }
+log = { workspace = true }
+once_cell = { workspace = true }
 prost = "0.14"
 pyo3 = { version = "0.18", features = [
     "extension-module",
