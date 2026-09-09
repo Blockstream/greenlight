@@ -110,7 +110,7 @@ impl Service<Request<Body>> for AuthService {
                 .duration_since(std::time::SystemTime::UNIX_EPOCH)?
                 .as_millis();
 
-            let (mut parts, mut body) = request.into_parts();
+            let (mut parts, body) = request.into_parts();
 
             // http-body 1.0 drops `data()`; collect the whole body rather
             // than just the first frame, which is also what the signature

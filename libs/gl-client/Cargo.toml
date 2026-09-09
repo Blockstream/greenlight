@@ -35,8 +35,9 @@ log = "^0.4"
 # jose and picky's http_trait_impl, the latter dragging http 0.2 into a tree
 # that is otherwise entirely on http 1.
 picky = { version = "6", default-features = false, features = ["x509"] }
-picky-asn1-x509 = "0.15"
-picky-asn1-der = "0.4"
+# Must track the version picky itself uses, otherwise the whole picky-asn1
+# stack gets compiled two extra times just to bridge between the majors.
+picky-asn1-x509 = "0.6"
 pin-project = "1.1.5"
 prost = "0.14"
 tonic-prost = "0.14"

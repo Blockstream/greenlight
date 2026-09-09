@@ -168,14 +168,14 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> 
         let mut crs = std::io::Cursor::new(&data.csr);
         let pem = Pem::read_from(&mut crs).map_err(into_verify_pairing_data_error)?;
         let csr = Csr::from_pem(&pem).map_err(into_verify_pairing_data_error)?;
-        let sub_pk_der = csr
-            .public_key()
-            .to_der()
-            .map_err(into_verify_pairing_data_error)?;
-        let sub_pk_info: SubjectPublicKeyInfo =
-            picky_asn1_der::from_bytes(&sub_pk_der).map_err(into_verify_pairing_data_error)?;
+        // picky's PublicKey is a thin wrapper around SubjectPublicKeyInfo, so
+        // borrow it directly. This used to serialise to DER and parse it back
+        // with picky-asn1-der, which was only necessary because the direct
+        // picky-asn1-x509 dependency was a different major than the one picky
+        // itself uses.
+        let sub_pk_info: &SubjectPublicKeyInfo = csr.public_key().as_ref();
 
-        if let PublicKey::Ec(bs) = sub_pk_info.subject_public_key {
+        if let PublicKey::Ec(bs) = &sub_pk_info.subject_public_key {
             let pk = hex::encode(bs.0.payload_view());
 
             if pk == data.device_id
