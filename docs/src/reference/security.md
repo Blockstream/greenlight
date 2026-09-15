@@ -90,6 +90,39 @@ operations. An attacker that gains access to the node is unable to
 provide either these signatures and will therefore fail to convince
 the signer of its injected commands.
 
+## Signer State Integrity
+
+The signer does not store its own state. The node stores the
+[signer state](signer-state.md) (channel states, allowed on-chain
+destinations, known invoices) and attaches it to every request. An
+attacker with access to the node infrastructure can therefore read,
+withhold, replay or modify the state a signer receives, and the signer
+must not trust it blindly.
+
+| Party | Trusted with | Not trusted with |
+|-------|--------------|------------------|
+| Node infrastructure | Storing and returning the state | The content, age or completeness of the state |
+| Signer | Writing and signing state entries | |
+| Application embedding the signer | Keeping the state anchor, choosing enforcement options | |
+
+ - **Authenticity:** every state entry is signed with a key derived
+   from the node secret. In `hard` state signature mode the signer
+   refuses entries with missing or invalid signatures, so the node
+   cannot inject or alter state.
+ - **Freshness and completeness** (planned): a small _state anchor_
+   kept on the device records the latest version of every key the
+   signer has seen. On start, the signer refuses state that is older
+   than its anchor, is missing keys, or brings back deleted keys.
+ - **Enforcement options belong to the application.** The state
+   signature mode and anchor enforcement are set where the signer is
+   embedded; the node cannot change them, and there is no way for the
+   node to reset an anchor.
+
+A signer without an anchor, for example right after pairing or
+recovery, trusts the first state it receives. See
+[Signer State](signer-state.md) for the details and the configuration
+options.
+
 ## Client &rlarr; Signer Authorization
 
 The [`rune`][rune]-based signer authentication verifies a client's 
