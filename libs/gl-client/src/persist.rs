@@ -201,7 +201,7 @@ impl State {
     fn insert_channel(
         &mut self,
         key: &str,
-        channel_entry: vls_persist::model::ChannelEntry,
+        channel_entry: lightning_signer::persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
         self.ensure_not_tombstone(&key)?;
@@ -221,7 +221,7 @@ impl State {
     fn update_channel(
         &mut self,
         key: &str,
-        channel_entry: vls_persist::model::ChannelEntry,
+        channel_entry: lightning_signer::persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         trace!("Updating channel {key}");
         let key = format!("{CHANNEL_PREFIX}/{key}");
@@ -262,9 +262,9 @@ impl State {
             .values
             .get(&key)
             .ok_or_else(|| Error::Internal(format!("missing channel state for key {}", key)))?;
-        let entry: vls_persist::model::ChannelEntry =
+        let entry: lightning_signer::persist::model::ChannelEntry =
             serde_json::from_value(value.value.clone()).unwrap();
-        Ok(entry.into())
+        Ok(entry)
     }
 
     fn get_node_channels(
@@ -288,9 +288,9 @@ impl State {
                 let key = k.split('/').last().unwrap();
                 let key = vls_persist::model::NodeChannelId(hex::decode(&key).unwrap());
 
-                let value: vls_persist::model::ChannelEntry =
+                let value: lightning_signer::persist::model::ChannelEntry =
                     serde_json::from_value(v.value.clone()).unwrap();
-                (key.channel_id(), value.into())
+                (key.channel_id(), value)
             })
             .collect())
     }
@@ -746,7 +746,7 @@ impl Persist for MemoryPersister {
         let id = vls_persist::model::NodeChannelId::new(node_id, &stub.id0);
         let channel_value_satoshis = 0;
         let enforcement_state = lightning_signer::policy::validator::EnforcementState::new(0);
-        let entry = vls_persist::model::ChannelEntry {
+        let entry = lightning_signer::persist::model::ChannelEntry {
             channel_value_satoshis,
             channel_setup: None,
             id: None,
@@ -767,7 +767,7 @@ impl Persist for MemoryPersister {
         let node_channel_id = vls_persist::model::NodeChannelId::new(node_id, &channel.id0);
         let id = hex::encode(node_channel_id.0);
         let channel_value_satoshis = channel.setup.channel_value_sat;
-        let entry = vls_persist::model::ChannelEntry {
+        let entry = lightning_signer::persist::model::ChannelEntry {
             channel_value_satoshis,
             channel_setup: Some(channel.setup.clone()),
             id: channel.id.clone(),
@@ -1583,6 +1583,26 @@ mod tests {
         ] {
             assert_tombstone(&state, &live_key);
             assert!(old_version < u64::MAX);
+        }
+    }
+
+    /// Channel entries serialized by `vls_persist::model::ChannelEntry`
+    /// (VLS 0.14). The state signatures cover these bytes, so the
+    /// `lightning_signer::persist::model::ChannelEntry` used since VLS 1.0
+    /// must round-trip them unchanged.
+    const VLS_0_14_STUB_CHANNEL_ENTRY: &str = r#"{"blockheight":850000,"channel_setup":null,"channel_value_satoshis":0,"enforcement_state":{"channel_closed":false,"counterparty_secrets":{"old_secrets":[]},"current_counterparty_commit_info":null,"current_counterparty_point":null,"current_counterparty_signatures":null,"current_holder_commit_info":null,"initial_holder_value":0,"next_counterparty_commit_num":0,"next_counterparty_revoke_num":0,"next_holder_commit_info":null,"next_holder_commit_num":0,"previous_counterparty_commit_info":null,"previous_counterparty_point":null},"id":null}"#;
+    const VLS_0_14_CHANNEL_ENTRY: &str = r#"{"blockheight":null,"channel_setup":{"channel_value_sat":1000000,"commitment_type":"AnchorsZeroFeeHtlc","counterparty_points":{"delayed_payment_basepoint":"022f1b310f4c065331bc0d79ba4661bb9822d67d7c4a1b0a1892e1fd0cd23aa68d","funding_pubkey":"03f76a39d05686e34a4420897e359371836145dd3973e3982568b60f8433adde6e","htlc_basepoint":"0299c2aa85d2b21a62f396907a802a58e521dafd5bddaccbd72786eea189bc4dc9","payment_point":"030f0fb9a244ad31a369ee02b7abfbbb0bfa3812b9a39ed93346d03d67d412d177","revocation_basepoint":"02552c630b64b54bf50210c9e253d38bd4949c72e22873500f6285c2bede312a84"},"counterparty_selected_contest_delay":6,"counterparty_shutdown_script":null,"funding_outpoint":{"txid":"1111111111111111111111111111111111111111111111111111111111111111","vout":3},"holder_selected_contest_delay":144,"holder_shutdown_script":[0,20,34,51],"is_outbound":true,"push_value_msat":12345},"channel_value_satoshis":1000000,"enforcement_state":{"channel_closed":true,"counterparty_secrets":{"old_secrets":[[[170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170,170],281474976710655]]},"current_counterparty_commit_info":{"feerate_per_kw":253,"is_counterparty_broadcaster":true,"offered_htlcs":[{"cltv_expiry":800000,"payment_hash":[7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],"value_sat":5000}],"received_htlcs":[{"cltv_expiry":800100,"payment_hash":[8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],"value_sat":6000},{"cltv_expiry":0,"payment_hash":[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],"value_sat":7000}],"to_broadcaster_value_sat":2000,"to_countersigner_value_sat":1000},"current_counterparty_point":"02531fe6068134503d2723133227c867ac8fa6c83c537e9a44c3c5bdbdcb1fe337","current_counterparty_signatures":["3045022100f0bae8d1be9c33afca3beee8849ea5f804f3467123cc0f899770e8af394216d002204068aa494d31371758f7b4ee1d26962e0d620ae06e529de72051a198e7865665",["304402207675dc64879e04183fcf01a6a4e20b7b2f906d52a8c9cd987568880fe0734bcf0220713893fd38b96b6854f2200324152a8717e3d3819e6dd96c5a42b56d1499d20f","3045022100f905a204a7295997196aa3677f7840d6bc2dee004ce5b0b2682937208560b165022029e81ec0482e8dfa9130b16dab70ffcd9270de04030f195389728af555ff54cf"]],"current_holder_commit_info":{"feerate_per_kw":253,"is_counterparty_broadcaster":false,"offered_htlcs":[{"cltv_expiry":800000,"payment_hash":[7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],"value_sat":5000}],"received_htlcs":[{"cltv_expiry":800100,"payment_hash":[8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],"value_sat":6000},{"cltv_expiry":0,"payment_hash":[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],"value_sat":7000}],"to_broadcaster_value_sat":2000,"to_countersigner_value_sat":1000},"initial_holder_value":123456,"next_counterparty_commit_num":43,"next_counterparty_revoke_num":41,"next_holder_commit_info":[{"feerate_per_kw":253,"is_counterparty_broadcaster":false,"offered_htlcs":[{"cltv_expiry":800000,"payment_hash":[7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],"value_sat":5000}],"received_htlcs":[{"cltv_expiry":800100,"payment_hash":[8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],"value_sat":6000},{"cltv_expiry":0,"payment_hash":[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],"value_sat":7000}],"to_broadcaster_value_sat":2000,"to_countersigner_value_sat":1000},["3045022100e95f025594c7a578714f10ced4140f56d6362da62f3cf1407836c39952e73303022054b9f0fc0191dc0460984f7bd06e140b0c09a186e2539a3d2cf38ade89ddb792",[]]],"next_holder_commit_num":42,"previous_counterparty_commit_info":{"feerate_per_kw":253,"is_counterparty_broadcaster":true,"offered_htlcs":[{"cltv_expiry":800000,"payment_hash":[7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],"value_sat":5000}],"received_htlcs":[{"cltv_expiry":800100,"payment_hash":[8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],"value_sat":6000},{"cltv_expiry":0,"payment_hash":[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],"value_sat":7000}],"to_broadcaster_value_sat":2000,"to_countersigner_value_sat":1000},"previous_counterparty_point":"03462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b"},"id":"deadbeef0102030405060708090a0b0c0d0e0f101112131415161718191a1bab"}"#;
+
+    #[test]
+    fn channel_entry_serialization_matches_vls_0_14() {
+        for expected in [VLS_0_14_STUB_CHANNEL_ENTRY, VLS_0_14_CHANNEL_ENTRY] {
+            let entry: lightning_signer::persist::model::ChannelEntry =
+                serde_json::from_str(expected).unwrap();
+            let entry = StateEntry::new(0, serde_json::to_value(entry).unwrap());
+            assert_eq!(
+                String::from_utf8(entry.canonical_value_bytes().unwrap()).unwrap(),
+                expected
+            );
         }
     }
 }

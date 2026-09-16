@@ -1765,7 +1765,7 @@ mod tests {
                 .await
                 .unwrap_err()
                 .to_string(),
-            *"protocol error: ShortRead"
+            *"protocol error: short read"
         )
     }
 

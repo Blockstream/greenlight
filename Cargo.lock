@@ -489,9 +489,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin-consensus-derive"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0468a0cbe4fb594b40940e107694c4edfc316a9d83bbeeff14ba1acbdfd291c2"
+checksum = "7d664058fbe866bd6e8e01a003eb8cdbce5f8c7bb0835621d7443b2b45a4031d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -630,9 +630,9 @@ dependencies = [
 
 [[package]]
 name = "bolt-derive"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6836000a836c3fc91ad5db2c95552c556b8347a6f6782a8f77a00d3fd989122"
+checksum = "b8c8cbe333b12e11cf3b8b9eb41d861d12715bec7510bda293800b5ea80f99b9"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2334,9 +2334,9 @@ dependencies = [
 
 [[package]]
 name = "lightning"
-version = "0.1.8"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ffe63f56b10d214be1ade8698ee80af82d981237cae3e581e7a631f5f4959f3"
+checksum = "9a8c4111946d048fecc72245a2ecacf28cde4390bcc946b010f544c6ac2b2d8b"
 dependencies = [
  "bech32 0.11.1",
  "bitcoin 0.32.9",
@@ -2344,6 +2344,7 @@ dependencies = [
  "hashbrown 0.13.2",
  "libm",
  "lightning-invoice",
+ "lightning-macros",
  "lightning-types",
  "possiblyrandom",
  "regex",
@@ -2351,9 +2352,9 @@ dependencies = [
 
 [[package]]
 name = "lightning-invoice"
-version = "0.33.2"
+version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11209f386879b97198b2bfc9e9c1e5d42870825c6bd4376f17f95357244d6600"
+checksum = "47d83bd798e04ab9eecc8bbef1fa17d3808859bcdc0406bd16c55d51c8834444"
 dependencies = [
  "bech32 0.11.1",
  "bitcoin 0.32.9",
@@ -2361,10 +2362,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "lightning-types"
-version = "0.2.0"
+name = "lightning-macros"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2cd84d4e71472035903e43caded8ecc123066ce466329ccd5ae537a8d5488c7"
+checksum = "d4c717494cdc2c8bb85bee7113031248f5f6c64f8802b33c1c9e2d98e594aa71"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "lightning-types"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77c676d4a34cceb2ae3756916e446b4d17f9430a24107e099981f0f9aec77e6"
 dependencies = [
  "bitcoin 0.32.9",
 ]
@@ -4776,9 +4788,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vls-common"
-version = "0.14.0"
+version = "1.0.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a7a66fafe84eddfc3e6bd6ea189211668500b726be9111e66261cf6a4332c25"
+checksum = "36fac44a73a2a5bed8e2d0f15ababd9458519198b5d7b14184be835dd360e5f7"
 dependencies = [
  "bitcoin 0.32.9",
  "hex",
@@ -4786,9 +4798,9 @@ dependencies = [
 
 [[package]]
 name = "vls-core"
-version = "0.14.0"
+version = "1.0.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ac7a6047e0c2fcc73dfd9b5a545d357dcbc9aaaad0e90533c1a1c9bd2049e99"
+checksum = "eaa636ceeba6b0b4196a9da47ea307c2ff5859dd4773e8c2589748a4a74a8648"
 dependencies = [
  "ahash",
  "anyhow",
@@ -4817,9 +4829,9 @@ dependencies = [
 
 [[package]]
 name = "vls-persist"
-version = "0.14.0"
+version = "1.0.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84526aaf721d6086c433aa838b9cb668740e8784d29d8b6a273745ef80dae8f6"
+checksum = "7b5b893e737bc0ec94583c028c45ea8e1d856a7d3b5bb4f1ce29f5cb255f987f"
 dependencies = [
  "hex",
  "log",
@@ -4833,20 +4845,20 @@ dependencies = [
 
 [[package]]
 name = "vls-policy-derive"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98b17d0402fe542a86bcac5a2b52a78448a38d13bb6a133a67a8143c6eaad608"
+checksum = "7062171f04cbf46b8f913b702759486cf62fbdc6e714edef12c29a3455774dcc"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.117",
 ]
 
 [[package]]
 name = "vls-protocol"
-version = "0.14.0"
+version = "1.0.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62ef967baebb85c82ac55744b58a366baa6cd81778613cfa5ba5d72fb1ed68e0"
+checksum = "d189e6c7a46d20fb8424eff40943c1dada2dfc0df47681b6da3e4dd00fa4800f"
 dependencies = [
  "as-any",
  "bitcoin-consensus-derive",
@@ -4860,14 +4872,16 @@ dependencies = [
 
 [[package]]
 name = "vls-protocol-signer"
-version = "0.14.0"
+version = "1.0.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddb4d6be842ee103875fe20e857cd9ab518036b69386b3608a71d6c37e0b107b"
+checksum = "4ccffa9ac07be0504a6dbefafa2188b0c79c5a969c129f95a9d52b551bcf08ce"
 dependencies = [
  "bit-vec",
  "log",
+ "serde_json",
  "vls-common",
  "vls-core",
+ "vls-persist",
  "vls-protocol",
 ]
 
