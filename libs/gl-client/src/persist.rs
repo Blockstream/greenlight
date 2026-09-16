@@ -677,20 +677,28 @@ impl From<Vec<crate::pb::SignerStateEntry>> for State {
     }
 }
 
-pub(crate) struct MemoryPersister {
+pub struct MemoryPersister {
     state: Arc<Mutex<State>>,
 }
 
 impl MemoryPersister {
     pub fn new() -> Self {
-        let state = Arc::new(Mutex::new(State {
+        State {
             values: BTreeMap::new(),
-        }));
-        MemoryPersister { state }
+        }
+        .into()
     }
 
     pub fn state(&self) -> Arc<Mutex<State>> {
         self.state.clone()
+    }
+}
+
+impl From<State> for MemoryPersister {
+    fn from(state: State) -> Self {
+        MemoryPersister {
+            state: Arc::new(Mutex::new(state)),
+        }
     }
 }
 
