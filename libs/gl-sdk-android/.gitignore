@@ -72,3 +72,4 @@ glsdk.common.kt
 glsdk.android.kt
 glsdk.jvm.kt
 glsdk.native.kt
+glsdk.kt
