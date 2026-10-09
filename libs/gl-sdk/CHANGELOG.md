@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Fixed
+
+- Kotlin: `UniFFI API checksum mismatch` on 32-bit ARM Android once the app is AOT-compiled. The bindings are generated with a gobley build that reads `u8`/`u16` return values correctly ([gobley#252](https://github.com/gobley/gobley/issues/252)).
+
 ### Added
 
 - `Scheduler.lightning_available(node_id)` — asks whether the Lightning account backed by `node_id` may be surfaced to the user. Intended as a feature gate for applications that offer Lightning alongside other account types. Callable before `register()` and without credentials, since the decision has to be made before a node exists. The answer is monotonic: once the node is registered it is reported as available and stays that way, whatever the node's status or the provider's capacity. Before registration the answer is advisory; treat an error as "unknown" rather than as a negative answer. Greenlight currently reports every unregistered account as unavailable while the backing Lightning Service Provider integration is being built.

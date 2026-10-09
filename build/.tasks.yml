@@ -18,9 +18,15 @@ tasks:
     vars:
       OS_NAME:
         sh: uname | tr '[:upper:]' '[:lower:]'
+      # gobley 0.3.7 misreads u8/u16 return values on 32-bit ARM Android, which fails the UniFFI
+      # checksum check once the app is AOT-compiled (https://github.com/gobley/gobley/issues/252).
+      # This revision carries the fix proposed upstream in https://github.com/gobley/gobley/pull/297.
+      GOBLEY_GIT: https://github.com/angelix/gobley
+      GOBLEY_REV: 40cef27c59829ca97a71945928028f9ab4880305
+      GOBLEY_ROOT: target/gobley
     cmds:
-      - cargo install --bin gobley-uniffi-bindgen gobley-uniffi-bindgen@0.3.7
-      - gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform
+      - cargo install --locked --git {{.GOBLEY_GIT}} --rev {{.GOBLEY_REV}} --root {{.GOBLEY_ROOT}} --bin gobley-uniffi-bindgen gobley-uniffi-bindgen
+      - "{{.GOBLEY_ROOT}}/bin/gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform"
       - cp -a ./target/release/kotlin-multiplatform/* libs/gl-sdk-android/lib/src/
       - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-arm64
       - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-simulator-arm64
