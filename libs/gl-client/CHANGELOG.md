@@ -6,13 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.7.0] - 2026-10-12
+
 ### Added
 
 - `Scheduler::check_lightning_availability(node_id)` and the corresponding `Scheduler.CheckLightningAvailability` RPC — reports whether the Lightning account backed by `node_id` may be surfaced to the user. Unauthenticated and callable before the node is registered, so the `node_id` is passed explicitly rather than taken from the credentials. Monotonic: a registered node is always reported as available.
+- Channel-splice support: a splice-policy dry-run resolver that answers splice decisions offline, durable splice state primitives in the `persist` module, and PSBT helpers (`psbt` module) for building splices from PSBTv2.
 
 ### Changed
 
 - Signer version updated from `v25.12` to `v26.06` (VLS 0.14.0 / CLN v26.06.1)
+
+### Fixed
+
+- Signing operations no longer hang after a `signmessage` RPC call.
 
 ## [0.6.0] - 2026-05-21
 
@@ -55,4 +62,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Addressed a deprecation warning in gl-testing regarding `PROTOCOL_TLS` being renamed to `PROTOCOL_TLS_SERVER`
 - Fixed initial VLS state not being persisted to the tower (nodelet)
 
+[0.7.0]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.6.0...gl-client-v0.7.0
 [0.6.0]: https://github.com/Blockstream/greenlight/compare/gl-client-0.3.2...gl-client-v0.6.0

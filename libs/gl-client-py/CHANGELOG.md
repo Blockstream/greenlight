@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.4.0] - 2026-10-12
+
 ### Changed
 
 - Signer version updated from `v25.12` to `v26.06` (VLS 0.14.0 / CLN v26.06.1)
