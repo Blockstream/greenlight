@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.4.0] - 2026-10-12
+
+### Changed
+
+- Updated gl-sdk dependency to `0.5.0` (CLN `v26.06` signer, `Scheduler.lightning_available`)
+
 ## [0.3.0] - 2026-05-21
 
 ### Added
@@ -18,4 +24,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Updated gl-sdk dependency (builder-style Node creation, LNURL support, diagnostic data, on-chain preview, error codes)
 - Adapted `onchain_send` command for new optional `sat_per_vbyte` and `utxos` parameters
 
+[0.4.0]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-cli-v0.4.0
 [0.3.0]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-cli-v0.3.0
