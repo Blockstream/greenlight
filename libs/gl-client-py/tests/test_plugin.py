@@ -228,14 +228,17 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
 
     # Try the pyo3 bindings from gl-client-py
     res = s.lsp_invoice(label="lbl2", description="description", amount_msat=31337)
-    from pyln.proto import Invoice
 
-    inv = Invoice.decode(res.bolt11)
-    pprint(inv)
+    # Decode with the CLN node's own decoder rather than pyln.proto's
+    # Invoice.decode, which uses bitstring.ConstBitStream (removed in
+    # bitstring >= 4.1).
+    decoded = r1.rpc.decode(res.bolt11)
+    pprint(decoded)
     # Only one routehint, with only one hop, the LSP to the destination
-    assert len(inv.route_hints.route_hints) == 1
-    rh = inv.route_hints.route_hints[0]
-    assert rh.pubkey == bytes.fromhex(lsp_id)
+    routes = decoded.get("routes", decoded.get("route_hints", []))
+    assert len(routes) == 1
+    hop = routes[0][0] if isinstance(routes[0], list) else routes[0]
+    assert hop.get("pubkey", hop.get("node_id")) == lsp_id
 
     # The response should include the LSP opening fee computed from
     # the LSPS2 fee parameters (min_fee_msat=1000, proportional=1000).
