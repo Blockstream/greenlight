@@ -20,6 +20,10 @@ dependencies = [
     "sonora>=0.2.3",
     "cln-version-manager",
     "bip39>=0.0.2",
+    # Stopgap: bitstring >=4.1 removed ConstBitStream, which pyln 24.2's
+    # pyln.proto still uses. Cap it so the test env stays resolvable until we
+    # renovate pyln to the 26.6 line (see GRN-VCJG), which drops this pin.
+    "bitstring<4",
 ]
 
 
