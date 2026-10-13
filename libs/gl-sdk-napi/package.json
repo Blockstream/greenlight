@@ -33,6 +33,7 @@
   "scripts": {
     "clean": "rm -rf ../../target && rm -rf index.js && rm -rf index.d.ts && rm -rf *.node",
     "build": "napi build --platform --release",
+    "pretest": "cargo build -p gl-plugin -p gl-signerproxy",
     "test": "jest"
   },
   "devDependencies": {
