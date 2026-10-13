@@ -109,6 +109,7 @@ impl Stage {
             20,  // WIRE_HSMD_SIGN_REMOTE_HTLC_TX
             21,  // WIRE_HSMD_SIGN_MUTUAL_CLOSE_TX
             28,  // WIRE_HSMD_CHECK_PUBKEY
+            34,  // WIRE_HSMD_FORGET_CHANNEL (lightningd delete_channel, sync)
             142, // WIRE_HSMD_SIGN_ANY_DELAYED_PAYMENT_TO_US
             143, // WIRE_HSMD_SIGN_ANY_REMOTE_HTLC_TO_US
             144, // WIRE_HSMD_SIGN_ANY_PENALTY_TO_US
@@ -259,5 +260,41 @@ mod test {
         drop(stage);
         f1.await.unwrap();
         f2.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_stuck_request_types() {
+        // WIRE_HSMD_FORGET_CHANNEL (34) is queued but never answered: this is
+        // the bgsync deadlock, lightningd's delete_channel() blocks on it
+        // synchronously, so the node must report itself as stuck.
+        let stage = Stage::new();
+        stage
+            .send(pb::HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: vec![0, 34, 0, 0, 0, 0, 0, 0, 0, 1],
+                signer_state: vec![],
+                requests: vec![],
+            })
+            .await
+            .unwrap();
+        assert_eq!(stage.stuck_request_types().await, vec![34]);
+        assert!(stage.is_stuck().await);
+
+        // WIRE_HSMD_DERIVE_SECRET (27) is not on the sticky list, a queued
+        // request of this type alone must not mark the node as stuck.
+        let stage = Stage::new();
+        stage
+            .send(pb::HsmRequest {
+                request_id: 0,
+                context: None,
+                raw: vec![0, 27, 0, 0, 0, 0, 0, 0, 0, 1],
+                signer_state: vec![],
+                requests: vec![],
+            })
+            .await
+            .unwrap();
+        assert_eq!(stage.stuck_request_types().await, Vec::<u16>::new());
+        assert!(!stage.is_stuck().await);
     }
 }
