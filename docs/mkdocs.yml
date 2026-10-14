@@ -77,6 +77,7 @@ nav:
     - Self-Hosting: tutorials/self-hosting.md
   - Reference:
     - Overview: reference/index.md
+    - Releasing the SDK: reference/releases.md
     - Client Libraries: reference/client-libraries.md
     - Credentials: reference/creds.md
     - reference/node-domain.md
