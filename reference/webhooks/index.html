@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -199,15 +199,15 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/>
               </svg>
-              <a href="https://github.com/Blockstream/greenlight/commit/e1e4bff6edb1bd596304aaa1dce82ad6fa28bc35" target="_blank" title="Go to Commit">
-                e1e4bff
+              <a href="https://github.com/Blockstream/greenlight/commit/33934be798cfbb0028c2c8a70e86745105e24b1c" target="_blank" title="Go to Commit">
+                33934be
               </a>
             </div>
             <div class="git-info-item" title="Last Updated">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/>
               </svg>
-              2026-06-04
+              2026-10-14
             </div>
           </div>
         </div>
@@ -849,6 +849,8 @@
       
         
       
+        
+      
     
     
     
@@ -1061,6 +1063,34 @@
     
   
     Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../signer-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Signer State
   
 
     
@@ -2110,10 +2140,10 @@
 <h3 id="payload-structure">Payload Structure</h3>
 <p>All webhook payloads share a common structure:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7293847502938475029&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02abc123def456...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoice_payment&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067200</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"7293847502938475029"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"node_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"02abc123def456..."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"event_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"invoice_payment"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067200</span><span class="p">,</span>
 <span class="w">  </span><span class="err">...eve</span><span class="kc">nt</span><span class="mi">-</span><span class="err">speci</span><span class="kc">f</span><span class="err">ic</span><span class="w"> </span><span class="kc">f</span><span class="err">ields...</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -2190,15 +2220,15 @@
 </table>
 <p><strong>Example payload:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7293847502938475029&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoice_payment&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067200</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;payment_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;preimage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;amount_msat&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;bolt11&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lnbc1u1pjkx3xypp5...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order-12345&quot;</span>
+<span class="w">  </span><span class="nt">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"7293847502938475029"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"node_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"event_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"invoice_payment"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067200</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"payment_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"preimage"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"amount_msat"</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"bolt11"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lnbc1u1pjkx3xypp5..."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">"order-12345"</span>
 <span class="p">}</span>
 </code></pre></div>
 <p><strong>Common use cases:</strong></p>
@@ -2239,13 +2269,13 @@
 </table>
 <p><strong>Example payload:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7293847502938475030&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;node_stuck&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067300</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;blockheight&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820000</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;headheight&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820150</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">150</span>
+<span class="w">  </span><span class="nt">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"7293847502938475030"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"node_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"02a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"event_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"node_stuck"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">1704067300</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"blockheight"</span><span class="p">:</span><span class="w"> </span><span class="mi">820000</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"headheight"</span><span class="p">:</span><span class="w"> </span><span class="mi">820150</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"lag"</span><span class="p">:</span><span class="w"> </span><span class="mi">150</span>
 <span class="p">}</span>
 </code></pre></div>
 <p><strong>Common use cases:</strong></p>
@@ -2329,37 +2359,37 @@ will invalidate the signature.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">abort</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-<span class="n">WEBHOOK_SECRET</span> <span class="o">=</span> <span class="s2">&quot;your-webhook-secret&quot;</span>  <span class="c1"># From add_outgoing_webhook()</span>
+<span class="n">WEBHOOK_SECRET</span> <span class="o">=</span> <span class="s2">"your-webhook-secret"</span>  <span class="c1"># From add_outgoing_webhook()</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">secret</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Verify the gl-signature header matches the payload.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Verify the gl-signature header matches the payload."""</span>
     <span class="n">expected</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
-        <span class="n">secret</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span>
+        <span class="n">secret</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">),</span>
         <span class="n">payload</span><span class="p">,</span>
         <span class="n">digestmod</span><span class="o">=</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span>
     <span class="p">)</span>
-    <span class="n">computed</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">expected</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="n">computed</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">expected</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">computed</span><span class="p">,</span> <span class="n">signature</span><span class="p">)</span>
 
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/webhook&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">"/webhook"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">"POST"</span><span class="p">])</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">():</span>
     <span class="c1"># Get raw body BEFORE parsing</span>
     <span class="n">raw_body</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
-    <span class="n">signature</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gl-signature&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"gl-signature"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">raw_body</span><span class="p">,</span> <span class="n">signature</span><span class="p">,</span> <span class="n">WEBHOOK_SECRET</span><span class="p">):</span>
-        <span class="n">abort</span><span class="p">(</span><span class="mi">401</span><span class="p">,</span> <span class="s2">&quot;Invalid signature&quot;</span><span class="p">)</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">401</span><span class="p">,</span> <span class="s2">"Invalid signature"</span><span class="p">)</span>
 
     <span class="c1"># Safe to parse now</span>
     <span class="n">event</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
 
     <span class="c1"># Handle event based on type</span>
-    <span class="k">if</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;event_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;invoice_payment&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">event</span><span class="p">[</span><span class="s2">"event_type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"invoice_payment"</span><span class="p">:</span>
         <span class="n">handle_payment</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;event_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;node_stuck&quot;</span><span class="p">:</span>
+    <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">"event_type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"node_stuck"</span><span class="p">:</span>
         <span class="n">handle_stuck_node</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">200</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="mi">200</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -2373,7 +2403,7 @@ will invalidate the signature.</p>
 <span class="k">use</span><span class="w"> </span><span class="n">hmac</span><span class="p">::{</span><span class="n">Hmac</span><span class="p">,</span><span class="w"> </span><span class="n">Mac</span><span class="p">};</span>
 <span class="k">use</span><span class="w"> </span><span class="n">sha2</span><span class="p">::</span><span class="n">Sha256</span><span class="p">;</span>
 
-<span class="k">const</span><span class="w"> </span><span class="n">WEBHOOK_SECRET</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;your-webhook-secret&quot;</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="n">WEBHOOK_SECRET</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"your-webhook-secret"</span><span class="p">;</span>
 
 <span class="k">fn</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">u8</span><span class="p">],</span><span class="w"> </span><span class="n">signature</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="nb">Ok</span><span class="p">(</span><span class="k">mut</span><span class="w"> </span><span class="n">mac</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Hmac</span><span class="p">::</span><span class="o">&lt;</span><span class="n">Sha256</span><span class="o">&gt;</span><span class="p">::</span><span class="n">new_from_slice</span><span class="p">(</span><span class="n">secret</span><span class="p">.</span><span class="n">as_bytes</span><span class="p">())</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
@@ -2394,9 +2424,9 @@ will invalidate the signature.</p>
 <span class="w">    </span><span class="n">body</span><span class="p">:</span><span class="w"> </span><span class="nc">Bytes</span><span class="p">,</span>
 <span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">StatusCode</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">signature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">headers</span>
-<span class="w">        </span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;gl-signature&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"gl-signature"</span><span class="p">)</span>
 <span class="w">        </span><span class="p">.</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">to_str</span><span class="p">().</span><span class="n">ok</span><span class="p">())</span>
-<span class="w">        </span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s">""</span><span class="p">);</span>
 
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">!</span><span class="n">verify_signature</span><span class="p">(</span><span class="o">&amp;</span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="n">signature</span><span class="p">,</span><span class="w"> </span><span class="n">WEBHOOK_SECRET</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">StatusCode</span><span class="p">::</span><span class="n">UNAUTHORIZED</span><span class="p">;</span>
@@ -2409,23 +2439,23 @@ will invalidate the signature.</p>
 <span class="w">    </span><span class="p">};</span>
 
 <span class="w">    </span><span class="c1">// Handle event...</span>
-<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Received event: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">[</span><span class="s">&quot;event_type&quot;</span><span class="p">]);</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"Received event: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">[</span><span class="s">"event_type"</span><span class="p">]);</span>
 
 <span class="w">    </span><span class="n">StatusCode</span><span class="p">::</span><span class="n">OK</span>
 <span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">express</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;express&#39;</span><span class="p">);</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">crypto</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">&#39;crypto&#39;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">express</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'express'</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">crypto</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">require</span><span class="p">(</span><span class="s1">'crypto'</span><span class="p">);</span>
 
 <span class="kd">const</span><span class="w"> </span><span class="nx">app</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">express</span><span class="p">();</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">WEBHOOK_SECRET</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">WEBHOOK_SECRET</span><span class="p">;</span>
 
 <span class="kd">function</span><span class="w"> </span><span class="nx">verifySignature</span><span class="p">(</span><span class="nx">payload</span><span class="p">,</span><span class="w"> </span><span class="nx">signature</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">hmac</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">createHmac</span><span class="p">(</span><span class="s1">&#39;sha256&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">hmac</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">createHmac</span><span class="p">(</span><span class="s1">'sha256'</span><span class="p">,</span><span class="w"> </span><span class="nx">secret</span><span class="p">);</span>
 <span class="w">    </span><span class="nx">hmac</span><span class="p">.</span><span class="nx">update</span><span class="p">(</span><span class="nx">payload</span><span class="p">);</span>
-<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">computed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">hmac</span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="s1">&#39;base64&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">computed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">hmac</span><span class="p">.</span><span class="nx">digest</span><span class="p">(</span><span class="s1">'base64'</span><span class="p">);</span>
 
 <span class="w">    </span><span class="c1">// Timing-safe comparison</span>
 <span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
@@ -2439,11 +2469,11 @@ will invalidate the signature.</p>
 <span class="p">}</span>
 
 <span class="c1">// Use raw body parser for signature verification</span>
-<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s1">&#39;/webhook&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">express</span><span class="p">.</span><span class="nx">raw</span><span class="p">({</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="w"> </span><span class="p">}),</span><span class="w"> </span><span class="p">(</span><span class="nx">req</span><span class="p">,</span><span class="w"> </span><span class="nx">res</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">signature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="s1">&#39;gl-signature&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">;</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s1">'/webhook'</span><span class="p">,</span><span class="w"> </span><span class="nx">express</span><span class="p">.</span><span class="nx">raw</span><span class="p">({</span><span class="w"> </span><span class="nx">type</span><span class="o">:</span><span class="w"> </span><span class="s1">'application/json'</span><span class="w"> </span><span class="p">}),</span><span class="w"> </span><span class="p">(</span><span class="nx">req</span><span class="p">,</span><span class="w"> </span><span class="nx">res</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">signature</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="s1">'gl-signature'</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
 
 <span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">verifySignature</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span><span class="w"> </span><span class="nx">signature</span><span class="p">,</span><span class="w"> </span><span class="nx">WEBHOOK_SECRET</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mf">401</span><span class="p">).</span><span class="nx">send</span><span class="p">(</span><span class="s1">&#39;Invalid signature&#39;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mf">401</span><span class="p">).</span><span class="nx">send</span><span class="p">(</span><span class="s1">'Invalid signature'</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="c1">// Safe to parse</span>
@@ -2453,10 +2483,10 @@ will invalidate the signature.</p>
 
 <span class="w">    </span><span class="c1">// Handle event based on type</span>
 <span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">event_type</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;invoice_payment&#39;</span><span class="o">:</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="s1">'invoice_payment'</span><span class="o">:</span>
 <span class="w">            </span><span class="nx">handlePayment</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
 <span class="w">            </span><span class="k">break</span><span class="p">;</span>
-<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="s1">&#39;node_stuck&#39;</span><span class="o">:</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="s1">'node_stuck'</span><span class="o">:</span>
 <span class="w">            </span><span class="nx">handleStuckNode</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
 <span class="w">            </span><span class="k">break</span><span class="p">;</span>
 <span class="w">    </span><span class="p">}</span>
@@ -2586,26 +2616,26 @@ like invalid signatures.</p>
 
 <span class="c1"># Load credentials</span>
 <span class="n">creds</span> <span class="o">=</span> <span class="n">Credentials</span><span class="o">.</span><span class="n">from_parts</span><span class="p">(</span>
-    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;device.pem&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
-    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;device-key.pem&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
-    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;ca.pem&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
-    <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;rune&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"device.pem"</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"device-key.pem"</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"ca.pem"</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
+    <span class="n">Path</span><span class="p">(</span><span class="s2">"rune"</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span>
 <span class="p">)</span>
 
-<span class="n">node_id</span> <span class="o">=</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s2">&quot;02a1b2c3...&quot;</span><span class="p">)</span>
+<span class="n">node_id</span> <span class="o">=</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s2">"02a1b2c3..."</span><span class="p">)</span>
 
 <span class="n">scheduler</span> <span class="o">=</span> <span class="n">Scheduler</span><span class="p">(</span>
     <span class="n">node_id</span><span class="o">=</span><span class="n">node_id</span><span class="p">,</span>
-    <span class="n">network</span><span class="o">=</span><span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span>
+    <span class="n">network</span><span class="o">=</span><span class="s2">"bitcoin"</span><span class="p">,</span>
     <span class="n">creds</span><span class="o">=</span><span class="n">creds</span>
 <span class="p">)</span>
 
 <span class="c1"># Add webhook</span>
-<span class="n">response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">&quot;https://example.com/webhook&quot;</span><span class="p">)</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">"https://example.com/webhook"</span><span class="p">)</span>
 
 <span class="c1"># Store the secret securely - it cannot be recovered!</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Webhook ID: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Secret: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">secret</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Webhook ID: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Secret: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">secret</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -2616,7 +2646,7 @@ like invalid signatures.</p>
 <span class="kd">let</span><span class="w"> </span><span class="n">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Builder</span><span class="p">::</span><span class="n">as_device</span><span class="p">()</span>
 <span class="w">    </span><span class="p">.</span><span class="n">with_identity</span><span class="p">(</span><span class="n">device_cert</span><span class="p">,</span><span class="w"> </span><span class="n">device_key</span><span class="p">)</span>
 <span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
-<span class="w">    </span><span class="p">.</span><span class="n">expect</span><span class="p">(</span><span class="s">&quot;Failed to build credentials&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">.</span><span class="n">expect</span><span class="p">(</span><span class="s">"Failed to build credentials"</span><span class="p">);</span>
 
 <span class="kd">let</span><span class="w"> </span><span class="n">scheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">::</span><span class="n">with_credentials</span><span class="p">(</span>
 <span class="w">    </span><span class="n">node_id</span><span class="p">,</span>
@@ -2627,12 +2657,12 @@ like invalid signatures.</p>
 
 <span class="c1">// Add webhook</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span>
-<span class="w">    </span><span class="p">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s">&quot;https://example.com/webhook&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s">"https://example.com/webhook"</span><span class="p">)</span>
 <span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 
 <span class="c1">// Store the secret securely - it cannot be recovered!</span>
-<span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Webhook ID: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
-<span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Secret: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">secret</span><span class="p">);</span>
+<span class="fm">println!</span><span class="p">(</span><span class="s">"Webhook ID: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
+<span class="fm">println!</span><span class="p">(</span><span class="s">"Secret: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="n">secret</span><span class="p">);</span>
 </code></pre></div>
 </div>
 </div>
@@ -2650,13 +2680,13 @@ webhook and create a new one.</p>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="n">webhooks</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">list_outgoing_webhooks</span><span class="p">()</span>
 <span class="k">for</span> <span class="n">webhook</span> <span class="ow">in</span> <span class="n">webhooks</span><span class="o">.</span><span class="n">outgoing_webhooks</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ID: </span><span class="si">{</span><span class="n">webhook</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, URL: </span><span class="si">{</span><span class="n">webhook</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ID: </span><span class="si">{</span><span class="n">webhook</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, URL: </span><span class="si">{</span><span class="n">webhook</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">webhooks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">list_outgoing_webhooks</span><span class="p">().</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 <span class="k">for</span><span class="w"> </span><span class="n">webhook</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">webhooks</span><span class="p">.</span><span class="n">outgoing_webhooks</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;ID: {}, URL: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">webhook</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">webhook</span><span class="p">.</span><span class="n">uri</span><span class="p">);</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">"ID: {}, URL: {}"</span><span class="p">,</span><span class="w"> </span><span class="n">webhook</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">webhook</span><span class="p">.</span><span class="n">uri</span><span class="p">);</span>
 <span class="p">}</span>
 </code></pre></div>
 </div>
@@ -2692,17 +2722,17 @@ webhook and create a new one.</p>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="c1"># Option A: Add new webhook, delete old</span>
-<span class="n">new_response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">&quot;https://example.com/webhook&quot;</span><span class="p">)</span>
+<span class="n">new_response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">add_outgoing_webhook</span><span class="p">(</span><span class="s2">"https://example.com/webhook"</span><span class="p">)</span>
 <span class="c1"># Update your endpoint to use new_response.secret</span>
 <span class="n">scheduler</span><span class="o">.</span><span class="n">delete_outgoing_webhooks</span><span class="p">([</span><span class="n">old_webhook_id</span><span class="p">])</span>
 
-<span class="c1"># Option B: Rotate existing webhook&#39;s secret</span>
+<span class="c1"># Option B: Rotate existing webhook's secret</span>
 <span class="n">response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">rotate_outgoing_webhook_secret</span><span class="p">(</span><span class="n">webhook_id</span><span class="p">)</span>
 <span class="c1"># response.secret contains the new secret</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="c1">// Rotate existing webhook&#39;s secret</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Rotate existing webhook's secret</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span>
 <span class="w">    </span><span class="p">.</span><span class="n">rotate_outgoing_webhook_secret</span><span class="p">(</span><span class="n">webhook_id</span><span class="p">)</span>
 <span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
@@ -2714,8 +2744,8 @@ webhook and create a new one.</p>
 <p><strong>Handling rotation in your endpoint:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="c1"># During rotation: accept multiple secrets</span>
 <span class="n">SECRETS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;WEBHOOK_SECRET_OLD&quot;</span><span class="p">],</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;WEBHOOK_SECRET_NEW&quot;</span><span class="p">],</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"WEBHOOK_SECRET_OLD"</span><span class="p">],</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"WEBHOOK_SECRET_NEW"</span><span class="p">],</span>
 <span class="p">]</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">signature</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -2736,10 +2766,10 @@ webhook and create a new one.</p>
 <span class="n">EVENT_TTL</span> <span class="o">=</span> <span class="mi">86400</span>  <span class="c1"># 24 hours</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
-    <span class="n">event_id</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;event_id&quot;</span><span class="p">]</span>
+    <span class="n">event_id</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">"event_id"</span><span class="p">]</span>
 
     <span class="c1"># Check if already processed (atomic set-if-not-exists)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;webhook:</span><span class="si">{</span><span class="n">event_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ex</span><span class="o">=</span><span class="n">EVENT_TTL</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="sa">f</span><span class="s2">"webhook:</span><span class="si">{</span><span class="n">event_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"1"</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ex</span><span class="o">=</span><span class="n">EVENT_TTL</span><span class="p">):</span>
         <span class="k">return</span>  <span class="c1"># Already processed, skip</span>
 
     <span class="c1"># Process the event</span>
@@ -2754,9 +2784,9 @@ Redis with TTL or a database table with cleanup jobs works well.</p>
 <p>Return a response quickly (within 30 seconds). Perform heavy processing asynchronously.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">celery</span><span class="w"> </span><span class="kn">import</span> <span class="n">Celery</span>
 
-<span class="n">celery</span> <span class="o">=</span> <span class="n">Celery</span><span class="p">(</span><span class="s1">&#39;tasks&#39;</span><span class="p">,</span> <span class="n">broker</span><span class="o">=</span><span class="s1">&#39;redis://localhost&#39;</span><span class="p">)</span>
+<span class="n">celery</span> <span class="o">=</span> <span class="n">Celery</span><span class="p">(</span><span class="s1">'tasks'</span><span class="p">,</span> <span class="n">broker</span><span class="o">=</span><span class="s1">'redis://localhost'</span><span class="p">)</span>
 
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/webhook&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">"/webhook"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">"POST"</span><span class="p">])</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_webhook</span><span class="p">():</span>
     <span class="n">event</span> <span class="o">=</span> <span class="n">verify_and_parse</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
 
@@ -2764,7 +2794,7 @@ Redis with TTL or a database table with cleanup jobs works well.</p>
     <span class="n">process_event</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
 
     <span class="c1"># Return immediately</span>
-    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">200</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="mi">200</span>
 
 <span class="nd">@celery</span><span class="o">.</span><span class="n">task</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">process_event</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
@@ -2825,8 +2855,8 @@ ngrok<span class="w"> </span>http<span class="w"> </span><span class="m">8000</s
 </code></pre></div>
 <p>Test signature verification independently:</p>
 <div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">test_signature_verification</span><span class="p">():</span>
-    <span class="n">secret</span> <span class="o">=</span> <span class="s2">&quot;test-secret&quot;</span>
-    <span class="n">payload</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;{&quot;event_id&quot;:&quot;123&quot;,&quot;event_type&quot;:&quot;invoice_payment&quot;}&#39;</span>
+    <span class="n">secret</span> <span class="o">=</span> <span class="s2">"test-secret"</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">'{"event_id":"123","event_type":"invoice_payment"}'</span>
 
     <span class="c1"># Compute expected signature</span>
     <span class="n">expected</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span>
@@ -2834,8 +2864,8 @@ ngrok<span class="w"> </span>http<span class="w"> </span><span class="m">8000</s
     <span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
 
     <span class="k">assert</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="s2">&quot;wrong&quot;</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;tampered&quot;</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="s2">"wrong"</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">verify_signature</span><span class="p">(</span><span class="sa">b</span><span class="s2">"tampered"</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -2890,7 +2920,7 @@ ngrok<span class="w"> </span>http<span class="w"> </span><span class="m">8000</s
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "content.code.annotate", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

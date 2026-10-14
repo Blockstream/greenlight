@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -199,15 +199,15 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/>
               </svg>
-              <a href="https://github.com/Blockstream/greenlight/commit/e1e4bff6edb1bd596304aaa1dce82ad6fa28bc35" target="_blank" title="Go to Commit">
-                e1e4bff
+              <a href="https://github.com/Blockstream/greenlight/commit/33934be798cfbb0028c2c8a70e86745105e24b1c" target="_blank" title="Go to Commit">
+                33934be
               </a>
             </div>
             <div class="git-info-item" title="Last Updated">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/>
               </svg>
-              2026-06-04
+              2026-10-14
             </div>
           </div>
         </div>
@@ -932,6 +932,8 @@
       
         
       
+        
+      
     
     
     
@@ -1141,6 +1143,34 @@
     
   
     Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/signer-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Signer State
   
 
     
@@ -1513,8 +1543,8 @@ after the other you should get a working example. See the getting started projec
 <div class="tabbed-block">
 <p>Install the <code>bip39</code> and <code>rand</code> crates required for secure randomness and conversion of mnemonics. Add the following lines to your Cargo.toml</p>
 <div class="highlight"><pre><span></span><code><span class="k">[dependencies]</span>
-<span class="n">rand</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;*&quot;</span>
-<span class="n">bip39</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;*&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="p">=[</span><span class="s2">&quot;rand_core&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="n">rand</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"*"</span>
+<span class="n">bip39</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"*"</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="p">=[</span><span class="s2">"rand_core"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1536,17 +1566,17 @@ phrase and then convert it into a seed secret we can use:</p>
 
 <span class="c1">// Seed phrase for user</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Mnemonic</span><span class="p">::</span><span class="n">from_entropy_in</span><span class="p">(</span><span class="n">Language</span><span class="p">::</span><span class="n">English</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">entropy</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">_phrase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mnemonic</span><span class="p">.</span><span class="n">words</span><span class="p">().</span><span class="n">collect</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;&gt;</span><span class="p">().</span><span class="n">join</span><span class="p">(</span><span class="s">&quot; &quot;</span><span class="p">);</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">_phrase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mnemonic</span><span class="p">.</span><span class="n">words</span><span class="p">().</span><span class="n">collect</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;&gt;</span><span class="p">().</span><span class="n">join</span><span class="p">(</span><span class="s">" "</span><span class="p">);</span>
 
-<span class="k">const</span><span class="w"> </span><span class="n">EMPTY_PASSPHRASE</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="n">EMPTY_PASSPHRASE</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">""</span><span class="p">;</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">seed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">mnemonic</span><span class="p">.</span><span class="n">to_seed</span><span class="p">(</span><span class="n">EMPTY_PASSPHRASE</span><span class="p">)[</span><span class="mi">0</span><span class="o">..</span><span class="mi">32</span><span class="p">];</span><span class="w"> </span><span class="c1">// Only need the first 32 bytes</span>
 
 <span class="c1">// Store the seed on the filesystem, or secure configuration system</span>
-<span class="n">save_to_file</span><span class="p">(</span><span class="s">&quot;hsm_secret&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">seed</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="n">save_to_file</span><span class="p">(</span><span class="s">"hsm_secret"</span><span class="p">,</span><span class="w"> </span><span class="n">seed</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="n">rand</span> <span class="o">=</span> <span class="n">secrets</span><span class="o">.</span><span class="n">randbits</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="s2">&quot;big&quot;</span><span class="p">)</span>  <span class="c1"># 32 bytes of randomness</span>
+<div class="highlight"><pre><span></span><code><span class="n">rand</span> <span class="o">=</span> <span class="n">secrets</span><span class="o">.</span><span class="n">randbits</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="s2">"big"</span><span class="p">)</span>  <span class="c1"># 32 bytes of randomness</span>
 
 <span class="c1"># Seed phrase for user</span>
 <span class="n">phrase</span> <span class="o">=</span> <span class="n">bip39</span><span class="o">.</span><span class="n">encode_bytes</span><span class="p">(</span><span class="n">rand</span><span class="p">)</span>
@@ -1554,7 +1584,7 @@ phrase and then convert it into a seed secret we can use:</p>
 <span class="n">seed</span> <span class="o">=</span> <span class="n">bip39</span><span class="o">.</span><span class="n">phrase_to_seed</span><span class="p">(</span><span class="n">phrase</span><span class="p">)[:</span><span class="mi">32</span><span class="p">]</span>  <span class="c1"># Only need the first 32 bytes</span>
 
 <span class="c1"># Store the seed on the filesystem, or secure configuration system</span>
-<span class="n">save_to_file</span><span class="p">(</span><span class="s2">&quot;hsm_secret&quot;</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+<span class="n">save_to_file</span><span class="p">(</span><span class="s2">"hsm_secret"</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
 </code></pre></div>
 </div>
 </div>
@@ -1573,8 +1603,8 @@ nodes.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Rust</label><label for="__tabbed_3_2">Python</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">developer_cert_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">env</span><span class="p">::</span><span class="n">var</span><span class="p">(</span><span class="s">&quot;GL_NOBODY_CRT&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<span class="kd">let</span><span class="w"> </span><span class="n">developer_key_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">env</span><span class="p">::</span><span class="n">var</span><span class="p">(</span><span class="s">&quot;GL_NOBODY_KEY&quot;</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="n">developer_cert_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">env</span><span class="p">::</span><span class="n">var</span><span class="p">(</span><span class="s">"GL_NOBODY_CRT"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="n">developer_key_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">env</span><span class="p">::</span><span class="n">var</span><span class="p">(</span><span class="s">"GL_NOBODY_KEY"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">developer_cert</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">fs</span><span class="p">::</span><span class="n">read</span><span class="p">(</span><span class="n">developer_cert_path</span><span class="p">).</span><span class="n">unwrap_or_default</span><span class="p">();</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">developer_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">fs</span><span class="p">::</span><span class="n">read</span><span class="p">(</span><span class="n">developer_key_path</span><span class="p">).</span><span class="n">unwrap_or_default</span><span class="p">();</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">developer_creds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Nobody</span><span class="w"> </span><span class="p">{</span>
@@ -1585,10 +1615,10 @@ nodes.</p>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="n">developer_cert_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;GL_NOBODY_CRT&#39;</span><span class="p">)</span>
-<span class="n">developer_key_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;GL_NOBODY_KEY&#39;</span><span class="p">)</span>
-<span class="n">developer_cert</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">developer_cert_path</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-<span class="n">developer_key</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">developer_key_path</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><span class="n">developer_cert_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'GL_NOBODY_CRT'</span><span class="p">)</span>
+<span class="n">developer_key_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'GL_NOBODY_KEY'</span><span class="p">)</span>
+<span class="n">developer_cert</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">developer_cert_path</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"rb"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">developer_key</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">developer_key_path</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"rb"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 
 <span class="n">developer_creds</span> <span class="o">=</span> <span class="n">Credentials</span><span class="o">.</span><span class="n">nobody_with</span><span class="p">(</span><span class="n">developer_cert</span><span class="p">,</span> <span class="n">developer_key</span><span class="p">)</span>
 </code></pre></div>
@@ -1632,7 +1662,7 @@ node's private key. Since the private key is managed exclusively by the
 <span class="c1">// ownership of the `node_id`</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">registration_response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scheduler</span><span class="p">.</span><span class="n">register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">signer</span><span class="p">,</span><span class="w"> </span><span class="nb">None</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 <span class="kd">let</span><span class="w"> </span><span class="n">device_creds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Device</span><span class="p">::</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">registration_response</span><span class="p">.</span><span class="n">creds</span><span class="p">);</span>
-<span class="n">save_to_file</span><span class="p">(</span><span class="s">&quot;credentials.gfs&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">device_creds</span><span class="p">.</span><span class="n">to_bytes</span><span class="p">())</span><span class="o">?</span><span class="p">;</span>
+<span class="n">save_to_file</span><span class="p">(</span><span class="s">"credentials.gfs"</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">device_creds</span><span class="p">.</span><span class="n">to_bytes</span><span class="p">())</span><span class="o">?</span><span class="p">;</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1643,7 +1673,7 @@ node's private key. Since the private key is managed exclusively by the
 <span class="n">registration_response</span> <span class="o">=</span> <span class="n">scheduler</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">signer</span><span class="p">,</span> <span class="n">invite_code</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
 <span class="n">device_creds</span> <span class="o">=</span> <span class="n">Credentials</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">registration_response</span><span class="o">.</span><span class="n">creds</span><span class="p">)</span>
-<span class="n">save_to_file</span><span class="p">(</span><span class="s2">&quot;credentials.gfs&quot;</span><span class="p">,</span> <span class="n">device_creds</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">())</span>
+<span class="n">save_to_file</span><span class="p">(</span><span class="s2">"credentials.gfs"</span><span class="p">,</span> <span class="n">device_creds</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">())</span>
 </code></pre></div>
 </div>
 </div>
@@ -1726,7 +1756,7 @@ authorization work under the hood.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "content.code.annotate", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

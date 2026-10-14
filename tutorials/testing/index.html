@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -199,15 +199,15 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/>
               </svg>
-              <a href="https://github.com/Blockstream/greenlight/commit/e1e4bff6edb1bd596304aaa1dce82ad6fa28bc35" target="_blank" title="Go to Commit">
-                e1e4bff
+              <a href="https://github.com/Blockstream/greenlight/commit/33934be798cfbb0028c2c8a70e86745105e24b1c" target="_blank" title="Go to Commit">
+                33934be
               </a>
             </div>
             <div class="git-info-item" title="Last Updated">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/>
               </svg>
-              2026-06-04
+              2026-10-14
             </div>
           </div>
         </div>
@@ -1004,6 +1004,8 @@
       
         
       
+        
+      
     
     
     
@@ -1213,6 +1215,34 @@
     
   
     Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/signer-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Signer State
   
 
     
@@ -1770,7 +1800,7 @@ should be familiar for the python developers amongst you.</p>
 <span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">gltesting.fixtures</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">test_invoice_payment</span><span class="p">(</span><span class="n">node_factory</span><span class="p">,</span> <span class="n">clients</span><span class="p">,</span> <span class="n">bitcoind</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello World!&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Hello World!"</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
 <p>Here we import our test fixtures and create a simple test that just
 prints <code>"Hello World!"</code> to the standard output. Any function that 
@@ -1913,7 +1943,7 @@ can request signatures from the signer.</p>
 
 <span class="hll">    <span class="c1"># Start signer and connect to (l2)</span>
 </span><span class="hll">    <span class="n">s</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">signer</span><span class="p">()</span><span class="o">.</span><span class="n">run_in_thread</span><span class="p">()</span>
-</span><span class="hll">    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="sa">f</span><span class="s1">&#39;127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span class="hll">    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">'id'</span><span class="p">],</span> <span class="sa">f</span><span class="s1">'127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
 <p>We are almost there! Now we fund a channel between <code>l2</code> and <code>gl</code>. We 
 import a helper function 
@@ -1963,18 +1993,18 @@ confirmed and fully functional.</p>
 
     <span class="c1"># Start signer and connect to (l2)</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">signer</span><span class="p">()</span><span class="o">.</span><span class="n">run_in_thread</span><span class="p">()</span>
-    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="sa">f</span><span class="s1">&#39;127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">'id'</span><span class="p">],</span> <span class="sa">f</span><span class="s1">'127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 
 <span class="hll">    <span class="c1"># Fund a channel (l2)----(gl).</span>
 </span><span class="hll">    <span class="c1"># This results in the following network</span>
 </span><span class="hll">    <span class="c1"># (l1)----(l2)----(gl)</span>
-</span><span class="hll">    <span class="n">l2</span><span class="o">.</span><span class="n">rpc</span><span class="o">.</span><span class="n">fundchannel</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">node_id</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s1">&#39;all&#39;</span><span class="p">)</span>
+</span><span class="hll">    <span class="n">l2</span><span class="o">.</span><span class="n">rpc</span><span class="o">.</span><span class="n">fundchannel</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">node_id</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s1">'all'</span><span class="p">)</span>
 </span><span class="hll">    <span class="c1"># Generate a block to synchronize and proceed</span>
 </span><span class="hll">    <span class="c1"># with the channel funding.</span>
 </span><span class="hll">    <span class="n">bitcoind</span><span class="o">.</span><span class="n">generate_block</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">wait_for_mempool</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </span><span class="hll">    <span class="c1"># Wait for the channel to confirm.</span>
 </span><span class="hll">    <span class="n">wait_for</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span>
-</span><span class="hll">        <span class="n">gl1</span><span class="o">.</span><span class="n">list_peers</span><span class="p">()</span><span class="o">.</span><span class="n">peers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s1">&#39;CHANNELD_NORMAL&#39;</span>
+</span><span class="hll">        <span class="n">gl1</span><span class="o">.</span><span class="n">list_peers</span><span class="p">()</span><span class="o">.</span><span class="n">peers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s1">'CHANNELD_NORMAL'</span>
 </span><span class="hll">    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
 <p>Before we create and pay the invoice we also need to wait for the 
@@ -2037,22 +2067,22 @@ of the network as both channels are bidirectional.</p>
 
     <span class="c1"># Start signer and connect to (l2)</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">signer</span><span class="p">()</span><span class="o">.</span><span class="n">run_in_thread</span><span class="p">()</span>
-    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="sa">f</span><span class="s1">&#39;127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">'id'</span><span class="p">],</span> <span class="sa">f</span><span class="s1">'127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 
     <span class="c1"># Fund a channel (l2)----(gl).</span>
     <span class="c1"># This results in the following network</span>
     <span class="c1"># (l1)----(l2)----(gl)</span>
-    <span class="n">l2</span><span class="o">.</span><span class="n">rpc</span><span class="o">.</span><span class="n">fundchannel</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">node_id</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s1">&#39;all&#39;</span><span class="p">)</span>
+    <span class="n">l2</span><span class="o">.</span><span class="n">rpc</span><span class="o">.</span><span class="n">fundchannel</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">node_id</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s1">'all'</span><span class="p">)</span>
     <span class="c1"># Generate a block to synchronize and proceed</span>
     <span class="c1"># with the channel funding.</span>
     <span class="n">bitcoind</span><span class="o">.</span><span class="n">generate_block</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">wait_for_mempool</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="c1"># Wait for the channel to confirm.</span>
     <span class="n">wait_for</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span>
-        <span class="n">gl1</span><span class="o">.</span><span class="n">list_peers</span><span class="p">()</span><span class="o">.</span><span class="n">peers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s1">&#39;CHANNELD_NORMAL&#39;</span>
+        <span class="n">gl1</span><span class="o">.</span><span class="n">list_peers</span><span class="p">()</span><span class="o">.</span><span class="n">peers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s1">'CHANNELD_NORMAL'</span>
     <span class="p">)</span>
 
 <span class="hll">    <span class="c1"># Wait for all channels to appear in our view of the network. We </span>
-</span><span class="hll">    <span class="c1"># don&#39;t even have to wait for our channel to appear in l1s </span>
+</span><span class="hll">    <span class="c1"># don't even have to wait for our channel to appear in l1s </span>
 </span><span class="hll">    <span class="c1"># gossip: We can give a hint as soon as we know that our channel </span>
 </span><span class="hll">    <span class="c1"># is not a dead end. We wait for 4 entries in our gossmap as both </span>
 </span><span class="hll">    <span class="c1"># channels are bidirectional.</span>
@@ -2129,22 +2159,22 @@ node. To create the invoice we import the core-lightning proto stubs
 
     <span class="c1"># Start signer and connect to (l2)</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">signer</span><span class="p">()</span><span class="o">.</span><span class="n">run_in_thread</span><span class="p">()</span>
-    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="sa">f</span><span class="s1">&#39;127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">gl1</span><span class="o">.</span><span class="n">connect_peer</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">'id'</span><span class="p">],</span> <span class="sa">f</span><span class="s1">'127.0.0.1:</span><span class="si">{</span><span class="n">l2</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 
     <span class="c1"># Fund a channel (l2)----(gl).</span>
     <span class="c1"># This results in the following network</span>
     <span class="c1"># (l1)----(l2)----(gl)</span>
-    <span class="n">l2</span><span class="o">.</span><span class="n">rpc</span><span class="o">.</span><span class="n">fundchannel</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">node_id</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s1">&#39;all&#39;</span><span class="p">)</span>
+    <span class="n">l2</span><span class="o">.</span><span class="n">rpc</span><span class="o">.</span><span class="n">fundchannel</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">node_id</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s1">'all'</span><span class="p">)</span>
     <span class="c1"># Generate a block to synchronize and proceed</span>
     <span class="c1"># with the channel funding.</span>
     <span class="n">bitcoind</span><span class="o">.</span><span class="n">generate_block</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">wait_for_mempool</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="c1"># Wait for the channel to confirm.</span>
     <span class="n">wait_for</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span>
-        <span class="n">gl1</span><span class="o">.</span><span class="n">list_peers</span><span class="p">()</span><span class="o">.</span><span class="n">peers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s1">&#39;CHANNELD_NORMAL&#39;</span>
+        <span class="n">gl1</span><span class="o">.</span><span class="n">list_peers</span><span class="p">()</span><span class="o">.</span><span class="n">peers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s1">'CHANNELD_NORMAL'</span>
     <span class="p">)</span>
 
     <span class="c1"># Wait for all channels to appear in our view of the network. We </span>
-    <span class="c1"># don&#39;t even have to wait for our channel to appear at the gossmap</span>
+    <span class="c1"># don't even have to wait for our channel to appear at the gossmap</span>
     <span class="c1"># of l1: We can give a hint as soon as we know that our channel is </span>
     <span class="c1"># not a dead end. We wait for 4 entries in our gossmap as both </span>
     <span class="c1"># channels are bidirectional.</span>
@@ -2156,8 +2186,8 @@ node. To create the invoice we import the core-lightning proto stubs
 <span class="hll">    <span class="c1"># Create an invoice.</span>
 </span><span class="hll">    <span class="n">bolt11</span> <span class="o">=</span> <span class="n">gl1</span><span class="o">.</span><span class="n">invoice</span><span class="p">(</span>
 </span><span class="hll">        <span class="n">amount_msat</span><span class="o">=</span><span class="n">clnpb</span><span class="o">.</span><span class="n">AmountOrAny</span><span class="p">(</span><span class="n">amount</span><span class="o">=</span><span class="n">clnpb</span><span class="o">.</span><span class="n">Amount</span><span class="p">(</span><span class="n">msat</span><span class="o">=</span><span class="mi">100000</span><span class="p">)),</span>
-</span><span class="hll">        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;test-desc&quot;</span><span class="p">,</span>
-</span><span class="hll">        <span class="n">label</span> <span class="o">=</span><span class="s2">&quot;test-label&quot;</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">description</span><span class="o">=</span><span class="s2">"test-desc"</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">label</span> <span class="o">=</span><span class="s2">"test-label"</span><span class="p">,</span>
 </span><span class="hll">    <span class="p">)</span><span class="o">.</span><span class="n">bolt11</span>
 </span><span class="hll">
 </span><span class="hll">    <span class="c1"># Pay invoice.</span>
@@ -2213,21 +2243,21 @@ the test so that we can access them from our REPL:</p>
 <span class="normal">20</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">gltesting.fixtures</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">test_setup</span><span class="p">(</span><span class="n">clients</span><span class="p">,</span> <span class="n">node_factory</span><span class="p">,</span> <span class="n">scheduler</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="n">bitcoind</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sets up a gltesting backend and a small lightning network.</span>
+<span class="w">    </span><span class="sd">"""Sets up a gltesting backend and a small lightning network.</span>
 
 <span class="sd">    This is meant to be run from inside the docker shell. See the </span>
 <span class="sd">    gltesting tutorial for further info.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">l3</span> <span class="o">=</span> <span class="n">node_factory</span><span class="o">.</span><span class="n">line_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># (1)!</span>
 
-    <span class="c1"># Assuming we want interact with l3 we&#39;ll want to print</span>
+    <span class="c1"># Assuming we want interact with l3 we'll want to print</span>
     <span class="c1"># its contact details:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;l3 details: </span><span class="si">{</span><span class="n">l3</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> @ 127.0.0.1:</span><span class="si">{</span><span class="n">l3</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"l3 details: </span><span class="si">{</span><span class="n">l3</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> @ 127.0.0.1:</span><span class="si">{</span><span class="n">l3</span><span class="o">.</span><span class="n">daemon</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;export GL_CA_CRT=</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/certs/ca.pem&quot;</span><span class="p">)</span>  <span class="c1"># (4)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;export GL_NOBODY_CRT=</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/certs/users/nobody.crt&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;export GL_NOBODY_KEY=</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/certs/users/nobody-key.pem&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;export GL_SCHEDULER_GRPC_URI=https://localhost:</span><span class="si">{</span><span class="n">scheduler</span><span class="o">.</span><span class="n">grpc_port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># (3)!</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"export GL_CA_CRT=</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/certs/ca.pem"</span><span class="p">)</span>  <span class="c1"># (4)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"export GL_NOBODY_CRT=</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/certs/users/nobody.crt"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"export GL_NOBODY_KEY=</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/certs/users/nobody-key.pem"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"export GL_SCHEDULER_GRPC_URI=https://localhost:</span><span class="si">{</span><span class="n">scheduler</span><span class="o">.</span><span class="n">grpc_port</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>  <span class="c1"># (3)!</span>
 
     <span class="nb">breakpoint</span><span class="p">()</span>  <span class="c1"># (2)!</span>
 </code></pre></div></td></tr></table></div>
@@ -2368,7 +2398,7 @@ in the repository under <code>examples/app_test.py</code>.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">glclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">Scheduler</span><span class="p">,</span> <span class="n">Signer</span><span class="p">,</span> <span class="n">TlsConfig</span><span class="p">,</span><span class="n">Node</span><span class="p">,</span> <span class="n">nodepb</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">GetInfoApp</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;An example application for gltesting.</span>
+<span class="w">    </span><span class="sd">"""An example application for gltesting.</span>
 
 <span class="sd">    This example application shows the process on how to register,</span>
 <span class="sd">    scheduler and call against a gltesting environment greenlight </span>
@@ -2380,7 +2410,7 @@ in the repository under <code>examples/app_test.py</code>.</p>
 <span class="sd">    Then run the test below outside the gltesting docker container</span>
 <span class="sd">    (run it from the host).</span>
 <span class="sd">    `pytest -s -v app_test.py::test_getinfoapp`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">secret</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">network</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tls</span><span class="p">:</span> <span class="n">TlsConfig</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">secret</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="n">secret</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">network</span>
@@ -2389,18 +2419,18 @@ in the repository under <code>examples/app_test.py</code>.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">signer</span><span class="o">.</span><span class="n">node_id</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">scheduler</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Scheduler</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a glclient Scheduler</span>
+<span class="w">        </span><span class="sd">"""Returns a glclient Scheduler</span>
 
 <span class="sd">        The scheduler is created from the attributes stored in this</span>
 <span class="sd">        class.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">Scheduler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tls</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">register_or_recover</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Registers or recovers a node on gltesting</span>
+<span class="w">        </span><span class="sd">"""Registers or recovers a node on gltesting</span>
 
 <span class="sd">        Also sets the new identity after register/recover.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">res</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">()</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signer</span><span class="p">)</span>
@@ -2410,7 +2440,7 @@ in the repository under <code>examples/app_test.py</code>.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">tls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tls</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">device_cert</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">device_key</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nodepb</span><span class="o">.</span><span class="n">GetInfoResponse</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Requests getinfo on the gltesting greenlight node&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Requests getinfo on the gltesting greenlight node"""</span>
         <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler</span><span class="p">()</span><span class="o">.</span><span class="n">schedule</span><span class="p">()</span>
         <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tls</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">grpc_uri</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">get_info</span><span class="p">()</span>
@@ -2419,9 +2449,9 @@ in the repository under <code>examples/app_test.py</code>.</p>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_getinfoapp</span><span class="p">():</span>
     <span class="c1"># These are normally persisted on disk and need to be loaded and</span>
     <span class="c1"># passed to the glclient library by the application. In this </span>
-    <span class="c1"># example we store them directly in the &quot;app&quot;.</span>
-    <span class="n">secret</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span><span class="o">*</span><span class="mi">32</span>
-    <span class="n">network</span><span class="o">=</span><span class="s1">&#39;regtest&#39;</span>
+    <span class="c1"># example we store them directly in the "app".</span>
+    <span class="n">secret</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">'</span><span class="se">\x00</span><span class="s1">'</span><span class="o">*</span><span class="mi">32</span>
+    <span class="n">network</span><span class="o">=</span><span class="s1">'regtest'</span>
     <span class="n">tls</span> <span class="o">=</span> <span class="n">TlsConfig</span><span class="p">()</span>
 
     <span class="c1"># Register a node</span>
@@ -2430,7 +2460,7 @@ in the repository under <code>examples/app_test.py</code>.</p>
 
     <span class="c1"># GetInfo</span>
     <span class="n">res</span> <span class="o">=</span> <span class="n">giap</span><span class="o">.</span><span class="n">get_info</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;res=</span><span class="si">{</span><span class="n">res</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"res=</span><span class="si">{</span><span class="n">res</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
 <p>This example application registers a node and requests <code>getinfo</code> on
 the greenlight node. Let's check if we can run it agains our REPL
@@ -2456,18 +2486,18 @@ lines, you made it! You successfully set up a <code>gltesting</code> greenlight
 mock in the <code>docker-shell</code> an application against it from the host.</p>
 <div class="highlight"><pre><span></span><code><span class="o">==================</span><span class="w"> </span><span class="nb">test</span><span class="w"> </span>session<span class="w"> </span><span class="nv">starts</span><span class="w"> </span><span class="o">==================</span>
 ...<span class="w">                                                        </span>
-app_test.py::test_getinfoapp<span class="w"> </span><span class="nv">res</span><span class="o">=</span>id:<span class="w"> </span><span class="s2">&quot;\002\005\216\213l*\323c\354Y\252\023d)%mtQd\302\275\310\177\230\360\246\206\220\354,\\\233\013&quot;</span>
-alias:<span class="w"> </span><span class="s2">&quot;VIOLENTSPAWN-v23.05gl1&quot;</span>
-color:<span class="w"> </span><span class="s2">&quot;\002\005\216&quot;</span>
-version:<span class="w"> </span><span class="s2">&quot;v23.05gl1&quot;</span>
-lightning_dir:<span class="w"> </span><span class="s2">&quot;/tmp/gltesting/tmp/tmpdz6neih7/node-0/regtest&quot;</span>
+app_test.py::test_getinfoapp<span class="w"> </span><span class="nv">res</span><span class="o">=</span>id:<span class="w"> </span><span class="s2">"\002\005\216\213l*\323c\354Y\252\023d)%mtQd\302\275\310\177\230\360\246\206\220\354,\\\233\013"</span>
+alias:<span class="w"> </span><span class="s2">"VIOLENTSPAWN-v23.05gl1"</span>
+color:<span class="w"> </span><span class="s2">"\002\005\216"</span>
+version:<span class="w"> </span><span class="s2">"v23.05gl1"</span>
+lightning_dir:<span class="w"> </span><span class="s2">"/tmp/gltesting/tmp/tmpdz6neih7/node-0/regtest"</span>
 our_features<span class="w"> </span><span class="o">{</span>
-<span class="w">  </span>init:<span class="w"> </span><span class="s2">&quot;\010\240\210\n\&quot;i\242&quot;</span>
-<span class="w">  </span>node:<span class="w"> </span><span class="s2">&quot;\210\240\210\n\&quot;i\242&quot;</span>
-<span class="w">  </span>invoice:<span class="w"> </span><span class="s2">&quot;\002\000\000\002\002A\000&quot;</span>
+<span class="w">  </span>init:<span class="w"> </span><span class="s2">"\010\240\210\n\"i\242"</span>
+<span class="w">  </span>node:<span class="w"> </span><span class="s2">"\210\240\210\n\"i\242"</span>
+<span class="w">  </span>invoice:<span class="w"> </span><span class="s2">"\002\000\000\002\002A\000"</span>
 <span class="o">}</span>
 blockheight:<span class="w"> </span><span class="m">103</span>
-network:<span class="w"> </span><span class="s2">&quot;regtest&quot;</span>
+network:<span class="w"> </span><span class="s2">"regtest"</span>
 fees_collected_msat<span class="w"> </span><span class="o">{</span>
 <span class="o">}</span>
 
@@ -2535,7 +2565,7 @@ trigger a shutdown.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.instant", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "content.code.annotate", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
