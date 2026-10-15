@@ -26,7 +26,7 @@ cargo install gl-cli
 ### Prerequisites
 
 Ensure __Rust__ is installed on your system. If it is not installed, you can set
-it up using [Rustup]("https://rustup.rs/"):
+it up using [Rustup](https://rustup.rs/):
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
@@ -63,7 +63,7 @@ glcli -d "${HOME}/.greenlight_node_1" node getinfo
 
 Before you can operate a Greenlight node you have to register one. Currently, 
 you need an _invite code_ or a
-[developer certificate]("https://blockstream.github.io/greenlight/getting-started/certs/")
+[developer certificate](https://blockstream.github.io/greenlight/getting-started/certs/)
 to register a new node. `glcli` currently supports registration via an
 _invite code_ using the `--invite-code` option:
 ```bash
@@ -131,7 +131,7 @@ cargo test
 
 ## Contributing
 `glcli` is under active development and currently lacks many major commands from
-[Core-Lightning]("https://github.com/ElementsProject/lightning") such as
+[Core-Lightning](https://github.com/ElementsProject/lightning) such as
 `listinvoices`, `fundchannel`, `close` and `sendpay`. Contributions to
 add these and other missing commands are welcome. If you need a command 
 that is not yet available, feel free to submit a pull request or open an issue 
