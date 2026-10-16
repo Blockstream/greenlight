@@ -272,7 +272,6 @@ impl Signer {
             rules: vec![
                 FilterRule::new_warn("policy-channel-safe-type-anchors"),
                 FilterRule::new_warn("policy-routing-balanced"),
-                FilterRule::new_warn("policy-commitment-retry-same"),
             ],
         });
 
@@ -294,21 +293,6 @@ impl Signer {
             rules: vec![
                 FilterRule::new_warn("policy-routing-balanced"),
                 FilterRule::new_warn("policy-htlc-fee-range"),
-            ],
-        });
-
-        // TODO: Remove once we found the desync issue
-        policy.filter.merge(PolicyFilter {
-            rules: vec![
-                // "policy failure: get_per_commitment_secret: cannot
-                // revoke commitment_number 312 when
-                // next_holder_commit_num is 313"
-                FilterRule::new_warn("policy-revoke-new-commitment-signed"),
-                // "policy failure: get_current_holder_commitment_info:
-                // invalid next holder commitment number: 3974 != 3973"
-                // Triggered during force-close signing when tower
-                // committed the state advance but CLN didn't.
-                FilterRule::new_warn("policy-other"),
             ],
         });
 
