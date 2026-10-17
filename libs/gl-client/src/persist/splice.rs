@@ -404,7 +404,7 @@ impl State {
             if !key.starts_with(&key_prefix) || self.is_tombstone(key) {
                 continue;
             }
-            let channel: vls_persist::model::ChannelEntry =
+            let channel: lightning_signer::persist::model::ChannelEntry =
                 serde_json::from_value(entry.value.clone()).map_err(|e| {
                     anyhow!("failed to decode channel state value for key {key}: {e}")
                 })?;
@@ -986,10 +986,10 @@ mod tests {
         }
     }
 
-    fn channel_entry(txid: &str, vout: u32) -> vls_persist::model::ChannelEntry {
+    fn channel_entry(txid: &str, vout: u32) -> lightning_signer::persist::model::ChannelEntry {
         let secret = SecretKey::from_slice(&[1; 32]).unwrap();
         let pubkey = PublicKey::from_secret_key(&Secp256k1::signing_only(), &secret);
-        vls_persist::model::ChannelEntry {
+        lightning_signer::persist::model::ChannelEntry {
             channel_value_satoshis: 1_000_000,
             channel_setup: Some(ChannelSetup {
                 is_outbound: true,

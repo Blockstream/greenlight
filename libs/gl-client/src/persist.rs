@@ -212,7 +212,7 @@ impl State {
     fn insert_channel(
         &mut self,
         key: &str,
-        channel_entry: vls_persist::model::ChannelEntry,
+        channel_entry: lightning_signer::persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
         self.ensure_not_tombstone(&key)?;
@@ -232,7 +232,7 @@ impl State {
     fn update_channel(
         &mut self,
         key: &str,
-        channel_entry: vls_persist::model::ChannelEntry,
+        channel_entry: lightning_signer::persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         trace!("Updating channel {key}");
         let key = format!("{CHANNEL_PREFIX}/{key}");
@@ -273,7 +273,7 @@ impl State {
             .values
             .get(&key)
             .ok_or_else(|| Error::Internal(format!("missing channel state for key {}", key)))?;
-        let entry: vls_persist::model::ChannelEntry =
+        let entry: lightning_signer::persist::model::ChannelEntry =
             serde_json::from_value(value.value.clone()).unwrap();
         Ok(entry.into())
     }
@@ -299,7 +299,7 @@ impl State {
                 let key = k.split('/').last().unwrap();
                 let key = vls_persist::model::NodeChannelId(hex::decode(&key).unwrap());
 
-                let value: vls_persist::model::ChannelEntry =
+                let value: lightning_signer::persist::model::ChannelEntry =
                     serde_json::from_value(v.value.clone()).unwrap();
                 (key.channel_id(), value.into())
             })
@@ -757,7 +757,7 @@ impl Persist for MemoryPersister {
         let id = vls_persist::model::NodeChannelId::new(node_id, &stub.id0);
         let channel_value_satoshis = 0;
         let enforcement_state = lightning_signer::policy::validator::EnforcementState::new(0);
-        let entry = vls_persist::model::ChannelEntry {
+        let entry = lightning_signer::persist::model::ChannelEntry {
             channel_value_satoshis,
             channel_setup: None,
             id: None,
@@ -778,7 +778,7 @@ impl Persist for MemoryPersister {
         let node_channel_id = vls_persist::model::NodeChannelId::new(node_id, &channel.id0);
         let id = hex::encode(node_channel_id.0);
         let channel_value_satoshis = channel.setup.channel_value_sat;
-        let entry = vls_persist::model::ChannelEntry {
+        let entry = lightning_signer::persist::model::ChannelEntry {
             channel_value_satoshis,
             channel_setup: Some(channel.setup.clone()),
             id: channel.id.clone(),

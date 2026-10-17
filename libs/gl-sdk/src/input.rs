@@ -240,11 +240,7 @@ fn try_parse_bolt11(input: &str) -> Option<Result<ParsedInput, Error>> {
 
     let amount_msat = parsed.amount_milli_satoshis();
     let expiry = parsed.expiry_time().as_secs();
-    let timestamp = parsed
-        .timestamp()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
+    let timestamp = parsed.duration_since_epoch().as_secs();
 
     Some(Ok(ParsedInput::Bolt11 {
         invoice: ParsedInvoice {
