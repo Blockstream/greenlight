@@ -551,7 +551,12 @@ impl Node for PluginNodeServer {
                     .collect();
 
                 let saved_percent = savings_percent(full_wire_bytes, outgoing_wire_bytes);
-                trace!(
+                // NB: this must stay at debug level: cln-plugin 0.7
+                // forwards plugin trace events as lightningd TRACE
+                // records, which are dropped at the default
+                // `--log-level=debug`, so tests and operators never
+                // see them.
+                debug!(
                     "Signer state diff to hsm_id={} request_id={} entries={}, wire_bytes={}, full_wire_bytes={}, saved {}% bandwidth syncing the state",
                     hsm_id,
                     req.request.request_id,
