@@ -10,6 +10,7 @@ use tokio::sync::broadcast;
 extern crate gl_util;
 
 mod awaitables;
+pub mod channels;
 pub mod config;
 pub mod events;
 pub mod hsm;
