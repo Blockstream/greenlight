@@ -147,25 +147,7 @@ impl Node {
     pub fn send(&self, invoice: String, amount_msat: Option<u64>) -> Result<SendResponse, Error> {
         self.check_connected()?;
         let mut cln_client = exec(self.get_cln_client())?.clone();
-        let req = clnpb::PayRequest {
-            amount_msat: match amount_msat {
-                Some(a) => Some(clnpb::Amount { msat: a }),
-                None => None,
-            },
-
-            bolt11: invoice,
-            description: None,
-            exclude: vec![],
-            exemptfee: None,
-            label: None,
-            localinvreqid: None,
-            maxdelay: None,
-            maxfee: None,
-            maxfeepercent: None,
-            partial_msat: None,
-            retry_for: None,
-            riskfactor: None,
-        };
+        let req = pay_request(invoice, amount_msat)?;
         exec(cln_client.pay(req))
             .map_err(|e| Error::rpc(e.to_string()))
             .map(|r| r.into_inner().into())
@@ -1044,10 +1026,7 @@ impl Node {
 
         // Phase 2: Pay the invoice
         let mut cln_client = exec(self.get_cln_client())?.clone();
-        let pay_response = match exec(cln_client.pay(clnpb::PayRequest {
-            bolt11: invoice_str.clone(),
-            ..Default::default()
-        })) {
+        let pay_response = match exec(cln_client.pay(pay_request(invoice_str.clone(), None)?)) {
             Ok(r) => r.into_inner(),
             Err(e) => {
                 let payment_hash = invoice_str
@@ -1223,6 +1202,31 @@ fn url_action_domain_mismatch(callback_url: &str, action_url: &str) -> Option<St
             action_domain, cb_domain
         ))
     }
+}
+
+// Both direct and LNURL payments must reject expensive routes before offering HTLCs.
+fn pay_request(invoice: String, amount_msat: Option<u64>) -> Result<clnpb::PayRequest, Error> {
+    let normalized = invoice.to_lowercase();
+    let parsed = normalized
+        .strip_prefix("lightning:")
+        .unwrap_or(&normalized)
+        .parse::<Bolt11Invoice>()
+        .map_err(|e| Error::argument("invoice", e.to_string()))?;
+    let principal = parsed
+        .amount_milli_satoshis()
+        .filter(|a| *a > 0)
+        .or(amount_msat)
+        .filter(|a| *a > 0)
+        .ok_or_else(|| Error::argument("amount_msat", "missing payment amount"))?;
+    let maxfee = gl_client::signer::FeeBudgetLimits::default()
+        .payment_fee_msat(principal)
+        .map_err(|e| Error::argument("amount_msat", e.to_string()))?;
+    Ok(clnpb::PayRequest {
+        bolt11: invoice,
+        amount_msat: amount_msat.map(|msat| clnpb::Amount { msat }),
+        maxfee: Some(clnpb::Amount { msat: maxfee }),
+        ..Default::default()
+    })
 }
 
 fn validate_lnurl_pay_input(request: &crate::lnurl::LnUrlPayRequest) -> Result<(), Error> {
@@ -2616,6 +2620,40 @@ fn node_event_from_pb(other: glpb::NodeEvent) -> Option<NodeEvent> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn payment_requests_scale_fees_for_fixed_and_amountless_invoices() {
+        use bitcoin::{
+            hashes::{Hash, sha256},
+            secp256k1::{Secp256k1, SecretKey},
+        };
+        use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
+        for invoice_amount in [Some(1_000_000_000), None, Some(0)] {
+            let mut builder = InvoiceBuilder::new(Currency::Bitcoin)
+                .description("SDK fee budget".to_string())
+                .payment_hash(sha256::Hash::hash(&[3; 32]))
+                .payment_secret(PaymentSecret([4; 32]))
+                .current_timestamp()
+                .min_final_cltv_expiry_delta(18);
+            if let Some(amount) = invoice_amount {
+                builder = builder.amount_milli_satoshis(amount);
+            }
+            let invoice = builder
+                .build_signed(|m| {
+                    Secp256k1::new()
+                        .sign_ecdsa_recoverable(m, &SecretKey::from_slice(&[2; 32]).unwrap())
+                })
+                .unwrap();
+            let fixed = invoice_amount.is_some_and(|amount| amount > 0);
+            let amount = if fixed { None } else { Some(1_000_000_000) };
+            let request = pay_request(invoice.to_string(), amount).unwrap();
+            assert_eq!(request.amount_msat.map(|a| a.msat), amount);
+            assert_eq!(request.maxfee.unwrap().msat, 5_000_000);
+            if !fixed {
+                assert!(pay_request(invoice.to_string(), None).is_err());
+            }
+        }
+    }
 
     #[test]
     fn parse_amount_or_all_handles_all_variants() {
