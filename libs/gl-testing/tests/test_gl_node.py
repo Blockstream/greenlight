@@ -145,3 +145,49 @@ def test_configure_close_to_addr(node_factory, clients, bitcoind):
     wait_for(lambda: gl1.list_peer_channels().channels[0].state ==  2)
     
     assert gl1.list_peer_channels().channels[0].close_to_addr == close_to_addr
+
+
+def test_node_forward(node_factory, clients, bitcoind):
+    """Forward a payment from sender -> Greenlight -> recipient."""
+    sender, recipient = node_factory.get_nodes(2)
+    c = clients.new()
+    c.register(configure=True)
+    gl1 = c.node()
+    s = c.signer().run_in_thread()
+    for peer in [sender, recipient]:
+        gl1.connect_peer(peer.info['id'], f'127.0.0.1:{peer.daemon.port}')
+
+    sender.fundwallet(2_000_000)
+    sender.rpc.fundchannel(c.node_id.hex(), 1_000_000)
+
+    gl1_address = gl1.new_address().bech32
+    bitcoind.rpc.sendtoaddress(gl1_address, 1)
+    bitcoind.generate_block(1, wait_for_mempool=1)
+    wait_for(lambda: len(gl1.list_funds().outputs) > 0)
+    gl1.fund_channel(
+        bytes.fromhex(recipient.info['id']),
+        clnpb.AmountOrAll(amount=clnpb.Amount(msat=1_000_000_000)),
+    )
+    bitcoind.generate_block(6, wait_for_mempool=1)
+    wait_for(lambda: len(gl1.list_peer_channels().channels) == 2
+             and all(ch.state == 2 for ch in gl1.list_peer_channels().channels))
+    for peer in [sender, recipient]:
+        wait_for(lambda: peer.rpc.listpeerchannels()['channels'][0]['state']
+                 == 'CHANNELD_NORMAL')
+
+    incoming = sender.rpc.listpeerchannels()['channels'][0]['short_channel_id']
+    # Use Greenlight's alias for its private outgoing channel.
+    outgoing = recipient.rpc.listpeerchannels()['channels'][0]['alias']['remote']
+    inv = recipient.rpc.invoice(100_000_000, 'forward', 'desc')
+    route = [
+        {'id': c.node_id.hex(), 'channel': incoming,
+         'amount_msat': 100_010_000, 'delay': 80},
+        {'id': recipient.info['id'], 'channel': outgoing,
+         'amount_msat': 100_000_000, 'delay': 18},
+    ]
+    sender.rpc.sendpay(route, inv['payment_hash'], bolt11=inv['bolt11'],
+                       payment_secret=inv['payment_secret'])
+    assert sender.rpc.waitsendpay(inv['payment_hash'], timeout=30)['status'] == 'complete'
+    assert recipient.rpc.listinvoices('forward')['invoices'][0]['status'] == 'paid'
+    wait_for(lambda: all(not ch.htlcs for ch in gl1.list_peer_channels().channels))
+    s.shutdown()
