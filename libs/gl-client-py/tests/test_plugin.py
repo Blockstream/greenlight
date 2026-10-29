@@ -1,4 +1,5 @@
 from gltesting.fixtures import *
+from glclient import nodepb
 from pyln.testing.utils import wait_for
 from pyln import grpc as clnpb
 import grpc
@@ -42,8 +43,9 @@ def test_max_message_size(clients):
         n1.datastore("some-key", hex=bytes.fromhex(secrets.token_hex(size)))
 
 
+@pytest.mark.parametrize("amount_msat", [50_000_000, 500_000_000])
 @flaky(max_runs=10)
-def test_trampoline_pay(bitcoind, clients, node_factory):
+def test_trampoline_pay(bitcoind, clients, node_factory, amount_msat, scheduler):
     c1 = clients.new()
     c1.register()
     s1 = c1.signer()
@@ -85,15 +87,28 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
         "17b08f669513b7379728fc1abcea5eaf3448bc1eba55a68ca2cd1843409cdc04"
     )
     inv = l2.rpc.invoice(
-        amount_msat=50000000,
+        amount_msat=amount_msat,
         label="trampoline-pay-test",
         description="trampoline-pay-test",
         preimage=invoice_preimage,
     )
     l2.rpc.setpaymentkey(invoice_preimage)
     l2.rpc.setcheckinvoice(inv["bolt11"])
-    l2.rpc.setcheckamount(50000000)
+    l2.rpc.setcheckamount(amount_msat)
 
+    if amount_msat == 500_000_000:
+        req = nodepb.TrampolinePayRequest(
+            bolt11=inv["bolt11"],
+            trampoline_node_id=bytes.fromhex(l2.info["id"]),
+            maxfeepercent=1.0,
+        )
+        with pytest.raises(ValueError, match="(?i)invoice.*declin"):
+            n1.inner.call("/greenlight.Node/TrampolinePay", req.SerializeToString())
+        wait_for(lambda: len(scheduler.debugger.reports) == 1)
+        assert "payment allowance" in scheduler.debugger.reports.pop().msg
+        assert not n1.list_peer_channels(bytes.fromhex(l2.info["id"])).channels[0].htlcs
+
+    # A declined preapproval must leave the node able to pay the same invoice.
     res = n1.trampoline_pay(inv["bolt11"], bytes.fromhex(l2.info["id"]))
     assert res
     assert len(res.payment_hash) == 32  # There was a confusion about hex/bytes return.
@@ -115,7 +130,7 @@ def test_trampoline_pay(bitcoind, clients, node_factory):
     ch = n1.list_peer_channels(bytes.fromhex(l2.info["id"])).channels[0]
     assert res2 == res
 
-    assert ch.to_us_msat.msat == (1000000000 - (50000000 + 0.005 * 50000000))
+    assert ch.to_us_msat.msat == (1000000000 - (amount_msat + amount_msat * 5 // 1000))
     assert len(ch.htlcs) == 0
 
     # new unknown unconnected node without the trampoline featurebit.
@@ -171,7 +186,7 @@ def test_trampoline_multi_htlc(bitcoind, clients, node_factory):
     # Fund first channel
     n1.fund_channel(
         bytes.fromhex(l2.info["id"]),
-        clnpb.AmountOrAll(amount=clnpb.Amount(msat=70000000)),
+        clnpb.AmountOrAll(amount=clnpb.Amount(msat=700000000)),
     )
     bitcoind.generate_block(6, wait_for_mempool=1)
     wait_for(lambda: len([c for c in n1.list_funds().channels if c.state == 2]) == 1)
@@ -179,7 +194,7 @@ def test_trampoline_multi_htlc(bitcoind, clients, node_factory):
     # Fund second channel
     n1.fund_channel(
         bytes.fromhex(l2.info["id"]),
-        clnpb.AmountOrAll(amount=clnpb.Amount(msat=30000000)),
+        clnpb.AmountOrAll(amount=clnpb.Amount(msat=300000000)),
     )
     bitcoind.generate_block(6, wait_for_mempool=1)
     wait_for(lambda: len([c for c in n1.list_funds().channels if c.state == 2]) == 2)

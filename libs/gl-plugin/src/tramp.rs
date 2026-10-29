@@ -20,7 +20,8 @@ const TRAMPOLINE_FEATURE_BIT: usize = 427;
 // https://github.com/lightning/bolts/blob/master/04-onion-routing.md#max-htlc-cltv-selection
 const MAX_DELAY_DEFAULT: u32 = 2016;
 // The amount we overpay to allow the trampoline node to spend some fees.
-const DEFAULT_OVERPAY_PERCENT: f32 = 0.5;
+const DEFAULT_OVERPAY_PERCENT: f32 =
+    gl_client::signer::FeeBudgetLimits::DEFAULT_PAYMENT_FEE_PPM as f32 / 10_000.0;
 // Type used to address bolt11 in the onion payload.
 const TLV_BOLT11: u64 = 33001;
 // Type used to address the amount in msat in the onion payload, in case
@@ -388,11 +389,24 @@ pub async fn trampolinepay(
     // We need to add some sats to the htlcs to allow the trampoline node
     // to pay fees on routing.
     let tlv_amount_msat = amount_msat;
-    let overpay = amount_msat as f64
-        * (as_option(req.maxfeepercent).unwrap_or(DEFAULT_OVERPAY_PERCENT) as f64 / 100 as f64);
-    let amount_msat = amount_msat + overpay as u64;
+    let overpay = gl_client::signer::FeeBudgetLimits::fee_for_percent_msat(
+        amount_msat,
+        as_option(req.maxfeepercent).unwrap_or(DEFAULT_OVERPAY_PERCENT),
+    )
+    .map_err(|e| {
+        error!(
+            TrampolineErrorCode::PaymentFailure,
+            "Invalid trampoline fee: {}", e
+        )
+    })?;
+    let amount_msat = amount_msat.checked_add(overpay).ok_or_else(|| {
+        error!(
+            TrampolineErrorCode::PaymentFailure,
+            "Trampoline amount plus fee overflows"
+        )
+    })?;
 
-    debug!("overpay={}, total_amt={}", overpay as u64, amount_msat);
+    debug!("overpay={}, total_amt={}", overpay, amount_msat);
 
     let channels: Vec<Channel> = rpc
         .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: Some(node_id) })

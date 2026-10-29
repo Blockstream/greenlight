@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+- `Node.send` and `Node.lnurl_pay` set CLN's `maxfee` to the larger of 1,000 sat and 0.5% of the payment principal, matching the signer's default routing policy for fixed and amountless invoices.
+
 - iOS (Kotlin and Swift): a Rust panic in the SDK reaches the app as an exception instead of aborting it, as it already does on Android. The Android and iOS libraries unwind on panic, unlike the workspace's release profile.
 
 ### Security
