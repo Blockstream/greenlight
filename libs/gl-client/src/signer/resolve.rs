@@ -131,16 +131,23 @@ impl Resolver {
                     true
                 }
                 (Message::PreapproveInvoice(l), Request::Pay(r)) => {
-                    l.invstring.0.eq_ignore_ascii_case(r.bolt11.as_bytes())
+                    super::auth::same_invoice(&l.invstring.0, &r.bolt11)
+                }
+                (Message::PreapproveInvoice(l), Request::SendPay(r)) => r
+                    .bolt11
+                    .as_ref()
+                    .is_some_and(|invoice| super::auth::same_invoice(&l.invstring.0, invoice)),
+                (Message::PreapproveInvoice(l), Request::Xpay(r)) => {
+                    super::auth::same_invoice(&l.invstring.0, &r.invstring)
                 }
                 (Message::PreapproveInvoice(l), Request::PreApproveInvoice(r)) => {
                     // Manually calling preapproveinvoice should
                     // always be allowed. The bolt11 string have to
                     // match.
-                    l.invstring.0.eq_ignore_ascii_case(r.bolt11.as_bytes())
+                    super::auth::same_invoice(&l.invstring.0, &r.bolt11)
                 }
                 (Message::PreapproveInvoice(l), Request::TrampolinePay(r)) => {
-                    l.invstring.0.eq_ignore_ascii_case(r.bolt11.as_bytes())
+                    super::auth::same_invoice(&l.invstring.0, &r.bolt11)
                 }
                 (_, _) => false,
             };
@@ -163,6 +170,45 @@ mod tests {
     use crate::signer::splice_policy::{
         SpliceOperation, SplicePolicyDecision, SplicePolicyViolation, VlsProof,
     };
+
+    #[test]
+    fn preapproval_matches_invoice_case_and_prefix_for_each_payment_rpc() {
+        let message = Message::PreapproveInvoice(vls_protocol::msgs::PreapproveInvoice {
+            invstring: vls_protocol::serde_bolt::WireString(b"lnbc-invoice".to_vec()),
+        });
+        for (invoice, approved) in [
+            (Some("LNBC-INVOICE"), true),
+            (Some("LIGHTNING:LNBC-INVOICE"), true),
+            (Some("lnbc-other"), false),
+            (None, false),
+        ] {
+            use crate::signer::model::{cln, greenlight};
+            for request in [
+                Request::Pay(cln::PayRequest {
+                    bolt11: invoice.unwrap_or_default().into(),
+                    ..Default::default()
+                }),
+                Request::SendPay(cln::SendpayRequest {
+                    bolt11: invoice.map(str::to_string),
+                    ..Default::default()
+                }),
+                Request::Xpay(cln::XpayRequest {
+                    invstring: invoice.unwrap_or_default().into(),
+                    ..Default::default()
+                }),
+                Request::TrampolinePay(greenlight::TrampolinePayRequest {
+                    bolt11: invoice.unwrap_or_default().into(),
+                    ..Default::default()
+                }),
+                Request::PreApproveInvoice(cln::PreapproveinvoiceRequest {
+                    bolt11: invoice.unwrap_or_default().into(),
+                }),
+            ] {
+                let result = Resolver::try_resolve(&message, &[request], &State::new(), &[], None);
+                assert_eq!(result.is_ok(), approved, "invoice: {invoice:?}");
+            }
+        }
+    }
 
     #[test]
     fn rejected_splice_decision_is_a_policy_error() {
