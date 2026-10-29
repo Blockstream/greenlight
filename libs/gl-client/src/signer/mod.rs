@@ -23,7 +23,8 @@ use lightning_signer::bitcoin::secp256k1::{
     ecdsa::Signature as SecpSignature, Message as SecpMessage, PublicKey, Secp256k1, SecretKey,
 };
 use lightning_signer::bitcoin::Network;
-use lightning_signer::node::NodeServices;
+use lightning_signer::lightning::types::payment::PaymentHash;
+use lightning_signer::node::{Node, NodeServices};
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, error, info, trace, warn};
@@ -58,6 +59,9 @@ pub use backup::{
     RecoverchannelRequest, RecoverchannelSkippedChannel, SignerBackupConfig, SignerBackupSnapshot,
     SignerBackupStrategy,
 };
+mod fee_budget;
+mod routing_policy;
+pub use fee_budget::FeeBudgetLimits;
 pub mod model;
 mod report;
 mod resolve;
@@ -108,6 +112,7 @@ pub struct StateSignatureOverrideConfig {
 pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
+    pub fee_budget_limits: FeeBudgetLimits,
     #[cfg(feature = "backup")]
     pub backup: Option<SignerBackupConfig>,
 }
@@ -132,6 +137,7 @@ pub struct Signer {
     state_signature_mode: StateSignatureMode,
     state_signature_override_enabled: bool,
     state_signature_override_note: Option<String>,
+    fee_budget_limits: FeeBudgetLimits,
     master_rune: Rune,
     services: NodeServices,
     tls: TlsConfig,
@@ -181,6 +187,16 @@ pub enum Error {
         required_proof: String,
     },
 
+    #[error("hard fee budget rejected request: {0}")]
+    FeeBudget(#[source] anyhow::Error),
+
+    #[error("preapproval declined: {cause}")]
+    PreapprovalDeclined {
+        #[source]
+        cause: Box<Error>,
+        reply: Vec<u8>,
+    },
+
     #[error("error asking node to be upgraded: {0}")]
     Upgrade(tonic::Status),
 
@@ -211,9 +227,7 @@ impl Signer {
     where
         T: TlsConfigProvider,
     {
-        use lightning_signer::policy::{
-            filter::PolicyFilter, simple_validator::SimpleValidatorFactory,
-        };
+        use lightning_signer::policy::filter::PolicyFilter;
         use lightning_signer::signer::ClockStartingTimeFactory;
         use lightning_signer::util::clock::StandardClock;
 
@@ -266,45 +280,34 @@ impl Signer {
         let mut policy =
             lightning_signer::policy::simple_validator::make_default_simple_policy(network);
 
-        policy.filter = PolicyFilter::default();
-        policy.filter.merge(PolicyFilter {
-            // TODO: Remove once we have fully switched over to zero-fee anchors
+        // Preserve the existing 600 sat/vB ceiling for sweeps and withdrawals,
+        // including penalty transactions during fee spikes. Commitment and
+        // mutual-close fees have separate absolute caps in the handler.
+        policy.max_feerate_per_kw = 150_000;
+
+        // Static feerate limits cannot follow chain fee spikes (#538), and
+        // the percentage limit has no small-payment fee exemption. Keep these
+        // as diagnostics. VLS enforces the routing balance and absolute routing
+        // allowance; the handler independently caps on-chain transaction fees.
+        policy.filter = PolicyFilter {
             rules: vec![
+                // TODO: Remove once we have fully switched over to zero-fee anchors
                 FilterRule::new_warn("policy-channel-safe-type-anchors"),
-                FilterRule::new_warn("policy-routing-balanced"),
-            ],
-        });
-
-        // TODO Remove this once VLS has implemented the fee budget
-        // per payment, rather than the fee budget per HTLC.
-        // Ref: https://github.com/Blockstream/greenlight/issues/538
-        {
-            policy.max_feerate_per_kw = 150_000;
-            policy.filter.merge(PolicyFilter {
-                rules: vec![
-                    FilterRule::new_warn("policy-commitment-fee-range"),
-                    FilterRule::new_warn("policy-mutual-fee-range"),
-                ],
-            });
-        }
-
-        policy.filter.merge(PolicyFilter {
-            // TODO: Remove once we have implemented zero invoice support
-            rules: vec![
-                FilterRule::new_warn("policy-routing-balanced"),
+                FilterRule::new_warn("policy-commitment-fee-range"),
+                FilterRule::new_warn("policy-mutual-fee-range"),
                 FilterRule::new_warn("policy-htlc-fee-range"),
             ],
-        });
+        };
 
         // Increase the invoices limit. Results in a larger state, but
         // bumping into this is rather annoying.
         policy.max_invoices = 10_000usize;
 
-        // Relaxed max_routing_fee since we no longer have the
-        // presplitter which was causing the HTLCs to be smaller.
-        policy.max_routing_fee_msat = 1_000_000;
-
-        let validator_factory = Arc::new(SimpleValidatorFactory::new_with_policy(policy));
+        // VLS aggregates the payment hash across channels and HTLC parts.
+        let validator_factory = Arc::new(routing_policy::RoutingValidatorFactory::new(
+            policy,
+            config.fee_budget_limits,
+        ));
         let starting_time_factory = ClockStartingTimeFactory::new();
         let clock = Arc::new(StandardClock());
 
@@ -350,6 +353,7 @@ impl Signer {
             state_signature_mode,
             state_signature_override_enabled,
             state_signature_override_note,
+            fee_budget_limits: config.fee_budget_limits,
             master_rune: mr,
             services,
             tls: creds.tls_config(),
@@ -732,27 +736,36 @@ impl Signer {
                         .map_err(|e| Error::NodeDisconnect(e))?;
                 }
                 Err(e) => {
-                    // Report the rejection to the server for debugging
-                    // Note: process_request already reports some errors, but we ensure
-                    // all errors are reported here as a safety net
-                    report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                    let rejection = crate::pb::scheduler::SignerRejection {
                         msg: format!("Error in run_once loop: {:?}", e),
                         request: Some(req.clone()),
                         git_version: GITHASH.to_string(),
                         node_id: self.node_id(),
-                    })
-                    .await;
-
-                    let response = HsmResponse {
-                        raw: vec![],
-                        request_id,
-                        error: format!("{:?}", e),
-                        signer_state: vec![],
+                    };
+                    let response = match &e {
+                        Error::PreapprovalDeclined { reply, .. } => HsmResponse {
+                            raw: reply.clone(),
+                            request_id,
+                            ..Default::default()
+                        },
+                        _ => HsmResponse {
+                            request_id,
+                            error: format!("{e:?}"),
+                            ..Default::default()
+                        },
                     };
                     client
                         .respond_hsm_request(response)
                         .await
                         .map_err(|e| Error::NodeDisconnect(e))?;
+                    // CLN has its reply before reporting can wait on the scheduler.
+                    tokio::spawn(async move {
+                        let _ = tokio::time::timeout(
+                            Duration::from_secs(30),
+                            report::Reporter::report(rejection),
+                        )
+                        .await;
+                    });
                     warn!(
                         "Rejected request {} with error: {}. State: {:?}",
                         hex_req, e, signer_state,
@@ -783,6 +796,35 @@ impl Signer {
     }
 
     async fn process_request(&self, req: HsmRequest) -> Result<HsmResponse, Error> {
+        use vls_protocol::msgs::{Message, PreapproveInvoiceReply, PreapproveKeysendReply};
+        let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(Error::Protocol)?;
+        let decline = match &msg {
+            Message::PreapproveInvoice(_) => {
+                Some(PreapproveInvoiceReply { result: false }.as_vec())
+            }
+            Message::PreapproveKeysend(_) => {
+                Some(PreapproveKeysendReply { result: false }.as_vec())
+            }
+            _ => None,
+        };
+        let result = self
+            .process_request_inner(req, msg, decline.is_some())
+            .await;
+        match (result, decline) {
+            (Err(cause), Some(reply)) => Err(Error::PreapprovalDeclined {
+                cause: Box::new(cause),
+                reply,
+            }),
+            (result, _) => result,
+        }
+    }
+
+    async fn process_request_inner(
+        &self,
+        req: HsmRequest,
+        msg: vls_protocol::msgs::Message,
+        preapproval: bool,
+    ) -> Result<HsmResponse, Error> {
         debug!("Processing request {:?}", req);
         let req = req;
 
@@ -854,18 +896,21 @@ impl Signer {
             })
             .collect::<Vec<model::Request>>();
 
-        let msg = vls_protocol::msgs::from_vec(req.raw.clone()).map_err(|e| Error::Protocol(e))?;
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", prestate_log);
 
         if let Err(e) = self.authenticate_request(&msg, &ctxrequests, req.context.as_ref()) {
-            report::Reporter::report(crate::pb::scheduler::SignerRejection {
-                msg: e.to_string(),
-                request: Some(req.clone()),
-                git_version: GITHASH.to_string(),
-                node_id: self.node_id(),
-            })
-            .await;
+            if preapproval {
+                warn!("Preapproval context did not resolve: {e}");
+            } else {
+                report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                    msg: e.to_string(),
+                    request: Some(req.clone()),
+                    git_version: GITHASH.to_string(),
+                    node_id: self.node_id(),
+                })
+                .await;
+            }
             #[cfg(not(feature = "permissive"))]
             return Err(e);
         };
@@ -903,22 +948,31 @@ impl Signer {
         approver.approve(approvals);
         let root_handler = self.handler_with_approver(approver)?;
 
+        fee_budget::check_payment_preapproval(&msg, &ctxrequests, self.fee_budget_limits)
+            .map_err(Error::FeeBudget)?;
+
         log::trace!("Updating state from context");
-        if let Err(e) = update_state_from_context(&ctxrequests, &root_handler) {
-            error!("Failed to update state from context: {:?}", e);
-            report::Reporter::report(crate::pb::scheduler::SignerRejection {
-                msg: format!("Failed to update state from context: {:?}", e),
-                request: Some(req.clone()),
-                git_version: GITHASH.to_string(),
-                node_id: self.node_id(),
-            })
-            .await;
-            return Err(Error::Other(anyhow!(
-                "Failed to update state from context: {:?}",
-                e
-            )));
+        for request in &ctxrequests {
+            if let Err(e) = record_invoice(
+                request,
+                &root_handler.node(),
+                self.services.persister.as_ref(),
+                self.services.clock.now().as_secs(),
+            ) {
+                warn!("Skipping payment context: {e:#}");
+            }
         }
         log::trace!("State updated");
+
+        // Do not put this inside authenticate_request's permissive fallback
+        // or VLS's filterable policy engine.
+        fee_budget::check_request(
+            &msg,
+            req.context.as_ref(),
+            &root_handler.node(),
+            self.fee_budget_limits,
+        )
+        .map_err(Error::FeeBudget)?;
 
         // Match over root and client handler.
         let response = match req.context.clone() {
@@ -943,6 +997,9 @@ impl Signer {
 
         let response = match response {
             Ok(r) => r,
+            Err(e) if preapproval => {
+                return Err(Error::Other(anyhow!("preapproving payment: {e:?}")));
+            }
             Err(e) => {
                 report::Reporter::report(crate::pb::scheduler::SignerRejection {
                     msg: format!("{:?}", e),
@@ -1566,51 +1623,112 @@ impl Signer {
     }
 }
 
-/// Look through the context requests and update the state
-/// accordingly. This is useful to modify allowlists and invoice lists
-/// extracted from the authenticated requests.
-fn update_state_from_context(
-    requests: &Vec<model::Request>,
-    handler: &handler::RootHandler,
-) -> Result<(), Error> {
-    log::debug!("Updating state from {} context request", requests.len());
-    let node = handler.node();
+fn record_invoice(
+    request: &model::Request,
+    node: &Node,
+    persister: &dyn lightning_signer::persist::Persist,
+    now_secs: u64,
+) -> Result<()> {
+    use lightning_signer::invoice::InvoiceAttributes;
 
-    requests.iter().for_each(|r| {
-        if let Err(e) = update_state_from_request(r, &node) {
-            log::warn!("Failed to update state from request: {:?}", e);
+    let (invoice_text, requested_amount_msat) = match request {
+        model::Request::Pay(r) => (r.bolt11.as_str(), r.amount_msat.as_ref().map(|a| a.msat)),
+        model::Request::Xpay(r) => (r.invstring.as_str(), r.amount_msat.as_ref().map(|a| a.msat)),
+        model::Request::TrampolinePay(r) => (r.bolt11.as_str(), Some(r.amount_msat)),
+        model::Request::SendPay(r) => {
+            let Some(invoice) = r.bolt11.as_deref() else {
+                return Ok(());
+            };
+            let amount = match (&r.amount_msat, r.partid) {
+                (Some(amount), _) => Some(amount),
+                // CLN defaults single-part payments to the final hop's amount.
+                (None, None | Some(0)) => r.route.last().and_then(|hop| hop.amount_msat.as_ref()),
+                (None, Some(_)) => None,
+            };
+            (invoice, amount.map(|a| a.msat))
         }
-    });
+        _ => return Ok(()),
+    };
+
+    let invoice = auth::parse_invoice(invoice_text)?;
+    let payment_hash = invoice.payment_hash();
+    let invoice_amount_msat = invoice.amount_milli_satoshis();
+    let amountless = invoice_amount_msat == 0;
+    let approved_invoice = node.get_state().invoices.get(&payment_hash).cloned();
+
+    if let Some(approved) = &approved_invoice {
+        if approved.invoice_hash != invoice.invoice_hash() {
+            anyhow::bail!("different invoice for an already approved payment hash");
+        }
+        if approved.amount_msat != 0 {
+            if !amountless || requested_amount_msat == Some(approved.amount_msat) {
+                return Ok(()); // Keep the existing approval without checking expiry again.
+            }
+            ensure_amount_can_change(node, &payment_hash)?;
+        }
+    }
+
+    let amount_msat = if amountless {
+        requested_amount_msat
+            .filter(|a| *a > 0)
+            .ok_or_else(|| anyhow!("amountless invoice requires an authenticated payment amount"))?
+    } else {
+        invoice_amount_msat // Overpayments consume the routing allowance.
+    };
+    let mut velocity = node.get_state().velocity_control.clone();
+    if amountless && !velocity.insert(now_secs, amount_msat) {
+        anyhow::bail!("payment amount exceeds signer velocity limit");
+    }
+    if approved_invoice.is_none() && !node.add_invoice(invoice).map_err(|e| anyhow!("{e}"))? {
+        anyhow::bail!("payment invoice exceeds signer velocity limit");
+    }
+    if !amountless {
+        return Ok(());
+    }
+
+    let mut state = node.get_state();
+    let approved = state
+        .invoices
+        .get_mut(&payment_hash)
+        .ok_or_else(|| anyhow!("invoice was not recorded"))?;
+    approved.amount_msat = amount_msat;
+    state.velocity_control = velocity;
+    persister
+        .update_node(&node.get_id(), &state)
+        .map_err(|e| anyhow!("persisting payment amount: {e:?}"))?;
     Ok(())
 }
 
-fn update_state_from_request(
-    request: &model::Request,
-    node: &lightning_signer::node::Node,
-) -> Result<(), Error> {
-    use lightning_signer::invoice::Invoice;
-    use std::str::FromStr;
-    match request {
-        model::Request::SendPay(model::cln::SendpayRequest {
-            bolt11: Some(inv), ..
-        }) => match Invoice::from_str(inv) {
-            Ok(invoice) => {
-                log::debug!(
-                    "Adding invoice {:?} as side-effect of this sendpay {:?}",
-                    invoice,
-                    request
-                );
-                if let Err(e) = node.add_invoice(invoice) {
-                    log::warn!("Failed to add invoice to node state: {:?}", e);
-                }
-            }
-            Err(e) => {
-                log::warn!("Failed to parse invoice from sendpay request: {:?}", e);
-            }
-        },
-        _ => {}
+fn ensure_amount_can_change(node: &Node, payment_hash: &PaymentHash) -> Result<()> {
+    let amount_is_locked = node
+        .get_state()
+        .payments
+        .get(payment_hash)
+        .is_some_and(|payment| {
+            payment.is_fulfilled() || !payment.is_no_incoming() || !payment.is_no_outgoing()
+        });
+    if amount_is_locked {
+        anyhow::bail!("cannot change the amount of a pending or fulfilled payment");
     }
 
+    // Holder validation can precede VLS's payment-summary update.
+    let channels: Vec<_> = node.get_channels().values().cloned().collect();
+    for slot in channels {
+        let slot = slot.lock().map_err(|_| anyhow!("channel lock poisoned"))?;
+        let lightning_signer::channel::ChannelSlot::Ready(channel) = &*slot else {
+            continue;
+        };
+        let Some((commitment, _)) = &channel.enforcement_state.next_holder_commit_info else {
+            continue;
+        };
+        if commitment
+            .offered_htlcs
+            .iter()
+            .any(|htlc| htlc.payment_hash == *payment_hash)
+        {
+            anyhow::bail!("cannot change the amount of a pending payment");
+        }
+    }
     Ok(())
 }
 
@@ -1742,6 +1860,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: StateSignatureMode::Soft,
                 state_signature_override: None,
+                fee_budget_limits: FeeBudgetLimits::default(),
                 backup: Some(SignerBackupConfig {
                     path: "backup.json".into(),
                     strategy: SignerBackupStrategy::Periodic { updates: 0 },

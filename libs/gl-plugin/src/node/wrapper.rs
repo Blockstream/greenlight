@@ -211,6 +211,15 @@ impl Node for WrappedNodeServer {
         &self,
         r: Request<pb::SendpayRequest>,
     ) -> Result<Response<pb::SendpayResponse>, Status> {
+        if let Some(bolt11) = &r.get_ref().bolt11 {
+            // Record the invoice while the signed SendPay context is still pending,
+            // before CLN offers HTLCs and returns ahead of commitment signing.
+            self.inner
+                .pre_approve_invoice(Request::new(pb::PreapproveinvoiceRequest {
+                    bolt11: bolt11.clone(),
+                }))
+                .await?;
+        }
         self.inner.send_pay(r).await
     }
 
