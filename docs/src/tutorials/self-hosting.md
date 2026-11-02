@@ -107,5 +107,5 @@ connection is lost. Calling the method multiple times will results in
 the same encrypted backup URL
 
 [postgres]: https://www.postgresql.org/
-[schedpb]: https://github.com/Blockstream/greenlight/blob/main/libs/proto/scheduler.proto
+[schedpb]: https://github.com/Blockstream/greenlight/blob/main/libs/proto/glclient/scheduler.proto
 [node-rpc-proxy]: ../reference/node-rpc-proxy.md
