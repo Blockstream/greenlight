@@ -54,7 +54,7 @@ reqwest = { version = "^0.11", features = [
     "json",
     "rustls-tls-webpki-roots",
 ], default-features = false }
-ring = "~0.16.20"
+ring = "0.17"
 runeauth = "0.1"
 rustls-pemfile = "1.0.4"
 sha256 = "1.5.0"
@@ -65,13 +65,13 @@ tower = { version = "0.4" }
 tempfile = "3.10.1"
 url = "2.5.0"
 serde = { version = "1", features = ["derive"] }
-rcgen = { version = "0.10.0", features = ["pem", "x509-parser"] }
+rcgen = { version = "0.13", features = ["pem"] }
 vls-core = { workspace = true }
 vls-persist = { workspace = true }
 vls-protocol-signer = { workspace = true }
 vls-protocol = { workspace = true }
 serde_json = "^1.0"
-thiserror = "1"
+thiserror = "2"
 cln-grpc = { workspace = true }
 chacha20poly1305 = { version = "0.10.1", optional = true }
 uuid = { version = "1.8.0", features = ["serde"] }
