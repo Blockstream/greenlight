@@ -20,7 +20,7 @@ pub struct Request {
     pubkey: Vec<u8>,
 
     // A signature by the caller's public key, authenticating the
-    // payload.
+    // versioned payload (URI, framed payload, and timestamp).
     signature: Vec<u8>,
 
     // The callers rune that is used to authorize the request.

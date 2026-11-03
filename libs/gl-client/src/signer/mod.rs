@@ -60,6 +60,8 @@ pub use backup::{
 };
 pub mod model;
 mod report;
+#[cfg(test)]
+mod request_context_tests;
 mod resolve;
 mod splice_policy;
 
@@ -597,14 +599,7 @@ impl Signer {
             .filter(|r| !r.pubkey.is_empty() && !r.signature.is_empty() && !r.rune.is_empty())
             .map(|r| {
                 let pk = UnparsedPublicKey::new(&ECDSA_P256_SHA256_FIXED, &r.pubkey);
-                let mut data = r.request.clone();
-
-                // If we have a timestamp associated we must add it to
-                // the payload being checked. Same thing happens on
-                // the client too.
-                if r.timestamp != 0 {
-                    data.put_u64(r.timestamp);
-                }
+                let data = crate::request_context::payload(&r.uri, &r.request, r.timestamp);
 
                 pk.verify(&data, &r.signature)
                     .map_err(|e| anyhow!("signature verification failed: {}", e))?;
@@ -874,6 +869,16 @@ impl Signer {
         for parsed_request in ctxrequests.iter() {
             match parsed_request {
                 model::Request::GlConfig(gl_config) => {
+                    // The node is untrusted; only a valid address for this
+                    // network may authorize on-chain destinations.
+                    if let Err(e) = gl_config
+                        .close_to_addr
+                        .parse::<lightning_signer::bitcoin::Address<_>>()
+                        .and_then(|a| a.require_network(self.network))
+                    {
+                        warn!("Ignoring Configure with invalid close_to_addr: {}", e);
+                        continue;
+                    }
                     let pubkey = PublicKey::from_slice(&self.id);
                     match pubkey {
                         Ok(p) => {

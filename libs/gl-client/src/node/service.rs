@@ -109,13 +109,11 @@ impl Service<Request<BoxBody>> for AuthService {
 
             let data = body.data().await.unwrap().unwrap();
 
-            // Copy used to create the signature (payload + associated data)
-            let mut buf = data.to_vec();
-
             // Associated data that is covered by the signature
             let mut ts = vec![];
             ts.put_u64(time.try_into()?);
-            buf.put_u64(time.try_into()?);
+
+            let buf = crate::request_context::payload(parts.uri.path(), &data, time.try_into()?);
 
             let rng = rand::SystemRandom::new();
             let pubkey = keypair.public_key().as_ref();
