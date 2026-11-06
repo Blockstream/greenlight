@@ -3,9 +3,9 @@ use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
 use gl_client::signer::{
-    RecoverableChannel, CLNBackup, CLNBackupOptions, Signer,
-    SignerBackupConfig, SignerBackupSnapshot, SignerBackupStrategy, SignerConfig,
-    StateSignatureMode, StateSignatureOverrideConfig,
+    CLNBackup, CLNBackupOptions, FeeBudgetLimits, RecoverableChannel, Signer, SignerBackupConfig,
+    SignerBackupSnapshot, SignerBackupStrategy, SignerConfig, StateSignatureMode,
+    StateSignatureOverrideConfig,
 };
 use lightning_signer::bitcoin::Network;
 use serde::Serialize;
@@ -87,6 +87,18 @@ pub enum Command {
         backup_strategy: Option<BackupStrategyArg>,
         #[arg(long = "backup-periodic-updates")]
         backup_periodic_updates: Option<u32>,
+        /// Routing fee allowance for small payments, in millisatoshi (whole-sat HTLC accounting).
+        #[arg(long, default_value_t = FeeBudgetLimits::default().payment_fee_exempt_msat)]
+        payment_fee_exempt_msat: u64,
+        /// Routing fee allowance in parts per million (5,000 ppm = 0.5%).
+        #[arg(long, default_value_t = FeeBudgetLimits::default().max_payment_fee_ppm)]
+        max_payment_fee_ppm: u32,
+        /// Hard miner-fee ceiling per commitment or signed local HTLC input, in satoshi.
+        #[arg(long, default_value_t = FeeBudgetLimits::default().max_commitment_fee_sat)]
+        max_commitment_fee_sat: u64,
+        /// Hard fee ceiling per mutual-close transaction, in satoshi.
+        #[arg(long, default_value_t = FeeBudgetLimits::default().max_mutual_close_fee_sat)]
+        max_mutual_close_fee_sat: u64,
     },
     /// Inspects a local signer backup file
     InspectBackup {
@@ -119,6 +131,10 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
             backup_path,
             backup_strategy,
             backup_periodic_updates,
+            payment_fee_exempt_msat,
+            max_payment_fee_ppm,
+            max_commitment_fee_sat,
+            max_mutual_close_fee_sat,
         } => {
             run_handler(
                 config,
@@ -128,6 +144,12 @@ pub async fn command_handler<P: AsRef<Path>>(cmd: Command, config: Config<P>) ->
                 backup_path,
                 backup_strategy,
                 backup_periodic_updates,
+                FeeBudgetLimits {
+                    payment_fee_exempt_msat,
+                    max_payment_fee_ppm,
+                    max_commitment_fee_sat,
+                    max_mutual_close_fee_sat,
+                },
             )
             .await
         }
@@ -323,6 +345,7 @@ async fn run_handler<P: AsRef<Path>>(
     backup_path: Option<PathBuf>,
     backup_strategy: Option<BackupStrategyArg>,
     backup_periodic_updates: Option<u32>,
+    fee_budget_limits: FeeBudgetLimits,
 ) -> Result<()> {
     // Check if we can find a seed file, if we can not find one, we need to register first.
     let seed_path = config.data_dir.as_ref().join(SEED_FILE_NAME);
@@ -371,6 +394,7 @@ async fn run_handler<P: AsRef<Path>>(
             state_signature_mode: state_signature_mode.into(),
             state_signature_override,
             backup,
+            fee_budget_limits,
         },
     )
     .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
@@ -459,6 +483,7 @@ mod tests {
                 backup_path,
                 backup_strategy,
                 backup_periodic_updates,
+                ..
             } => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
                 assert!(state_override.is_none());
@@ -482,6 +507,7 @@ mod tests {
                 backup_path,
                 backup_strategy,
                 backup_periodic_updates,
+                ..
             } => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Soft);
                 assert!(state_override.is_none());
@@ -512,6 +538,7 @@ mod tests {
                 backup_path,
                 backup_strategy,
                 backup_periodic_updates,
+                ..
             }) => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Off);
                 assert!(state_override.is_none());
@@ -544,6 +571,7 @@ mod tests {
                 backup_path,
                 backup_strategy,
                 backup_periodic_updates,
+                ..
             } => {
                 assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
                 assert_eq!(

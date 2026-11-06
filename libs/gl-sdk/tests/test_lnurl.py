@@ -10,10 +10,14 @@ Network topology:
 
 import asyncio
 
+import pytest
+from pyln import grpc as clnpb
+
 from gltesting.fixtures import *  # noqa: F401, F403
 from pyln.testing.utils import wait_for
 
 import glsdk
+import glclient
 
 
 MNEMONIC = (
@@ -28,7 +32,8 @@ def make_sdk_node(nobody_id, scheduler):
     """Register a GL node via the SDK and return it with signer running."""
     dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
     config = glsdk.Config().with_developer_cert(dev_cert)
-    node = glsdk.register(MNEMONIC, None, config)
+    config = config.with_network(glsdk.Network.REGTEST)
+    node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
     return node, config
 
 
@@ -254,3 +259,44 @@ def test_lnurl_pay_with_message_success_action(
         assert sa.message == "Thank you for your payment!"
     finally:
         sdk_node.disconnect()
+
+
+@pytest.fixture
+def funded_sdk_node(scheduler, nobody_id, node_factory, bitcoind, lnurl_service):
+    relay = fund_and_connect(node_factory, bitcoind, lnurl_service)
+    node, _ = make_sdk_node(nobody_id, scheduler)
+    credentials = glclient.Credentials.from_bytes(node.credentials())
+    gl_node = glclient.Scheduler(network="regtest", creds=credentials).node()
+    relay_id = relay.info["id"]
+
+    gl_node.connect_peer(relay_id, f"127.0.0.1:{relay.daemon.port}")
+    bitcoind.rpc.sendtoaddress(gl_node.new_address().bech32, 0.5)
+    bitcoind.generate_block(1, wait_for_mempool=1)
+    wait_for(lambda: len(gl_node.list_funds().outputs) > 0)
+    gl_node.fund_channel(
+        bytes.fromhex(relay_id),
+        clnpb.AmountOrAll(amount=clnpb.Amount(msat=CHANNEL_SATS * 1000)),
+    )
+    bitcoind.generate_block(6, wait_for_mempool=1)
+    wait_for(lambda: any(ch.state == 2 for ch in gl_node.list_peer_channels().channels))
+
+    try:
+        yield node
+    finally:
+        node.disconnect()
+
+
+@pytest.mark.parametrize("amountless", [False, True])
+def test_sdk_send(funded_sdk_node, lnurl_service, amountless):
+    amount_msat = 500_000_000
+    recipient = lnurl_service.cln_node
+    invoice = recipient.rpc.invoice(
+        "any" if amountless else amount_msat, "sdk-send", "desc"
+    )
+    result = funded_sdk_node.send(
+        invoice["bolt11"], amount_msat if amountless else None
+    )
+    assert result.status == glsdk.PayStatus.COMPLETE
+    assert result.amount_msat == amount_msat
+    assert result.amount_sent_msat - amount_msat <= 2_500_000
+    assert recipient.rpc.listinvoices("sdk-send")["invoices"][0]["status"] == "paid"

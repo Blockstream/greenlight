@@ -90,6 +90,18 @@ operations. An attacker that gains access to the node is unable to
 provide either these signatures and will therefore fail to convince
 the signer of its injected commands.
 
+## Signer Fee Budgets
+
+VLS enforces routing-fee allowances across channels and HTLC parts. Independent
+handler checks cap actual on-chain fees and remain active in permissive mode.
+See [Signer Fee Budgets](signer-fees.md) for configuration, defaults, and
+operational limitations.
+
+!!! warning "Permissive mode does not establish payment authorization"
+    Default builds can automatically approve a node-supplied invoice without
+    an authenticated client payment RPC. The fee allowance is relative to
+    that invoice and does not prove approval of its principal.
+
 ## Signer State Integrity
 
 The signer does not store its own state. The node stores the

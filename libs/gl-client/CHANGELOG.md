@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- Configure routing and on-chain fee limits with `FeeBudgetLimits` through `SignerConfig::fee_budget_limits`. See [signer fee budgets](../../docs/src/reference/signer-fees.md) for configuration, defaults, and limitations.
+
+### Changed
+
+- Enforce a routing-fee allowance per payment, shared across all parts and channels. The default is the larger of 1,000 sat and 0.5% of the payment amount. `pay`, direct-invoice `xpay`, and trampoline requests with fee limits above the allowance are rejected before HTLCs are offered.
+- Enforce on-chain fee limits of 100,000 sat per new commitment or signed local HTLC input, and 50,000 sat per mutual close by default. Previously accepted force-close commitments remain signable after limits are lowered.
+
+### Fixed
+
+- Fix missing invoice approvals for invoice-backed `sendpay` and direct-invoice `xpay`, including amountless invoices.
+- Allow retrying an amountless invoice with a different amount once the previous attempt has no outstanding HTLCs.
+- Fix node hangs caused by signer errors during invoice and keysend preapproval.
+
 ## [0.7.0] - 2026-10-12
 
 ### Added

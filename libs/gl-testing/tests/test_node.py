@@ -353,18 +353,12 @@ def test_vls_crash_repro(
     inv = l1.rpc.invoice(amount_msat=2499000, label="lbl", description="desc")
 
 
+@pytest.mark.parametrize("parts", [1, 2])
+@pytest.mark.parametrize("amountless", [False, True])
 def test_sendpay_signer(
-    clients: Clients, scheduler: Scheduler, node_factory, bitcoind
+    clients: Clients, scheduler: Scheduler, node_factory, bitcoind, parts, amountless
 ) -> None:
-    """Ensure that `sendpay` works with the signer.
-
-    `sendpay` injects HTLCs outside of the context of a payment, and
-    as such there is no indication that the HTLC was intended by the
-    user. By extracting invoices from `sendpay` commands in the
-    context, we should be able to tell VLS about a payment before it
-    gets the `commitment_signed` message with a spurious HTLC (from
-    its PoV).
-    """
+    """Record the invoice before SendPay returns and loses its signed context."""
     l1 = node_factory.get_node()
     c = clients.new()
     c.register(configure=True)
@@ -387,7 +381,7 @@ def test_sendpay_signer(
     )
     amount = 10**9
     chan = l1.rpc.listpeerchannels()["channels"][0]
-    inv = l1.rpc.invoice(amount, "lbl", "desc")
+    inv = l1.rpc.invoice("any" if amountless else amount, "lbl", "desc")
     payment_hash = bytes.fromhex(inv["payment_hash"])
     payment_secret = bytes.fromhex(inv["payment_secret"])
 
@@ -395,24 +389,71 @@ def test_sendpay_signer(
         clnpb.SendpayRoute(
             id=bytes.fromhex(l1.info["id"]),
             channel=chan["short_channel_id"],
-            amount_msat=clnpb.Amount(msat=amount),
+            amount_msat=clnpb.Amount(msat=amount // parts),
             delay=18,
         ),
     ]
 
-    req = clnpb.SendpayRequest(
-        route=route,
-        payment_hash=payment_hash,
-        bolt11=inv["bolt11"],
-        payment_secret=payment_secret,
-    )
+    if parts == 1 and not amountless:
+        for limits in [
+            {"maxfee": clnpb.Amount(msat=5_000_001)},
+            {"maxfeepercent": 1.0},
+            {"exemptfee": clnpb.Amount(msat=5_000_001)},
+        ]:
+            req = clnpb.PayRequest(bolt11=inv["bolt11"], **limits)
+            with pytest.raises(ValueError, match="(?i)invoice.*declin"):
+                gl1.inner.call("/cln.Node/Pay", req.SerializeToString())
+            wait_for(lambda: len(scheduler.debugger.reports) == 1)
+            assert "payment allowance" in scheduler.debugger.reports.pop().msg
+        assert not gl1.list_peer_channels(bytes.fromhex(l1.info["id"])).channels[0].htlcs
 
-    res = clnpb.SendpayResponse.FromString(
-        bytes(gl1.inner.call("/cln.Node/SendPay", req.SerializeToString()))
-    )
+    for part in range(1, parts + 1):
+        req = clnpb.SendpayRequest(
+            route=route,
+            payment_hash=payment_hash,
+            bolt11="LIGHTNING:" + inv["bolt11"].upper() if part == 1 else None,
+            payment_secret=payment_secret,
+            amount_msat=clnpb.Amount(msat=amount) if parts > 1 else None,
+            partid=part if parts > 1 else None,
+            groupid=1 if parts > 1 else None,
+        )
+        gl1.inner.call("/cln.Node/SendPay", req.SerializeToString())
 
-    req = clnpb.WaitsendpayRequest(payment_hash=payment_hash)
-    res = clnpb.WaitsendpayResponse.FromString(
-        bytes(gl1.inner.call("/cln.Node/WaitSendPay", req.SerializeToString()))
+    # SendPay has returned and its context is gone before waiting for settlement.
+    for part in range(1, parts + 1):
+        req = clnpb.WaitsendpayRequest(
+            payment_hash=payment_hash,
+            partid=part if parts > 1 else None,
+            groupid=1 if parts > 1 else None,
+            timeout=30,
+        )
+        res = clnpb.WaitsendpayResponse.FromString(
+            bytes(gl1.inner.call("/cln.Node/WaitSendPay", req.SerializeToString()))
+        )
+        assert res.amount_msat.msat == amount // parts
+    invoice = l1.rpc.listinvoices("lbl")["invoices"][0]
+    assert invoice["status"] == "paid"
+    assert int(invoice["amount_received_msat"]) == amount
+
+
+def test_expired_sendpay_preapproval_does_not_block_node(clients, scheduler):
+    c = clients.new()
+    c.register(configure=True)
+    handle = c.signer().run_in_thread()
+    node = c.node()
+    invoice = node.invoice(
+        clnpb.AmountOrAny(amount=clnpb.Amount(msat=42_000)),
+        "expired",
+        "desc",
+        expiry=0,
     )
-    print(res)
+    time.sleep(1)
+    request = clnpb.SendpayRequest(bolt11=invoice.bolt11, payment_hash=invoice.payment_hash)
+    with pytest.raises(ValueError, match="(?i)invoice.*declin"):
+        node.inner.call("/cln.Node/SendPay", request.SerializeToString())
+    wait_for(lambda: len(scheduler.debugger.reports) == 1)
+    assert "expired" in scheduler.debugger.reports.pop().msg.lower()
+    assert node.invoice(
+        clnpb.AmountOrAny(amount=clnpb.Amount(msat=42_000)), "live", "desc"
+    ).bolt11
+    handle.shutdown()

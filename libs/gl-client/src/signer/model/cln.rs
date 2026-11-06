@@ -35,6 +35,7 @@ pub fn decode_request(uri: &str, p: &[u8]) -> anyhow::Result<Request> {
             Request::ListTransactions(ListtransactionsRequest::decode(p)?)
         }
         "/cln.Node/Pay" => Request::Pay(PayRequest::decode(p)?),
+        "/cln.Node/Xpay" => Request::Xpay(XpayRequest::decode(p)?),
         "/cln.Node/ListNodes" => Request::ListNodes(ListnodesRequest::decode(p)?),
         "/cln.Node/WaitAnyInvoice" => Request::WaitAnyInvoice(WaitanyinvoiceRequest::decode(p)?),
         "/cln.Node/WaitInvoice" => Request::WaitInvoice(WaitinvoiceRequest::decode(p)?),

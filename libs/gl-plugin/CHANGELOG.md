@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Fixed
+
+- Use checked fee arithmetic for trampoline payments, rejecting invalid percentages and amount overflow.
+- Preapprove invoice-backed `sendpay` calls before offering HTLCs, while the signed request context is still available to the signer.
+
 ### Removed
 
 - Legacy client-side LSPS2 `htlc_accepted` hook — JIT channel fee handling is now performed natively by CLN

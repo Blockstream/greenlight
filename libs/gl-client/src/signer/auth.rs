@@ -5,6 +5,24 @@ use lightning_signer::invoice::Invoice;
 use std::str::FromStr;
 use vls_protocol_signer::approver::Approval;
 
+fn normalize_invoice(value: &str) -> String {
+    let normalized = value.to_lowercase();
+    normalized
+        .strip_prefix("lightning:")
+        .unwrap_or(&normalized)
+        .to_owned()
+}
+
+pub(super) fn parse_invoice(value: &str) -> anyhow::Result<Invoice> {
+    Invoice::from_str(&normalize_invoice(value))
+        .map_err(|e| anyhow::anyhow!("invalid payment invoice: {e}"))
+}
+
+pub(super) fn same_invoice(wire: &[u8], context: &str) -> bool {
+    std::str::from_utf8(wire)
+        .is_ok_and(|wire| normalize_invoice(wire) == normalize_invoice(context))
+}
+
 pub trait Authorizer {
     fn authorize(&self, requests: &Vec<Request>) -> Result<Vec<Approval>, Error>;
 }
@@ -15,23 +33,21 @@ impl Authorizer for GreenlightAuthorizer {
     fn authorize(&self, requests: &Vec<Request>) -> Result<Vec<Approval>, Error> {
         let mut approvals = Vec::new();
         for request in requests.iter() {
-            match request {
-                Request::Pay(req) => {
-                    let inv = req.bolt11.clone().to_lowercase();
-                    let inv = inv.strip_prefix("lightning:").unwrap_or(&inv);
-                    match Invoice::from_str(inv) {
-                        Ok(invoice) => {
-                            approvals.push(Approval::Invoice(invoice));
-                        }
-                        Err(e) => {
-                            return Err(crate::Error::IllegalArgument(format!(
-                                "Failed to parse invoice from Pay request: {:?}",
-                                e
-                            )));
-                        }
+            let invoice = match request {
+                Request::Pay(req) => Some(req.bolt11.as_str()),
+                Request::Xpay(req) => Some(req.invstring.as_str()),
+                Request::SendPay(req) => req.bolt11.as_deref(),
+                _ => None,
+            };
+            if let Some(invoice) = invoice {
+                match parse_invoice(invoice) {
+                    Ok(invoice) => approvals.push(Approval::Invoice(invoice)),
+                    Err(e) => {
+                        // One invalid pending command must not reject
+                        // unrelated signing requests in the same context.
+                        log::warn!("Skipping invalid invoice approval: {e:#}");
                     }
                 }
-                _ => {}
             }
         }
         Ok(approvals)
