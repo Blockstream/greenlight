@@ -26,7 +26,7 @@ tasks:
       GOBLEY_ROOT: target/gobley
     cmds:
       - cargo install --locked --git {{.GOBLEY_GIT}} --rev {{.GOBLEY_REV}} --root {{.GOBLEY_ROOT}} --bin gobley-uniffi-bindgen gobley-uniffi-bindgen
-      - "{{.GOBLEY_ROOT}}/bin/gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform"
+      - "{{.GOBLEY_ROOT}}/bin/gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/release/libglsdk.a --out-dir target/release/kotlin-multiplatform"
       - cp -a ./target/release/kotlin-multiplatform/* libs/gl-sdk-android/lib/src/
       - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-arm64
       - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-simulator-arm64
@@ -57,7 +57,7 @@ tasks:
     env: &sdk_env
       CARGO_PROFILE_RELEASE_PANIC: unwind
     cmds:
-      - cargo ndk -t {{.ARCH}}-linux-{{.ABI}} -o target/release/android/jniLibs build -p gl-sdk
+      - cargo ndk -t {{.ARCH}}-linux-{{.ABI}} -o target/release/android/jniLibs build --release -p gl-sdk
 
   ios:
     deps:
