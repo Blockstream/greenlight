@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Changed
+
+- **BREAKING**: RPC request-context signatures now cover the gRPC method, so a node can no longer present a signed request as a different RPC. Signers ignore contexts signed by older clients, so upgrade clients and signers together. See the security reference.
+
+### Fixed
+
+- Validate the `Configure` close address against the signer's network before adding it to the allowlist.
+
 ## [0.7.0] - 2026-10-12
 
 ### Added

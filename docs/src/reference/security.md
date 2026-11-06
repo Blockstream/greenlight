@@ -90,6 +90,42 @@ operations. An attacker that gains access to the node is unable to
 provide either these signatures and will therefore fail to convince
 the signer of its injected commands.
 
+### Request-context signatures
+
+The client signs the following bytes with ECDSA-P256/SHA256:
+
+```text
+"greenlight/request-context/v1\0"
+|| u64be(len(uri)) || uri
+|| u64be(len(frame)) || frame
+|| u64be(timestamp_ms)
+```
+
+The `uri` is the gRPC path, such as `/cln.Node/Pay`. The `frame` is the
+gRPC frame, including its 5-byte header. Covering the URI prevents the
+node from presenting a signed request as a different RPC with a compatible
+protobuf encoding. The timestamp is authenticated, but its freshness is
+not checked.
+
+The signer ignores any context that does not verify, including those signed
+by older clients. An ignored context authorizes nothing: an enforcing signer
+refuses operations that depend on it, and a `permissive` signer behaves as if
+it were absent. Upgrade clients and signers together.
+
+A `Configure` context cached before this format was introduced is ignored in
+the same way. If a signer already applied it, the close address stays
+allowlisted because the allowlist is part of the signer state. An ignored
+context cannot restore an address that was never applied or is missing from
+that state.
+
+Upgrade clients before allowing the first `Configure` call on a node with an
+updated signer. The plugin stores this request using a create-only datastore
+write, so a first call from an old client can cache an unverifiable context
+that a later `Configure` call cannot replace. Recovery requires removing the
+cached `glconf/request` entry and configuring again with an updated client.
+This is a configuration migration limitation, not a reason to accept a legacy
+signature as authorization.
+
 ## Signer State Integrity
 
 The signer does not store its own state. The node stores the

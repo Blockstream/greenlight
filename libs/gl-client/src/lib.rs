@@ -28,6 +28,8 @@ pub mod scheduler;
 /// move your funds.
 pub mod signer;
 
+mod request_context;
+
 pub mod metrics;
 pub mod persist;
 pub mod psbt;
