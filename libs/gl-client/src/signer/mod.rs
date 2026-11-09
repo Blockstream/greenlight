@@ -266,6 +266,17 @@ impl Signer {
         let mut policy =
             lightning_signer::policy::simple_validator::make_default_simple_policy(network);
 
+        // The default floor of 253 sat/kw (~1 sat/vB) is meant for stacks
+        // where the signer builds its own sweeps. In Greenlight all sweep
+        // transactions, including justice sweeps, are built by CLN, which
+        // applies its own backend-derived feerate floor and worth-it checks
+        // before requesting the signature. During quiet-fee periods CLN's
+        // estimates fall below 253 sat/kw, and the signer then hard-fails
+        // `SIGN_PENALTY_TO_US` with 'feerate below minimum', stranding the
+        // sweep. Keep a sanity floor that still rejects zero-fee or absurdly
+        // low txs but never contradicts CLN's own fee policy.
+        policy.min_feerate_per_kw = 75;
+
         policy.filter = PolicyFilter::default();
         policy.filter.merge(PolicyFilter {
             // TODO: Remove once we have fully switched over to zero-fee anchors

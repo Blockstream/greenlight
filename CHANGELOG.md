@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
  - Fixed `signmessage` hanging forever and blocking all subsequent signing operations. The signer refuses `SIGN_MESSAGE` requests by design, so the node now rejects the RPC with an `Unimplemented` ("not supported") error instead of forwarding it to the serial hsmd queue. ([#739](https://github.com/Blockstream/greenlight/issues/739))
+ - Fixed the signer rejecting justice-sweep signatures with a "feerate below minimum" policy failure when CLN builds sweeps at quiet-fee feerates below the 253 sat/kw default floor. In Greenlight CLN builds all sweep transactions and applies its own feerate floors, so the signer now uses a sanity-check floor of 75 sat/kw.
 
 ## [0.4.0] - 2026-05-21
 
