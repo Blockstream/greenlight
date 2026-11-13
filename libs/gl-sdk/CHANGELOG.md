@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Changed
+
+- iOS (Kotlin and Swift): a Rust panic in the SDK reaches the app as an exception instead of aborting it, as it already does on Android. The Android and iOS libraries unwind on panic, unlike the workspace's release profile.
+
+### Fixed
+
+- JVM (Kotlin): the `glsdk-jvm` artifact bundles the native library for macOS, Linux (glibc 2.17 or later) and Windows (no Visual C++ Redistributable needed), each on x86_64 and arm64. It shipped without one, so loading the SDK failed with `UnsatisfiedLinkError`.
+- Android: the native libraries are built in release mode. They were unoptimized debug builds with debug assertions, and the `arm64-v8a` `libglsdk.so` shrinks from 29.9 MB to 11.0 MB.
+
 ## [0.5.0] - 2026-10-12
 
 ### Added

@@ -1,5 +1,22 @@
 version: "3"
 
+vars:
+  # cargo-zigbuild and cargo-xwin cross build the Linux and Windows libraries bundled in the jvm jar
+  CARGO_ZIGBUILD_VERSION: 0.24.0
+  CARGO_XWIN_VERSION: 0.23.1
+  CROSS_TOOLS_ROOT: target/cross-tools
+  CROSS_TOOLS_BIN: "{{.ROOT_DIR}}/{{.CROSS_TOOLS_ROOT}}/bin"
+  # The Windows libraries link the C runtime statically, so they load without the Visual C++ Redistributable
+  WINDOWS_RUSTFLAGS: -C target-feature=+crt-static
+
+env:
+  # The MSVC CRT and Windows SDK cargo-xwin builds the Windows libraries with. An existing cargo-xwin cache
+  # is reused when it has the needed arches, whatever its versions, so each pair gets its own cache.
+  XWIN_CRT_VERSION: 14.44.17.14
+  XWIN_SDK_VERSION: 10.0.26100
+  XWIN_CACHE_DIR:
+    sh: echo "$HOME/Library/Caches/cargo-xwin/crt-$XWIN_CRT_VERSION-sdk-$XWIN_SDK_VERSION"
+
 tasks:
   android:
     deps:
@@ -15,6 +32,7 @@ tasks:
       - android
       - ios
       - ios-sim
+      - jvm
     vars:
       OS_NAME:
         sh: uname | tr '[:upper:]' '[:lower:]'
@@ -26,7 +44,7 @@ tasks:
       GOBLEY_ROOT: target/gobley
     cmds:
       - cargo install --locked --git {{.GOBLEY_GIT}} --rev {{.GOBLEY_REV}} --root {{.GOBLEY_ROOT}} --bin gobley-uniffi-bindgen gobley-uniffi-bindgen
-      - "{{.GOBLEY_ROOT}}/bin/gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/debug/libglsdk.a --out-dir target/release/kotlin-multiplatform"
+      - "{{.GOBLEY_ROOT}}/bin/gobley-uniffi-bindgen --config ./libs/gl-sdk/uniffi.kotlin-multiplatform.toml --library ./target/aarch64-linux-android/release/libglsdk.a --out-dir target/release/kotlin-multiplatform"
       - cp -a ./target/release/kotlin-multiplatform/* libs/gl-sdk-android/lib/src/
       - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-arm64
       - mkdir -p libs/gl-sdk-android/lib/src/lib/ios-simulator-arm64
@@ -52,8 +70,12 @@ tasks:
     vars:
       ABI: '{{index .MATCH 0}}'
       ARCH: '{{index .MATCH 1}}'
+    # The workspace's release profile aborts on panic. The SDK libraries unwind instead, so UniFFI
+    # hands a Rust panic to Kotlin or Swift as an exception rather than aborting the app.
+    env: &sdk_env
+      CARGO_PROFILE_RELEASE_PANIC: unwind
     cmds:
-      - cargo ndk -t {{.ARCH}}-linux-{{.ABI}} -o target/release/android/jniLibs build -p gl-sdk
+      - cargo ndk -t {{.ARCH}}-linux-{{.ABI}} -o target/release/android/jniLibs build --release -p gl-sdk
 
   ios:
     deps:
@@ -70,11 +92,105 @@ tasks:
   ios-apple-*:
     vars:
       ARCH: '{{ index .MATCH 0 }}'
+    env: *sdk_env
     cmds:
       - IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target {{.ARCH}}-apple-ios -p gl-sdk
 
   ios-sim-apple-*:
     vars:
       ARCH: '{{ index .MATCH 0 }}'
+    env: *sdk_env
     cmds:
       - IPHONEOS_DEPLOYMENT_TARGET=12.0 MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target {{.ARCH}}-apple-ios-sim -p gl-sdk
+
+  # Builds the desktop libraries and puts each in the jvm resources directory named after its
+  # platform, for ex. darwin-aarch64, where JNA looks for it
+  jvm:
+    deps:
+      - jvm-darwin-aarch64
+      - jvm-darwin-x86_64
+      - jvm-linux-aarch64
+      - jvm-linux-x86_64
+      - jvm-windows
+    vars:
+      RESOURCES: libs/gl-sdk-android/lib/src/jvmMain/resources
+    cmds:
+      - mkdir -p {{.RESOURCES}}/darwin-aarch64 {{.RESOURCES}}/darwin-x86-64 {{.RESOURCES}}/linux-aarch64 {{.RESOURCES}}/linux-x86-64 {{.RESOURCES}}/win32-aarch64 {{.RESOURCES}}/win32-x86-64
+      - cp -a target/aarch64-apple-darwin/release/libglsdk.dylib {{.RESOURCES}}/darwin-aarch64/
+      - cp -a target/x86_64-apple-darwin/release/libglsdk.dylib {{.RESOURCES}}/darwin-x86-64/
+      - cp -a target/aarch64-unknown-linux-gnu/release/libglsdk.so {{.RESOURCES}}/linux-aarch64/
+      - cp -a target/x86_64-unknown-linux-gnu/release/libglsdk.so {{.RESOURCES}}/linux-x86-64/
+      - cp -a target/aarch64-pc-windows-msvc/release/glsdk.dll {{.RESOURCES}}/win32-aarch64/
+      - cp -a target/x86_64-pc-windows-msvc/release/glsdk.dll {{.RESOURCES}}/win32-x86-64/
+
+  # Installs the cargo subcommands that cross build the Linux and Windows libraries. cargo-zigbuild
+  # also requires zig (`brew install zig`), and cargo-xwin the llvm-ar of the llvm-tools component
+  # (`rustup component add llvm-tools`), which it links as llvm-lib.
+  cross-tools:
+    run: once
+    cmds:
+      - cargo install --locked --root {{.CROSS_TOOLS_ROOT}} cargo-zigbuild@{{.CARGO_ZIGBUILD_VERSION}} cargo-xwin@{{.CARGO_XWIN_VERSION}}
+
+  # Builds a macOS dylib. cargo strips with rust-objcopy, which in rustc 1.91 does not pad the string
+  # table to 8 bytes after an indirect symbol table with an odd number of entries, and dyld on macOS 27
+  # refuses to load the resulting dylib: Apple's strip is used instead, by its full path, as the strip
+  # first on PATH can be llvm-strip, with the same bug, or GNU strip, without Mach-O support. It removes
+  # the local symbols too, loading the library needs only the exported ones.
+  jvm-darwin-*:
+    vars:
+      ARCH: '{{ index .MATCH 0 }}'
+    env: *sdk_env
+    cmds:
+      - MACOSX_DEPLOYMENT_TARGET=11.0 CARGO_PROFILE_RELEASE_STRIP=false cargo build --release --target {{.ARCH}}-apple-darwin -p gl-sdk
+      - /usr/bin/strip -x target/{{.ARCH}}-apple-darwin/release/libglsdk.dylib
+
+  # Cross builds a Linux library with zig, linking glibc 2.17 so it loads on older distributions too
+  jvm-linux-*:
+    vars:
+      ARCH: '{{ index .MATCH 0 }}'
+    deps:
+      - cross-tools
+    env: *sdk_env
+    cmds:
+      - PATH="{{.CROSS_TOOLS_BIN}}:$PATH" cargo zigbuild --release --target {{.ARCH}}-unknown-linux-gnu.2.17 -p gl-sdk
+
+  # Builds the Windows libraries one after the other: every cargo-xwin run recreates the clang-cl
+  # symlink in its shared cache, and two runs at once fail with "Failed to setup clang-cl symlink"
+  jvm-windows:
+    cmds:
+      - task: jvm-windows-x86_64
+      - task: jvm-windows-aarch64
+
+  # Cross builds the Windows x86_64 library, the MSVC CRT and Windows SDK are downloaded on first use.
+  # The static CRT flag is appended to RUSTFLAGS: cargo-xwin, like cargo, ignores the target rustflags
+  # when RUSTFLAGS is set, so a caller's RUSTFLAGS would drop it.
+  jvm-windows-x86_64:
+    deps:
+      - cross-tools
+    env: *sdk_env
+    cmds:
+      - PATH="{{.CROSS_TOOLS_BIN}}:$PATH" RUSTFLAGS="${RUSTFLAGS:-} {{.WINDOWS_RUSTFLAGS}}" cargo xwin build --release --target x86_64-pc-windows-msvc -p gl-sdk
+
+  # Cross builds the Windows arm64 library, the MSVC CRT and Windows SDK are downloaded on first use.
+  # On this target ring compiles its C code with clang, which does not take the clang-cl /imsvc flags
+  # cargo-xwin gives the SDK headers with: they are given in INCLUDE instead, where clang and clang-cl
+  # both find them.
+  jvm-windows-aarch64:
+    deps:
+      - cross-tools
+    env: *sdk_env
+    cmds:
+      - |
+        set -eu -o pipefail
+        export PATH="{{.CROSS_TOOLS_BIN}}:$PATH"
+        # Appended to RUSTFLAGS as on x86_64: cargo xwin env folds RUSTFLAGS, the caller's included,
+        # into the target rustflags
+        export RUSTFLAGS="${RUSTFLAGS:-} {{.WINDOWS_RUSTFLAGS}}"
+        # Assigned first, so a failing cargo xwin env stops the script: eval would ignore its exit status
+        xwin_env=$(cargo xwin env --target aarch64-pc-windows-msvc)
+        eval "$xwin_env"
+        # cargo xwin env exports an empty RUSTFLAGS, which cargo would use instead of the target rustflags
+        unset RUSTFLAGS
+        export INCLUDE=$(echo "$CFLAGS_aarch64_pc_windows_msvc" | grep -o '/imsvc [^ ]*' | cut -d' ' -f2 | paste -sd ';' -)
+        export CFLAGS_aarch64_pc_windows_msvc=$(echo "$CFLAGS_aarch64_pc_windows_msvc" | sed -E 's#/imsvc [^ ]+##g')
+        cargo build --release --target aarch64-pc-windows-msvc -p gl-sdk
