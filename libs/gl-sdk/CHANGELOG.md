@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - iOS (Kotlin and Swift): a Rust panic in the SDK reaches the app as an exception instead of aborting it, as it already does on Android. The Android and iOS libraries unwind on panic, unlike the workspace's release profile.
 
+### Security
+
+- JVM (Kotlin): the native library bundled in the `glsdk-jvm` artifact is loaded by its absolute path. JNA looked the library up by name first, so a library with the same name in the working directory (macOS, Windows), on `PATH` (Windows) or in `LD_LIBRARY_PATH` was loaded instead and received every call into the SDK, the mnemonic included.
+
 ### Fixed
 
 - JVM (Kotlin): the `glsdk-jvm` artifact bundles the native library for macOS, Linux (glibc 2.17 or later) and Windows (no Visual C++ Redistributable needed), each on x86_64 and arm64. It shipped without one, so loading the SDK failed with `UnsatisfiedLinkError`.
