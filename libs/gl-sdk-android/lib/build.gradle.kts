@@ -31,7 +31,15 @@ kotlin {
         }
     }
 
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+            // Compile against the Java 17 API, not the one of the JDK running Gradle
+            freeCompilerArgs.add("-Xjdk-release=17")
+        }
+        // JNA loads the native libs with System::load, a restricted method that warns on Java 24 or later
+        testRuns["test"].executionTask.configure { jvmArgs("--enable-native-access=ALL-UNNAMED") }
+    }
 
     val xcf = XCFramework()
 
