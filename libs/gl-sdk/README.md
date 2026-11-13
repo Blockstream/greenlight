@@ -105,6 +105,31 @@ perl -pi -e 's/NodeBuilder::register\(/NodeBuilder::register_node\(/g; s/Schedul
 
 The `task sdk:bindings-cpp` command handles all of the above automatically, including platform detection.
 
+## Kotlin Multiplatform
+
+Build the Kotlin Multiplatform package (Android, iOS, iOS simulator and JVM) in `libs/gl-sdk-android`:
+
+```bash
+task build:kotlin
+```
+
+The JVM artifact bundles the native library for macOS, Linux and Windows, each on x86_64 and arm64.
+They are built on macOS: the Linux libraries are cross compiled with [cargo-zigbuild](https://github.com/rust-cross/cargo-zigbuild),
+which requires zig, and the Windows libraries with [cargo-xwin](https://github.com/rust-cross/cargo-xwin),
+which archives with the `llvm-ar` of the `llvm-tools` component:
+
+```bash
+brew install zig
+rustup component add llvm-tools
+```
+
+On first use cargo-xwin downloads the MSVC CRT and the Windows SDK (about 1.1 GB, cached in `~/Library/Caches/cargo-xwin`).
+Building the Windows libraries accepts their [license](https://go.microsoft.com/fwlink/?LinkId=2086102).
+
+### JVM
+
+JNA loads the native library with `System::load`, a restricted method: on Java 24 or later it prints a warning unless the application runs with `--enable-native-access=ALL-UNNAMED`.
+
 ## Synchronous API Design
 
 The entire public API exposed by the SDK through UniFFI is

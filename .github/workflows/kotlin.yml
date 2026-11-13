@@ -25,9 +25,11 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: dtolnay/rust-toolchain@1.91.0
         with:
-          targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
+          targets: x86_64-linux-android, aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios, aarch64-apple-darwin, x86_64-apple-darwin, aarch64-unknown-linux-gnu, x86_64-unknown-linux-gnu, aarch64-pc-windows-msvc, x86_64-pc-windows-msvc
+          # cargo-xwin archives the Windows libraries with the llvm-ar of llvm-tools
+          components: llvm-tools
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -42,6 +44,11 @@ jobs:
         run: |
           cargo install cargo-ndk --version 3.5.4
 
+      # cargo-zigbuild cross builds the Linux libraries of the jvm jar with zig
+      - name: "Install zig"
+        run: |
+          brew install zig
+
       - name: "Build Kotlin Multiplatform bindings"
         run: |
           /usr/local/bin/task build:kotlin
@@ -50,6 +57,11 @@ jobs:
         working-directory: libs/gl-sdk-android
         run: |
           ./gradlew :lib:assemble --console=plain
+
+      - name: "Test JVM library"
+        working-directory: libs/gl-sdk-android
+        run: |
+          ./gradlew :lib:jvmTest --console=plain
 
       - name: "Puiblish to Maven"
         working-directory: libs/gl-sdk-android
