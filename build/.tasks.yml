@@ -38,9 +38,13 @@ tasks:
         sh: uname | tr '[:upper:]' '[:lower:]'
       # gobley 0.3.7 misreads u8/u16 return values on 32-bit ARM Android, which fails the UniFFI
       # checksum check once the app is AOT-compiled (https://github.com/gobley/gobley/issues/252).
-      # This revision carries the fix proposed upstream in https://github.com/gobley/gobley/pull/297.
+      # On the JVM it looks the library up by name in the system library paths, the working directory
+      # included on macOS and Windows, before the one bundled in the jar, so a library placed there
+      # would be loaded instead. This revision of the fork's main branch carries the fixes proposed
+      # upstream in https://github.com/gobley/gobley/pull/297 and, for the JVM library lookup, in
+      # https://github.com/gobley/gobley/pull/300.
       GOBLEY_GIT: https://github.com/angelix/gobley
-      GOBLEY_REV: 40cef27c59829ca97a71945928028f9ab4880305
+      GOBLEY_REV: 2af41b487abc4546a5eebdc70f01c0c42855bc7c
       GOBLEY_ROOT: target/gobley
     cmds:
       - cargo install --locked --git {{.GOBLEY_GIT}} --rev {{.GOBLEY_REV}} --root {{.GOBLEY_ROOT}} --bin gobley-uniffi-bindgen gobley-uniffi-bindgen
