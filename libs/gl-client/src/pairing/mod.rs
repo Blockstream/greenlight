@@ -9,7 +9,7 @@ pub enum Error {
     #[error(transparent)]
     TransportError(#[from] tonic::transport::Error),
     #[error(transparent)]
-    X509Error(#[from] rcgen::RcgenError),
+    X509Error(#[from] rcgen::Error),
     #[error("could not build client: {0}")]
     BuildClientError(String),
     #[error(transparent)]

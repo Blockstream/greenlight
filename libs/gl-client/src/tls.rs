@@ -160,7 +160,11 @@ pub fn generate_self_signed_device_cert(
     device: &str,
     subject_alt_names: Vec<String>,
     key_pair: Option<rcgen::KeyPair>,
-) -> rcgen::Certificate {
+) -> DeviceCert {
+    // Start from a fresh key pair unless one was handed to us.
+    let key_pair =
+        key_pair.unwrap_or_else(|| rcgen::KeyPair::generate().expect("could not generate keypair"));
+
     // Configure the certificate.
     let mut params = cert_params_from_template(subject_alt_names);
 
@@ -172,15 +176,58 @@ pub fn generate_self_signed_device_cert(
         format!("/users/{}/{}", node_id, device),
     );
 
-    // Start from an empty key pair.
-    params.key_pair = key_pair;
-    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+    // self_signed consumes the params, but we keep them around to be
+    // able to generate the registration CSR later.
+    let cert = params
+        .clone()
+        .self_signed(&key_pair)
+        .expect("could not self-sign the device certificate");
 
-    rcgen::Certificate::from_params(params).unwrap()
+    // A CSR cannot carry the CA flag at all, and rcgen refuses to
+    // serialize one with an explicit is_ca setting. The leaf-ness is
+    // enforced by the signing profile on the scheduler side.
+    params.is_ca = rcgen::IsCa::NoCa;
+
+    DeviceCert {
+        params,
+        key_pair,
+        cert,
+    }
+}
+
+/// A self-signed device certificate bundled with the key pair it was
+/// created for. rcgen 0.13 no longer keeps the key pair inside the
+/// certificate, so we carry both plus the parameters that are needed
+/// to produce the registration CSR.
+pub struct DeviceCert {
+    params: rcgen::CertificateParams,
+    key_pair: rcgen::KeyPair,
+    cert: rcgen::Certificate,
+}
+
+impl DeviceCert {
+    pub fn get_key_pair(&self) -> &rcgen::KeyPair {
+        &self.key_pair
+    }
+
+    /// PEM of the PKCS#10 certificate signing request, signed with the
+    /// device key, as sent to the scheduler during registration.
+    pub fn serialize_request_pem(&self) -> Result<String, rcgen::Error> {
+        Ok(self.params.serialize_request(&self.key_pair)?.pem()?)
+    }
+
+    pub fn serialize_pem(&self) -> Result<String, rcgen::Error> {
+        Ok(self.cert.pem())
+    }
+
+    pub fn serialize_private_key_pem(&self) -> String {
+        self.key_pair.serialize_pem()
+    }
 }
 
 fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::CertificateParams {
-    let mut params = rcgen::CertificateParams::new(subject_alt_names);
+    let mut params = rcgen::CertificateParams::new(subject_alt_names)
+        .expect("could not create certificate parameters");
 
     // Certificate can be used to issue unlimited sub certificates for devices.
     params
@@ -204,7 +251,7 @@ fn cert_params_from_template(subject_alt_names: Vec<String>) -> rcgen::Certifica
 }
 
 pub fn generate_ecdsa_key_pair() -> rcgen::KeyPair {
-    rcgen::KeyPair::generate(&rcgen::PKCS_ECDSA_P256_SHA256).unwrap()
+    rcgen::KeyPair::generate().unwrap()
 }
 
 #[cfg(test)]
@@ -229,7 +276,7 @@ pub mod tests {
     #[test]
     fn test_generate_self_signed_device_cert_from_pem() {
         let kp = generate_ecdsa_key_pair();
-        let keys = KeyPair::from_der(kp.serialized_der()).unwrap();
+        let keys = KeyPair::from_pem(&kp.serialize_pem()).unwrap();
         let cert = generate_self_signed_device_cert(
             "mynodeid",
             "device",
