@@ -130,9 +130,12 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> 
                 .map_err(into_approve_pairing_error)?
                 .remove(0)
         };
-        let kp =
-            EcdsaKeyPair::from_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key.as_ref())
-                .map_err(into_approve_pairing_error)?;
+        let kp = EcdsaKeyPair::from_pkcs8(
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+            key.as_ref(),
+            &rand::SystemRandom::new(),
+        )
+        .map_err(into_approve_pairing_error)?;
         let rng = rand::SystemRandom::new();
         let sig = kp
             .sign(&rng, &buf)

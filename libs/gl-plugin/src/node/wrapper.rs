@@ -1400,8 +1400,13 @@ impl WrappedNodeServer {
     }
 
     async fn get_routehints(&self, rpc: &mut cln_rpc::ClnRpc) -> Result<Vec<pb::Routehint>, Error> {
-        // Get a map of active channels to peers with a status of
-        // "CHANNELD_NORMAL", and it aliases.
+        // Get a map of available channels to peers with a status of
+        // "CHANNELD_NORMAL", and it aliases. Channels that are not
+        // available (`crate::channels::is_channel_available`, e.g.,
+        // dangling channel opens or abandoned JIT channels that may have
+        // been dropped by the LSP server) must never show up as
+        // routehints, otherwise incoming payments are routed into a
+        // black hole.
         // Due to a bug in `listincoming` in CLN we get the real
         // `short_channel_id`, whereas we're supposed to use the remote alias if
         // the channel is unannounced. This patches the issue in GL, and should
@@ -1416,7 +1421,14 @@ impl WrappedNodeServer {
             _ => res
                 .channels
                 .into_iter()
-                .filter(|c| c.peer_connected && c.state == ChannelState::CHANNELD_NORMAL)
+                .filter(|c| {
+                    c.peer_connected
+                        && crate::channels::is_channel_available(
+                            c.state == ChannelState::CHANNELD_NORMAL,
+                            c.short_channel_id.is_some(),
+                            c.max_to_us_msat.as_ref().map(|a| a.msat()).unwrap_or(0),
+                        )
+                })
                 .filter_map(|c| {
                     c.short_channel_id.map(|scid| {
                         let value = c

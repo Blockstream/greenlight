@@ -1,9 +1,9 @@
 use cln_rpc::{
     model::{
-        requests::{ConnectRequest, GetinfoRequest, GetrouteRequest, ListpeerchannelsRequest},
+        requests::{ConnectRequest, GetrouteRequest, ListpeerchannelsRequest},
         responses::GetrouteResponse,
     },
-    primitives::{Amount, PublicKey, ShortChannelId},
+    primitives::{Amount, ChannelState, PublicKey, ShortChannelId},
     ClnRpc,
 };
 use std::{
@@ -87,7 +87,6 @@ pub struct AwaitableChannel {
     peer_id: PublicKey,
     rpc_path: PathBuf,
 
-    version: Option<String>,
     peer_connected: bool,
     channel_ready: bool,
     route_found: bool,
@@ -95,7 +94,6 @@ pub struct AwaitableChannel {
     last_check: Option<Instant>,
     rpc_call_delay: Duration,
 
-    get_version: Option<Pin<Box<dyn Future<Output = Result<String, Error>> + Send>>>,
     ensure_peer_connection: Option<Pin<Box<dyn Future<Output = Result<(), Error>> + Send>>>,
     billboard: Option<Pin<Box<dyn Future<Output = Result<Vec<String>, Error>> + Send>>>,
     get_route: Option<Pin<Box<dyn Future<Output = Result<GetrouteResponse, Error>> + Send>>>,
@@ -116,22 +114,6 @@ impl Future for AwaitableChannel {
             let elapsed = now.duration_since(last_check);
             if elapsed < self.rpc_call_delay {
                 return std::task::Poll::Pending;
-            }
-        }
-
-        // Get version if not set already.
-        if self.version.is_none() {
-            if self.get_version.is_none() {
-                let fut = Box::pin(get_version(self.rpc_path.clone()));
-                self.get_version = Some(fut);
-            }
-
-            let get_version = self.get_version.as_mut().unwrap();
-            match get_version.as_mut().poll(cx) {
-                std::task::Poll::Ready(v) => {
-                    self.version = Some(v?);
-                }
-                std::task::Poll::Pending => return std::task::Poll::Pending,
             }
         }
 
@@ -161,7 +143,6 @@ impl Future for AwaitableChannel {
             if self.billboard.is_none() {
                 let fut = Box::pin(billboard(
                     self.rpc_path.clone(),
-                    self.version.as_ref().unwrap().clone(),
                     self.peer_id.clone(),
                     self.scid,
                 ));
@@ -216,7 +197,6 @@ impl Future for AwaitableChannel {
         if self.spendable_msat.is_none() {
             let fut = Box::pin(spendable_msat(
                 self.rpc_path.clone(),
-                self.version.as_ref().unwrap().clone(),
                 self.peer_id.clone(),
                 self.scid,
             ));
@@ -237,13 +217,11 @@ impl AwaitableChannel {
             peer_id,
             scid,
             rpc_path,
-            version: None,
             peer_connected: false,
             channel_ready: false,
             route_found: false,
             last_check: None,
             rpc_call_delay: Duration::from_millis(RPC_CALL_DELAY_MSEC),
-            get_version: None,
             ensure_peer_connection: None,
             billboard: None,
             get_route: None,
@@ -294,42 +272,37 @@ async fn ensure_peer_connection(
     Ok(())
 }
 
-async fn get_version(rpc_path: impl AsRef<Path>) -> Result<String, Error> {
-    let mut rpc = connect(rpc_path).await?;
-    let info = rpc.call_typed(&GetinfoRequest {}).await?;
-    Ok(info.version)
-}
-
 async fn billboard(
     rpc_path: impl AsRef<Path>,
-    version: String,
     peer_id: PublicKey,
     scid: ShortChannelId,
 ) -> Result<Vec<String>, Error> {
     let mut rpc = connect(rpc_path).await?;
-    if *version >= *"v23.05gl1" {
-        Ok(rpc
-            .call_typed(&ListpeerchannelsRequest { id: Some(peer_id) })
-            .await
-            .map_err(|e| Error::Rpc(e))?
-            .channels
-            .into_iter()
-            .filter(|c| {
-                c.short_channel_id == Some(scid)
-                    || c.alias.clone().and_then(|a| a.local) == Some(scid)
-            })
-            .nth(0)
-            .ok_or(Error::Channel(
-                "Could not find the channel in listpeerchannels",
-            ))?
-            .status
-            .ok_or(Error::Channel("Status not found"))?)
-    } else {
-        return Err(Error::Service(format!(
-            "Not supported in this version of core-lightning: {}, need at least v23.05gl1",
-            version,
-        )));
+    let channel = rpc
+        .call_typed(&ListpeerchannelsRequest { id: Some(peer_id) })
+        .await
+        .map_err(|e| Error::Rpc(e))?
+        .channels
+        .into_iter()
+        .filter(|c| {
+            c.short_channel_id == Some(scid) || c.alias.clone().and_then(|a| a.local) == Some(scid)
+        })
+        .nth(0)
+        .ok_or(Error::Channel(
+            "Could not find the channel in listpeerchannels",
+        ))?;
+
+    // A channel that is not (or no longer) in `CHANNELD_NORMAL` is
+    // opening, being closed, force-closed or abandoned: it will never
+    // report "ready" again, so abort waiting for it instead of
+    // spinning until the wait deadline expires.
+    if channel.state != ChannelState::CHANNELD_NORMAL {
+        return Err(Error::Channel(
+            "Channel is not in CHANNELD_NORMAL state, it will not become ready",
+        ));
     }
+
+    channel.status.ok_or(Error::Channel("Status not found"))
 }
 
 async fn get_route(
@@ -353,34 +326,27 @@ async fn get_route(
 
 async fn spendable_msat(
     rpc_path: impl AsRef<Path>,
-    version: String,
     peer_id: PublicKey,
     scid: ShortChannelId,
 ) -> Result<Amount, Error> {
     let mut rpc = connect(rpc_path).await?;
-    if *version >= *"v23.05gl1" {
-        Ok(rpc
-            .call_typed(&ListpeerchannelsRequest { id: Some(peer_id) })
-            .await
-            .map_err(|e| Error::Rpc(e))?
-            .channels
-            .into_iter()
-            .filter(|c| {
-                c.short_channel_id == Some(scid)
-                    || c.alias.clone().and_then(|a| a.local) == Some(scid)
-            })
-            .nth(0)
-            .ok_or(Error::Channel(
-                "Could not find the channel in listpeerchannels",
-            ))?
-            .spendable_msat
-            .ok_or(Error::Channel("No amount found"))?)
-    } else {
-        return Err(Error::Service(format!(
-            "Not supported in this version of core-lightning: {}, need at least v23.05gl1",
-            version,
-        )));
-    }
+    let channel = rpc
+        .call_typed(&ListpeerchannelsRequest { id: Some(peer_id) })
+        .await
+        .map_err(|e| Error::Rpc(e))?
+        .channels
+        .into_iter()
+        .filter(|c| {
+            c.short_channel_id == Some(scid) || c.alias.clone().and_then(|a| a.local) == Some(scid)
+        })
+        .nth(0)
+        .ok_or(Error::Channel(
+            "Could not find the channel in listpeerchannels",
+        ))?;
+
+    channel
+        .spendable_msat
+        .ok_or(Error::Channel("No amount found"))
 }
 
 pub fn assert_send<T: Send>(_: T) {}

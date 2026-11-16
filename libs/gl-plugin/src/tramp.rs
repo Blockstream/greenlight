@@ -1,7 +1,7 @@
 use crate::awaitables::{AwaitableChannel, AwaitablePeer, Error as AwaitablePeerError};
 use crate::pb;
 use cln_rpc::{
-    primitives::{Amount, PublicKey, ShortChannelId},
+    primitives::{Amount, ChannelState, PublicKey, ShortChannelId},
     ClnRpc, RpcError,
 };
 use futures::{future::join_all, FutureExt};
@@ -400,6 +400,23 @@ pub async fn trampolinepay(
         .channels
         .into_iter()
         .filter_map(|ch| {
+            // Skip channels we can neither use nor wait for: never
+            // funded (`max_to_us_msat == 0`) and never confirmed (no
+            // scid) channels are dangling channel opens that the LSP
+            // server may have dropped (e.g., abandoned JIT chan-
+            // nels), awaiting them would stall the payment until the
+            // deadline. See `crate::channels::is_channel_available`.
+            if !crate::channels::is_channel_available(
+                ch.state == ChannelState::CHANNELD_NORMAL,
+                ch.short_channel_id.is_some(),
+                ch.max_to_us_msat.as_ref().map(|a| a.msat()).unwrap_or(0),
+            ) {
+                debug!(
+                    "Skipping unavailable channel with peer {}: state={:?}, scid={:?}, max_to_us_msat={:?}",
+                    ch.peer_id, ch.state, ch.short_channel_id, ch.max_to_us_msat
+                );
+                return None;
+            }
             let short_channel_id = ch.short_channel_id.or(ch.alias.and_then(|a| a.local));
             let short_channel_id = match short_channel_id {
                 Some(scid) => scid,

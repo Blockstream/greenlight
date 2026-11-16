@@ -39,7 +39,11 @@ impl AuthLayer {
             .remove(0)
         };
 
-        match EcdsaKeyPair::from_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key.as_ref()) {
+        match EcdsaKeyPair::from_pkcs8(
+            &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+            key.as_ref(),
+            &rand::SystemRandom::new(),
+        ) {
             Ok(_) => trace!("Successfully decoded keypair from PEM string"),
             Err(e) => return Err(anyhow!("Could not decide keypair from PEM string: {}", e)),
         };
@@ -89,6 +93,7 @@ impl Service<Request<BoxBody>> for AuthService {
         let keypair = EcdsaKeyPair::from_pkcs8(
             &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
             self.key.as_ref(),
+            &rand::SystemRandom::new(),
         )
         .unwrap();
 
