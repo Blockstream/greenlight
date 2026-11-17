@@ -842,7 +842,12 @@ impl Signer {
                     warn!(
                         "Rejected request {} with error: {}. State: {:?}",
                         hex_req, e, signer_state,
-                    )
+                    );
+                    if !signer_state.is_empty() {
+                        // The node advances its delta baseline on send. Request a full
+                        // snapshot on reconnect when we discarded incoming state.
+                        return Err(e);
+                    }
                 }
             };
         }
@@ -1456,6 +1461,7 @@ impl Signer {
                 .await
             {
                 warn!("Error running against node: {e}");
+                sleep(Duration::from_secs(1)).await;
             }
         }
     }
