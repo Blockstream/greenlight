@@ -400,6 +400,7 @@ mod tests {
             vec![1; 32],
             Network::Bitcoin,
             crate::credentials::Nobody::default(),
+            Arc::new(super::super::device_state::MemoryDeviceStorage::default()),
         )
         .unwrap();
         let node = signer.handler().unwrap().node().clone();

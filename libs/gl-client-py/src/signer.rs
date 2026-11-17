@@ -44,12 +44,14 @@ impl Signer {
             }
         };
         let device_storage: Option<Arc<dyn DeviceStorage>> = match state_signature_mode {
-            StateSignatureMode::Soft => {
+            StateSignatureMode::Hard | StateSignatureMode::Soft => {
                 let path = device_storage_path
                     .as_deref()
                     .filter(|path| !path.is_empty())
                     .ok_or_else(|| {
-                        PyValueError::new_err("Soft mode requires device_storage_path")
+                        PyValueError::new_err(
+                            "Hard and Soft modes require a nonempty device_storage_path",
+                        )
                     })?;
                 Some(Arc::new(FileDeviceStorage::new(path).map_err(|e| {
                     PyValueError::new_err(format!("opening device storage: {e:#}"))

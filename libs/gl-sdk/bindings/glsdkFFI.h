@@ -589,12 +589,12 @@ void uniffi_glsdk_fn_free_signer(void*_Nonnull ptr, RustCallStatus *_Nonnull out
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW
-void*_Nonnull uniffi_glsdk_fn_constructor_signer_new(RustBuffer phrase, RustCallStatus *_Nonnull out_status
+void*_Nonnull uniffi_glsdk_fn_constructor_signer_new(RustBuffer phrase, RustBuffer device_storage_path, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED
-void*_Nonnull uniffi_glsdk_fn_constructor_signer_new_from_seed(RustBuffer seed, RustCallStatus *_Nonnull out_status
+void*_Nonnull uniffi_glsdk_fn_constructor_signer_new_from_seed(RustBuffer seed, RustBuffer device_storage_path, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED_WITH_CONFIG

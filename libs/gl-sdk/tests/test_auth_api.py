@@ -47,102 +47,84 @@ class TestConfig:
 class TestRegister:
     """Test the register() free function."""
 
-    def test_register_returns_node(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+    def test_register_returns_node(self, scheduler, sdk_config):
+        node = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         assert node is not None
         assert isinstance(node, glsdk.Node)
         node.disconnect()
 
-    def test_register_credentials_roundtrip(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+    def test_register_credentials_roundtrip(self, scheduler, sdk_config):
+        node = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         creds = node.credentials()
         assert isinstance(creds, bytes)
         assert len(creds) > 0
         node.disconnect()
 
-    def test_register_bad_mnemonic(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_register_bad_mnemonic(self, scheduler, sdk_config):
         with pytest.raises(glsdk.Error.PhraseCorrupted):
-            glsdk.NodeBuilder(config).register("not a valid mnemonic", None)
+            glsdk.NodeBuilder(sdk_config).register("not a valid mnemonic", None)
 
 
 class TestRecover:
     """Test the recover() free function."""
 
-    def test_recover_after_register(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_recover_after_register(self, scheduler, sdk_config):
 
         # Register first
-        node1 = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+        node1 = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         node1.disconnect()
 
         # Recover with same mnemonic
-        node2 = glsdk.NodeBuilder(config).recover(MNEMONIC)
+        node2 = glsdk.NodeBuilder(sdk_config).recover(MNEMONIC)
         assert node2 is not None
         assert isinstance(node2, glsdk.Node)
         creds = node2.credentials()
         assert len(creds) > 0
         node2.disconnect()
 
-    def test_recover_nonexistent_node(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_recover_nonexistent_node(self, scheduler, sdk_config):
         with pytest.raises(glsdk.Error.NoSuchNode):
-            glsdk.NodeBuilder(config).recover(MNEMONIC)
+            glsdk.NodeBuilder(sdk_config).recover(MNEMONIC)
 
 
 class TestConnect:
     """Test the connect() free function."""
 
-    def test_connect_with_saved_credentials(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_connect_with_saved_credentials(self, scheduler, sdk_config):
 
         # Register and save credentials
-        node1 = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+        node1 = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         saved_creds = node1.credentials()
         node1.disconnect()
 
         # Connect with saved credentials
-        node2 = glsdk.NodeBuilder(config).connect(saved_creds, MNEMONIC)
+        node2 = glsdk.NodeBuilder(sdk_config).connect(saved_creds, MNEMONIC)
         assert node2 is not None
         assert isinstance(node2, glsdk.Node)
         node2.disconnect()
 
-    def test_connect_bad_mnemonic(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_connect_bad_mnemonic(self, scheduler, sdk_config):
         with pytest.raises(glsdk.Error.PhraseCorrupted):
-            glsdk.NodeBuilder(config).connect(b"some-creds", "bad mnemonic")
+            glsdk.NodeBuilder(sdk_config).connect(b"some-creds", "bad mnemonic")
 
 
 class TestRegisterOrRecover:
     """Test the register_or_recover() free function."""
 
-    def test_registers_when_no_node_exists(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
+    def test_registers_when_no_node_exists(self, scheduler, sdk_config):
+        node = glsdk.NodeBuilder(sdk_config).register_or_recover(MNEMONIC, None)
         assert node is not None
         assert isinstance(node, glsdk.Node)
         node.disconnect()
 
-    def test_recovers_when_node_exists(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_recovers_when_node_exists(self, scheduler, sdk_config):
 
         # Register first
-        node1 = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+        node1 = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         node1.disconnect()
 
         # register_or_recover should recover
-        node2 = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
+        node2 = glsdk.NodeBuilder(sdk_config).register_or_recover(MNEMONIC, None)
         assert node2 is not None
         assert isinstance(node2, glsdk.Node)
         node2.disconnect()
@@ -151,17 +133,13 @@ class TestRegisterOrRecover:
 class TestDisconnect:
     """Test the disconnect() method."""
 
-    def test_disconnect_stops_signer(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+    def test_disconnect_stops_signer(self, scheduler, sdk_config):
+        node = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         # Should not raise
         node.disconnect()
 
-    def test_disconnect_idempotent(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+    def test_disconnect_idempotent(self, scheduler, sdk_config):
+        node = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         node.disconnect()
         # Second disconnect should not raise
         node.disconnect()
@@ -170,46 +148,40 @@ class TestDisconnect:
 class TestDuplicateRegister:
     """Test that registering the same node twice fails."""
 
-    def test_duplicate_register(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_duplicate_register(self, scheduler, sdk_config):
 
         # Register once
-        node1 = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+        node1 = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         node1.disconnect()
 
         # Register again with same mnemonic should fail
         with pytest.raises(glsdk.Error.DuplicateNode):
-            glsdk.NodeBuilder(config).register(MNEMONIC, None)
+            glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
 
 
 class TestConnectBadCredentials:
     """Test that connecting with invalid credentials fails."""
 
-    def test_connect_empty_credentials(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
+    def test_connect_empty_credentials(self, scheduler, sdk_config):
         # Empty credentials should fail (Credentials.load returns nobody creds,
         # but the signer won't be able to authenticate with them)
         with pytest.raises(glsdk.Error):
-            glsdk.NodeBuilder(config).connect(b"", MNEMONIC)
+            glsdk.NodeBuilder(sdk_config).connect(b"", MNEMONIC)
 
 
 class TestMultipleNodes:
     """Test running multiple nodes simultaneously."""
 
-    def test_two_nodes_independent(self, scheduler, nobody_id):
+    def test_two_nodes_independent(self, scheduler, sdk_config):
         """Two nodes from different mnemonics can run simultaneously."""
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
 
         mnemonic_2 = (
             "zoo zoo zoo zoo zoo zoo "
             "zoo zoo zoo zoo zoo wrong"
         )
 
-        node1 = glsdk.NodeBuilder(config).register(MNEMONIC, None)
-        node2 = glsdk.NodeBuilder(config).register(mnemonic_2, None)
+        node1 = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
+        node2 = glsdk.NodeBuilder(sdk_config).register(mnemonic_2, None)
 
         assert node1 is not None
         assert node2 is not None
@@ -228,11 +200,9 @@ class TestMultipleNodes:
 class TestDisconnectBlocksRpc:
     """Test that RPC calls fail after disconnect."""
 
-    def test_credentials_still_works_after_disconnect(self, scheduler, nobody_id):
+    def test_credentials_still_works_after_disconnect(self, scheduler, sdk_config):
         """credentials() should work even after disconnect since it's local data."""
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+        node = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         node.disconnect()
         # credentials() is local, should still work
         creds = node.credentials()
@@ -242,13 +212,11 @@ class TestDisconnectBlocksRpc:
 class TestLowLevelCredentials:
     """Test that Node created via low-level API exposes credentials."""
 
-    def test_node_new_stores_credentials(self, scheduler, nobody_id):
+    def test_node_new_stores_credentials(self, scheduler, sdk_config):
         """Node::new(creds) should allow calling node.credentials()."""
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
 
         # Register to get valid credentials
-        node1 = glsdk.NodeBuilder(config).register(MNEMONIC, None)
+        node1 = glsdk.NodeBuilder(sdk_config).register(MNEMONIC, None)
         saved_creds = node1.credentials()
         node1.disconnect()
 

@@ -4,10 +4,15 @@ import glclient
 from glclient import native
 
 
+@pytest.fixture(autouse=True)
+def use_embedded_credentials(monkeypatch):
+    for name in ("GL_CA_CRT", "GL_NOBODY_CRT", "GL_NOBODY_KEY"):
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.mark.parametrize("constructor", [glclient.Signer, native.Signer])
-def test_hard_default_does_not_open_device_storage(constructor, tmp_path):
-    path = tmp_path / "not-a-directory"
-    path.write_text("unused")
+def test_hard_default_opens_device_storage(constructor, tmp_path):
+    path = tmp_path / "device-state"
     signer = constructor(
         b"\x00" * 32,
         "regtest",
@@ -15,17 +20,19 @@ def test_hard_default_does_not_open_device_storage(constructor, tmp_path):
         device_storage_path=str(path),
     )
     assert len(bytes(signer.node_id())) == 33
+    assert path.is_dir()
 
 
 @pytest.mark.parametrize("constructor", [glclient.Signer, native.Signer])
 @pytest.mark.parametrize("path", [None, ""])
-def test_soft_requires_device_storage(constructor, path):
-    with pytest.raises(ValueError, match="requires device_storage_path"):
+@pytest.mark.parametrize("mode", ["hard", "soft"])
+def test_production_modes_require_device_storage(constructor, path, mode):
+    with pytest.raises(ValueError, match="device_storage_path"):
         constructor(
             b"\x00" * 32,
             "regtest",
             glclient.Credentials(),
-            state_signature_mode="soft",
+            state_signature_mode=mode,
             device_storage_path=path,
         )
 

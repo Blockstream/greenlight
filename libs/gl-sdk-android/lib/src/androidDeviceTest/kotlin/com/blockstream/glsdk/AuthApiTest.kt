@@ -64,19 +64,19 @@ class AuthApiTest {
 
     @Test(expected = Exception.PhraseCorrupted::class)
     fun register_bad_mnemonic() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).register("not a valid mnemonic", null)
     }
 
     @Test(expected = Exception.PhraseCorrupted::class)
     fun recover_bad_mnemonic() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).recover("not a valid mnemonic")
     }
 
     @Test(expected = Exception.PhraseCorrupted::class)
     fun connect_bad_mnemonic() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).connect("fake-creds".toByteArray(), "not a valid mnemonic")
     }
 
@@ -87,7 +87,7 @@ class AuthApiTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun register_or_recover_returns_node() {
-        val config = Config()
+        val config = signerConfig()
         val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
         assertNotNull(node)
         node.use { n ->
@@ -100,7 +100,7 @@ class AuthApiTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun credentials_roundtrip_via_connect() {
-        val config = Config()
+        val config = signerConfig()
 
         // Register or recover to get credentials
         val savedCreds: ByteArray
@@ -138,7 +138,7 @@ class AuthApiTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun register_or_recover_and_create_invoice() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).registerOrRecover(testMnemonic, null).use { node ->
             val addrResponse = node.onchainReceive()
             assertNotNull(addrResponse)
@@ -161,7 +161,7 @@ class AuthApiTest {
 
     @Test
     fun low_level_signer_still_available() {
-        val signer = Signer(testMnemonic)
+        val signer = Signer(testMnemonic, signerStoragePath())
         assertNotNull(signer)
         val nodeId = signer.nodeId()
         assertTrue("Node ID should not be empty", nodeId.isNotEmpty())

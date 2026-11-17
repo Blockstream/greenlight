@@ -29,8 +29,8 @@ def _convert(cls: Type[E], res: Iterable[Any]) -> E:
 class Signer(object):
     """Signer using Hard state verification by default.
 
-    Explicit Soft mode migrates legacy state once using the persistent
-    directory supplied by ``device_storage_path``.
+    Hard and Soft require a persistent ``device_storage_path``. Reuse this
+    directory across restarts. Explicit Soft mode migrates legacy state once.
     """
 
     def __init__(

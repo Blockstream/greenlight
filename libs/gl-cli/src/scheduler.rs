@@ -106,7 +106,8 @@ async fn register_handler<P: AsRef<Path>>(
 
     // Initialize a signer and scheduler with default credentials.
     let creds = credentials::Nobody::new();
-    let signer = Signer::new(seed, config.network, creds.clone())
+    let storage = util::device_storage(config.data_dir.as_ref())?;
+    let signer = Signer::new(seed, config.network, creds.clone(), storage)
         .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
     let scheduler = Scheduler::new(config.network, creds)
         .await
@@ -147,7 +148,8 @@ async fn recover_handler<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 
     // Initialize a signer and scheduler with default credentials.
     let creds = credentials::Nobody::new();
-    let signer = Signer::new(seed, config.network, creds.clone())
+    let storage = util::device_storage(config.data_dir.as_ref())?;
+    let signer = Signer::new(seed, config.network, creds.clone(), storage)
         .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
     let scheduler = Scheduler::new(config.network, creds)
         .await
@@ -226,7 +228,8 @@ async fn upgrade_credentials_handler<P: AsRef<Path>>(config: Config<P>) -> Resul
 
     // Initialize a signer and scheduler with default credentials.
     let nobody = credentials::Nobody::new();
-    let signer = Signer::new(seed, config.network, nobody.clone())
+    let storage = util::device_storage(config.data_dir.as_ref())?;
+    let signer = Signer::new(seed, config.network, nobody.clone(), storage)
         .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
     let scheduler = Scheduler::new(config.network, nobody)
         .await

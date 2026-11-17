@@ -472,7 +472,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_network() != 35643:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_config_with_signer_config() != 6578:
+    if lib.uniffi_glsdk_checksum_method_config_with_signer_config() != 57802:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_credentials_node_id() != 16312:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -560,9 +560,9 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_scheduler_new() != 15239:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_constructor_signer_new() != 62159:
+    if lib.uniffi_glsdk_checksum_constructor_signer_new() != 57832:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
+    if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 18435:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config() != 11623:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -1045,10 +1045,12 @@ _UniffiLib.uniffi_glsdk_fn_free_signer.argtypes = (
 _UniffiLib.uniffi_glsdk_fn_free_signer.restype = None
 _UniffiLib.uniffi_glsdk_fn_constructor_signer_new.argtypes = (
     _UniffiRustBuffer,
+    _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_signer_new.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed.argtypes = (
+    _UniffiRustBuffer,
     _UniffiRustBuffer,
     ctypes.POINTER(_UniffiRustCallStatus),
 )
@@ -4385,8 +4387,7 @@ class SignerConfig:
     state_signature_mode: "StateSignatureMode"
     device_storage_path: "typing.Optional[str]"
     """
-    Persistent directory for the migration marker; required in Soft mode.
-    Hard and Off modes do not open this directory.
+    Persistent directory shared across restarts. Required in Hard and Soft modes.
     """
 
     def __init__(self, *, state_signature_mode: "StateSignatureMode", device_storage_path: "typing.Optional[str]"):
@@ -7173,7 +7174,7 @@ class ConfigProtocol(typing.Protocol):
         raise NotImplementedError
     def with_signer_config(self, signer_config: "SignerConfig"):
         """
-        Configure all signers started by NodeBuilder with this Config.
+        Configure all signers started by NodeBuilder, including their required storage path.
         """
 
         raise NotImplementedError
@@ -7241,7 +7242,7 @@ class Config():
 
     def with_signer_config(self, signer_config: "SignerConfig") -> "Config":
         """
-        Configure all signers started by NodeBuilder with this Config.
+        Configure all signers started by NodeBuilder, including their required storage path.
         """
 
         _UniffiConverterTypeSignerConfig.check_lower(signer_config)
@@ -8948,11 +8949,14 @@ class SignerProtocol(typing.Protocol):
 # Signer is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Signer():
     _pointer: ctypes.c_void_p
-    def __init__(self, phrase: "str"):
+    def __init__(self, phrase: "str",device_storage_path: "str"):
         _UniffiConverterString.check_lower(phrase)
         
+        _UniffiConverterString.check_lower(device_storage_path)
+
         self._pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_signer_new,
-        _UniffiConverterString.lower(phrase))
+        _UniffiConverterString.lower(phrase),
+        _UniffiConverterString.lower(device_storage_path))
 
     def __del__(self):
         # In case of partial initialization of instances.
@@ -8972,12 +8976,15 @@ class Signer():
         inst._pointer = pointer
         return inst
     @classmethod
-    def new_from_seed(cls, seed: "bytes"):
+    def new_from_seed(cls, seed: "bytes",device_storage_path: "str"):
         _UniffiConverterBytes.check_lower(seed)
+
+        _UniffiConverterString.check_lower(device_storage_path)
         
         # Call the (fallible) function before creating any half-baked object instances.
         pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed,
-        _UniffiConverterBytes.lower(seed))
+        _UniffiConverterBytes.lower(seed),
+        _UniffiConverterString.lower(device_storage_path))
         return cls._make_instance_(pointer)
 
     @classmethod

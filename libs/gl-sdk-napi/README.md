@@ -96,9 +96,9 @@ class GreenlightApp {
   private signer: Signer;
   private node: Node | null = null;
 
-  constructor(phrase: string, network: Network) {
+  constructor(phrase: string, network: Network, deviceStoragePath: string) {
     this.scheduler = new Scheduler(network);
-    this.signer = new Signer(phrase);
+    this.signer = new Signer(phrase, deviceStoragePath);
     console.log(`✓ Signer created. Node ID: ${this.signer.nodeId().toString('hex')}`);
   }
 
@@ -197,7 +197,7 @@ async function quickStart(): Promise<void> {
   const network: Network = 'regtest';
 
   console.log('=== Greenlight SDK Demo ===');
-  const app = new GreenlightApp(phrase, network);
+  const app = new GreenlightApp(phrase, network, './greenlight-data/device-state');
 
   try {
     await app.registerOrRecover();

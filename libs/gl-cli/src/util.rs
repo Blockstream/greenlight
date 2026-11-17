@@ -1,6 +1,8 @@
 use dirs;
 use gl_client::credentials;
+use gl_client::signer::FileDeviceStorage;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::{
     fs::{self, File},
     io::Write,
@@ -11,6 +13,12 @@ use thiserror;
 pub const SEED_FILE_NAME: &str = "hsm_secret";
 pub const CREDENTIALS_FILE_NAME: &str = "credentials.gfs";
 pub const DEFAULT_GREENLIGHT_DIR: &str = "greenlight";
+
+pub fn device_storage(data_dir: &Path) -> crate::error::Result<Arc<FileDeviceStorage>> {
+    FileDeviceStorage::new(data_dir.join("device-state"))
+        .map(Arc::new)
+        .map_err(crate::error::Error::custom)
+}
 
 // -- Seed section
 

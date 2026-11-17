@@ -109,7 +109,10 @@ class Client:
         have_certs = keypath.exists()
 
         self.directory.mkdir(exist_ok=True)
-        signer = glclient.Signer(secret, NETWORK, self.creds())
+        signer = glclient.Signer(
+            secret, NETWORK, self.creds(),
+            device_storage_path=str(self.directory / "device-state"),
+        )
 
         return signer
 

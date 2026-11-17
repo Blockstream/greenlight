@@ -6,14 +6,20 @@ use gl_client::{
     node::ClnClient,
     pb::{cln, cln::{amount_or_any, Amount, AmountOrAny}},
     scheduler::Scheduler,
-    signer::Signer,
+    signer::{FileDeviceStorage, Signer},
 };
 use rand::RngCore;
-use std::{env, fs, path::PathBuf};
+use std::{env, fs, path::PathBuf, sync::Arc};
 use tokio;
 
 const NETWORK: Network = Network::Regtest;
 const TEST_NODE_DATA_DIR: &str = "/tmp/gltests/node2";
+
+fn device_storage() -> Result<Arc<FileDeviceStorage>> {
+    Ok(Arc::new(FileDeviceStorage::new(
+        PathBuf::from(TEST_NODE_DATA_DIR).join("device-state"),
+    )?))
+}
 
 fn save_to_file(file_name: &str, data: &[u8]) -> Result<()> {
     let path = PathBuf::from(TEST_NODE_DATA_DIR).join(file_name);
@@ -78,7 +84,12 @@ fn load_developer_creds() -> Result<Nobody> {
 
 async fn register_node(seed: Vec<u8>, developer_creds: Nobody) -> Result<(Scheduler<Nobody>, Device, Signer)> {
     // ---8<--- [start: init_signer]
-    let signer = Signer::new(seed.clone(), NETWORK, developer_creds.clone())?;
+    let signer = Signer::new(
+        seed.clone(),
+        NETWORK,
+        developer_creds.clone(),
+        device_storage()?,
+    )?;
     // ---8<--- [end: init_signer]
 
     // ---8<--- [start: register_node]
@@ -118,7 +129,7 @@ async fn start_node(device_creds_file_path: &str) -> Result<(cln::GetinfoRespons
 
     // ---8<--- [start: start_signer]
     let seed = read_file("hsm_secret")?;
-    let signer = Signer::new(seed, NETWORK, creds.clone())?;
+    let signer = Signer::new(seed, NETWORK, creds.clone(), device_storage()?)?;
     let (_tx, rx) = tokio::sync::mpsc::channel(1);
     tokio::spawn(async move {
         signer.run_forever(rx).await.unwrap();
@@ -145,7 +156,7 @@ async fn start_node(device_creds_file_path: &str) -> Result<(cln::GetinfoRespons
 async fn recover_node(dev_creds: Nobody) -> Result<(Scheduler<Nobody>, Device, Signer)> {
     // ---8<--- [start: recover_node]
     let seed = read_file("hsm_secret")?;
-    let signer = Signer::new(seed.clone(), NETWORK, dev_creds.clone())?;
+    let signer = Signer::new(seed.clone(), NETWORK, dev_creds.clone(), device_storage()?)?;
     let scheduler = Scheduler::new(NETWORK, dev_creds).await?;
     let recover_response = scheduler.recover(&signer).await?;
     // ---8<--- [end: recover_node]

@@ -25,7 +25,7 @@ class NodeOperationsTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun test_onchain_receive_and_invoice() {
-        val config = Config()
+        val config = signerConfig()
 
         val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
 
@@ -46,7 +46,7 @@ class NodeOperationsTest {
 
     @Test
     fun test_node_state_returns_valid_snapshot() {
-        val config = Config()
+        val config = signerConfig()
         val node = NodeBuilder(config).registerOrRecover(testMnemonic, null)
         node.use { n ->
             val state = n.nodeState()

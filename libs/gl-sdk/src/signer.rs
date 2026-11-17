@@ -5,17 +5,20 @@ use tracing;
 
 #[derive(uniffi::Object, Clone)]
 pub struct Signer {
-    seed: Vec<u8>,
     pub(crate) inner: gl_client::signer::Signer,
-    credentials: Option<Credentials>,
-    config: gl_client::signer::SignerConfig,
 }
 
 #[uniffi::export]
 impl Signer {
     #[uniffi::constructor()]
-    pub fn new(phrase: String) -> Result<Signer, Error> {
-        Self::new_with_config(phrase, SignerConfig::default())
+    pub fn new(phrase: String, device_storage_path: String) -> Result<Signer, Error> {
+        Self::new_with_config(
+            phrase,
+            SignerConfig {
+                device_storage_path: Some(device_storage_path),
+                ..Default::default()
+            },
+        )
     }
 
     #[uniffi::constructor()]
@@ -26,8 +29,14 @@ impl Signer {
     }
 
     #[uniffi::constructor()]
-    pub fn new_from_seed(seed: Vec<u8>) -> Result<Signer, Error> {
-        Self::new_from_seed_with_config(seed, SignerConfig::default())
+    pub fn new_from_seed(seed: Vec<u8>, device_storage_path: String) -> Result<Signer, Error> {
+        Self::new_from_seed_with_config(
+            seed,
+            SignerConfig {
+                device_storage_path: Some(device_storage_path),
+                ..Default::default()
+            },
+        )
     }
 
     #[uniffi::constructor()]
@@ -36,36 +45,18 @@ impl Signer {
         let config = config.to_client()?;
 
         let inner = gl_client::signer::Signer::new_with_config(
-            seed.clone(),
+            seed,
             gl_client::bitcoin::Network::Bitcoin,
             credentials,
-            config.clone(),
+            config,
         )
         .map_err(|e| Error::other(format!("{e:#}")))?;
-        let credentials = None;
-        Ok(Signer {
-            seed,
-            inner,
-            credentials,
-            config,
-        })
+        Ok(Signer { inner })
     }
 
     pub fn authenticate(&self, creds: &Credentials) -> Result<Signer, Error> {
-        let credentials = Some(creds.clone());
-
-        let inner = gl_client::signer::Signer::new_with_config(
-            self.seed.clone(),
-            gl_client::bitcoin::Network::Bitcoin,
-            creds.inner.clone(),
-            self.config.clone(),
-        )
-        .map_err(|e| Error::other(format!("{e:#}")))?;
-
         Ok(Signer {
-            inner,
-            credentials,
-            ..self.clone()
+            inner: self.inner.with_credentials(creds.inner.clone()),
         })
     }
 

@@ -144,15 +144,16 @@ impl<Creds> Scheduler<Creds> {
     ///
     /// ```rust
     /// # use gl_client::credentials::Nobody;
-    /// # use gl_client::{scheduler::Scheduler, signer::Signer};
+    /// # use gl_client::{scheduler::Scheduler, signer::{DeviceStorage, Signer}};
+    /// # use std::sync::Arc;
     /// # use lightning_signer::bitcoin::Network;
-    /// # async fn example() {
+    /// # async fn example(device_storage: Arc<dyn DeviceStorage>) {
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
     /// let scheduler = Scheduler::new(network, creds.clone()).await.unwrap();
-    /// let secret = vec![0, 0, 0, 0];
-    /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
+    /// let secret = vec![0; 32];
+    /// let signer = Signer::new(secret, network, creds, device_storage).unwrap(); // Create or obtain a signer instance
     /// let registration_response = scheduler.register(&signer, None).await.unwrap();
     /// # }
     /// ```
@@ -272,15 +273,16 @@ impl<Creds> Scheduler<Creds> {
     ///
     /// ```rust
     /// # use gl_client::credentials::Nobody;
-    /// # use gl_client::{scheduler::Scheduler, signer::Signer};
+    /// # use gl_client::{scheduler::Scheduler, signer::{DeviceStorage, Signer}};
+    /// # use std::sync::Arc;
     /// # use lightning_signer::bitcoin::Network;
-    /// # async fn example() {
+    /// # async fn example(device_storage: Arc<dyn DeviceStorage>) {
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
     /// let scheduler = Scheduler::new(network, creds.clone()).await.unwrap();
-    /// let secret = vec![0, 0, 0, 0];
-    /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
+    /// let secret = vec![0; 32];
+    /// let signer = Signer::new(secret, network, creds, device_storage).unwrap(); // Create or obtain a signer instance
     /// let recovery_response = scheduler.recover(&signer).await.unwrap();
     /// # }
     /// ```
@@ -371,15 +373,16 @@ impl<Creds> Scheduler<Creds> {
     ///
     /// ```rust
     /// # use gl_client::credentials::{Device, Nobody};
-    /// # use gl_client::{scheduler::Scheduler, signer::Signer};
+    /// # use gl_client::{scheduler::Scheduler, signer::{DeviceStorage, Signer}};
+    /// # use std::sync::Arc;
     /// # use lightning_signer::bitcoin::Network;
-    /// # async fn example() {
+    /// # async fn example(device_storage: Arc<dyn DeviceStorage>) {
     /// let node_id = vec![0, 1, 2, 3];
     /// let network = Network::Regtest;
     /// let creds = Nobody::new();
     /// let scheduler_unauthed = Scheduler::new(network, creds.clone()).await.unwrap();
-    /// let secret = vec![0, 0, 0, 0];
-    /// let signer = Signer::new(secret, network, creds).unwrap(); // Create or obtain a signer instance
+    /// let secret = vec![0; 32];
+    /// let signer = Signer::new(secret, network, creds, device_storage).unwrap(); // Create or obtain a signer instance
     /// let registration_response = scheduler_unauthed.register(&signer, None).await.unwrap();
     /// let creds = Device::from_bytes(registration_response.creds);
     /// let scheduler_authed = scheduler_unauthed.authenticate(creds);

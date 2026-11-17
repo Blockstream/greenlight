@@ -83,14 +83,15 @@ def test_scheduler_with_developer_cert():
     assert isinstance(scheduler_with_cert, glsdk.Scheduler)
 
 
-def test_register_with_developer_cert(scheduler, nobody_id):
+def test_register_with_developer_cert(scheduler, nobody_id, tmp_path):
     """Test that register works when using an explicit DeveloperCert."""
     # Load the test nobody cert/key from the fixture's byte attributes
     dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
 
     signer = glsdk.Signer(
         "abandon abandon abandon abandon abandon abandon "
-        "abandon abandon abandon abandon abandon about"
+        "abandon abandon abandon abandon abandon about",
+        str(tmp_path / "device-state"),
     )
     s = glsdk.Scheduler(glsdk.Network.BITCOIN).with_developer_cert(dev_cert)
     creds = s.register(signer, code=None)
@@ -98,10 +99,11 @@ def test_register_with_developer_cert(scheduler, nobody_id):
     assert isinstance(creds, glsdk.Credentials)
 
 
-def test_register_and_auth(scheduler, clients):
+def test_register_and_auth(scheduler, clients, tmp_path):
     signer = glsdk.Signer(
         "abandon abandon abandon abandon abandon abandon "
-        "abandon abandon abandon abandon abandon about"
+        "abandon abandon abandon abandon abandon about",
+        str(tmp_path / "device-state"),
     )
 
     # Now use the signer to sign up a new node:

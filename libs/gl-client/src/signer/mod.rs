@@ -125,7 +125,7 @@ pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
     pub fee_budget_limits: FeeBudgetLimits,
-    /// Persistent device-local watermark storage, required in Soft mode.
+    /// Persistent device-local metadata storage, required in Hard and Soft modes.
     pub device_storage: Option<Arc<dyn DeviceStorage>>,
     #[cfg(feature = "backup")]
     pub backup: Option<SignerBackupConfig>,
@@ -247,11 +247,24 @@ impl Error {
 }
 
 impl Signer {
-    pub fn new<T>(secret: Vec<u8>, network: Network, creds: T) -> Result<Signer, anyhow::Error>
+    pub fn new<T>(
+        secret: Vec<u8>,
+        network: Network,
+        creds: T,
+        device_storage: Arc<dyn DeviceStorage>,
+    ) -> Result<Signer, anyhow::Error>
     where
         T: TlsConfigProvider,
     {
-        Self::new_with_config(secret, network, creds, SignerConfig::default())
+        Self::new_with_config(
+            secret,
+            network,
+            creds,
+            SignerConfig {
+                device_storage: Some(device_storage),
+                ..Default::default()
+            },
+        )
     }
 
     pub fn new_with_config<T>(
@@ -269,9 +282,14 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
-        let device_storage = match state_signature_mode {
-            StateSignatureMode::Off => None,
-            _ => config.device_storage,
+        let device_storage = match (state_signature_mode, config.device_storage) {
+            (StateSignatureMode::Off, _) => None,
+            (_, Some(store)) => Some(store),
+            (_, None) => {
+                return Err(anyhow!(
+                    "{state_signature_mode:?} mode requires persistent device storage"
+                ))
+            }
         };
         #[cfg(feature = "backup")]
         let backup_config = {
@@ -418,11 +436,6 @@ impl Signer {
                     Some(SoftMigration { store, key })
                 }
             }
-            (StateSignatureMode::Soft, None) => {
-                return Err(anyhow!(
-                    "Soft state signature mode requires persistent device state storage"
-                ));
-            }
             _ => None,
         };
         // Soft remains available until processing succeeds. After migration
@@ -457,6 +470,14 @@ impl Signer {
                     .unwrap_or_default(),
             )),
         })
+    }
+
+    /// Use different TLS credentials while keeping the shared signer state.
+    pub fn with_credentials(&self, creds: impl TlsConfigProvider) -> Self {
+        Self {
+            tls: creds.tls_config(),
+            ..self.clone()
+        }
     }
 
     fn init_handler(&self) -> Result<handler::InitHandler, anyhow::Error> {
@@ -2331,25 +2352,27 @@ mod tests {
     }
 
     #[test]
-    fn hard_is_the_default_and_soft_requires_storage() {
+    fn hard_is_the_default_and_both_production_modes_require_storage() {
         assert_eq!(
             SignerConfig::default().state_signature_mode,
             StateSignatureMode::Hard
         );
-        let err = Signer::new_with_config(
-            vec![0; 32],
-            Network::Bitcoin,
-            credentials::Nobody::default(),
-            SignerConfig {
-                state_signature_mode: StateSignatureMode::Soft,
-                ..SignerConfig::default()
-            },
-        )
-        .err()
-        .unwrap();
-        assert!(err
-            .to_string()
-            .contains("requires persistent device state storage"));
+        for mode in [StateSignatureMode::Hard, StateSignatureMode::Soft] {
+            let err = Signer::new_with_config(
+                vec![0; 32],
+                Network::Bitcoin,
+                credentials::Nobody::default(),
+                SignerConfig {
+                    state_signature_mode: mode,
+                    ..SignerConfig::default()
+                },
+            )
+            .err()
+            .unwrap();
+            assert!(err
+                .to_string()
+                .contains("requires persistent device storage"));
+        }
     }
 
     #[tokio::test]
@@ -2469,11 +2492,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn default_hard_signer_signs_its_own_initial_state_without_device_storage() {
+    async fn default_hard_signer_signs_its_own_initial_state() {
         let signer = Signer::new(
             vec![0; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
         let response = signer
@@ -2860,6 +2884,7 @@ mod tests {
                 state_signature_mode: StateSignatureMode::Soft,
                 state_signature_override: None,
                 fee_budget_limits: FeeBudgetLimits::default(),
+                device_storage: Some(Arc::new(MemoryDeviceStorage::default())),
                 backup: Some(SignerBackupConfig {
                     path: "backup.json".into(),
                     strategy: SignerBackupStrategy::Periodic { updates: 0 },
@@ -2886,6 +2911,7 @@ mod tests {
             vec![0 as u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -2909,6 +2935,7 @@ mod tests {
             vec![0 as u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3212,6 +3239,7 @@ mod tests {
                     ack: "WRONG".to_string(),
                     note: None,
                 }),
+                device_storage: Some(Arc::new(MemoryDeviceStorage::default())),
                 ..SignerConfig::default()
             },
         );
@@ -3248,6 +3276,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3269,6 +3298,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3293,6 +3323,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3320,6 +3351,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
         let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
@@ -3337,6 +3369,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3403,7 +3436,13 @@ mod tests {
     #[test]
     fn test_empty_rune_is_valid() {
         let creds = credentials::Nobody::default();
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, creds).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            creds,
+            Arc::new(MemoryDeviceStorage::default()),
+        )
+        .unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();
@@ -3426,7 +3465,13 @@ mod tests {
     #[test]
     fn test_empty_rune_checks_pubkey() {
         let creds = credentials::Nobody::default();
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, creds).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            creds,
+            Arc::new(MemoryDeviceStorage::default()),
+        )
+        .unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();

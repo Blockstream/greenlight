@@ -82,7 +82,13 @@ mod tests {
 
     #[test]
     fn configured_signers_use_migration_settings_without_changing_the_original_config() {
-        let base = Config::new().with_network(Network::REGTEST);
+        let dir = tempfile::tempdir().unwrap();
+        let base = Config::new()
+            .with_network(Network::REGTEST)
+            .with_signer_config(SignerConfig {
+                device_storage_path: Some(dir.path().to_str().unwrap().to_owned()),
+                ..Default::default()
+            });
         let migration = base.with_signer_config(SignerConfig {
             state_signature_mode: StateSignatureMode::Soft,
             device_storage_path: None,

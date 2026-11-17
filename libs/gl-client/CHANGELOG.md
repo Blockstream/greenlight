@@ -14,7 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-- The signer uses a durable watermark to reject rollback and omissions across restarts.
+- **Breaking:** `Signer::new` takes a `DeviceStorage` argument, configuring a persistent metadata storage. `Signer::new_with_config` requires storage in Hard and Soft modes.
+- The signer uses a durable watermark to reject rollback, omissions, and same-version conflicts across restarts on the same device.
 - Enforce a routing-fee allowance per payment, shared across all parts and channels. The default is the larger of 1,000 sat and 0.5% of the payment amount. `pay`, direct-invoice `xpay`, and trampoline requests with fee limits above the allowance are rejected before HTLCs are offered.
 - Enforce on-chain fee limits of 100,000 sat per new commitment or signed local HTLC input, and 50,000 sat per mutual close by default. Previously accepted force-close commitments remain signable after limits are lowered.
 - State signature checks default to Hard. Soft requires persistent device storage and is limited to one successful state snapshot migration before switching to Hard. Rejected requests leave migration available; marker-write failures close the allowance. Requesting Soft after migration starts in Hard with a warning.

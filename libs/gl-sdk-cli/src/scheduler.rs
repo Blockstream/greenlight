@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::util::{self, DataDir};
 use clap::Subcommand;
 
@@ -30,7 +30,7 @@ fn register(
     let signer = match util::read_secret(data_dir) {
         Ok(secret) => {
             eprintln!("Secret already exists, using it");
-            util::signer_from_secret(secret)?
+            util::signer_from_secret(secret, data_dir)?
         }
         Err(_) => {
             let mnemonic = bip39::Mnemonic::generate(12)?;
@@ -38,7 +38,7 @@ fn register(
             util::write_phrase(data_dir, &phrase)?;
             eprintln!("New mnemonic generated and saved");
             eprintln!("Recovery phrase: {phrase}");
-            glsdk::Signer::new(phrase).map_err(Error::Sdk)?
+            util::signer_from_secret(util::Secret::Phrase(phrase), data_dir)?
         }
     };
     let scheduler = glsdk::Scheduler::new(network)?;
