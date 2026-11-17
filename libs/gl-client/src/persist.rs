@@ -12,6 +12,7 @@ pub(crate) use splice::{CandidateFundingFacts, WalletInput};
 pub(crate) use splice::{SpliceOrigin, SplicePhase, SpliceSessionV1};
 
 use anyhow::{anyhow, bail};
+use lightning_signer::bitcoin::hashes::{sha256, Hash};
 use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::chain::tracker::ChainTracker;
 use lightning_signer::channel::ChannelId;
@@ -148,21 +149,19 @@ impl State {
     ) -> Result<(), Error> {
         let node_key = format!("{NODE_PREFIX}/{key}");
         let state_key = format!("{NODE_STATE_PREFIX}/{key}");
-        self.ensure_not_tombstone(&node_key)?;
-        self.ensure_not_tombstone(&state_key)?;
-        let node_version = self.next_version(&node_key);
-        let state_version = self.next_version(&state_key);
+        if self.values.contains_key(&node_key) || self.values.contains_key(&state_key) {
+            return Err(Error::Internal(format!(
+                "node {key} already exists in signer state"
+            )));
+        }
 
         self.values.insert(
             node_key,
-            StateEntry::new(node_version, serde_json::to_value(node_entry).unwrap()),
+            StateEntry::new(0, serde_json::to_value(node_entry).unwrap()),
         );
         self.values.insert(
             state_key,
-            StateEntry::new(
-                state_version,
-                serde_json::to_value(node_state_entry).unwrap(),
-            ),
+            StateEntry::new(0, serde_json::to_value(node_state_entry).unwrap()),
         );
         Ok(())
     }
@@ -215,11 +214,14 @@ impl State {
         channel_entry: lightning_signer::persist::model::ChannelEntry,
     ) -> Result<(), Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
-        self.ensure_not_tombstone(&key)?;
-        let version = self.next_version(&key);
+        if self.values.contains_key(&key) {
+            return Err(Error::Internal(format!(
+                "channel {key} already exists in signer state"
+            )));
+        }
         self.values.insert(
             key,
-            StateEntry::new(version, serde_json::to_value(channel_entry).unwrap()),
+            StateEntry::new(0, serde_json::to_value(channel_entry).unwrap()),
         );
         Ok(())
     }
@@ -412,9 +414,82 @@ impl State {
         self.values.len()
     }
 
+    pub(crate) fn entry_fingerprints(
+        &self,
+    ) -> impl Iterator<Item = anyhow::Result<(&str, u64, [u8; 32])>> {
+        self.values
+            .iter()
+            .filter(|(key, _)| !key.starts_with(PEER_PREFIX))
+            .map(|(key, entry)| {
+                let hash = sha256::Hash::hash(&entry.canonical_value_bytes()?).to_byte_array();
+                Ok((key.as_str(), entry.version, hash))
+            })
+    }
+
     pub(crate) fn without_peer_hints(mut self) -> Self {
         self.values.retain(|key, _| !key.starts_with(PEER_PREFIX));
         self
+    }
+
+    // A full snapshot is authoritative for every entry it supplies, including version zero.
+    pub(crate) fn restore_snapshot(&self, mut snapshot: Self, node_id: &[u8]) -> Self {
+        let id = hex::encode(node_id);
+        let node_key = format!("{NODE_PREFIX}/{id}");
+        let state_key = format!("{NODE_STATE_PREFIX}/{id}");
+        let channel_prefix = format!("{CHANNEL_PREFIX}/{id}");
+        let tracker_key = format!("{TRACKER_PREFIX}/{id}");
+        let allowlist_key = format!("{ALLOWLIST_PREFIX}/{id}");
+        // Only use the seed defaults for a new node. The caller validates the complete candidate.
+        let has_node_records = snapshot.values.keys().any(|key| {
+            *key == node_key
+                || *key == state_key
+                || *key == tracker_key
+                || *key == allowlist_key
+                || key.starts_with(&channel_prefix)
+        });
+        if !has_node_records {
+            for (key, entry) in &self.values {
+                snapshot
+                    .values
+                    .entry(key.clone())
+                    .or_insert_with(|| entry.clone());
+            }
+        }
+        snapshot
+    }
+
+    pub(crate) fn validate_signer_state(&self, node_id: &[u8]) -> anyhow::Result<()> {
+        let id = hex::encode(node_id);
+        let node_key = format!("{NODE_PREFIX}/{id}");
+        let state_key = format!("{NODE_STATE_PREFIX}/{id}");
+        let tracker_key = format!("{TRACKER_PREFIX}/{id}");
+        let is_live = |key: &str| {
+            self.values
+                .get(key)
+                .is_some_and(|entry| entry.version != TOMBSTONE_VERSION)
+        };
+        if !is_live(&node_key) || !is_live(&state_key) {
+            bail!("incomplete signer node records for {id}");
+        }
+        if self.values.keys().any(|key| {
+            (key.starts_with("nodes/") && *key != node_key)
+                || (key.starts_with("nodestates/") && *key != state_key)
+        }) {
+            bail!("signer state contains an unexpected node");
+        }
+        if !is_live(&tracker_key) {
+            bail!("signer state is missing required entry {tracker_key}");
+        }
+        Ok(())
+    }
+
+    pub(crate) fn channel_is_tombstoned(
+        &self,
+        node_id: &PublicKey,
+        channel_id: &ChannelId,
+    ) -> bool {
+        let id = vls_persist::model::NodeChannelId::new(node_id, channel_id);
+        self.is_tombstone(&format!("{CHANNEL_PREFIX}/{}", hex::encode(id.0)))
     }
 
     /// Merge incoming state and track potential version conflicts.
@@ -430,11 +505,7 @@ impl State {
                 None => {
                     trace!("Insert new key {}: version={}", key, newver);
                     res.changes.push((key.to_owned(), None, newver));
-                    let mut inserted = incoming.clone();
-                    if incoming_is_tombstone {
-                        inserted.value = serde_json::Value::Null;
-                    }
-                    self.values.insert(key.clone(), inserted);
+                    self.values.insert(key.clone(), incoming.clone());
                 }
                 Some(v) => {
                     if incoming_is_tombstone {
@@ -448,11 +519,8 @@ impl State {
                             newver
                         );
                         res.changes.push((key.to_owned(), Some(v.version), newver));
-                        *v = StateEntry {
-                            version: newver,
-                            value: serde_json::Value::Null,
-                            signature: incoming.signature.clone(),
-                        };
+                        // The version marks deletion. Preserve the signed payload for the watermark.
+                        *v = incoming.clone();
                         continue;
                     }
 
@@ -1005,9 +1073,7 @@ impl Persist for MemoryPersister {
                 0,
                 state_e.velocity_control.into(),
                 state_e.fee_velocity_control.into(),
-                0u64,
-                /* dbid_high_water_mark: prevents reuse of
-                 * channel dbid, 0 disables enforcement. */
+                state_e.dbid_high_water_mark,
                 allowlist,
             );
 
@@ -1459,6 +1525,25 @@ mod tests {
 
         assert_tombstone(&state, &live_key);
         assert_eq!(res.conflict_count, 0);
+    }
+
+    #[test]
+    fn merge_preserves_tombstone_payload_and_signature() {
+        let key = "channels/abc";
+        let entry = SignerStateEntry {
+            key: key.to_owned(),
+            version: TOMBSTONE_VERSION,
+            value: br#"{"reason":"closed"}"#.to_vec(),
+            signature: vec![1, 2, 3],
+        };
+        let incoming = State::try_from(std::slice::from_ref(&entry)).unwrap();
+
+        for mut state in [State::new(), mk_state(vec![(key, 2, json!({"v": 1}))])] {
+            state.merge(&incoming).unwrap();
+            assert!(state.is_tombstone(key));
+            let merged: Vec<SignerStateEntry> = state.into();
+            assert_eq!(merged, vec![entry.clone()]);
+        }
     }
 
     #[test]

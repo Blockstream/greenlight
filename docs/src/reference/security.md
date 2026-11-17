@@ -104,7 +104,7 @@ operational limitations.
 
 ## Signer State Integrity
 
-The signer does not store its own state. The node stores the
+The node stores the full
 [signer state](signer-state.md) (channel states, allowed on-chain
 destinations, known invoices) and attaches it to every request. An
 attacker with access to the node infrastructure can therefore read,
@@ -115,25 +115,23 @@ must not trust it blindly.
 |-------|--------------|------------------|
 | Node infrastructure | Storing and returning the state | The content, age or completeness of the state |
 | Signer | Writing and signing state entries | |
-| Application embedding the signer | Keeping the state anchor, choosing enforcement options | |
+| Application embedding the signer | Persisting the device watermark and choosing a signature mode | |
 
  - **Authenticity:** every state entry is signed with a key derived
    from the node secret. In `hard` state signature mode the signer
    refuses entries with missing or invalid signatures, so the node
    cannot inject or alter state.
- - **Freshness and completeness** (planned): a small _state anchor_
-   kept on the device records the latest version of every key the
-   signer has seen. On start, the signer refuses state that is older
-   than its anchor, is missing keys, or brings back deleted keys.
- - **Enforcement options belong to the application.** The state
-   signature mode and anchor enforcement are set where the signer is
-   embedded; the node cannot change them, and there is no way for the
-   node to reset an anchor.
+ - **Freshness and completeness:** Signers with device storage persist
+   a device-local watermark before releasing signatures. A fresh process
+   refuses state that is older than its watermark, is missing keys, or
+   brings back deleted keys.
+ - **Configuration belongs to the application.** The application chooses
+   the signature mode and controls the local storage. The node cannot
+   reset the watermark.
 
-A signer without an anchor, for example right after pairing or
-recovery, trusts the first state it receives. See
-[Signer State](signer-state.md) for the details and the configuration
-options.
+On first use, the signer establishes its watermark from the first
+accepted snapshot. See [Signer State](signer-state.md) for configuration,
+recovery implications, and limits.
 
 ## Client &rlarr; Signer Authorization
 

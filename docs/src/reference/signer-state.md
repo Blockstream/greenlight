@@ -11,7 +11,7 @@ Greenlight signers do not keep a durable copy of the full signer state,
 which is what allows a signer to run on a phone, in a short-lived process,
 or on several devices at once. Instead, the Greenlight node stores the
 signer state and attaches it to every request it sends to the signer.
-A signer can keep a small amount of metadata in device-local storage,
+With persistent device storage, the signer keeps a watermark
 independently of the node.
 
 This creates a tension with the [security model](security.md): the
@@ -35,7 +35,7 @@ The signer state is a key-value map. Every entry consists of:
 
 The node also sends `peers/` entries as address hints for channel backup
 recovery. These are untrusted metadata. The signer keeps valid hints for
-backups and excludes them from state signatures.
+backups and excludes them from state signatures and the watermark.
 
 Deleting a key leaves a _tombstone_ behind: the entry is kept with the
 highest possible version and an empty value, so that an older value of
@@ -47,7 +47,8 @@ The node and the signer keep their copies of the state in sync by
 exchanging only what changed:
 
  1. When a signer connects, the node sends it a heartbeat request that
-    carries a full snapshot of the state.
+    carries a full snapshot of the state, including tombstones. The signer
+    checks the first snapshot after startup against the saved watermark.
  2. Every following request carries only the entries that changed
     since the node last sent state to that signer.
  3. The signer merges incoming entries into a scratch copy of its state.
@@ -55,8 +56,9 @@ exchanging only what changed:
     versions are ignored.
  4. The signer authorizes and processes the request against that copy.
     Only after processing and state signing succeed does it commit the
-    copy and return the signed changes. A rejected request leaves the
-    live state unchanged, including changes made while processing it.
+    copy and return the signed changes. It saves the watermark before
+    committing the copy or returning signatures. A request rejected
+    before the save leaves both live state and the watermark unchanged.
  5. The node merges and persists the returned entries _before_ it
     hands the signer's response on. If the entries cannot be stored,
     the response is dropped, so the node never acts on a signature whose
@@ -91,8 +93,8 @@ There are three properties the signer needs from the state it receives:
 | Property | Question | Mechanism | Status |
 |----------|----------|-----------|--------|
 | Authenticity | Was every entry written by a signer of this node? | State signatures | Available |
-| Freshness | Is any entry older than one this signer has already seen? | State anchor | Planned |
-| Completeness | Is any entry this signer has seen missing? | State anchor | Planned |
+| Freshness | Is any entry older than one this signer has already seen? | Device watermark | With persistent device storage |
+| Completeness | Is any entry this signer has seen missing? | Device watermark | With persistent device storage |
 
 ### Authenticity: state signatures
 
@@ -112,24 +114,22 @@ _state signature mode_:
 
 `hard` is the default. A signer never automatically falls back to
 `soft` when it encounters unsigned state. Only `hard` mode guarantees
-that every entry the signer acts on was written by a signer of this node.
+that every entry the signer acts on was written by a signer of this node,
+provided the operator override is disabled.
 
 The mode is part of the signer configuration:
 
 === "Rust"
 
 	```rust
-	use gl_client::signer::{Signer, SignerConfig, StateSignatureMode};
+	use gl_client::signer::{FileDeviceStorage, Signer, SignerConfig};
+	use std::sync::Arc;
 
-	let signer = Signer::new_with_config(
-	    seed,
-	    network,
-	    creds,
-	    SignerConfig {
-	        state_signature_mode: StateSignatureMode::Hard,
-	        ..Default::default()
-	    },
-	)?;
+	let storage = Arc::new(FileDeviceStorage::new("/path/to/app/device-state")?);
+	let signer = Signer::new_with_config(seed, network, creds, SignerConfig {
+	    device_storage: Some(storage),
+	    ..Default::default()
+	})?;
 	```
 
 === "glcli"
@@ -146,14 +146,12 @@ signatures in that snapshot are accepted and repaired; invalid signatures
 are refused. After a successful migration, all subsequent requests use Hard, including after
 reconnecting. Clones of the signer share this transition.
 
-Soft mode requires a persistent `DeviceStorage` supplied through
-`SignerConfig::device_storage`. The signer saves a migration marker,
-scoped by node ID and network, after processing and signing succeed but
-**before** committing state or returning signatures. If that marker is
-already present, requesting Soft starts the
-signer in Hard with a warning. Applications can keep the same configuration
-across restarts without reopening the migration. A successfully processed
-empty snapshot also consumes the allowance.
+The signer saves a migration marker in device storage after processing
+and signing succeed, then saves the watermark before returning signatures.
+The marker and watermark are scoped by node ID and network. If either is
+already present, requesting Soft starts the signer in Hard with a warning.
+Applications can keep the same configuration across restarts. A
+successfully processed empty snapshot also consumes the allowance.
 
 `DeviceStorage` provides fallible `load` and `save` operations over opaque
 bytes; writes must replace values atomically and durably. Each purpose has
@@ -161,10 +159,6 @@ its own key and encoding.
 Storage errors prevent the migration from publishing state or signatures.
 If writing the marker fails, the current signer switches to Hard because
 the failed write may still have persisted the marker.
-
-The optional `file-storage` feature provides `FileDeviceStorage` for Rust.
-Python and gl-sdk accept a persistent directory in the application's data
-directory; `glcli` uses `<data-dir>/device-state`.
 
 === "glcli"
 
@@ -197,26 +191,12 @@ directory; `glcli` uses `<data-dir>/device-state`.
 	or `Signer.new_from_seed_with_config(seed, migration)`. Authenticating
 	a signer preserves its migration configuration and storage.
 
-After a successful migration, reusing the Soft configuration logs a
-warning and uses Hard mode. The Rust, Python and SDK constructors use
-Hard by default; Hard does not require a device store.
-
 The migration deliberately trusts the unsigned snapshot it migrates. If the
 process crashes or the connection drops after saving the marker but
 before the node persists the repaired state, the allowance stays
 consumed. Restarting with Soft uses Hard; it does not retry the migration.
 Contact Greenlight support for explicit recovery if the node still has
 unsigned state.
-Deleting device storage or restoring an older copy can reset this local
-guard. That limitation is accepted for now.
-
-!!! note "Multi-device limitation"
-	The current solution does not coordinate migration across devices.
-	Each device has its own marker, so consuming the Soft allowance on one
-	device does not prevent another device from running Soft for the same
-	node. We plan to address this with an external watermarking service
-	that is not controlled by Blockstream. That service is outside the
-	scope of the current implementation.
 
 #### Operator-assisted override
 
@@ -224,8 +204,8 @@ For manual recovery, a signer can be started with an override that
 accepts missing and invalid state signatures for the lifetime of the
 process. The override has to be acknowledged explicitly
 (`I_ACCEPT_OPERATOR_ASSISTED_STATE_OVERRIDE`), and its use is reported
-to Greenlight. It disables the authenticity guarantee and should only
-be used together with the Greenlight team.
+to Greenlight. It disables the authenticity guarantee while watermark
+checks continue to apply. Use it only together with the Greenlight team.
 
 ```bash
 glcli signer run \
@@ -233,105 +213,61 @@ glcli signer run \
   --state-override-note "support case reference"
 ```
 
-### Freshness and completeness: the state anchor
+### Freshness and completeness with the watermark
 
-!!! example "Planned"
-	The state anchor is not available yet. Option and function names on
-	this page may change before it ships.
+The watermark records the version and hash of each value in the last
+committed state. It includes tombstones and covers only state committed
+by this signer. At startup, the signer rejects a snapshot that omits an
+anchored key, lowers its version, changes its value at the same version,
+or brings a deleted key back. Once initialized, it can merge incremental
+updates with newer state already in memory.
 
-Signatures show that an entry was written by a signer of the node, but
-not that it is the _latest_ version, or that nothing was left out. A
-signer starting from scratch, which on mobile happens at every app
-launch, cannot tell an old, validly signed snapshot from a current one.
+The signer saves the watermark before releasing any response that
+depends on a state change. If the storage write fails, the signer stops
+processing requests until it is reconstructed and reloads storage. A
+watermark violation also stops the signer loop and surfaces an error.
 
-The _state anchor_ closes that gap. It is a small record, kept on the
-device, of the highest version and a short hash of every key the signer
-has seen, including tombstones. It is not a copy of the state, and it
-contains no keys or secrets.
+A response lost before the node saves it can leave the watermark ahead
+of the node. Two devices can also produce different values at the same
+version. After restart, the saved watermark requires the node to supply
+a snapshot that satisfies it. The signer has no automatic recovery for
+missing or conflicting state.
 
-When a signer process starts and receives its first snapshot, it
-compares the snapshot against its anchor:
+#### Manual recovery in Hard mode
 
-| Check | Condition | Outcome |
-|-------|-----------|---------|
-| Rollback | An entry is older than the anchored version | Refused |
-| Omission | A key in the anchor is missing from the snapshot | Refused |
-| Resurrection | A key the anchor knows as deleted comes back | Refused |
-| Discrepancy | An entry has the anchored version but a different value | Accepted, reported |
+First try to restore a node snapshot that satisfies the saved watermark.
+If that snapshot is unavailable, an operator of a Hard-only app can
+explicitly accept a new baseline after independently verifying the state
+the node will supply. Stop the signer, back up the device storage, and
+remove only the `signer/{network}/{node_id}/watermark` record. For
+`FileDeviceStorage`, the filename is the hex SHA-256 hash of that key,
+using the hex node ID. Keep the Soft migration marker intact.
 
-A validly signed entry at the same or a higher version is always
-accepted: only another signer of the node can have produced it. Keys
-the anchor has never seen are accepted and are protected by their
-signatures.
+Restart in Hard mode. The first accepted signed snapshot establishes the
+new baseline. Resetting the watermark discards the ability to reject a
+previously signed snapshot based on the old baseline.
 
-The anchor only advances to versions the node has sent back to the
-signer, never to versions the signer merely wrote. This way a response
-that the node failed to store cannot leave the anchor ahead of the
-node's state and lock the signer out.
+#### Configuring device storage
 
-#### Signers without an anchor
+Soft mode requires persistent storage. In Hard mode, set
+`SignerConfig::device_storage` in Rust to enable the watermark. Reuse the
+same storage across restarts. Unreadable storage and invalid watermark
+data prevent signer initialization.
 
-A signer without an anchor trusts the first snapshot it receives and
-anchors it. This is the case on first start, after [pairing](pairing.md)
-a new device, after [recovery](../getting-started/recover.md), after
-reinstalling the application, and after the anchor has been cleared.
+Upgrade the node plugin first so it includes tombstones in initial
+snapshots. Off mode is intended for development and bypasses both
+signature verification and the watermark.
 
-Losing the anchor, or restoring an older copy of it from a device
-backup, is safe: the anchor only ever records versions the node once
-had, so an older anchor is merely less protective. The anchor needs
-persistent storage, not secret storage.
+#### Limits
 
-#### Storing the anchor
+A device without a watermark uses the first accepted snapshot as its
+baseline, including after pairing or reinstalling. Deleting or rolling back
+device storage can weaken both rollback protection and the Soft migration
+limit.
 
-The core signer operates through a storage interface, so it can also run
-in environments without a filesystem, such as a hardware security module.
-The optional `file-storage` feature supplies a file backend shared by the
-higher-level libraries:
-
-| Library | Anchor storage |
-|---------|----------------|
-| `gl-client` (Rust) | Storage interface, with an optional file backend |
-| `gl-sdk` | File-backed, configured with a path in the application's data directory |
-| `gl-client-py`, `glcli` | File-backed, configured with a path |
-| `gl-testing` | In memory |
-
-#### Enforcement
-
-Anchor enforcement is a signer option with two values:
-
- - `report`: the checks run and their results are reported to
-   Greenlight, but nothing is refused.
- - `enforce`: rollback, omission and resurrection are refused.
-
-The anchor is only meaningful together with `hard` state signature
-mode, because `soft` mode accepts unsigned entries at any version. It
-will start out as `report` and move to `enforce` after `hard` mode is
-the default.
-
-Like the state signature mode, the enforcement option is chosen by the
-application embedding the signer. The Greenlight node cannot change it.
-
-#### Clearing the anchor
-
-If a signer refuses to start because of an anchor check, either the
-state was tampered with, or the node's stored state went back in time
-for an operational reason, for example a restore from backup. The
-signer cannot tell these apart, and there is deliberately no way for
-the node to tell it.
-
-Clearing the anchor on the device (`reset_anchor()` in `gl-sdk`,
-`--reset-anchor` in `glcli`) makes the signer trust the next snapshot
-again, like a signer without an anchor. Applications should only
-offer this as an explicit user action, ideally after contacting
-Greenlight support.
-
-## Limits
-
- - A signer without an anchor trusts the first state it receives.
- - The anchor protects what that particular device has seen. A key
-   written by another signer, and never seen by this one, is protected
-   by its signature only.
- - A device that has been offline for a long time only refuses state
-   older than what it saw when it was last online.
+Run one active signer instance per device storage namespace. Clones
+share the watermark, but separate signer instances and devices cannot
+coordinate their local records. We plan to address coordination with an
+external watermarking service outside Blockstream’s control.
 
 [vls]: https://vls.tech
