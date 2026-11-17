@@ -13,7 +13,7 @@ use crate::runes;
 use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
 use crate::{node, node::Client};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use base64::engine::general_purpose;
 use base64::Engine;
 use bytes::BufMut;
@@ -34,6 +34,7 @@ use runeauth::{Condition, Restriction, Rune, RuneError};
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::PoisonError;
 use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
@@ -93,14 +94,18 @@ fn advertise_experimental_splicing(mut init: HsmdInitReplyV4) -> HsmdInitReplyV4
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StateSignatureMode {
+    /// Disable signature verification (development and tests only).
     Off,
+    /// Migrate one successfully processed state snapshot, then switch to Hard.
+    /// Requires persistent device state storage in [`SignerConfig`].
     Soft,
+    /// Reject incoming state with missing or invalid signatures (the default).
     Hard,
 }
 
 impl Default for StateSignatureMode {
     fn default() -> Self {
-        Self::Soft
+        Self::Hard
     }
 }
 
@@ -115,7 +120,7 @@ pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
     pub fee_budget_limits: FeeBudgetLimits,
-    /// Storage for device-local signer metadata.
+    /// Device-local metadata storage, required for a one-time Soft migration.
     pub device_storage: Option<Arc<dyn DeviceStorage>>,
     #[cfg(feature = "backup")]
     pub backup: Option<SignerBackupConfig>,
@@ -133,12 +138,18 @@ impl OverrideSignatureUsage {
     }
 }
 
+struct SoftMigration {
+    store: Arc<dyn DeviceStorage>,
+    key: String,
+}
+
 #[derive(Clone)]
 pub struct Signer {
     secret: [u8; 32],
     state_signing_secret: SecretKey,
     state_signing_pubkey: PublicKey,
     state_signature_mode: StateSignatureMode,
+    soft_migration: Arc<Mutex<Option<SoftMigration>>>,
     state_signature_override_enabled: bool,
     state_signature_override_note: Option<String>,
     fee_budget_limits: FeeBudgetLimits,
@@ -237,6 +248,7 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
+        let device_storage = config.device_storage;
         #[cfg(feature = "backup")]
         let backup_config = {
             if let Some(backup) = &config.backup {
@@ -360,12 +372,41 @@ impl Signer {
         let state_signing_pubkey =
             PublicKey::from_secret_key(&Secp256k1::signing_only(), &state_signing_secret);
 
+        let soft_migration = match (state_signature_mode, device_storage) {
+            (StateSignatureMode::Soft, Some(store)) => {
+                let key = format!("signer/{network}/{}/soft-migration", hex::encode(&id));
+                if store
+                    .load(&key)
+                    .context("loading Soft migration marker")?
+                    .is_some()
+                {
+                    warn!("Soft state migration has already been used on this device for this node; using Hard mode");
+                    None
+                } else {
+                    Some(SoftMigration { store, key })
+                }
+            }
+            (StateSignatureMode::Soft, None) => {
+                return Err(anyhow!(
+                    "Soft state signature mode requires persistent device state storage"
+                ));
+            }
+            _ => None,
+        };
+        // Soft remains available until processing succeeds. After migration
+        // or a failed marker write, requests use the stored mode.
+        let state_signature_mode = match state_signature_mode {
+            StateSignatureMode::Soft => StateSignatureMode::Hard,
+            mode => mode,
+        };
+
         trace!("Initialized signer for node_id={}", hex::encode(&id));
         Ok(Signer {
             secret: sec,
             state_signing_secret,
             state_signing_pubkey,
             state_signature_mode,
+            soft_migration: Arc::new(Mutex::new(soft_migration)),
             state_signature_override_enabled,
             state_signature_override_note,
             fee_budget_limits: config.fee_budget_limits,
@@ -408,16 +449,14 @@ impl Signer {
     fn handler_with_approver(
         &self,
         approver: Arc<dyn Approve>,
+        services: NodeServices,
     ) -> Result<handler::RootHandler, Error> {
-        let mut h = handler::HandlerBuilder::new(
-            self.network,
-            0 as u64,
-            self.services.clone(),
-            self.secret,
-        )
-        .approver(approver)
-        .build()
-        .map_err(|e| crate::signer::Error::Other(anyhow!("Could not create handler: {:?}", e)))?;
+        let mut h = handler::HandlerBuilder::new(self.network, 0 as u64, services, self.secret)
+            .approver(approver)
+            .build()
+            .map_err(|e| {
+                crate::signer::Error::Other(anyhow!("Could not create handler: {:?}", e))
+            })?;
         h.handle(Signer::initreq())
             .map_err(|e| Error::Other(anyhow!("Failed to handle hsmd_init message: {:?}", e)))?;
         Ok(h.into())
@@ -505,8 +544,19 @@ impl Signer {
         Ok(())
     }
 
-    fn state_signature_mode_label(&self) -> &'static str {
-        match self.state_signature_mode {
+    fn current_mode(&self) -> StateSignatureMode {
+        match *self
+            .soft_migration
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+        {
+            Some(_) => StateSignatureMode::Soft,
+            None => self.state_signature_mode,
+        }
+    }
+
+    fn state_signature_mode_label(mode: StateSignatureMode) -> &'static str {
+        match mode {
             StateSignatureMode::Off => "off",
             StateSignatureMode::Soft => "soft",
             StateSignatureMode::Hard => "hard",
@@ -515,9 +565,10 @@ impl Signer {
 
     fn inspect_incoming_state_signatures(
         &self,
+        mode: StateSignatureMode,
         entries: &[SignerStateEntry],
     ) -> Result<OverrideSignatureUsage, Error> {
-        if self.state_signature_mode == StateSignatureMode::Off {
+        if mode == StateSignatureMode::Off {
             return Ok(OverrideSignatureUsage::default());
         }
 
@@ -526,7 +577,7 @@ impl Signer {
 
         for entry in entries.iter() {
             if entry.signature.is_empty() {
-                if self.state_signature_mode == StateSignatureMode::Hard {
+                if mode == StateSignatureMode::Hard {
                     usage.missing_keys.push(entry.key.clone());
                     if first_error.is_none() {
                         first_error = Some(anyhow!("missing state signature for key {}", entry.key));
@@ -559,7 +610,7 @@ impl Signer {
         }
 
         let message = report::build_state_signature_override_enabled_message(
-            self.state_signature_mode_label(),
+            Self::state_signature_mode_label(self.current_mode()),
             &self.id,
             self.state_signature_override_note.as_deref(),
         );
@@ -575,6 +626,7 @@ impl Signer {
 
     async fn report_state_signature_override_usage(
         &self,
+        mode: StateSignatureMode,
         req: &HsmRequest,
         usage: &OverrideSignatureUsage,
     ) {
@@ -583,7 +635,7 @@ impl Signer {
         }
 
         let message = report::build_state_signature_override_used_message(
-            self.state_signature_mode_label(),
+            Self::state_signature_mode_label(mode),
             req.request_id as u64,
             &usage.missing_keys,
             &usage.invalid_keys,
@@ -795,17 +847,14 @@ impl Signer {
         msg: &vls_protocol::msgs::Message,
         reqs: &[model::Request],
         hsm_context: Option<&HsmRequestContext>,
+        state: &crate::persist::State,
     ) -> Result<(), Error> {
         log::trace!(
             "Resolving signature request against pending grpc commands: {:?}",
             reqs
         );
 
-        let state = self
-            .state
-            .lock()
-            .map_err(|e| Error::Other(anyhow!("Failed to acquire state lock: {:?}", e)))?;
-        Resolver::try_resolve(msg, reqs, &state, &self.id, hsm_context)?;
+        Resolver::try_resolve(msg, reqs, state, &self.id, hsm_context)?;
 
         Ok(())
     }
@@ -823,7 +872,7 @@ impl Signer {
             _ => None,
         };
         let result = self
-            .process_request_inner(req, msg, decline.is_some())
+            .process_request_with_message(req, msg, decline.is_some())
             .await;
         match (result, decline) {
             (Err(cause), Some(reply)) => Err(Error::PreapprovalDeclined {
@@ -834,7 +883,7 @@ impl Signer {
         }
     }
 
-    async fn process_request_inner(
+    async fn process_request_with_message(
         &self,
         req: HsmRequest,
         msg: vls_protocol::msgs::Message,
@@ -843,15 +892,47 @@ impl Signer {
         debug!("Processing request {:?}", req);
         let req = req;
 
-        let signature_usage = self.inspect_incoming_state_signatures(&req.signer_state)?;
+        let mode = self.current_mode();
+        let signature_usage = self.inspect_incoming_state_signatures(mode, &req.signer_state)?;
         if signature_usage.is_used() {
-            self.report_state_signature_override_usage(&req, &signature_usage)
+            self.report_state_signature_override_usage(mode, &req, &signature_usage)
                 .await;
         }
 
         let incoming_state = crate::persist::State::try_from(req.signer_state.as_slice())
             .map_err(|e| Error::Other(anyhow!("Failed to decode signer state: {e}")))?;
 
+        let mut rejections = Vec::new();
+        let result = self.process_request_inner(
+            &req,
+            msg,
+            preapproval,
+            incoming_state,
+            mode,
+            &mut rejections,
+        );
+        // No live-state lock is held while reporting to the server.
+        for msg in rejections {
+            report::Reporter::report(crate::pb::scheduler::SignerRejection {
+                msg,
+                request: Some(req.clone()),
+                git_version: GITHASH.to_string(),
+                node_id: self.node_id(),
+            })
+            .await;
+        }
+        result
+    }
+
+    fn process_request_inner(
+        &self,
+        req: &HsmRequest,
+        msg: vls_protocol::msgs::Message,
+        preapproval: bool,
+        incoming_state: crate::persist::State,
+        mode: StateSignatureMode,
+        rejections: &mut Vec<String>,
+    ) -> Result<HsmResponse, Error> {
         // Create sketch from incoming state (nodelet's view) so we can
         // send back any entries the nodelet doesn't know about yet,
         // including the initial VLS state created during Signer::new().
@@ -860,14 +941,19 @@ impl Signer {
         #[cfg(feature = "backup")]
         let pre_backup_state;
 
+        // Keep snapshot and commit atomic with respect to other signer clones.
+        // All processing below is synchronous; reporting happens after return.
+        let mut live_state = self
+            .state
+            .lock()
+            .map_err(|e| Error::Other(anyhow!("Failed to acquire state lock: {:?}", e)))?;
+        let mut candidate = live_state.clone();
         let prestate_log = {
-            debug!("Updating local signer state with state from node");
-            let mut state = self.state.lock().map_err(|e| {
-                Error::Other(anyhow!("Failed to acquire state lock: {:?}", e))
-            })?;
-            let merge_res = state.merge(&incoming_state).map_err(|e| {
-                Error::Other(anyhow!("Failed to merge signer state: {:?}", e))
-            })?;
+            debug!("Merging incoming signer state into a scratch copy");
+            let state = &mut candidate;
+            let merge_res = state
+                .merge(&incoming_state)
+                .map_err(|e| Error::Other(anyhow!("Failed to merge signer state: {:?}", e)))?;
             if merge_res.has_conflicts() {
                 debug!(
                     "State merge ignored stale versions (count={})",
@@ -884,6 +970,11 @@ impl Signer {
             })?;
             prestate_log
         };
+
+        let persister = Arc::new(crate::persist::MemoryPersister::from_state(candidate));
+        let state = persister.state();
+        let mut services = self.services.clone();
+        services.persister = persister.clone();
 
         // The first two bytes represent the message type. Check that
         // it is not a `sign-message` request (type 23).
@@ -914,17 +1005,17 @@ impl Signer {
         log::debug!("Handling message {:?}", msg);
         log::trace!("Signer state {}", prestate_log);
 
-        if let Err(e) = self.authenticate_request(&msg, &ctxrequests, req.context.as_ref()) {
+        let authentication = {
+            let state = state
+                .lock()
+                .map_err(|e| Error::Other(anyhow!("Failed to acquire scratch state lock: {e}")))?;
+            self.authenticate_request(&msg, &ctxrequests, req.context.as_ref(), &state)
+        };
+        if let Err(e) = authentication {
             if preapproval {
                 warn!("Preapproval context did not resolve: {e}");
             } else {
-                report::Reporter::report(crate::pb::scheduler::SignerRejection {
-                    msg: e.to_string(),
-                    request: Some(req.clone()),
-                    git_version: GITHASH.to_string(),
-                    node_id: self.node_id(),
-                })
-                .await;
+                rejections.push(e.to_string());
             }
             #[cfg(not(feature = "permissive"))]
             return Err(e);
@@ -937,8 +1028,7 @@ impl Signer {
                     let pubkey = PublicKey::from_slice(&self.id);
                     match pubkey {
                         Ok(p) => {
-                            let _ = self
-                                .services
+                            let _ = services
                                 .persister
                                 .update_node_allowlist(&p, vec![gl_config.close_to_addr.clone()]);
                         }
@@ -961,7 +1051,7 @@ impl Signer {
             vls_protocol_signer::approver::NegativeApprover(),
         )));
         approver.approve(approvals);
-        let root_handler = self.handler_with_approver(approver)?;
+        let root_handler = self.handler_with_approver(approver, services)?;
 
         fee_budget::check_payment_preapproval(&msg, &ctxrequests, self.fee_budget_limits)
             .map_err(Error::FeeBudget)?;
@@ -971,7 +1061,7 @@ impl Signer {
             if let Err(e) = record_invoice(
                 request,
                 &root_handler.node(),
-                self.services.persister.as_ref(),
+                persister.as_ref(),
                 self.services.clock.now().as_secs(),
             ) {
                 warn!("Skipping payment context: {e:#}");
@@ -1016,13 +1106,7 @@ impl Signer {
                 return Err(Error::Other(anyhow!("preapproving payment: {e:?}")));
             }
             Err(e) => {
-                report::Reporter::report(crate::pb::scheduler::SignerRejection {
-                    msg: format!("{:?}", e),
-                    request: Some(req.clone()),
-                    git_version: GITHASH.to_string(),
-                    node_id: self.node_id(),
-                })
-                .await;
+                rejections.push(format!("{:?}", e));
                 return Err(Error::Other(anyhow!("processing request: {e:?}")));
             }
         };
@@ -1032,7 +1116,7 @@ impl Signer {
 
         let signer_state = {
             debug!("Serializing state changes to report to node");
-            let mut state = self.state.lock().map_err(|e| {
+            let mut state = state.lock().map_err(|e| {
                 Error::Other(anyhow!(
                     "Failed to acquire state lock for serialization: {:?}",
                     e
@@ -1064,6 +1148,45 @@ impl Signer {
             }
             diff_entries
         };
+        let response = HsmResponse {
+            raw: response.as_vec(),
+            request_id: req.request_id,
+            signer_state,
+            error: "".to_owned(),
+        };
+        let committed_state = state
+            .lock()
+            .map_err(|e| {
+                Error::Other(anyhow!(
+                    "Failed to acquire scratch state lock for commit: {e}"
+                ))
+            })?
+            .clone();
+        if mode == StateSignatureMode::Soft {
+            // Claim only after all processing and signing succeed. A request
+            // checked in Soft must claim its own allowance, even if another
+            // clone completed the migration while it was waiting.
+            let migration = self
+                .soft_migration
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .take()
+                .ok_or_else(|| {
+                    Error::Other(anyhow!("Soft state migration has already been claimed"))
+                })?;
+            // A failed write may still have persisted the marker. Keep the
+            // allowance consumed and publish neither state nor signatures.
+            migration
+                .store
+                .save(&migration.key, b"used")
+                .context("persisting one-time Soft migration marker")
+                .map_err(Error::Other)?;
+        }
+        // The marker is durable before any migrated state or signatures can
+        // leave this transaction. Rejected requests never publish their state.
+        *live_state = committed_state;
+        drop(live_state);
+
         #[cfg(feature = "backup")]
         {
             match self.backup_runtime.lock() {
@@ -1077,12 +1200,7 @@ impl Signer {
                 }
             }
         }
-        Ok(HsmResponse {
-            raw: response.as_vec(),
-            request_id: req.request_id,
-            signer_state,
-            error: "".to_owned(),
-        })
+        Ok(response)
     }
 
     pub fn node_id(&self) -> Vec<u8> {
@@ -1784,6 +1902,7 @@ impl From<StartupMessage> for crate::pb::scheduler::StartupMessage {
 
 #[cfg(test)]
 mod tests {
+    use super::device_state::MemoryDeviceStorage;
     use super::*;
     use crate::credentials;
     use crate::pb;
@@ -1805,6 +1924,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: None,
+                device_storage: Some(Arc::new(MemoryDeviceStorage::default())),
                 ..SignerConfig::default()
             },
         )
@@ -1819,6 +1939,7 @@ mod tests {
             SignerConfig {
                 state_signature_mode: mode,
                 state_signature_override: Some(test_override_config(note)),
+                device_storage: Some(Arc::new(MemoryDeviceStorage::default())),
                 ..SignerConfig::default()
             },
         )
@@ -1861,6 +1982,520 @@ mod tests {
             value: serde_json::to_vec(&value).unwrap(),
             signature: vec![],
         }
+    }
+
+    fn heartbeat_request(entries: Vec<SignerStateEntry>) -> HsmRequest {
+        HsmRequest {
+            request_id: 0,
+            context: None,
+            raw: heartbeat_raw(),
+            signer_state: entries,
+            requests: vec![],
+        }
+    }
+
+    fn signed_config_request(signer: &Signer, address: &str) -> pb::PendingRequest {
+        use prost::Message;
+        use ring::signature::{EcdsaKeyPair, KeyPair, ECDSA_P256_SHA256_FIXED_SIGNING};
+
+        let rng = ring::rand::SystemRandom::new();
+        let pkcs8 = EcdsaKeyPair::generate_pkcs8(&ECDSA_P256_SHA256_FIXED_SIGNING, &rng).unwrap();
+        let key = EcdsaKeyPair::from_pkcs8(&ECDSA_P256_SHA256_FIXED_SIGNING, pkcs8.as_ref(), &rng)
+            .unwrap();
+        let pubkey = key.public_key().as_ref().to_vec();
+        let payload = pb::GlConfig {
+            close_to_addr: address.to_string(),
+        }
+        .encode_to_vec();
+        let mut request = vec![0];
+        request.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+        request.extend_from_slice(&payload);
+        let signature = key.sign(&rng, &request).unwrap().as_ref().to_vec();
+        let restriction = format!("pubkey={}", hex::encode(&pubkey));
+        let rune = signer.create_rune(None, vec![vec![&restriction]]).unwrap();
+        pb::PendingRequest {
+            request,
+            uri: "/greenlight.Node/Configure".to_string(),
+            pubkey,
+            signature,
+            rune: general_purpose::URL_SAFE.decode(rune).unwrap(),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn rejected_messages_discard_unsigned_state_and_do_not_launder_it_later() {
+        for raw in [
+            hex::decode("0017000B48656c6c6f20776f726c64").unwrap(),
+            vec![],
+        ] {
+            let signer = mk_signer(StateSignatureMode::Soft);
+            let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+            let mut req = heartbeat_request(vec![mk_state_entry("state/injected", 1, json!(1))]);
+            req.raw = raw;
+            assert!(signer.process_request(req).await.is_err());
+            assert_eq!(
+                serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+                before
+            );
+            assert_eq!(signer.current_mode(), StateSignatureMode::Soft);
+            let response = signer
+                .process_request(heartbeat_request(vec![]))
+                .await
+                .unwrap();
+            assert!(response
+                .signer_state
+                .iter()
+                .all(|entry| entry.key != "state/injected"));
+            assert_eq!(signer.current_mode(), StateSignatureMode::Hard);
+        }
+    }
+
+    #[tokio::test]
+    async fn failed_soft_request_can_retry_the_same_legacy_state_after_restart() {
+        let store: Arc<dyn DeviceStorage> = Arc::new(MemoryDeviceStorage::default());
+        let signer = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+        let key = signer
+            .soft_migration
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .key
+            .clone();
+        let legacy = mk_state_entry("state/legacy", 1, json!(1));
+        let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+        let mut req = heartbeat_request(vec![legacy.clone()]);
+        req.raw = hex::decode("0017000B48656c6c6f20776f726c64").unwrap();
+        assert!(signer.process_request(req).await.is_err());
+        assert_eq!(
+            serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+            before
+        );
+        assert!(store.load(&key).unwrap().is_none());
+        assert_eq!(signer.current_mode(), StateSignatureMode::Soft);
+        drop(signer);
+
+        let restarted = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+        assert_eq!(restarted.current_mode(), StateSignatureMode::Soft);
+        let response = restarted
+            .process_request(heartbeat_request(vec![legacy]))
+            .await
+            .unwrap();
+        let repaired = response
+            .signer_state
+            .iter()
+            .find(|entry| entry.key == "state/legacy")
+            .unwrap();
+        restarted.verify_state_entry_signature(repaired).unwrap();
+        assert_eq!(restarted.current_mode(), StateSignatureMode::Hard);
+        assert_eq!(store.load(&key).unwrap().unwrap(), b"used");
+        let next = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
+        assert_eq!(next.current_mode(), StateSignatureMode::Hard);
+    }
+
+    #[cfg(not(feature = "permissive"))]
+    #[tokio::test]
+    async fn failed_authorization_does_not_commit_incoming_state() {
+        for mode in [StateSignatureMode::Soft, StateSignatureMode::Hard] {
+            let signer = mk_signer(mode);
+            let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+            let mut entry = mk_state_entry("state/incoming", 1, json!(1));
+            if mode == StateSignatureMode::Hard {
+                entry.signature = signer
+                    .sign_state_payload(&entry.key, entry.version, &entry.value)
+                    .unwrap();
+            }
+            let mut req = heartbeat_request(vec![entry]);
+            // HsmdInit has no matching authenticated user command and is not
+            // among the messages that the resolver accepts without context.
+            req.raw = Signer::initreq().inner().as_vec();
+            assert!(matches!(
+                signer.process_request(req).await,
+                Err(Error::Resolver(..))
+            ));
+            assert_eq!(
+                serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+                before
+            );
+            assert_eq!(signer.current_mode(), mode);
+        }
+    }
+
+    #[tokio::test]
+    async fn failed_vls_handler_discards_incoming_state_and_context_updates() {
+        for mode in [StateSignatureMode::Soft, StateSignatureMode::Hard] {
+            let signer = mk_signer(mode);
+            let address = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT";
+            let config = signed_config_request(&signer, address);
+            assert!(signer.check_request_auth(vec![config.clone()])[0].is_ok());
+            let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+            let mut entry = mk_state_entry("state/incoming", 1, json!(1));
+            if mode == StateSignatureMode::Hard {
+                entry.signature = signer
+                    .sign_state_payload(&entry.key, entry.version, &entry.value)
+                    .unwrap();
+            }
+            let mut req = heartbeat_request(vec![entry]);
+            req.requests = vec![config.clone()];
+            req.raw = vls_protocol::msgs::GetPerCommitmentPoint {
+                commitment_number: 0,
+            }
+            .as_vec();
+            req.context = Some(HsmRequestContext {
+                node_id: signer.node_id(),
+                dbid: 7,
+                ..Default::default()
+            });
+            // Authorization allows this message, but VLS cannot load the missing
+            // channel. The authenticated allowlist update precedes that failure.
+            let err = signer.process_request(req).await.unwrap_err();
+            assert!(err.to_string().contains("processing request:"), "{err}");
+            assert_eq!(
+                serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+                before
+            );
+
+            assert_eq!(signer.current_mode(), mode);
+
+            let mut valid = heartbeat_request(vec![]);
+            valid.requests = vec![config];
+            let response = signer.process_request(valid).await.unwrap();
+            let allowlist = response
+                .signer_state
+                .iter()
+                .find(|entry| entry.key == format!("allowlists/{}", hex::encode(signer.node_id())))
+                .unwrap();
+            assert_eq!(
+                serde_json::from_slice::<serde_json::Value>(&allowlist.value).unwrap(),
+                json!([address])
+            );
+            signer.verify_state_entry_signature(allowlist).unwrap();
+            let committed: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+            assert!(committed.iter().any(|entry| entry.key == allowlist.key));
+            assert!(committed.iter().all(|entry| entry.key != "state/incoming"));
+            assert_eq!(signer.current_mode(), StateSignatureMode::Hard);
+        }
+    }
+
+    #[tokio::test]
+    async fn successful_vls_changes_are_signed_and_committed() {
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let mut req = heartbeat_request(vec![]);
+        req.raw = vls_protocol::msgs::NewChannel {
+            peer_id: vls_protocol::model::PubKey(signer.node_id().try_into().unwrap()),
+            dbid: 1,
+        }
+        .as_vec();
+        let response = signer.process_request(req).await.unwrap();
+        let channel = response
+            .signer_state
+            .iter()
+            .find(|entry| entry.key.starts_with("channels/"))
+            .unwrap();
+        signer.verify_state_entry_signature(channel).unwrap();
+        let committed: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+        let persisted = committed
+            .iter()
+            .find(|entry| entry.key == channel.key)
+            .unwrap();
+        assert_eq!(persisted.value, channel.value);
+        assert_eq!(persisted.signature, channel.signature);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn successful_requests_on_clones_do_not_lose_each_others_updates() {
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let barrier = Arc::new(tokio::sync::Barrier::new(2));
+        let spawn = |key: &'static str| {
+            let signer = signer.clone();
+            let barrier = barrier.clone();
+            tokio::spawn(async move {
+                let mut entry = mk_state_entry(key, 1, json!(1));
+                entry.signature = signer
+                    .sign_state_payload(&entry.key, entry.version, &entry.value)
+                    .unwrap();
+                barrier.wait().await;
+                signer.process_request(heartbeat_request(vec![entry])).await
+            })
+        };
+        let first = spawn("state/a");
+        let second = spawn("state/b");
+        let (a, b) = tokio::join!(first, second);
+        a.unwrap().unwrap();
+        b.unwrap().unwrap();
+        let committed: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+        for key in ["state/a", "state/b"] {
+            assert!(committed.iter().any(|entry| entry.key == key));
+        }
+    }
+
+    fn signer_with_device_storage(
+        store: Arc<dyn DeviceStorage>,
+        secret: u8,
+        network: Network,
+    ) -> anyhow::Result<Signer> {
+        Signer::new_with_config(
+            vec![secret; 32],
+            network,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: StateSignatureMode::Soft,
+                device_storage: Some(store),
+                ..SignerConfig::default()
+            },
+        )
+    }
+
+    #[test]
+    fn hard_is_the_default_and_soft_requires_storage() {
+        assert_eq!(
+            SignerConfig::default().state_signature_mode,
+            StateSignatureMode::Hard
+        );
+        let err = Signer::new_with_config(
+            vec![0; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                state_signature_mode: StateSignatureMode::Soft,
+                ..SignerConfig::default()
+            },
+        )
+        .err()
+        .unwrap();
+        assert!(err
+            .to_string()
+            .contains("requires persistent device state storage"));
+    }
+
+    #[tokio::test]
+    async fn soft_migration_rejects_subsequent_unsigned_additions_updates_and_tombstones() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let migrated = signer
+            .process_request(heartbeat_request(vec![mk_state_entry(
+                "state/test",
+                1,
+                json!(1),
+            )]))
+            .await
+            .unwrap();
+        assert_eq!(signer.current_mode(), StateSignatureMode::Hard);
+        let repaired = migrated
+            .signer_state
+            .iter()
+            .find(|e| e.key == "state/test")
+            .unwrap();
+        signer.verify_state_entry_signature(repaired).unwrap();
+
+        let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+        for entry in [
+            mk_state_entry("allowlists/injected", 0, json!([])),
+            mk_state_entry("state/test", 2, json!(2)),
+            mk_state_entry("state/test", u64::MAX, serde_json::Value::Null),
+        ] {
+            let err = signer
+                .process_request(heartbeat_request(vec![entry]))
+                .await
+                .unwrap_err();
+            assert!(err.to_string().contains("missing state signature"));
+            assert_eq!(
+                serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+                before
+            );
+        }
+        // Signed echoes of the migration result are accepted after the switch.
+        signer
+            .process_request(heartbeat_request(migrated.signer_state))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn soft_migration_is_shared_across_clones() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let barrier = Arc::new(tokio::sync::Barrier::new(2));
+        let spawn = |key: &'static str| {
+            let signer = signer.clone();
+            let barrier = barrier.clone();
+            tokio::spawn(async move {
+                barrier.wait().await;
+                signer
+                    .process_request(heartbeat_request(vec![mk_state_entry(key, 1, json!(1))]))
+                    .await
+            })
+        };
+        let first = spawn("state/a");
+        let second = spawn("state/b");
+        let (a, b) = tokio::join!(first, second);
+        assert_eq!(
+            usize::from(a.unwrap().is_ok()) + usize::from(b.unwrap().is_ok()),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn soft_migration_is_persisted_and_scoped_by_node_and_network() {
+        let store: Arc<dyn DeviceStorage> = Arc::new(MemoryDeviceStorage::default());
+        let signer = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+        signer
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap();
+        drop(signer);
+        let restarted = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+        assert_eq!(restarted.current_mode(), StateSignatureMode::Hard);
+        assert_eq!(restarted.state_signature_mode, StateSignatureMode::Hard);
+        assert_eq!(
+            signer_with_device_storage(store.clone(), 1, Network::Bitcoin)
+                .unwrap()
+                .current_mode(),
+            StateSignatureMode::Soft
+        );
+        assert_eq!(
+            signer_with_device_storage(store, 0, Network::Regtest)
+                .unwrap()
+                .current_mode(),
+            StateSignatureMode::Soft
+        );
+    }
+
+    #[tokio::test]
+    async fn malformed_or_invalid_snapshots_do_not_consume_soft_migration() {
+        let signer = mk_signer(StateSignatureMode::Soft);
+        let mut malformed = mk_state_entry("state/test", 1, json!(1));
+        malformed.value = b"{".to_vec();
+        let mut invalid = mk_state_entry("state/test", 1, json!(1));
+        invalid.signature = vec![1; COMPACT_SIGNATURE_LEN];
+        let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+        for entry in [malformed, invalid] {
+            assert!(signer
+                .process_request(heartbeat_request(vec![entry]))
+                .await
+                .is_err());
+            assert_eq!(
+                serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+                before
+            );
+            assert_eq!(signer.current_mode(), StateSignatureMode::Soft);
+        }
+        signer
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn default_hard_signer_signs_its_own_initial_state_without_device_storage() {
+        let signer = Signer::new(
+            vec![0; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+        )
+        .unwrap();
+        let response = signer
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap();
+        assert!(!response.signer_state.is_empty());
+        for entry in response.signer_state {
+            signer.verify_state_entry_signature(&entry).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn any_soft_migration_marker_value_starts_in_hard() {
+        for bytes in [b"".as_slice(), b"{".as_slice(), b"used".as_slice()] {
+            let store: Arc<dyn DeviceStorage> = Arc::new(MemoryDeviceStorage::default());
+            let signer = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+            let key = signer
+                .soft_migration
+                .lock()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .key
+                .clone();
+            store.save(&key, bytes).unwrap();
+            drop(signer);
+            let restarted = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
+            let err = restarted
+                .process_request(heartbeat_request(vec![mk_state_entry(
+                    "state/injected",
+                    0,
+                    json!(1),
+                )]))
+                .await
+                .unwrap_err();
+            assert!(err.to_string().contains("missing state signature"));
+        }
+    }
+
+    #[derive(Debug)]
+    struct FailingDeviceStorage {
+        fail_load: bool,
+        // Some filesystems can report an error after the new bytes are written.
+        saved: Mutex<Option<Vec<u8>>>,
+    }
+
+    impl DeviceStorage for FailingDeviceStorage {
+        fn load(&self, _: &str) -> anyhow::Result<Option<Vec<u8>>> {
+            if self.fail_load {
+                return Err(anyhow!("device storage unavailable"));
+            }
+            Ok(self.saved.lock().unwrap().clone())
+        }
+
+        fn save(&self, _: &str, value: &[u8]) -> anyhow::Result<()> {
+            *self.saved.lock().unwrap() = Some(value.to_vec());
+            Err(anyhow!("device storage sync failed"))
+        }
+    }
+
+    #[tokio::test]
+    async fn storage_failures_never_merge_unsigned_state_or_reopen_a_spent_migration() {
+        let unavailable: Arc<dyn DeviceStorage> = Arc::new(FailingDeviceStorage {
+            fail_load: true,
+            saved: Mutex::new(None),
+        });
+        assert!(signer_with_device_storage(unavailable, 0, Network::Bitcoin).is_err());
+
+        let store: Arc<dyn DeviceStorage> = Arc::new(FailingDeviceStorage {
+            fail_load: false,
+            saved: Mutex::new(None),
+        });
+        let signer = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+        let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+        let mut req = heartbeat_request(vec![mk_state_entry("state/legacy", 1, json!(1))]);
+        req.raw = vls_protocol::msgs::NewChannel {
+            peer_id: vls_protocol::model::PubKey(signer.node_id().try_into().unwrap()),
+            dbid: 1,
+        }
+        .as_vec();
+        let err = signer.process_request(req).await.unwrap_err();
+        assert_eq!(signer.current_mode(), StateSignatureMode::Hard);
+        assert!(err
+            .to_string()
+            .contains("persisting one-time Soft migration marker"));
+        assert_eq!(
+            serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+            before
+        );
+        signer
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap();
+        let err = signer
+            .process_request(heartbeat_request(vec![mk_state_entry(
+                "state/injected",
+                0,
+                json!(1),
+            )]))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("missing state signature"));
+        let restarted = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
+        assert_eq!(restarted.current_mode(), StateSignatureMode::Hard);
     }
 
     #[cfg(feature = "backup")]

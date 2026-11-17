@@ -7,11 +7,12 @@ channel, which destinations the on-chain wallet may send to, and which
 invoices and preimages it has seen. This knowledge is the _signer
 state_.
 
-Greenlight signers are stateless by design. They do not own durable
-storage for the signer state, which is what allows a signer to run on
-a phone, in a short-lived process, or on several devices at once.
-Instead, the Greenlight node stores the signer state and attaches it to
-every request it sends to the signer.
+Greenlight signers do not keep a durable copy of the full signer state,
+which is what allows a signer to run on a phone, in a short-lived process,
+or on several devices at once. Instead, the Greenlight node stores the
+signer state and attaches it to every request it sends to the signer.
+A signer can keep a small amount of metadata in device-local storage,
+independently of the node.
 
 This creates a tension with the [security model](security.md): the
 signer protects funds against an attacker with access to the node
@@ -45,15 +46,21 @@ exchanging only what changed:
     carries a full snapshot of the state.
  2. Every following request carries only the entries that changed
     since the node last sent state to that signer.
- 3. The signer merges incoming entries into its in-memory copy. New
-    keys are added, higher versions replace lower ones, lower versions
-    are ignored.
- 4. The signer processes the request and returns the entries it
-    changed, signed.
+ 3. The signer merges incoming entries into a scratch copy of its state.
+    New keys are added, higher versions replace lower ones, lower
+    versions are ignored.
+ 4. The signer authorizes and processes the request against that copy.
+    Only after processing and state signing succeed does it commit the
+    copy and return the signed changes. A rejected request leaves the
+    live state unchanged, including changes made while processing it.
  5. The node merges and persists the returned entries _before_ it
     hands the signer's response on. If the entries cannot be stored,
     the response is dropped, so the node never acts on a signature whose
     state was lost.
+
+Builds with the `permissive` feature report authorization failures but
+continue processing them. Requests that return an error still leave the
+live state unchanged.
 
 The node pipelines requests, so several can be in flight at once, each
 carrying the state as it was when the request was sent. The signer
@@ -96,18 +103,12 @@ _state signature mode_:
 | Mode | Missing signature | Invalid signature | Intended use |
 |------|-------------------|-------------------|--------------|
 | `off` | Accepted | Accepted | Development and tests only |
-| `soft` | Accepted, and signed on the way out | Refused | Migrating nodes whose state predates state signatures |
-| `hard` | Refused | Refused | Production, once all state is signed |
+| `soft` | Accepted for one successfully processed snapshot, and signed on the way out | Refused | One-time migration of nodes whose state predates state signatures |
+| `hard` | Refused | Refused | Production (default) |
 
-`soft` is the current default. In `soft` mode a signer signs unsigned
-entries it receives, which gradually migrates nodes created before
-state signing existed. Only `hard` mode guarantees that every entry the
-signer acts on was written by a signer of this node.
-
-!!! note "Planned default"
-	The default will move from `soft` to `hard` once the fleet's state
-	is fully signed. Applications embedding the signer should plan for
-	running in `hard` mode.
+`hard` is the default. A signer never automatically falls back to
+`soft` when it encounters unsigned state. Only `hard` mode guarantees
+that every entry the signer acts on was written by a signer of this node.
 
 The mode is part of the signer configuration:
 
@@ -132,6 +133,58 @@ The mode is part of the signer configuration:
 	```bash
 	glcli signer run --state-signature-mode hard
 	```
+
+#### One-time migration
+
+An application can explicitly select `soft` to migrate a legacy node.
+One successfully processed state snapshot can run in Soft mode. Missing
+signatures in that snapshot are accepted and repaired; invalid signatures
+are refused. After a successful migration, all subsequent requests use Hard, including after
+reconnecting. Clones of the signer share this transition.
+
+Soft mode requires a persistent `DeviceStorage` supplied through
+`SignerConfig::device_storage`. The signer saves a migration marker,
+scoped by node ID and network, after processing and signing succeed but
+**before** committing state or returning signatures. If that marker is
+already present, requesting Soft starts the
+signer in Hard with a warning. Applications can keep the same configuration
+across restarts without reopening the migration. A successfully processed
+empty snapshot also consumes the allowance.
+
+`DeviceStorage` provides fallible `load` and `save` operations over opaque
+bytes; writes must replace values atomically and durably. Each purpose has
+its own key and encoding.
+Storage errors prevent the migration from publishing state or signatures.
+If writing the marker fails, the current signer switches to Hard because
+the failed write may still have persisted the marker.
+
+For explicit Soft mode, `glcli` supplies a file-backed store under
+`<data-dir>/device-state`. To migrate a legacy node once:
+
+```bash
+glcli signer run --state-signature-mode soft
+```
+
+Afterward, rerunning with `soft` logs a warning and uses Hard mode.
+Running without the flag also uses Hard. The Rust, Python and SDK
+constructors use Hard by default; Hard does not require a device store.
+
+The migration deliberately trusts the unsigned snapshot it migrates. If the
+process crashes or the connection drops after saving the marker but
+before the node persists the repaired state, the allowance stays
+consumed. Restarting with Soft uses Hard; it does not retry the migration.
+Contact Greenlight support for explicit recovery if the node still has
+unsigned state.
+Deleting device storage or restoring an older copy can reset this local
+guard. That limitation is accepted for now.
+
+!!! note "Multi-device limitation"
+	The current solution does not coordinate migration across devices.
+	Each device has its own marker, so consuming the Soft allowance on one
+	device does not prevent another device from running Soft for the same
+	node. We plan to address this with an external watermarking service
+	that is not controlled by Blockstream. That service is outside the
+	scope of the current implementation.
 
 #### Operator-assisted override
 

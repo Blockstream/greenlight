@@ -694,10 +694,13 @@ pub(crate) struct MemoryPersister {
 
 impl MemoryPersister {
     pub fn new() -> Self {
-        let state = Arc::new(Mutex::new(State {
-            values: BTreeMap::new(),
-        }));
-        MemoryPersister { state }
+        Self::from_state(State::new())
+    }
+
+    pub fn from_state(state: State) -> Self {
+        MemoryPersister {
+            state: Arc::new(Mutex::new(state)),
+        }
     }
 
     pub fn state(&self) -> Arc<Mutex<State>> {

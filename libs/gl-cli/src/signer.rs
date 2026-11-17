@@ -3,13 +3,14 @@ use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
 use gl_client::signer::{
-    CLNBackup, CLNBackupOptions, FeeBudgetLimits, RecoverableChannel, Signer, SignerBackupConfig,
+    CLNBackup, CLNBackupOptions, DeviceStorage, FeeBudgetLimits, RecoverableChannel, Signer, SignerBackupConfig,
     SignerBackupSnapshot, SignerBackupStrategy, SignerConfig, StateSignatureMode,
     StateSignatureOverrideConfig,
 };
 use lightning_signer::bitcoin::Network;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio::{join, signal};
 use util::{CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
 
@@ -28,7 +29,7 @@ pub enum StateSignatureModeArg {
 
 impl Default for StateSignatureModeArg {
     fn default() -> Self {
-        Self::Soft
+        Self::Hard
     }
 }
 
@@ -75,7 +76,8 @@ impl Default for BackupConvertFormat {
 pub enum Command {
     /// Starts a signer that connects to greenlight
     Run {
-        #[arg(long, value_enum, default_value_t = StateSignatureModeArg::Soft)]
+        /// Signature checks; soft migrates one state snapshot per device.
+        #[arg(long, value_enum, default_value_t = StateSignatureModeArg::Hard)]
         state_signature_mode: StateSignatureModeArg,
         #[arg(long = "state-override")]
         state_override: Option<String>,
@@ -385,6 +387,15 @@ async fn run_handler<P: AsRef<Path>>(
         }
     });
     let backup = backup_config_from_args(backup_path, backup_strategy, backup_periodic_updates)?;
+    let device_storage: Option<Arc<dyn DeviceStorage>> = match state_signature_mode {
+        StateSignatureModeArg::Soft => Some(Arc::new(
+            crate::device_state::FileDeviceStorage::new(
+                config.data_dir.as_ref().join("device-state"),
+            )
+            .map_err(|e| Error::custom(format!("Failed to open device state storage: {e:#}")))?,
+        )),
+        _ => None,
+    };
 
     let signer = Signer::new_with_config(
         seed,
@@ -393,7 +404,7 @@ async fn run_handler<P: AsRef<Path>>(
         SignerConfig {
             state_signature_mode: state_signature_mode.into(),
             state_signature_override,
-            device_storage: None,
+            device_storage,
             backup,
             fee_budget_limits,
         },
@@ -498,7 +509,7 @@ mod tests {
     }
 
     #[test]
-    fn run_mode_defaults_to_soft() {
+    fn run_mode_defaults_to_hard() {
         let cli = TestCli::parse_from(["test", "run"]);
         match cli.cmd {
             Command::Run {
@@ -510,7 +521,7 @@ mod tests {
                 backup_periodic_updates,
                 ..
             } => {
-                assert_eq!(state_signature_mode, StateSignatureModeArg::Soft);
+                assert_eq!(state_signature_mode, StateSignatureModeArg::Hard);
                 assert!(state_override.is_none());
                 assert!(state_override_note.is_none());
                 assert!(backup_path.is_none());

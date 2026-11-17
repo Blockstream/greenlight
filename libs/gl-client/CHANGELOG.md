@@ -15,12 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Enforce a routing-fee allowance per payment, shared across all parts and channels. The default is the larger of 1,000 sat and 0.5% of the payment amount. `pay`, direct-invoice `xpay`, and trampoline requests with fee limits above the allowance are rejected before HTLCs are offered.
 - Enforce on-chain fee limits of 100,000 sat per new commitment or signed local HTLC input, and 50,000 sat per mutual close by default. Previously accepted force-close commitments remain signable after limits are lowered.
+- State signature checks default to Hard. Soft requires persistent device storage and is limited to one successful state snapshot migration before switching to Hard. Rejected requests leave migration available; marker-write failures close the allowance. Requesting Soft after migration starts in Hard with a warning.
 
 ### Fixed
 
 - Fix missing invoice approvals for invoice-backed `sendpay` and direct-invoice `xpay`, including amountless invoices.
 - Allow retrying an amountless invoice with a different amount once the previous attempt has no outstanding HTLCs.
 - Fix node hangs caused by signer errors during invoice and keysend preapproval.
+- Rejected signer requests no longer retain incoming state or changes made during processing. Authorization and VLS handling use a scratch state that is committed only after success.
 
 ## [0.7.0] - 2026-10-12
 

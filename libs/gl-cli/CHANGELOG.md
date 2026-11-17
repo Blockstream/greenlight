@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+- `signer run` defaults to `hard` state signature mode. Explicit `soft` mode allows one successful migration per device and node, then uses Hard on subsequent requests and restarts.
 - `fundchannel` now creates private channels by default
 
 ## [0.1.2] - 2026-01-16
