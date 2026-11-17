@@ -28,10 +28,14 @@ The signer state is a key-value map. Every entry consists of:
 
 | Field | Description |
 |-------|-------------|
-| `key` | The entry name, prefixed by its class: `nodes/`, `nodestates/`, `channels/`, `allowlists/`, `trackers/`, `peers/` |
+| `key` | The entry name, prefixed by its class: `nodes/`, `nodestates/`, `channels/`, `allowlists/`, `trackers/` |
 | `version` | A counter that increases with every change to this key |
 | `value` | The serialized VLS object |
 | `signature` | The signer's signature over the key, version and value |
+
+The node also sends `peers/` entries as address hints for channel backup
+recovery. These are untrusted metadata. The signer keeps valid hints for
+backups and excludes them from state signatures.
 
 Deleting a key leaves a _tombstone_ behind: the entry is kept with the
 highest possible version and an empty value, so that an older value of

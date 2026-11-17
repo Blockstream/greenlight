@@ -9,6 +9,7 @@ use crate::pb::scheduler::{
 /// signing if ok, and then shipping the response to the node.
 use crate::pb::{node_client::NodeClient, Empty, HsmRequest, HsmRequestContext, HsmResponse};
 use crate::pb::{PendingRequest, SignerStateEntry};
+use crate::persist::PEER_PREFIX;
 use crate::runes;
 use crate::signer::resolve::Resolver;
 use crate::tls::TlsConfig;
@@ -578,6 +579,9 @@ impl Signer {
         let mut first_error: Option<anyhow::Error> = None;
 
         for entry in entries.iter() {
+            if entry.key.starts_with(PEER_PREFIX) {
+                continue;
+            }
             if entry.signature.is_empty() {
                 if mode == StateSignatureMode::Hard {
                     usage.missing_keys.push(entry.key.clone());
@@ -901,7 +905,7 @@ impl Signer {
                 .await;
         }
 
-        let incoming_state = crate::persist::State::try_from(req.signer_state.as_slice())
+        let incoming_state = crate::persist::State::from_signer_request(&req.signer_state)
             .map_err(|e| Error::Other(anyhow!("Failed to decode signer state: {e}")))?;
 
         let mut rejections = Vec::new();
@@ -1130,10 +1134,11 @@ impl Signer {
                 })
                 .map_err(|e| Error::Other(anyhow!("Failed to sign signer state entries: {e}")))?;
             let full_wire_bytes = {
-                let full_entries: Vec<crate::pb::SignerStateEntry> = state.clone().into();
+                let full_entries: Vec<crate::pb::SignerStateEntry> =
+                    state.clone().without_peer_hints().into();
                 signer_state_response_wire_bytes(&full_entries)
             };
-            let diff_state = prestate_sketch.diff_state(&state);
+            let diff_state = prestate_sketch.diff_state(&state).without_peer_hints();
             let diff_entries: Vec<crate::pb::SignerStateEntry> = diff_state.into();
             let diff_wire_bytes = signer_state_response_wire_bytes(&diff_entries);
             let saved_percent = savings_percent(full_wire_bytes, diff_wire_bytes);
@@ -2498,6 +2503,58 @@ mod tests {
         assert!(err.to_string().contains("missing state signature"));
         let restarted = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
         assert_eq!(restarted.current_mode(), StateSignatureMode::Hard);
+    }
+
+    #[tokio::test]
+    async fn backend_peer_hints_are_accepted_without_being_signed() {
+        use crate::persist::{PeerEntry, State};
+
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let mut backend = State::new();
+        let mut hint = PeerEntry {
+            peer_id: "02aa".into(),
+            addr: "127.0.0.1:9735".into(),
+            direction: "out".into(),
+            features: "".into(),
+        };
+        backend.insert_or_update_peer(hint.clone()).unwrap();
+        let response = signer
+            .process_request(heartbeat_request(backend.clone().into()))
+            .await
+            .unwrap()
+            .signer_state;
+        assert!(response
+            .iter()
+            .all(|entry| !entry.key.starts_with(PEER_PREFIX)));
+        let cached: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+        assert!(cached
+            .iter()
+            .any(|entry| entry.key == "peers/02aa" && entry.signature.is_empty()));
+        hint.addr = "127.0.0.2:9735".into();
+        backend.insert_or_update_peer(hint.clone()).unwrap();
+        let mut entries: Vec<SignerStateEntry> = backend.into();
+        let mut malformed = mk_state_entry("peers/02bb", 0, json!(null));
+        malformed.value = b"{".to_vec();
+        entries.push(malformed);
+        let response = signer
+            .process_request(heartbeat_request(entries))
+            .await
+            .unwrap();
+        assert!(response
+            .signer_state
+            .iter()
+            .all(|entry| !entry.key.starts_with(PEER_PREFIX)));
+        let cached: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+        let peers = cached
+            .iter()
+            .filter(|entry| entry.key.starts_with(PEER_PREFIX))
+            .collect::<Vec<_>>();
+        assert_eq!(peers.len(), 1);
+        assert_eq!(
+            serde_json::from_slice::<PeerEntry>(&peers[0].value).unwrap(),
+            hint
+        );
+        assert!(peers[0].signature.is_empty());
     }
 
     #[cfg(feature = "backup")]
