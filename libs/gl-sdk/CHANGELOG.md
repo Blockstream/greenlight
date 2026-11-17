@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- `SignerConfig`, `StateSignatureMode`, and `Config.with_signer_config()` to configure state verification and persistent migration storage for all signers started by `NodeBuilder`.
+- `Signer.new_with_config()` and `Signer.new_from_seed_with_config()` for standalone signers. Authentication preserves the configuration; existing constructors continue to use Hard by default.
+
 ### Changed
 
 - `Node.send` and `Node.lnurl_pay` set CLN's `maxfee` to the larger of 1,000 sat and 0.5% of the payment principal, matching the signer's default routing policy for fixed and amountless invoices.

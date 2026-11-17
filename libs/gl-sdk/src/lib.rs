@@ -134,6 +134,7 @@ mod node;
 mod node_builder;
 mod scheduler;
 mod signer;
+mod signer_config;
 mod util;
 
 pub use crate::{
@@ -158,6 +159,7 @@ pub use crate::{
     node_builder::NodeBuilder,
     scheduler::Scheduler,
     signer::{Handle, Signer},
+    signer_config::{SignerConfig, StateSignatureMode},
 };
 
 /// Which scheduler operation to perform.
@@ -178,10 +180,9 @@ fn schedule_node(
     let nobody = config.nobody();
 
     let seed_for_async = seed.clone();
+    let config_for_async = config.clone();
     let credentials = util::exec(async move {
-        let signer =
-            gl_client::signer::Signer::new(seed_for_async, network, nobody.clone())
-                .map_err(|e| Error::other(e.to_string()))?;
+        let signer = config_for_async.create_signer(seed_for_async, nobody.clone())?;
 
         let scheduler = gl_client::scheduler::Scheduler::new(network, nobody)
             .await
@@ -209,9 +210,7 @@ fn schedule_node(
         credentials::Credentials::load(creds_bytes)
     })?;
 
-    let authenticated_signer =
-        gl_client::signer::Signer::new(seed, network, credentials.inner.clone())
-            .map_err(|e| Error::other(e.to_string()))?;
+    let authenticated_signer = config.create_signer(seed, credentials.inner.clone())?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
     let node = node::Node::with_signer(credentials, handle, network)?;
@@ -272,9 +271,7 @@ pub(crate) fn connect_internal(
     let network = config.network;
     let creds = credentials::Credentials::load(credentials)?;
 
-    let authenticated_signer =
-        gl_client::signer::Signer::new(seed, network, creds.inner.clone())
-            .map_err(|e| Error::other(e.to_string()))?;
+    let authenticated_signer = config.create_signer(seed, creds.inner.clone())?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
     let node = node::Node::with_signer(creds, handle, network)?;

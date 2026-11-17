@@ -307,6 +307,11 @@ void*_Nonnull uniffi_glsdk_fn_method_config_with_developer_cert(void*_Nonnull pt
 void*_Nonnull uniffi_glsdk_fn_method_config_with_network(void*_Nonnull ptr, RustBuffer network, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_CONFIG_WITH_SIGNER_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_CONFIG_WITH_SIGNER_CONFIG
+void*_Nonnull uniffi_glsdk_fn_method_config_with_signer_config(void*_Nonnull ptr, RustBuffer signer_config, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CLONE_CREDENTIALS
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CLONE_CREDENTIALS
 void*_Nonnull uniffi_glsdk_fn_clone_credentials(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -590,6 +595,16 @@ void*_Nonnull uniffi_glsdk_fn_constructor_signer_new(RustBuffer phrase, RustCall
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED
 void*_Nonnull uniffi_glsdk_fn_constructor_signer_new_from_seed(RustBuffer seed, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED_WITH_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_FROM_SEED_WITH_CONFIG
+void*_Nonnull uniffi_glsdk_fn_constructor_signer_new_from_seed_with_config(RustBuffer seed, RustBuffer config, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_WITH_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_CONSTRUCTOR_SIGNER_NEW_WITH_CONFIG
+void*_Nonnull uniffi_glsdk_fn_constructor_signer_new_with_config(RustBuffer phrase, RustBuffer config, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_SIGNER_AUTHENTICATE
@@ -953,6 +968,12 @@ uint16_t uniffi_glsdk_checksum_method_config_with_network(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_CONFIG_WITH_SIGNER_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_CONFIG_WITH_SIGNER_CONFIG
+uint16_t uniffi_glsdk_checksum_method_config_with_signer_config(void
+
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_CREDENTIALS_NODE_ID
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_CREDENTIALS_NODE_ID
 uint16_t uniffi_glsdk_checksum_method_credentials_node_id(void
@@ -1221,6 +1242,18 @@ uint16_t uniffi_glsdk_checksum_constructor_signer_new(void
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_CONSTRUCTOR_SIGNER_NEW_FROM_SEED
 uint16_t uniffi_glsdk_checksum_constructor_signer_new_from_seed(void
     
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_CONSTRUCTOR_SIGNER_NEW_FROM_SEED_WITH_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_CONSTRUCTOR_SIGNER_NEW_FROM_SEED_WITH_CONFIG
+uint16_t uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config(void
+
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_CONSTRUCTOR_SIGNER_NEW_WITH_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_CONSTRUCTOR_SIGNER_NEW_WITH_CONFIG
+uint16_t uniffi_glsdk_checksum_constructor_signer_new_with_config(void
+
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_CHECKSUM_METHOD_LOGLISTENER_ON_LOG

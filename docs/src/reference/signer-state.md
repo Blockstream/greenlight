@@ -158,16 +158,44 @@ Storage errors prevent the migration from publishing state or signatures.
 If writing the marker fails, the current signer switches to Hard because
 the failed write may still have persisted the marker.
 
-For explicit Soft mode, `glcli` supplies a file-backed store under
-`<data-dir>/device-state`. To migrate a legacy node once:
+The optional `file-storage` feature provides `FileDeviceStorage` for Rust.
+Python and gl-sdk accept a persistent directory in the application's data
+directory; `glcli` uses `<data-dir>/device-state`.
 
-```bash
-glcli signer run --state-signature-mode soft
-```
+=== "glcli"
 
-Afterward, rerunning with `soft` logs a warning and uses Hard mode.
-Running without the flag also uses Hard. The Rust, Python and SDK
-constructors use Hard by default; Hard does not require a device store.
+	```bash
+	glcli signer run --state-signature-mode soft
+	```
+
+=== "Python"
+
+	```python
+	signer = glclient.Signer(
+	    seed, network, creds,
+	    state_signature_mode="soft",
+	    device_storage_path="/path/to/app/device-state",
+	)
+	```
+
+=== "gl-sdk (Python)"
+
+	```python
+	migration = glsdk.SignerConfig(
+	    state_signature_mode=glsdk.StateSignatureMode.SOFT,
+	    device_storage_path="/path/to/app/device-state",
+	)
+	config = glsdk.Config().with_signer_config(migration)
+	node = glsdk.NodeBuilder(config).connect(credentials, mnemonic)
+	```
+
+	Standalone signers use `Signer.new_with_config(mnemonic, migration)`
+	or `Signer.new_from_seed_with_config(seed, migration)`. Authenticating
+	a signer preserves its migration configuration and storage.
+
+After a successful migration, reusing the Soft configuration logs a
+warning and uses Hard mode. The Rust, Python and SDK constructors use
+Hard by default; Hard does not require a device store.
 
 The migration deliberately trusts the unsigned snapshot it migrates. If the
 process crashes or the connection drops after saving the marker but
@@ -251,14 +279,14 @@ persistent storage, not secret storage.
 
 #### Storing the anchor
 
-`gl-client` itself does not access the filesystem, so that the signer
-can also run in environments without one, such as a hardware security
-module. It defines a storage interface for the anchor instead, and the
-higher-level libraries provide implementations:
+The core signer operates through a storage interface, so it can also run
+in environments without a filesystem, such as a hardware security module.
+The optional `file-storage` feature supplies a file backend shared by the
+higher-level libraries:
 
 | Library | Anchor storage |
 |---------|----------------|
-| `gl-client` (Rust) | Storage interface only; bring your own implementation |
+| `gl-client` (Rust) | Storage interface, with an optional file backend |
 | `gl-sdk` | File-backed, configured with a path in the application's data directory |
 | `gl-client-py`, `glcli` | File-backed, configured with a path |
 | `gl-testing` | In memory |

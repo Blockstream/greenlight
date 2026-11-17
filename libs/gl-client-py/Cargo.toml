@@ -17,6 +17,7 @@ bytes = "1.6"
 env_logger = { workspace = true }
 gl-client = { path = "../gl-client", default-features = false, features = [
     "export",
+    "file-storage",
 ] }
 hex = "*"
 log = "*"

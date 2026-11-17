@@ -53,6 +53,8 @@ mod approver;
 mod auth;
 mod device_state;
 pub use device_state::DeviceStorage;
+#[cfg(feature = "file-storage")]
+pub use device_state::FileDeviceStorage;
 #[cfg(feature = "backup")]
 mod backup;
 #[cfg(feature = "backup")]

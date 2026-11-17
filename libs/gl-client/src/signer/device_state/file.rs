@@ -1,18 +1,19 @@
+use super::DeviceStorage;
+use crate::bitcoin::hashes::{sha256, Hash};
 use anyhow::{Context, Result};
-use gl_client::bitcoin::hashes::{sha256, Hash};
-use gl_client::signer::DeviceStorage;
 use std::fs::{self, File};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 /// A file-backed device store using durable, atomic replacement.
 #[derive(Debug)]
-pub(crate) struct FileDeviceStorage {
+pub struct FileDeviceStorage {
     dir: PathBuf,
 }
 
 impl FileDeviceStorage {
-    pub(crate) fn new(dir: impl AsRef<Path>) -> Result<Self> {
+    /// Open directory-backed storage, creating the directory when needed.
+    pub fn new(dir: impl AsRef<Path>) -> Result<Self> {
         let dir = dir.as_ref().to_owned();
         fs::create_dir_all(&dir)
             .with_context(|| format!("creating device state directory {}", dir.display()))?;

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- Optional `state_signature_mode` and `device_storage_path` keyword arguments for `Signer`, allowing explicit one-time Soft migration with persistent storage. Existing constructors continue to use Hard by default.
+
 ## [0.4.0] - 2026-10-12
 
 ### Changed

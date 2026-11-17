@@ -3,6 +3,11 @@
 use anyhow::Result;
 use std::fmt::Debug;
 
+#[cfg(feature = "file-storage")]
+mod file;
+#[cfg(feature = "file-storage")]
+pub use file::FileDeviceStorage;
+
 /// Device-local storage for opaque signer metadata.
 ///
 /// Keys are logical identifiers, not filesystem paths. The signer namespaces

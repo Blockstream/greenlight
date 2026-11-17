@@ -1,7 +1,9 @@
 use crate::credentials::Credentials;
 use gl_client::bitcoin::Network;
+use gl_client::signer::{DeviceStorage, FileDeviceStorage, SignerConfig, StateSignatureMode};
 use log::warn;
 use pyo3::{exceptions::PyValueError, prelude::*};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 #[pyclass]
@@ -13,7 +15,14 @@ pub struct Signer {
 #[pymethods]
 impl Signer {
     #[new]
-    fn new(secret: Vec<u8>, network: String, creds: Credentials) -> PyResult<Signer> {
+    #[pyo3(signature = (secret, network, creds, *, state_signature_mode="hard", device_storage_path=None))]
+    fn new(
+        secret: Vec<u8>,
+        network: String,
+        creds: Credentials,
+        state_signature_mode: &str,
+        device_storage_path: Option<String>,
+    ) -> PyResult<Signer> {
         let network: Network = match network.parse() {
             Ok(network) => network,
             Err(_) => {
@@ -24,11 +33,45 @@ impl Signer {
             }
         };
 
-        let inner = match gl_client::signer::Signer::new(secret, network, creds.inner) {
+        let state_signature_mode = match state_signature_mode {
+            "hard" => StateSignatureMode::Hard,
+            "soft" => StateSignatureMode::Soft,
+            "off" => StateSignatureMode::Off,
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "Unknown state signature mode {other}: expected hard, soft or off"
+                )))
+            }
+        };
+        let device_storage: Option<Arc<dyn DeviceStorage>> = match state_signature_mode {
+            StateSignatureMode::Soft => {
+                let path = device_storage_path
+                    .as_deref()
+                    .filter(|path| !path.is_empty())
+                    .ok_or_else(|| {
+                        PyValueError::new_err("Soft mode requires device_storage_path")
+                    })?;
+                Some(Arc::new(FileDeviceStorage::new(path).map_err(|e| {
+                    PyValueError::new_err(format!("opening device storage: {e:#}"))
+                })?))
+            }
+            _ => None,
+        };
+        let config = SignerConfig {
+            state_signature_mode,
+            device_storage,
+            ..Default::default()
+        };
+        let inner = match gl_client::signer::Signer::new_with_config(
+            secret,
+            network,
+            creds.inner,
+            config,
+        ) {
             Ok(v) => v,
             Err(e) => {
                 return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                    "Error initializing Signer: {}",
+                    "Error initializing Signer: {:#}",
                     e
                 )))
             }

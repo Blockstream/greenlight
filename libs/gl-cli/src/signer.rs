@@ -3,9 +3,9 @@ use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
 use gl_client::signer::{
-    CLNBackup, CLNBackupOptions, DeviceStorage, FeeBudgetLimits, RecoverableChannel, Signer, SignerBackupConfig,
-    SignerBackupSnapshot, SignerBackupStrategy, SignerConfig, StateSignatureMode,
-    StateSignatureOverrideConfig,
+    CLNBackup, CLNBackupOptions, DeviceStorage, FeeBudgetLimits, FileDeviceStorage, RecoverableChannel,
+    Signer, SignerBackupConfig, SignerBackupSnapshot, SignerBackupStrategy, SignerConfig,
+    StateSignatureMode, StateSignatureOverrideConfig,
 };
 use lightning_signer::bitcoin::Network;
 use serde::Serialize;
@@ -389,7 +389,7 @@ async fn run_handler<P: AsRef<Path>>(
     let backup = backup_config_from_args(backup_path, backup_strategy, backup_periodic_updates)?;
     let device_storage: Option<Arc<dyn DeviceStorage>> = match state_signature_mode {
         StateSignatureModeArg::Soft => Some(Arc::new(
-            crate::device_state::FileDeviceStorage::new(
+            FileDeviceStorage::new(
                 config.data_dir.as_ref().join("device-state"),
             )
             .map_err(|e| Error::custom(format!("Failed to open device state storage: {e:#}")))?,

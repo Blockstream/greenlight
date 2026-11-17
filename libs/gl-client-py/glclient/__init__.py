@@ -27,8 +27,28 @@ def _convert(cls: Type[E], res: Iterable[Any]) -> E:
 
 
 class Signer(object):
-    def __init__(self, secret: bytes, network: str, creds: Credentials):
-        self.inner = native.Signer(secret, network, creds)
+    """Signer using Hard state verification by default.
+
+    Explicit Soft mode migrates legacy state once using the persistent
+    directory supplied by ``device_storage_path``.
+    """
+
+    def __init__(
+        self,
+        secret: bytes,
+        network: str,
+        creds: Credentials,
+        *,
+        state_signature_mode: str = "hard",
+        device_storage_path: Optional[str] = None,
+    ):
+        self.inner = native.Signer(
+            secret,
+            network,
+            creds,
+            state_signature_mode=state_signature_mode,
+            device_storage_path=device_storage_path,
+        )
         self.creds = creds
         self.handle: Optional[native.SignerHandle] = None
 
