@@ -15,7 +15,7 @@ impl FileDeviceStorage {
     /// Open directory-backed storage, creating the directory when needed.
     pub fn new(dir: impl AsRef<Path>) -> Result<Self> {
         let dir = dir.as_ref().to_owned();
-        fs::create_dir_all(&dir)
+        create_storage_directory(&dir)
             .with_context(|| format!("creating device state directory {}", dir.display()))?;
         Ok(Self { dir })
     }
@@ -25,6 +25,26 @@ impl FileDeviceStorage {
         self.dir
             .join(sha256::Hash::hash(key.as_bytes()).to_string())
     }
+}
+
+fn create_storage_directory(path: &Path) -> std::io::Result<()> {
+    if path.is_dir() {
+        return Ok(());
+    }
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    create_storage_directory(parent)?;
+    match fs::create_dir(path) {
+        Ok(()) => (),
+        Err(error) if error.kind() == ErrorKind::AlreadyExists && path.is_dir() => (),
+        Err(error) => return Err(error),
+    }
+    // A file sync alone cannot make the newly created directory durable.
+    #[cfg(unix)]
+    File::open(parent)?.sync_all()?;
+    Ok(())
 }
 
 impl DeviceStorage for FileDeviceStorage {
