@@ -50,6 +50,8 @@ use vls_protocol_signer::handler::Handler;
 
 mod approver;
 mod auth;
+mod device_state;
+pub use device_state::DeviceStorage;
 #[cfg(feature = "backup")]
 mod backup;
 #[cfg(feature = "backup")]
@@ -113,6 +115,8 @@ pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
     pub fee_budget_limits: FeeBudgetLimits,
+    /// Storage for device-local signer metadata.
+    pub device_storage: Option<Arc<dyn DeviceStorage>>,
     #[cfg(feature = "backup")]
     pub backup: Option<SignerBackupConfig>,
 }
@@ -1876,6 +1880,7 @@ mod tests {
                     path: "backup.json".into(),
                     strategy: SignerBackupStrategy::Periodic { updates: 0 },
                 }),
+                ..SignerConfig::default()
             },
         );
 

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 - Configure routing and on-chain fee limits with `FeeBudgetLimits` through `SignerConfig::fee_budget_limits`. See [signer fee budgets](../../docs/src/reference/signer-fees.md) for configuration, defaults, and limitations.
+- `DeviceStorage` and `SignerConfig::device_storage` for device-local signer metadata, scoped by node and network.
 
 ### Changed
 

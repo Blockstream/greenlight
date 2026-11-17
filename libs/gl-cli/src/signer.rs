@@ -393,6 +393,7 @@ async fn run_handler<P: AsRef<Path>>(
         SignerConfig {
             state_signature_mode: state_signature_mode.into(),
             state_signature_override,
+            device_storage: None,
             backup,
             fee_budget_limits,
         },

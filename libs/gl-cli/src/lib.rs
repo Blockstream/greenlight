@@ -2,6 +2,7 @@ use crate::error::Result;
 use clap::{Parser, Subcommand};
 use gl_client::bitcoin::Network;
 use std::{path::PathBuf, str::FromStr};
+mod device_state;
 mod error;
 mod json_hex;
 pub mod model;
