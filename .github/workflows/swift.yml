@@ -1,0 +1,160 @@
+name: Swift
+
+# Builds the gl-sdk XCFramework and Swift bindings. On a gl-sdk-vX.Y.Z
+# tag they are attached to this repository's gl-sdk-vX.Y.Z release, where
+# Blockstream/gl-sdk-swift picks them up: its publish workflow commits the
+# bindings and a Package.swift pointing at the zip here, and tags X.Y.Z.
+# Each repository only writes to itself, so no cross-repository token is
+# needed.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/swift.yml'
+      - 'build/**'
+      - 'libs/gl-client/**'
+      - 'libs/gl-sdk/**'
+      - 'libs/proto/**'
+      - 'Cargo.lock'
+    tags:
+      - 'gl-sdk-v[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+    paths:
+      - '.github/workflows/swift.yml'
+      - 'build/**'
+      - 'libs/gl-client/**'
+      - 'libs/gl-sdk/**'
+      - 'libs/proto/**'
+      - 'Cargo.lock'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build XCFramework
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Determine the version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/gl-sdk-v* ]]; then
+            VERSION="${GITHUB_REF_NAME#gl-sdk-v}"
+          else
+            VERSION=$(cargo metadata --no-deps --format-version 1 | \
+              jq -r '.packages[] | select(.name == "gl-sdk") | .version')
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Building gl-sdk $VERSION"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install XcodeGen and yq
+        run: brew install xcodegen yq
+
+      - name: Set the framework version
+        run: |
+          yq e '.targets.glsdkFFI.settings.MARKETING_VERSION = env(VERSION)' -i build/project.yml
+          yq e '.targets.glsdkFFI.settings.CURRENT_PROJECT_VERSION = "1"' -i build/project.yml
+
+      - name: Build
+        run: task build:swift
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          (cd target && zip -9 -r -q ../dist/glsdkFFI.xcframework.zip glsdkFFI.xcframework)
+          cp target/swift/glsdk.swift dist/glsdk.swift
+          # SwiftPM verifies the zip against this checksum, the SHA-256.
+          swift package compute-checksum dist/glsdkFFI.xcframework.zip > dist/glsdkFFI.xcframework.zip.checksum
+          shasum -a 256 dist/glsdkFFI.xcframework.zip
+          cat dist/glsdkFFI.xcframework.zip.checksum
+          ls -la dist
+
+      # Compiles the bindings against the framework as a Swift package,
+      # the way gl-sdk-swift ships them, for the iOS simulator.
+      - name: Compile the Swift package
+        run: |
+          PKG="$RUNNER_TEMP/GreenlightSDK"
+          mkdir -p "$PKG/Sources/GreenlightSDK"
+          cp dist/glsdk.swift "$PKG/Sources/GreenlightSDK/GreenlightSDK.swift"
+          (cd "$PKG" && unzip -q "$GITHUB_WORKSPACE/dist/glsdkFFI.xcframework.zip")
+          cat > "$PKG/Package.swift" <<'EOF'
+          // swift-tools-version:5.5
+          import PackageDescription
+
+          let package = Package(
+              name: "glsdk",
+              platforms: [.macOS(.v12), .iOS(.v13)],
+              products: [
+                  .library(name: "GreenlightSDK", targets: ["glsdkFFI", "GreenlightSDK"]),
+              ],
+              targets: [
+                  .binaryTarget(name: "glsdkFFI", path: "glsdkFFI.xcframework"),
+                  .target(name: "GreenlightSDK", dependencies: ["glsdkFFI"]),
+              ]
+          )
+          EOF
+          cd "$PKG"
+          xcodebuild build -scheme GreenlightSDK \
+            -destination 'generic/platform=iOS Simulator' -quiet
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: swift
+          path: dist/
+          if-no-files-found: error
+
+  # release.yml creates the gl-sdk-vX.Y.Z release once the crate is
+  # published. Whichever runs first creates it, the other updates it.
+  attach:
+    name: Attach to the gl-sdk release
+    if: startsWith(github.ref, 'refs/tags/gl-sdk-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: swift
+          path: dist
+
+      - name: Upload the release assets
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "gl-sdk ${TAG#gl-sdk-v}" \
+              --notes "See the [gl-sdk changelog](https://github.com/$GH_REPO/blob/$TAG/libs/gl-sdk/CHANGELOG.md)." \
+              || gh release view "$TAG" >/dev/null  # lost the race to release.yml
+          fi
+          gh release upload "$TAG" --clobber \
+            dist/glsdkFFI.xcframework.zip \
+            dist/glsdkFFI.xcframework.zip.checksum \
+            dist/glsdk.swift
+          gh release view "$TAG" --json assets --jq '.assets[].name'

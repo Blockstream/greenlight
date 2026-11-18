@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Python: the `gl-sdk` package is published to PyPI, with wheels for Linux (glibc 2.17 or later) on x86_64 and aarch64, macOS 11 or later on arm64 and x86_64, and Windows on x64.
 
+### Changed
+
+- Swift: the `glsdkFFI` binary target in `gl-sdk-swift`'s `Package.swift` downloads `glsdkFFI.xcframework.zip` from the `gl-sdk-vX.Y.Z` release of `Blockstream/greenlight`, where it is now built, instead of from the `gl-sdk-swift` release.
+
 ### Fixed
 
 - Python: `glsdk.__version__` reports the installed package version. It was hard-coded to 0.4.0.

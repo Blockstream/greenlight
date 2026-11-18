@@ -15,7 +15,7 @@ failure modes.
 | `gl-sdk` (Python, `libs/gl-sdk`) | `.github/workflows/python.yml` | push of a `gl-sdk-vX.Y.Z` tag | PyPI (trusted publishing) |
 | `@greenlightcln/glsdk` (npm) | `.github/workflows/typescript.yml` | push to `main` whose `package.json` version is not on npm yet | npm |
 | `com.blockstream:glsdk` (Android, JVM) | `gitlab/deploy-maven.yml` on the internal GitLab mirror | manual `publish_to_maven` job on a tag pipeline | Maven Central |
-| `GreenlightSDK` (Swift) | `swift.yml` in `Blockstream/gl-sdk-swift` | manual dispatch | GitHub Releases of that repo |
+| `GreenlightSDK` (Swift) | `.github/workflows/swift.yml` builds it, `publish.yml` in `Blockstream/gl-sdk-swift` publishes it | push of a `gl-sdk-vX.Y.Z` tag; `gl-sdk-swift` picks it up within the hour | tag and GitHub Release `X.Y.Z` in `gl-sdk-swift` |
 | `clnvm` (Python) | `task clnvm:publish` (manual `twine`) | manual | PyPI |
 
 ## Tag conventions
@@ -132,5 +132,17 @@ in dependency order.
   which is what the `manylinux_2_17` tag promises. The bindings in the
   wheel are regenerated from the bundled library, and the job warns if
   the committed `libs/gl-sdk/glsdk/glsdk.py` differs from them.
-- **Swift is a separate repository.** `gl-sdk-swift` is published from
-  its own repo (`Blockstream/gl-sdk-swift`) and is out of scope here.
+- **The Swift package is published from `gl-sdk-swift`.** SwiftPM
+  resolves packages by repository, so the package lives there, while
+  greenlight builds it. `swift.yml` builds the XCFramework and the
+  bindings on every change to the SDK, compiles them as a Swift package
+  for the iOS simulator, and on a `gl-sdk-vX.Y.Z` tag attaches
+  `glsdkFFI.xcframework.zip`, its checksum and `glsdk.swift` to the
+  `gl-sdk-vX.Y.Z` release here. `publish.yml` in `gl-sdk-swift` polls
+  hourly for such releases, commits a `Package.swift` whose binary
+  target points at the zip in greenlight's release, and tags and
+  releases `X.Y.Z` there. Neither repository writes to the other, so no
+  cross-repository token is needed. To publish sooner or retry, run
+  `publish.yml` in `gl-sdk-swift` by hand. GitHub disables its schedule
+  after 60 days without activity in that repository; re-enable it on
+  the Actions tab.
