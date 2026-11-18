@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Fixed
+
+- Python: `glsdk.__version__` reports the installed package version. It was hard-coded to 0.4.0.
+
 ## [0.5.1] - 2026-11-18
 
 ### Changed
