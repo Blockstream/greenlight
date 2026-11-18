@@ -223,13 +223,13 @@ jobs:
             lib: libglsdk.so
             plat: manylinux_2_17_aarch64.manylinux2014_aarch64
             smoke: true
-          - host: macos-14
+          - host: macos-15
             target: aarch64-apple-darwin
             lib: libglsdk.dylib
             plat: macosx_11_0_arm64
             smoke: true
           # Cross built on the arm64 runner, not smoke tested.
-          - host: macos-14
+          - host: macos-15
             target: x86_64-apple-darwin
             lib: libglsdk.dylib
             plat: macosx_11_0_x86_64

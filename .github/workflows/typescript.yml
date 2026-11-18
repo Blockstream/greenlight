@@ -65,7 +65,7 @@ jobs:
             target: x86_64-apple-darwin
             strip: strip -x *.node
           
-          - host: macos-14
+          - host: macos-15
             target: aarch64-apple-darwin
             strip: strip -x *.node
           
