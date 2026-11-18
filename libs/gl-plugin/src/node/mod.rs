@@ -36,6 +36,12 @@ static LIMITER: OnceCell<RateLimiter<NotKeyed, InMemoryState, MonotonicClock>> =
 static RPC_CLIENT: OnceCell<Arc<Mutex<cln_rpc::ClnRpc>>> = OnceCell::const_new();
 static RPC_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
+/// Bound on a single reconnect `connect` call. An unreachable address
+/// otherwise blocks until the TCP connect times out (minutes).
+const RECONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+/// How many peers to reconnect at the same time.
+const RECONNECT_CONCURRENCY: usize = 8;
+
 #[allow(unused)]
 const OPT_SUPPORTS_LSPS: usize = 729;
 
@@ -950,19 +956,41 @@ impl PluginNodeServer {
             peers.iter().map(|p| p.id.clone())
         );
 
-        let rpc_arc = get_rpc(&self.rpc_path).await;
-        let mut rpc = rpc_arc.lock().await;
+        // Reconnecting is best effort and must never stall other
+        // operations: an unreachable peer (e.g. a stale peerlist entry)
+        // makes `connect` hang for minutes. So each attempt gets its own
+        // RPC connection instead of the shared one other calls (e.g.
+        // `lsp_invoice`) wait on, a timeout, and runs next to the others.
+        use futures::StreamExt;
+        futures::stream::iter(peers)
+            .for_each_concurrent(RECONNECT_CONCURRENCY, |r| {
+                let rpc_path = self.rpc_path.clone();
+                async move {
+                    trace!("Calling connect: {:?} (plugin)", &r.id);
+                    let res = match cln_rpc::ClnRpc::new(&rpc_path).await {
+                        Ok(mut rpc) => {
+                            tokio::time::timeout(RECONNECT_TIMEOUT, rpc.call_typed(&r)).await
+                        }
+                        Err(e) => {
+                            warn!("Could not open RPC to connect to {}: {:?} (plugin)", &r.id, e);
+                            return;
+                        }
+                    };
+                    trace!("Connect returned: {:?} -> {:?} (plugin)", &r.id, res);
 
-        for r in peers {
-            trace!("Calling connect: {:?} (plugin)", &r.id);
-            let res = rpc.call_typed(&r).await;
-            trace!("Connect returned: {:?} -> {:?} (plugin)", &r.id, res);
-
-            match res {
-                Ok(r) => info!("Connection to {} established: {:?} (plugin)", &r.id, r),
-                Err(e) => warn!("Could not connect to {}: {:?} (plugin)", &r.id, e),
-            }
-        }
+                    match res {
+                        Ok(Ok(c)) => {
+                            info!("Connection to {} established: {:?} (plugin)", &c.id, c)
+                        }
+                        Ok(Err(e)) => warn!("Could not connect to {}: {:?} (plugin)", &r.id, e),
+                        Err(_) => warn!(
+                            "Connecting to {} timed out after {:?} (plugin)",
+                            &r.id, RECONNECT_TIMEOUT
+                        ),
+                    }
+                }
+            })
+            .await;
         return Ok(());
     }
 
@@ -1091,8 +1119,8 @@ impl PluginNodeServer {
     async fn get_reconnect_peers(
         &self,
     ) -> Result<Vec<cln_rpc::model::requests::ConnectRequest>, Error> {
-        let rpc_arc = get_rpc(&self.rpc_path).await;
-        let mut rpc = rpc_arc.lock().await;
+        // Own connection: don't queue behind, or hold up, the shared one.
+        let mut rpc = cln_rpc::ClnRpc::new(&self.rpc_path).await?;
         let peers = self.list_peers(&mut rpc).await?;
 
         let mut requests: Vec<cln_rpc::model::requests::ConnectRequest> = peers
