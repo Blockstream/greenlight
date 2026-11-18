@@ -6,20 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.8.0] - 2026-11-18
+
 ### Added
 
 - Configure routing and on-chain fee limits with `FeeBudgetLimits` through `SignerConfig::fee_budget_limits`. See [signer fee budgets](../../docs/src/reference/signer-fees.md) for configuration, defaults, and limitations.
 
 ### Changed
 
+- **BREAKING**: Upgraded VLS to 1.0.0-rc.1, which moves the re-exported `bitcoin`, `lightning` and `lightning_invoice` types to the LDK 0.2 stack. `ChannelEntry` is now re-exported from `lightning_signer::persist::model`; persisted entries keep their format, so state written by 0.7 still loads.
+- **BREAKING**: `SignerConfig` has a new `fee_budget_limits` field, `signer::Error` has new `FeeBudget` and `PreapprovalDeclined` variants, and `signer::model::Request` has a new `Xpay` variant.
 - Enforce a routing-fee allowance per payment, shared across all parts and channels. The default is the larger of 1,000 sat and 0.5% of the payment amount. `pay`, direct-invoice `xpay`, and trampoline requests with fee limits above the allowance are rejected before HTLCs are offered.
 - Enforce on-chain fee limits of 100,000 sat per new commitment or signed local HTLC input, and 50,000 sat per mutual close by default. Previously accepted force-close commitments remain signable after limits are lowered.
+- The signer enforces the `policy-commitment-retry-same`, `policy-revoke-new-commitment-signed` and `policy-other` policies again. They were downgraded to warnings while a commitment state desync was investigated.
+- Updated `rcgen` to 0.13, `ring` to 0.17 and `thiserror` to 2. Device certificates and CSRs keep their format.
 
 ### Fixed
 
 - Fix missing invoice approvals for invoice-backed `sendpay` and direct-invoice `xpay`, including amountless invoices.
 - Allow retrying an amountless invoice with a different amount once the previous attempt has no outstanding HTLCs.
 - Fix node hangs caused by signer errors during invoice and keysend preapproval.
+- The signer no longer rejects justice sweeps built by CLN at quiet-fee feerates below 253 sat/kw with "feerate below minimum". CLN builds all sweeps and applies its own feerate floors, so the signer's minimum is now a 75 sat/kw sanity check.
 
 ## [0.7.0] - 2026-10-12
 
@@ -77,5 +84,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Addressed a deprecation warning in gl-testing regarding `PROTOCOL_TLS` being renamed to `PROTOCOL_TLS_SERVER`
 - Fixed initial VLS state not being persisted to the tower (nodelet)
 
+[0.8.0]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.7.0...gl-client-v0.8.0
 [0.7.0]: https://github.com/Blockstream/greenlight/compare/gl-client-v0.6.0...gl-client-v0.7.0
 [0.6.0]: https://github.com/Blockstream/greenlight/compare/gl-client-0.3.2...gl-client-v0.6.0

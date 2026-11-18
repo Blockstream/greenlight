@@ -1,6 +1,6 @@
 [package]
 name = "gl-client-py"
-version = "0.3.0"
+version = "0.4.1"
 edition = "2018"
 authors = ["Christian Decker", "The Greenlight Team"]
 description = "Python bindings for the Greenlight client library."

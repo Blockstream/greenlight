@@ -1,6 +1,6 @@
 [package]
 name = "gl-cli"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 authors = ["Peter Neuroth <pet.v.ne@gmail.com>"]
 description = "A command-line interface for running a Greenlight signer and operating a Greenlight node"
@@ -26,7 +26,7 @@ clap = { version = "4.5", features = ["derive"] }
 dirs = "6.0"
 env_logger = "0.11"
 futures = "0.3"
-gl-client = { version = "0.7", path = "../gl-client", features = ["backup"] }
+gl-client = { version = "0.8", path = "../gl-client", features = ["backup"] }
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

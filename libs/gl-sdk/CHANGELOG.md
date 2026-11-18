@@ -6,10 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.5.1] - 2026-11-18
+
 ### Changed
 
+- Updated `gl-client` to 0.8.0, which brings VLS 1.0.0-rc.1, the signer's per-payment and on-chain fee budgets, and `lightning-invoice` 0.34.
 - `Node.send` and `Node.lnurl_pay` set CLN's `maxfee` to the larger of 1,000 sat and 0.5% of the payment principal, matching the signer's default routing policy for fixed and amountless invoices.
-
 - iOS (Kotlin and Swift): a Rust panic in the SDK reaches the app as an exception instead of aborting it, as it already does on Android. The Android and iOS libraries unwind on panic, unlike the workspace's release profile.
 
 ### Security
@@ -91,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Updated gl-client dependency to support CLN v25.12 signer.
 
+[0.5.1]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.5.0...gl-sdk-v0.5.1
 [0.5.0]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.4.0...gl-sdk-v0.5.0
 [0.4.0]: https://github.com/Blockstream/greenlight/compare/gl-sdk-v0.1.1...gl-sdk-v0.4.0
 [0.1.1]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-v0.1.1
