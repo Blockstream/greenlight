@@ -30,6 +30,9 @@
 //! or come back online), while a never-funded zeroconf channel is not,
 //! even if it would momentarily show spendable capacity.
 
+use std::collections::HashSet;
+use std::hash::Hash;
+
 /// Decide whether a channel is available for payments, awaiting and
 /// routehints.
 ///
@@ -42,6 +45,51 @@ pub fn is_channel_available(
     max_to_us_msat_msat: u64,
 ) -> bool {
     state_is_normal && (max_to_us_msat_msat > 0 || has_scid)
+}
+
+/// The peers worth reconnecting to: those with at least one available
+/// channel.
+///
+/// Reconnecting is only useful to bring channels back. A peer with no
+/// channel at all, or with only unavailable ones (e.g. an abandoned JIT
+/// channel the LSP server may have forgotten), is not worth dialing, and
+/// an unreachable one can hold up the caller for minutes per `connect`.
+///
+/// Each item is `(peer_id, state_is_normal, has_scid, max_to_us_msat)`,
+/// see [`is_channel_available`].
+pub fn peers_with_available_channels<K, I>(channels: I) -> HashSet<K>
+where
+    K: Eq + Hash,
+    I: IntoIterator<Item = (K, bool, bool, u64)>,
+{
+    channels
+        .into_iter()
+        .filter(|(_, normal, scid, max_to_us)| is_channel_available(*normal, *scid, *max_to_us))
+        .map(|(id, ..)| id)
+        .collect()
+}
+
+/// Ask `lightningd` for the peers worth reconnecting to, as lowercase
+/// hex node ids. See [`peers_with_available_channels`].
+pub async fn reconnect_candidates(
+    rpc: &mut cln_rpc::ClnRpc,
+) -> Result<HashSet<String>, cln_rpc::RpcError> {
+    use cln_rpc::primitives::ChannelState;
+
+    let res = rpc
+        .call_typed(&cln_rpc::model::requests::ListpeerchannelsRequest { id: None })
+        .await?;
+
+    Ok(peers_with_available_channels(res.channels.into_iter().map(
+        |c| {
+            (
+                c.peer_id.to_string(),
+                c.state == ChannelState::CHANNELD_NORMAL,
+                c.short_channel_id.is_some(),
+                c.max_to_us_msat.map(|a| a.msat()).unwrap_or(0),
+            )
+        },
+    )))
 }
 
 #[cfg(test)]
@@ -69,5 +117,23 @@ mod tests {
         assert!(!is_channel_available(false, false, 1));
         assert!(!is_channel_available(false, true, 0));
         assert!(!is_channel_available(false, false, 0));
+    }
+
+    #[test]
+    fn test_reconnect_needs_one_available_channel() {
+        let peers = peers_with_available_channels(vec![
+            // Confirmed normal channel: reconnect.
+            ("good", true, true, 0),
+            // A stalled JIT channel next to a good one still reconnects.
+            ("mixed", true, false, 0),
+            ("mixed", true, true, 1),
+            // Only an abandoned JIT channel: skip.
+            ("stalled-jit", true, false, 0),
+            // Only a closing channel: skip.
+            ("closing", false, true, 1),
+        ]);
+        let mut peers: Vec<_> = peers.into_iter().collect();
+        peers.sort();
+        assert_eq!(peers, vec!["good", "mixed"]);
     }
 }
