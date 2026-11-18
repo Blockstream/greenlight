@@ -10,16 +10,13 @@ failure modes.
 
 | Artifact | Workflow | Trigger | Registry |
 | --- | --- | --- | --- |
-| `gl-client`, `gl-sdk`, `gl-sdk-cli` (Rust) | `.github/workflows/release.yml` | push of a `*-v*` tag | crates.io |
-| `@greenlightcln/glsdk` (npm) | `.github/workflows/typescript.yml` | push to `main`, gated on a version change | npm |
-| `gl-client-py`, `gl-sdk` (Python wheels) | `.github/workflows/python.yml` | push to `main` / PR | **built only — not published** |
+| `gl-client`, `gl-plugin`, `gl-signerproxy`, `gl-cli`, `gl-sdk`, `gl-sdk-cli` (Rust) | `.github/workflows/release.yml` | push of a `<crate>-vX.Y.Z` tag | crates.io |
+| `gl-client` (Python, `libs/gl-client-py`) | `.github/workflows/python.yml` | push of a `gl-client-py-vX.Y.Z` tag | PyPI (trusted publishing) |
+| `gl-sdk` (Python, `libs/gl-sdk`) | `.github/workflows/python.yml` | push of a `gl-sdk-vX.Y.Z` tag | PyPI (trusted publishing) |
+| `@greenlightcln/glsdk` (npm) | `.github/workflows/typescript.yml` | push to `main` whose `package.json` version is not on npm yet | npm |
+| `com.blockstream:glsdk` (Android, JVM) | `gitlab/deploy-maven.yml` on the internal GitLab mirror | manual `publish_to_maven` job on a tag pipeline | Maven Central |
+| `GreenlightSDK` (Swift) | `swift.yml` in `Blockstream/gl-sdk-swift` | manual dispatch | GitHub Releases of that repo |
 | `clnvm` (Python) | `task clnvm:publish` (manual `twine`) | manual | PyPI |
-
-!!! warning
-    The Python SDK wheels are built and tested in CI but there is
-    currently **no publish step** for them. Publishing them, if it is
-    ever wanted, still has to be wired up (see
-    [Gaps and gotchas](#gaps-and-gotchas)).
 
 ## Tag conventions
 
@@ -33,6 +30,14 @@ so a release tag looks like `gl-client-v0.7.0`. Everything before the
 last `-v` is taken as the crate name and the rest as the version. The
 workflow then enforces a **"Version Match"** check: the tag version must
 equal the `version` in that crate's `Cargo.toml`.
+
+The same pattern also matches the Python release tags. A
+`gl-sdk-vX.Y.Z` tag therefore publishes both the `gl-sdk` crate and the
+`gl-sdk` Python package. The `gl-client-py` crate sets `publish = false`,
+so `release.yml` skips `gl-client-py-vX.Y.Z` tags and only
+`python.yml` acts on them. `python.yml` checks that every built wheel
+carries the version from the tag, which comes from the package's
+`pyproject.toml`.
 
 ## Cutting a release
 
@@ -53,7 +58,8 @@ equal the `version` in that crate's `Cargo.toml`.
 
 4. **Publish in dependency order.** The higher-level crates depend on
    the lower-level ones, so publish (or re-run) `gl-client` first, then
-   `gl-sdk`, then `gl-sdk-cli`. If they race, the dependent crate fails
+   `gl-plugin`, `gl-signerproxy`, `gl-cli` and `gl-sdk`, then
+   `gl-sdk-cli`. If they race, the dependent crate fails
    with `failed to select a version for the requirement gl-client = ...`
    simply because its dependency is not on crates.io yet. The publish
    step is idempotent — anything already on crates.io is skipped — so a
@@ -92,6 +98,7 @@ Publishing reads these GitHub Actions secrets (in
 | --- | --- | --- |
 | `CRATES_IO_TOKEN` | `release.yml` | crates.io publishing |
 | `NPM_TOKEN` | `typescript.yml` | npm publishing |
+| *(none)* | `python.yml` | PyPI, through trusted publishing in the `pypi` environment |
 | `TWINE_PASSWORD` | manual `task clnvm:publish` only | PyPI; not used by CI |
 | `CARGO_REGISTRY_TOKEN` | *none* | orphaned — `release.yml` maps the env var from `CRATES_IO_TOKEN` instead |
 | `RELEASE_PLZ_TOKEN` | *none* | orphaned — `release-plz.toml` exists but no workflow runs release-plz |
@@ -106,19 +113,24 @@ in dependency order.
 
 ## Gaps and gotchas
 
-- **npm publish skips after a rebase-merge.** `typescript.yml` decides
-  whether to publish by diffing `package.json` against its immediate
-  parent (`HEAD^`). A normal PR merge puts the version bump on the tip,
-  so it fires; a **rebase-merge buries the bump below the tip**, the diff
-  sees "unchanged", and `check-version` skips build, test **and** publish.
-  A `workflow_dispatch` does not help, because `publish` transitively
-  depends on the skipped `test` job. The robust fix is to compare against
-  the version already published to npm (`npm view @greenlightcln/glsdk
-  version`) rather than `HEAD^`.
-- **Python wheels are not published.** `python.yml` builds them and
-  `import glclient` smoke-tests them, but nothing uploads them to PyPI.
-  If Python releases are wanted, add a publish job (ideally PyPI trusted
-  publishing, which needs no token) triggered by `gl-client-py-v*` /
-  `gl-sdk-v*` tags.
+- **npm publishes whatever version is missing from the registry.**
+  `typescript.yml` builds, tests and publishes when the `package.json`
+  version is not in the registry's version list for `@greenlightcln/glsdk`.
+  It compared against the parent commit before, which skipped the
+  publish after a rebase-merge buried the version bump below the tip,
+  and that left npm at 0.1.1 while `package.json` said 0.3.0.
+- **PyPI trusted publishing has to be set up on pypi.org.** The publish
+  jobs in `python.yml` run in the `pypi` GitHub environment and
+  authenticate with the workflow's OIDC token. Each PyPI project needs a
+  trusted publisher for owner `Blockstream`, repository `greenlight`,
+  workflow `python.yml` and environment `pypi`. For a project that does
+  not exist on PyPI yet, add it as a *pending* publisher.
+- **The `gl-sdk` Python wheel is retagged.** hatchling builds it as
+  `py3-none-any`, but it bundles the native library, so `python.yml`
+  retags each wheel with the platform the library was built for. The
+  Linux libraries are built with `cargo zigbuild` against glibc 2.17,
+  which is what the `manylinux_2_17` tag promises. The bindings in the
+  wheel are regenerated from the bundled library, and the job warns if
+  the committed `libs/gl-sdk/glsdk/glsdk.py` differs from them.
 - **Swift is a separate repository.** `gl-sdk-swift` is published from
   its own repo (`Blockstream/gl-sdk-swift`) and is out of scope here.
