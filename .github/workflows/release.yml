@@ -48,7 +48,38 @@ permissions:
   contents: write
 
 jobs:
+  # Some tags matching the pattern above release a package that is not a
+  # crate, for example `gl-client-py-v*` publishes the Python package from
+  # python.yml. Their workspace crate sets `publish = false`, and this job
+  # skips them. A tag naming no workspace crate at all still runs the
+  # publish job, which fails on it.
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.filter.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            CRATE="${{ inputs.crate }}"
+          else
+            CRATE=$(echo "${GITHUB_REF#refs/tags/}" | sed -E 's/-v[0-9]+\.[0-9]+\.[0-9]+$//')
+          fi
+          # `publish = false` shows as an empty registry list.
+          PUBLISH=$(cargo metadata --no-deps --format-version 1 | \
+            jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | if .publish == [] then "false" else "true" end')
+          if [ "$PUBLISH" = "false" ]; then
+            echo "::notice::$CRATE sets publish = false, not publishing it to crates.io"
+            echo "publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "publish=true" >> $GITHUB_OUTPUT
+          fi
+
   publish:
+    needs: filter
+    if: needs.filter.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       # ==========================================================================

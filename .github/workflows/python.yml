@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    # Release tags. `gl-client-py-vX.Y.Z` publishes the `gl-client`
+    # package and `gl-sdk-vX.Y.Z` the `gl-sdk` package to PyPI, see the
+    # publish jobs at the end. `gl-sdk-v*` also publishes the gl-sdk crate
+    # through release.yml.
+    tags:
+      - 'gl-client-py-v[0-9]+.[0-9]+.[0-9]+'
+      - 'gl-sdk-v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     types:
       - synchronize
@@ -190,3 +197,190 @@ jobs:
         with:
           name: wheels-win-${{ matrix.target }}
           path: libs\gl-client-py\dist
+
+  # The gl-sdk Python package wraps the gl-sdk shared library with UniFFI
+  # bindings loaded through ctypes, so one wheel per platform serves every
+  # Python version. hatchling tags the wheel `py3-none-any`, which is
+  # retagged with the platform the bundled library was built for.
+  gl-sdk-wheels:
+    name: gl-sdk wheel - ${{ matrix.plat }}
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux libraries link glibc 2.17 through cargo-zigbuild, like the
+          # desktop libraries in the jvm jar, so the manylinux_2_17 tag holds.
+          - host: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            zig: true
+            lib: libglsdk.so
+            plat: manylinux_2_17_x86_64.manylinux2014_x86_64
+            smoke: true
+          - host: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            zig: true
+            lib: libglsdk.so
+            plat: manylinux_2_17_aarch64.manylinux2014_aarch64
+            smoke: true
+          - host: macos-14
+            target: aarch64-apple-darwin
+            lib: libglsdk.dylib
+            plat: macosx_11_0_arm64
+            smoke: true
+          # Cross built on the arm64 runner, not smoke tested.
+          - host: macos-14
+            target: x86_64-apple-darwin
+            lib: libglsdk.dylib
+            plat: macosx_11_0_x86_64
+            smoke: false
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            lib: glsdk.dll
+            plat: win_amd64
+            smoke: true
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cargo-zigbuild
+        if: matrix.zig
+        run: |
+          pip install ziglang
+          cargo install --locked cargo-zigbuild@0.24.0
+
+      - name: Build the gl-sdk library (Linux)
+        if: runner.os == 'Linux'
+        run: cargo zigbuild --release --target ${{ matrix.target }}.2.17 -p gl-sdk
+
+      # Apple's strip instead of cargo's rust-objcopy, see jvm-darwin-* in
+      # build/.tasks.yml for the dyld issue this avoids.
+      - name: Build the gl-sdk library (macOS)
+        if: runner.os == 'macOS'
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '11.0'
+          CARGO_PROFILE_RELEASE_STRIP: 'false'
+        run: |
+          cargo build --release --target ${{ matrix.target }} -p gl-sdk
+          /usr/bin/strip -x target/${{ matrix.target }}/release/${{ matrix.lib }}
+
+      # Static C runtime, so the library loads without the Visual C++
+      # Redistributable.
+      - name: Build the gl-sdk library (Windows)
+        if: runner.os == 'Windows'
+        env:
+          RUSTFLAGS: -C target-feature=+crt-static
+        run: cargo build --release --target ${{ matrix.target }} -p gl-sdk
+
+      # Regenerated from the library going into the wheel, so the bindings
+      # and the library always agree on the API checksums.
+      - name: Generate the Python bindings
+        run: |
+          LIB=target/${{ matrix.target }}/release/${{ matrix.lib }}
+          cp "$LIB" libs/gl-sdk/glsdk/${{ matrix.lib }}
+          cargo run --bin uniffi-bindgen -- generate \
+            --library "$LIB" --language python --out-dir libs/gl-sdk/glsdk
+          if ! git diff --quiet -- libs/gl-sdk/glsdk/glsdk.py; then
+            echo "::warning::The committed libs/gl-sdk/glsdk/glsdk.py is stale, run task sdk:bindings-python"
+          fi
+
+      - name: Build and retag the wheel
+        run: |
+          uv build --package gl-sdk --wheel --out-dir dist-sdk
+          uvx --from wheel wheel tags --remove --platform-tag '${{ matrix.plat }}' dist-sdk/*.whl
+          ls -la dist-sdk
+
+      - name: Smoke test the wheel
+        if: matrix.smoke
+        run: |
+          WHEEL=$(ls dist-sdk/*.whl)
+          # The import checks the bindings against the library's API
+          # checksums, parse_input calls into the library.
+          uv run --no-project --isolated --python 3.12 --with "$WHEEL" python -c \
+            "import glsdk; print(glsdk.__version__); print(glsdk.parse_input('02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f283686619'))"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: gl-sdk-wheel-${{ matrix.target }}
+          path: dist-sdk/*.whl
+          if-no-files-found: error
+
+  # Publishing uses PyPI trusted publishing: PyPI accepts the GitHub OIDC
+  # token of this workflow in the `pypi` environment, no API token needed.
+  publish-gl-client:
+    name: Publish gl-client to PyPI
+    if: startsWith(github.ref, 'refs/tags/gl-client-py-v')
+    needs: [source, linux, macos, windows]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/gl-client/
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Check the version matches the tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#gl-client-py-v}
+          ls -la dist
+          for f in dist/*; do
+            case "$(basename "$f")" in
+              gl_client-"$VERSION"-*.whl|gl_client-"$VERSION".tar.gz) ;;
+              *) echo "::error::$f does not match version $VERSION from the tag"; exit 1 ;;
+            esac
+          done
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-gl-sdk:
+    name: Publish gl-sdk to PyPI
+    if: startsWith(github.ref, 'refs/tags/gl-sdk-v')
+    needs: [gl-sdk-wheels]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/gl-sdk/
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gl-sdk-wheel-*
+          path: dist
+          merge-multiple: true
+
+      - name: Check the version matches the tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#gl-sdk-v}
+          ls -la dist
+          for f in dist/*; do
+            case "$(basename "$f")" in
+              gl_sdk-"$VERSION"-*.whl) ;;
+              *) echo "::error::$f does not match version $VERSION from the tag"; exit 1 ;;
+            esac
+          done
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
