@@ -550,6 +550,11 @@ public protocol ConfigProtocol: AnyObject, Sendable {
      */
     func withNetwork(network: Network)  -> Config
     
+    /**
+     * Configure all signers started by NodeBuilder with this Config.
+     */
+    func withSignerConfig(signerConfig: SignerConfig)  -> Config
+
 }
 open class Config: ConfigProtocol, @unchecked Sendable {
     fileprivate let pointer: UnsafeMutableRawPointer!
@@ -636,6 +641,17 @@ open func withNetwork(network: Network) -> Config  {
 })
 }
     
+    /**
+     * Configure all signers started by NodeBuilder with this Config.
+     */
+open func withSignerConfig(signerConfig: SignerConfig) -> Config  {
+    return try!  FfiConverterTypeConfig_lift(try! rustCall() {
+    uniffi_glsdk_fn_method_config_with_signer_config(self.uniffiClonePointer(),
+        FfiConverterTypeSignerConfig_lower(signerConfig),$0
+    )
+})
+}
+
 
 }
 
@@ -2335,8 +2351,12 @@ public protocol SchedulerProtocol: AnyObject, Sendable {
      * before it creates a node. It needs no credentials, and the
      * `node_id` is passed explicitly.
      *
-     * The answer is advisory and may change over time. Treat an
-     * error as "unknown" rather than as a negative answer.
+     * The answer is monotonic: once the node has been registered
+     * it is reported as available, and stays available regardless
+     * of the node's status or the provider's current capacity.
+     * Before registration the answer is advisory and may change
+     * over time. Treat an error as "unknown" rather than as a
+     * negative answer.
      */
     func lightningAvailable(nodeId: Data) throws  -> Bool
     
@@ -2434,8 +2454,12 @@ public convenience init(network: Network)throws  {
      * before it creates a node. It needs no credentials, and the
      * `node_id` is passed explicitly.
      *
-     * The answer is advisory and may change over time. Treat an
-     * error as "unknown" rather than as a negative answer.
+     * The answer is monotonic: once the node has been registered
+     * it is reported as available, and stays available regardless
+     * of the node's status or the provider's current capacity.
+     * Before registration the answer is advisory and may change
+     * over time. Treat an error as "unknown" rather than as a
+     * negative answer.
      */
 open func lightningAvailable(nodeId: Data)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeError_lift) {
@@ -2611,6 +2635,24 @@ public static func newFromSeed(seed: Data)throws  -> Signer  {
 })
 }
     
+public static func newFromSeedWithConfig(seed: Data, config: SignerConfig)throws  -> Signer  {
+    return try  FfiConverterTypeSigner_lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_constructor_signer_new_from_seed_with_config(
+        FfiConverterData.lower(seed),
+        FfiConverterTypeSignerConfig_lower(config),$0
+    )
+})
+}
+
+public static func newWithConfig(phrase: String, config: SignerConfig)throws  -> Signer  {
+    return try  FfiConverterTypeSigner_lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_glsdk_fn_constructor_signer_new_with_config(
+        FfiConverterString.lower(phrase),
+        FfiConverterTypeSignerConfig_lower(config),$0
+    )
+})
+}
+
 
     
 open func authenticate(creds: Credentials)throws  -> Signer  {
@@ -6881,6 +6923,87 @@ public func FfiConverterTypeSendResponse_lower(_ value: SendResponse) -> RustBuf
     return FfiConverterTypeSendResponse.lower(value)
 }
 
+
+/**
+ * State verification and storage settings for SDK signers.
+ */
+public struct SignerConfig {
+    public var stateSignatureMode: StateSignatureMode
+    /**
+     * Persistent directory for the migration marker; required in Soft mode.
+     * Hard and Off modes do not open this directory.
+     */
+    public var deviceStoragePath: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(stateSignatureMode: StateSignatureMode,
+        /**
+         * Persistent directory for the migration marker; required in Soft mode.
+         * Hard and Off modes do not open this directory.
+         */deviceStoragePath: String?) {
+        self.stateSignatureMode = stateSignatureMode
+        self.deviceStoragePath = deviceStoragePath
+    }
+}
+
+#if compiler(>=6)
+extension SignerConfig: Sendable {}
+#endif
+
+
+extension SignerConfig: Equatable, Hashable {
+    public static func ==(lhs: SignerConfig, rhs: SignerConfig) -> Bool {
+        if lhs.stateSignatureMode != rhs.stateSignatureMode {
+            return false
+        }
+        if lhs.deviceStoragePath != rhs.deviceStoragePath {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(stateSignatureMode)
+        hasher.combine(deviceStoragePath)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSignerConfig: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SignerConfig {
+        return
+            try SignerConfig(
+                stateSignatureMode: FfiConverterTypeStateSignatureMode.read(from: &buf),
+                deviceStoragePath: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SignerConfig, into buf: inout [UInt8]) {
+        FfiConverterTypeStateSignatureMode.write(value.stateSignatureMode, into: &buf)
+        FfiConverterOptionString.write(value.deviceStoragePath, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSignerConfig_lift(_ buf: RustBuffer) throws -> SignerConfig {
+    return try FfiConverterTypeSignerConfig.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSignerConfig_lower(_ value: SignerConfig) -> RustBuffer {
+    return FfiConverterTypeSignerConfig.lower(value)
+}
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 /**
@@ -8604,6 +8727,89 @@ extension ResolvedInput: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum StateSignatureMode {
+
+    /**
+     * Disable signature checks for development and testing only.
+     */
+    case off
+    /**
+     * Allow one successful migration, then use Hard mode.
+     */
+    case soft
+    case hard
+}
+
+
+#if compiler(>=6)
+extension StateSignatureMode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeStateSignatureMode: FfiConverterRustBuffer {
+    typealias SwiftType = StateSignatureMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StateSignatureMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        case 1: return .off
+
+        case 2: return .soft
+
+        case 3: return .hard
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: StateSignatureMode, into buf: inout [UInt8]) {
+        switch value {
+
+
+        case .off:
+            writeInt(&buf, Int32(1))
+
+
+        case .soft:
+            writeInt(&buf, Int32(2))
+
+
+        case .hard:
+            writeInt(&buf, Int32(3))
+
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStateSignatureMode_lift(_ buf: RustBuffer) throws -> StateSignatureMode {
+    return try FfiConverterTypeStateSignatureMode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeStateSignatureMode_lower(_ value: StateSignatureMode) -> RustBuffer {
+    return FfiConverterTypeStateSignatureMode.lower(value)
+}
+
+
+extension StateSignatureMode: Equatable, Hashable {}
+
+
+
+
+
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 /**
  * A processed success action from an LNURL-pay callback.
  *
@@ -9627,6 +9833,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_method_config_with_network() != 35643) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_glsdk_checksum_method_config_with_signer_config() != 6578) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_glsdk_checksum_method_credentials_node_id() != 16312) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -9720,7 +9929,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327) {
+    if (uniffi_glsdk_checksum_method_scheduler_lightning_available() != 8721) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_scheduler_recover() != 55514) {
@@ -9760,6 +9969,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config() != 11623) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_glsdk_checksum_constructor_signer_new_with_config() != 4613) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_loglistener_on_log() != 34844) {

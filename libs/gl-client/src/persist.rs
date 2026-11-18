@@ -11,7 +11,7 @@ pub use splice::{
 pub(crate) use splice::{CandidateFundingFacts, WalletInput};
 pub(crate) use splice::{SpliceOrigin, SplicePhase, SpliceSessionV1};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use lightning_signer::bitcoin::secp256k1::PublicKey;
 use lightning_signer::chain::tracker::ChainTracker;
 use lightning_signer::channel::ChannelId;
@@ -39,7 +39,7 @@ const NODE_STATE_PREFIX: &str = "nodestates";
 const CHANNEL_PREFIX: &str = "channels";
 const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
-const PEER_PREFIX: &str = "peers";
+pub(crate) const PEER_PREFIX: &str = "peers/";
 const TOMBSTONE_VERSION: u64 = u64::MAX;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -246,7 +246,7 @@ impl State {
     }
 
     pub fn insert_or_update_peer(&mut self, peer: PeerEntry) -> Result<(), Error> {
-        let key = format!("{PEER_PREFIX}/{}", peer.peer_id);
+        let key = format!("{PEER_PREFIX}{}", peer.peer_id);
         self.ensure_not_tombstone(&key)?;
         let value = serde_json::to_value(peer).unwrap();
         match self.values.get_mut(&key) {
@@ -412,6 +412,11 @@ impl State {
         self.values.len()
     }
 
+    pub(crate) fn without_peer_hints(mut self) -> Self {
+        self.values.retain(|key, _| !key.starts_with(PEER_PREFIX));
+        self
+    }
+
     /// Merge incoming state and track potential version conflicts.
     ///
     /// A conflict means the incoming state is stale or incompatible with local
@@ -535,14 +540,14 @@ impl State {
         State { values }
     }
 
-    /// Sign entries missing signatures and return how many signatures were added.
+    /// Sign signer-owned entries missing signatures. Peer address hints are written by the node.
     pub fn resign_signatures<F>(&mut self, mut signer: F) -> anyhow::Result<usize>
     where
         F: FnMut(&str, u64, &[u8]) -> anyhow::Result<Vec<u8>>,
     {
         let mut changed = 0usize;
         for (key, entry) in self.values.iter_mut() {
-            if !entry.signature.is_empty() {
+            if key.starts_with(PEER_PREFIX) || !entry.signature.is_empty() {
                 continue;
             }
             let value = entry.canonical_value_bytes()?;
@@ -651,30 +656,56 @@ impl Into<Vec<crate::pb::SignerStateEntry>> for State {
     }
 }
 
+fn decode_entry(entry: &crate::pb::SignerStateEntry) -> anyhow::Result<StateEntry> {
+    let value = serde_json::from_slice(&entry.value).map_err(|e| {
+        anyhow!(
+            "failed to decode signer state value for key {}: {}",
+            entry.key,
+            e
+        )
+    })?;
+    Ok(StateEntry {
+        version: entry.version,
+        value,
+        signature: entry.signature.clone(),
+    })
+}
+
+impl State {
+    pub(crate) fn from_signer_request(
+        entries: &[crate::pb::SignerStateEntry],
+    ) -> anyhow::Result<Self> {
+        let mut state = Self::new();
+        for entry in entries {
+            if let Some(peer_id) = entry.key.strip_prefix(PEER_PREFIX) {
+                // These hints are for backup recovery. Invalid hints cannot block signing.
+                if let Ok(value) = serde_json::from_slice::<PeerEntry>(&entry.value) {
+                    if entry.version != TOMBSTONE_VERSION && value.peer_id == peer_id {
+                        state.values.insert(
+                            entry.key.clone(),
+                            StateEntry::new(entry.version, serde_json::to_value(value)?),
+                        );
+                    }
+                }
+            } else if state
+                .values
+                .insert(entry.key.clone(), decode_entry(entry)?)
+                .is_some()
+            {
+                bail!("duplicate signer state entry {}", entry.key);
+            }
+        }
+        Ok(state)
+    }
+}
+
 impl TryFrom<&[crate::pb::SignerStateEntry]> for State {
     type Error = anyhow::Error;
 
     fn try_from(v: &[crate::pb::SignerStateEntry]) -> Result<State, Self::Error> {
         let values = v
             .iter()
-            .map(|entry| -> anyhow::Result<(String, StateEntry)> {
-                let value = serde_json::from_slice(&entry.value).map_err(|e| {
-                    anyhow!(
-                        "failed to decode signer state value for key {}: {}",
-                        entry.key,
-                        e
-                    )
-                })?;
-
-                Ok((
-                    entry.key.to_owned(),
-                    StateEntry {
-                        version: entry.version,
-                        value,
-                        signature: entry.signature.clone(),
-                    },
-                ))
-            })
+            .map(|entry| Ok((entry.key.clone(), decode_entry(entry)?)))
             .collect::<anyhow::Result<BTreeMap<_, _>>>()?;
 
         Ok(State { values })
@@ -694,10 +725,13 @@ pub(crate) struct MemoryPersister {
 
 impl MemoryPersister {
     pub fn new() -> Self {
-        let state = Arc::new(Mutex::new(State {
-            values: BTreeMap::new(),
-        }));
-        MemoryPersister { state }
+        Self::from_state(State::new())
+    }
+
+    pub fn from_state(state: State) -> Self {
+        MemoryPersister {
+            state: Arc::new(Mutex::new(state)),
+        }
     }
 
     pub fn state(&self) -> Arc<Mutex<State>> {
@@ -1526,7 +1560,7 @@ mod tests {
     #[test]
     fn insert_or_update_peer_keeps_last_known_address() {
         let mut state = State::new();
-        let key = format!("{PEER_PREFIX}/02aa");
+        let key = format!("{PEER_PREFIX}02aa");
 
         state
             .insert_or_update_peer(PeerEntry {

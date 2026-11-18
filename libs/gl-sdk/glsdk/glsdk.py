@@ -472,6 +472,8 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_config_with_network() != 35643:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_method_config_with_signer_config() != 6578:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_credentials_node_id() != 16312:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_credentials_save() != 26677:
@@ -534,7 +536,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327:
+    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 8721:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -561,6 +563,10 @@ def _uniffi_check_api_checksums(lib):
     if lib.uniffi_glsdk_checksum_constructor_signer_new() != 62159:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config() != 11623:
+        raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    if lib.uniffi_glsdk_checksum_constructor_signer_new_with_config() != 4613:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_loglistener_on_log() != 34844:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -714,6 +720,12 @@ _UniffiLib.uniffi_glsdk_fn_method_config_with_network.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_method_config_with_network.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_method_config_with_signer_config.argtypes = (
+    ctypes.c_void_p,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_method_config_with_signer_config.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_clone_credentials.argtypes = (
     ctypes.c_void_p,
     ctypes.POINTER(_UniffiRustCallStatus),
@@ -1041,6 +1053,18 @@ _UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed.argtypes = (
     ctypes.POINTER(_UniffiRustCallStatus),
 )
 _UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed_with_config.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed_with_config.restype = ctypes.c_void_p
+_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_with_config.argtypes = (
+    _UniffiRustBuffer,
+    _UniffiRustBuffer,
+    ctypes.POINTER(_UniffiRustCallStatus),
+)
+_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_with_config.restype = ctypes.c_void_p
 _UniffiLib.uniffi_glsdk_fn_method_signer_authenticate.argtypes = (
     ctypes.c_void_p,
     ctypes.c_void_p,
@@ -1372,6 +1396,9 @@ _UniffiLib.uniffi_glsdk_checksum_method_config_with_developer_cert.restype = cty
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_network.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_config_with_network.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_method_config_with_signer_config.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_method_config_with_signer_config.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_node_id.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_credentials_node_id.restype = ctypes.c_uint16
@@ -1507,6 +1534,12 @@ _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new.restype = ctypes.c_uint1
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config.restype = ctypes.c_uint16
+_UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_with_config.argtypes = (
+)
+_UniffiLib.uniffi_glsdk_checksum_constructor_signer_new_with_config.restype = ctypes.c_uint16
 _UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.argtypes = (
 )
 _UniffiLib.uniffi_glsdk_checksum_method_loglistener_on_log.restype = ctypes.c_uint16
@@ -4344,6 +4377,51 @@ class _UniffiConverterTypeSendResponse(_UniffiConverterRustBuffer):
         _UniffiConverterUInt32.write(value.parts, buf)
 
 
+class SignerConfig:
+    """
+    State verification and storage settings for SDK signers.
+    """
+
+    state_signature_mode: "StateSignatureMode"
+    device_storage_path: "typing.Optional[str]"
+    """
+    Persistent directory for the migration marker; required in Soft mode.
+    Hard and Off modes do not open this directory.
+    """
+
+    def __init__(self, *, state_signature_mode: "StateSignatureMode", device_storage_path: "typing.Optional[str]"):
+        self.state_signature_mode = state_signature_mode
+        self.device_storage_path = device_storage_path
+
+    def __str__(self):
+        return "SignerConfig(state_signature_mode={}, device_storage_path={})".format(self.state_signature_mode, self.device_storage_path)
+
+    def __eq__(self, other):
+        if self.state_signature_mode != other.state_signature_mode:
+            return False
+        if self.device_storage_path != other.device_storage_path:
+            return False
+        return True
+
+class _UniffiConverterTypeSignerConfig(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        return SignerConfig(
+            state_signature_mode=_UniffiConverterTypeStateSignatureMode.read(buf),
+            device_storage_path=_UniffiConverterOptionalString.read(buf),
+        )
+
+    @staticmethod
+    def check_lower(value):
+        _UniffiConverterTypeStateSignatureMode.check_lower(value.state_signature_mode)
+        _UniffiConverterOptionalString.check_lower(value.device_storage_path)
+
+    @staticmethod
+    def write(value, buf):
+        _UniffiConverterTypeStateSignatureMode.write(value.state_signature_mode, buf)
+        _UniffiConverterOptionalString.write(value.device_storage_path, buf)
+
+
 
 
 
@@ -6138,6 +6216,60 @@ class _UniffiConverterTypeResolvedInput(_UniffiConverterRustBuffer):
 
 
 
+class StateSignatureMode(enum.Enum):
+    OFF = 0
+    """
+    Disable signature checks for development and testing only.
+    """
+
+
+    SOFT = 1
+    """
+    Allow one successful migration, then use Hard mode.
+    """
+
+
+    HARD = 2
+
+
+
+class _UniffiConverterTypeStateSignatureMode(_UniffiConverterRustBuffer):
+    @staticmethod
+    def read(buf):
+        variant = buf.read_i32()
+        if variant == 1:
+            return StateSignatureMode.OFF
+        if variant == 2:
+            return StateSignatureMode.SOFT
+        if variant == 3:
+            return StateSignatureMode.HARD
+        raise InternalError("Raw enum value doesn't match any cases")
+
+    @staticmethod
+    def check_lower(value):
+        if value == StateSignatureMode.OFF:
+            return
+        if value == StateSignatureMode.SOFT:
+            return
+        if value == StateSignatureMode.HARD:
+            return
+        raise ValueError(value)
+
+    @staticmethod
+    def write(value, buf):
+        if value == StateSignatureMode.OFF:
+            buf.write_i32(1)
+        if value == StateSignatureMode.SOFT:
+            buf.write_i32(2)
+        if value == StateSignatureMode.HARD:
+            buf.write_i32(3)
+
+
+
+
+
+
+
 class SuccessActionProcessed:
     """
     A processed success action from an LNURL-pay callback.
@@ -7039,6 +7171,12 @@ class ConfigProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
+    def with_signer_config(self, signer_config: "SignerConfig"):
+        """
+        Configure all signers started by NodeBuilder with this Config.
+        """
+
+        raise NotImplementedError
 # Config is a Rust-only trait - it's a wrapper around a Rust implementation.
 class Config():
     _pointer: ctypes.c_void_p
@@ -7095,6 +7233,22 @@ class Config():
         return _UniffiConverterTypeConfig.lift(
             _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_config_with_network,self._uniffi_clone_pointer(),
         _UniffiConverterTypeNetwork.lower(network))
+        )
+
+
+
+
+
+    def with_signer_config(self, signer_config: "SignerConfig") -> "Config":
+        """
+        Configure all signers started by NodeBuilder with this Config.
+        """
+
+        _UniffiConverterTypeSignerConfig.check_lower(signer_config)
+
+        return _UniffiConverterTypeConfig.lift(
+            _uniffi_rust_call(_UniffiLib.uniffi_glsdk_fn_method_config_with_signer_config,self._uniffi_clone_pointer(),
+        _UniffiConverterTypeSignerConfig.lower(signer_config))
         )
 
 
@@ -8616,8 +8770,12 @@ class SchedulerProtocol(typing.Protocol):
         before it creates a node. It needs no credentials, and the
         `node_id` is passed explicitly.
 
-        The answer is advisory and may change over time. Treat an
-        error as "unknown" rather than as a negative answer.
+        The answer is monotonic: once the node has been registered
+        it is reported as available, and stays available regardless
+        of the node's status or the provider's current capacity.
+        Before registration the answer is advisory and may change
+        over time. Treat an error as "unknown" rather than as a
+        negative answer.
         """
 
         raise NotImplementedError
@@ -8685,8 +8843,12 @@ class Scheduler():
         before it creates a node. It needs no credentials, and the
         `node_id` is passed explicitly.
 
-        The answer is advisory and may change over time. Treat an
-        error as "unknown" rather than as a negative answer.
+        The answer is monotonic: once the node has been registered
+        it is reported as available, and stays available regardless
+        of the node's status or the provider's current capacity.
+        Before registration the answer is advisory and may change
+        over time. Treat an error as "unknown" rather than as a
+        negative answer.
         """
 
         _UniffiConverterBytes.check_lower(node_id)
@@ -8816,6 +8978,30 @@ class Signer():
         # Call the (fallible) function before creating any half-baked object instances.
         pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed,
         _UniffiConverterBytes.lower(seed))
+        return cls._make_instance_(pointer)
+
+    @classmethod
+    def new_from_seed_with_config(cls, seed: "bytes",config: "SignerConfig"):
+        _UniffiConverterBytes.check_lower(seed)
+
+        _UniffiConverterTypeSignerConfig.check_lower(config)
+
+        # Call the (fallible) function before creating any half-baked object instances.
+        pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_from_seed_with_config,
+        _UniffiConverterBytes.lower(seed),
+        _UniffiConverterTypeSignerConfig.lower(config))
+        return cls._make_instance_(pointer)
+
+    @classmethod
+    def new_with_config(cls, phrase: "str",config: "SignerConfig"):
+        _UniffiConverterString.check_lower(phrase)
+
+        _UniffiConverterTypeSignerConfig.check_lower(config)
+
+        # Call the (fallible) function before creating any half-baked object instances.
+        pointer = _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_constructor_signer_new_with_config,
+        _UniffiConverterString.lower(phrase),
+        _UniffiConverterTypeSignerConfig.lower(config))
         return cls._make_instance_(pointer)
 
 
@@ -8982,6 +9168,7 @@ __all__ = [
     "PaymentType",
     "PaymentTypeFilter",
     "ResolvedInput",
+    "StateSignatureMode",
     "SuccessActionProcessed",
     "FundChannel",
     "FundOutput",
@@ -9016,6 +9203,7 @@ __all__ = [
     "PreparedOnchainSend",
     "ReceiveResponse",
     "SendResponse",
+    "SignerConfig",
     "parse_input",
     "resolve_input",
     "set_log_level",
