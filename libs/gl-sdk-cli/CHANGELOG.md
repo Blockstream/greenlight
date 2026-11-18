@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [0.4.1] - 2026-11-18
+
+### Changed
+
+- Updated `gl-sdk` to 0.5.1.
+
 ## [0.4.0] - 2026-10-12
 
 ### Changed
@@ -24,5 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Updated gl-sdk dependency (builder-style Node creation, LNURL support, diagnostic data, on-chain preview, error codes)
 - Adapted `onchain_send` command for new optional `sat_per_vbyte` and `utxos` parameters
 
+[0.4.1]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-cli-v0.4.1
 [0.4.0]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-cli-v0.4.0
 [0.3.0]: https://github.com/Blockstream/greenlight/releases/tag/gl-sdk-cli-v0.3.0
