@@ -41,6 +41,9 @@ static RPC_POLL_INTERVAL: Duration = Duration::from_millis(500);
 const RECONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 /// How many peers to reconnect at the same time.
 const RECONNECT_CONCURRENCY: usize = 8;
+/// Bound on the LSPS2 invoice negotiation with the LSP (`lsps2.buy`
+/// round trip plus invoice creation).
+const LSP_INVOICE_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[allow(unused)]
 const OPT_SUPPORTS_LSPS: usize = 729;
@@ -223,9 +226,15 @@ impl Node for PluginNodeServer {
         req: Request<pb::LspInvoiceRequest>,
     ) -> Result<Response<pb::LspInvoiceResponse>, Status> {
         let req: pb::LspInvoiceRequest = req.into_inner();
-        let rpc_arc = get_rpc(&self.rpc_path).await;
 
-        let mut rpc = rpc_arc.lock().await;
+        // Own connection rather than the shared one: the LSPS2
+        // negotiation waits on a remote LSP, and must neither block nor
+        // be blocked by other calls. It also lets us time it out safely,
+        // as `cln_rpc` doesn't match responses to requests, so an
+        // abandoned call would desync a shared connection.
+        let mut rpc = cln_rpc::ClnRpc::new(&self.rpc_path)
+            .await
+            .map_err(|e| Status::unavailable(format!("Could not connect to lightningd: {e}")))?;
 
         // Check if we have sufficient incoming capacity to skip JIT channel negotiation.
         // We require capacity + 5% buffer to account for fees and routing.
@@ -334,17 +343,25 @@ impl Node for PluginNodeServer {
         let invoice_label = req.label.clone();
 
         // Use the new RPC method name for versions > v25.05gl1
+        let timed_out = || {
+            Status::deadline_exceeded(format!(
+                "LSP {} did not complete the JIT channel negotiation within {:?}",
+                lsp_id, LSP_INVOICE_TIMEOUT
+            ))
+        };
         let mut res = if *version > *"v25.05gl1" {
             let mut invreq: crate::requests::LspInvoiceRequestV2 = req.into();
             invreq.lsp_id = lsp_id.to_owned();
-            rpc.call_typed(&invreq)
+            tokio::time::timeout(LSP_INVOICE_TIMEOUT, rpc.call_typed(&invreq))
                 .await
+                .map_err(|_| timed_out())?
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
         } else {
             let mut invreq: crate::requests::LspInvoiceRequest = req.into();
             invreq.lsp_id = lsp_id.to_owned();
-            rpc.call_typed(&invreq)
+            tokio::time::timeout(LSP_INVOICE_TIMEOUT, rpc.call_typed(&invreq))
                 .await
+                .map_err(|_| timed_out())?
                 .map_err(|e| Status::new(Code::Internal, e.to_string()))?
         };
 
