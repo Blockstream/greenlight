@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gl-client = { path = "../../libs/gl-client" }
+gl-client = { path = "../../libs/gl-client", features = ["file-storage"] }
 rand = "0.8"
 bip39 = { version = "2", features = ["rand_core"] }
 tokio = { version = "1.29.1", features = ["rt", "macros"] }

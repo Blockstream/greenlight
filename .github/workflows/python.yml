@@ -85,14 +85,14 @@ jobs:
             uv sync
           run: |
             uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-            python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+            python3 -c "import glclient,tempfile;store=tempfile.TemporaryDirectory();creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds,device_storage_path=store.name);print(repr(creds));print(signer.version())"
 
       - name: Install built wheel (native)
         if: matrix.target == 'x86_64'
         run: |
           uv sync
           uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          uv run python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+          uv run python3 -c "import glclient,tempfile;store=tempfile.TemporaryDirectory();creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds,device_storage_path=store.name);print(repr(creds));print(signer.version())"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -143,7 +143,7 @@ jobs:
         run: |
           uv sync
           uv pip install libs/gl-client-py/dist/gl_client*.whl --force-reinstall
-          uv run python3 -c "import glclient;creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds);print(repr(creds));print(signer.version())"
+          uv run python3 -c "import glclient,tempfile;store=tempfile.TemporaryDirectory();creds=glclient.Credentials();signer=glclient.Signer(b'\x00'*32,'bitcoin', creds,device_storage_path=store.name);print(repr(creds));print(signer.version())"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4

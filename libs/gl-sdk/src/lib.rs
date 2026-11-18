@@ -179,11 +179,8 @@ fn schedule_node(
     let network = config.network;
     let nobody = config.nobody();
 
-    let seed_for_async = seed.clone();
-    let config_for_async = config.clone();
-    let credentials = util::exec(async move {
-        let signer = config_for_async.create_signer(seed_for_async, nobody.clone())?;
-
+    let signer = config.create_signer(seed, nobody.clone())?;
+    let (credentials, authenticated_signer) = util::exec(async move {
         let scheduler = gl_client::scheduler::Scheduler::new(network, nobody)
             .await
             .map_err(|e| Error::other(e.to_string()))?;
@@ -207,10 +204,10 @@ fn schedule_node(
             }
         };
 
-        credentials::Credentials::load(creds_bytes)
+        let credentials = credentials::Credentials::load(creds_bytes)?;
+        let signer = signer.with_credentials(credentials.inner.clone());
+        Ok::<_, Error>((credentials, signer))
     })?;
-
-    let authenticated_signer = config.create_signer(seed, credentials.inner.clone())?;
 
     let handle = signer::Handle::spawn(authenticated_signer);
     let node = node::Node::with_signer(credentials, handle, network)?;

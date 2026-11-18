@@ -551,7 +551,7 @@ public protocol ConfigProtocol: AnyObject, Sendable {
     func withNetwork(network: Network)  -> Config
     
     /**
-     * Configure all signers started by NodeBuilder with this Config.
+     * Configure all signers started by NodeBuilder, including their required storage path.
      */
     func withSignerConfig(signerConfig: SignerConfig)  -> Config
 
@@ -642,7 +642,7 @@ open func withNetwork(network: Network) -> Config  {
 }
     
     /**
-     * Configure all signers started by NodeBuilder with this Config.
+     * Configure all signers started by NodeBuilder, including their required storage path.
      */
 open func withSignerConfig(signerConfig: SignerConfig) -> Config  {
     return try!  FfiConverterTypeConfig_lift(try! rustCall() {
@@ -2608,11 +2608,12 @@ open class Signer: SignerProtocol, @unchecked Sendable {
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
         return try! rustCall { uniffi_glsdk_fn_clone_signer(self.pointer, $0) }
     }
-public convenience init(phrase: String)throws  {
+public convenience init(phrase: String, deviceStoragePath: String)throws  {
     let pointer =
         try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_glsdk_fn_constructor_signer_new(
-        FfiConverterString.lower(phrase),$0
+        FfiConverterString.lower(phrase),
+        FfiConverterString.lower(deviceStoragePath),$0
     )
 }
     self.init(unsafeFromRawPointer: pointer)
@@ -2627,10 +2628,11 @@ public convenience init(phrase: String)throws  {
     }
 
     
-public static func newFromSeed(seed: Data)throws  -> Signer  {
+public static func newFromSeed(seed: Data, deviceStoragePath: String)throws  -> Signer  {
     return try  FfiConverterTypeSigner_lift(try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_glsdk_fn_constructor_signer_new_from_seed(
-        FfiConverterData.lower(seed),$0
+        FfiConverterData.lower(seed),
+        FfiConverterString.lower(deviceStoragePath),$0
     )
 })
 }
@@ -6930,8 +6932,7 @@ public func FfiConverterTypeSendResponse_lower(_ value: SendResponse) -> RustBuf
 public struct SignerConfig {
     public var stateSignatureMode: StateSignatureMode
     /**
-     * Persistent directory for the migration marker; required in Soft mode.
-     * Hard and Off modes do not open this directory.
+     * Persistent directory shared across restarts. Required in Hard and Soft modes.
      */
     public var deviceStoragePath: String?
 
@@ -6939,8 +6940,7 @@ public struct SignerConfig {
     // declare one manually.
     public init(stateSignatureMode: StateSignatureMode,
         /**
-         * Persistent directory for the migration marker; required in Soft mode.
-         * Hard and Off modes do not open this directory.
+         * Persistent directory shared across restarts. Required in Hard and Soft modes.
          */deviceStoragePath: String?) {
         self.stateSignatureMode = stateSignatureMode
         self.deviceStoragePath = deviceStoragePath
@@ -9833,7 +9833,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_method_config_with_network() != 35643) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_method_config_with_signer_config() != 6578) {
+    if (uniffi_glsdk_checksum_method_config_with_signer_config() != 57802) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_credentials_node_id() != 16312) {
@@ -9965,10 +9965,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_constructor_scheduler_new() != 15239) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_constructor_signer_new() != 62159) {
+    if (uniffi_glsdk_checksum_constructor_signer_new() != 57832) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 6776) {
+    if (uniffi_glsdk_checksum_constructor_signer_new_from_seed() != 18435) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_constructor_signer_new_from_seed_with_config() != 11623) {

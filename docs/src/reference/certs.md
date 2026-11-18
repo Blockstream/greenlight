@@ -124,13 +124,15 @@ For the lower-level `gl-client` library, you can construct a
 	```rust
 	use gl_client::credentials::Nobody;
 	use gl_client::scheduler::Scheduler;
-	use gl_client::signer::Signer;
+	use gl_client::signer::{FileDeviceStorage, Signer};
+	use std::sync::Arc;
 
 	let cert = std::fs::read("client.crt")?;
 	let key = std::fs::read("client-key.pem")?;
 	let developer_creds = Nobody::with(cert, key);
 
-	let signer = Signer::new(seed, Network::Bitcoin, developer_creds.clone())?;
+	let storage = Arc::new(FileDeviceStorage::new("/path/to/app/device-state")?);
+	let signer = Signer::new(seed, Network::Bitcoin, developer_creds.clone(), storage)?;
 	let scheduler = Scheduler::new(Network::Bitcoin, developer_creds).await?;
 	let res = scheduler.register(&signer, None).await?;
 	```
@@ -143,7 +145,7 @@ For the lower-level `gl-client` library, you can construct a
 	key = open("client-key.pem", "rb").read()
 	creds = Credentials.nobody_with(cert, key)
 
-	signer = Signer(seed, network="bitcoin", creds=creds)
+	signer = Signer(seed, network="bitcoin", creds=creds, device_storage_path="/path/to/app/device-state")
 	scheduler = Scheduler(network="bitcoin", creds=creds)
 	res = scheduler.register(signer)
 	```

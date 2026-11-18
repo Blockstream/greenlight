@@ -3,15 +3,15 @@ use crate::util;
 use clap::{Subcommand, ValueEnum};
 use core::fmt::Debug;
 use gl_client::signer::{
-    CLNBackup, CLNBackupOptions, DeviceStorage, FeeBudgetLimits, FileDeviceStorage, RecoverableChannel,
-    Signer, SignerBackupConfig, SignerBackupSnapshot, SignerBackupStrategy, SignerConfig,
+    CLNBackup, CLNBackupOptions, DeviceStorage, FeeBudgetLimits, RecoverableChannel, Signer,
+    SignerBackupConfig, SignerBackupSnapshot, SignerBackupStrategy, SignerConfig,
     StateSignatureMode, StateSignatureOverrideConfig,
 };
 use lightning_signer::bitcoin::Network;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::{join, signal};
+use tokio::signal;
 use util::{CREDENTIALS_FILE_NAME, SEED_FILE_NAME};
 
 pub struct Config<P: AsRef<Path>> {
@@ -388,12 +388,9 @@ async fn run_handler<P: AsRef<Path>>(
     });
     let backup = backup_config_from_args(backup_path, backup_strategy, backup_periodic_updates)?;
     let device_storage: Option<Arc<dyn DeviceStorage>> = match state_signature_mode {
-        StateSignatureModeArg::Soft => Some(Arc::new(
-            FileDeviceStorage::new(
-                config.data_dir.as_ref().join("device-state"),
-            )
-            .map_err(|e| Error::custom(format!("Failed to open device state storage: {e:#}")))?,
-        )),
+        StateSignatureModeArg::Hard | StateSignatureModeArg::Soft => {
+            Some(util::device_storage(config.data_dir.as_ref())?)
+        }
         _ => None,
     };
 
@@ -412,16 +409,16 @@ async fn run_handler<P: AsRef<Path>>(
     .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
 
     let (tx, rx) = tokio::sync::mpsc::channel(1);
-    let handle = tokio::spawn(async move {
-        let _ = signer.run_forever(rx).await;
-    });
-
-    _ = signal::ctrl_c().await.map_err(|e| Error::custom(e))?;
-
-    _ = tx.send(()).await;
-    _ = join!(handle);
-
-    Ok(())
+    let mut handle = tokio::spawn(async move { signer.run_forever(rx).await });
+    let result = tokio::select! {
+        result = &mut handle => result,
+        signal = signal::ctrl_c() => {
+            signal.map_err(Error::custom)?;
+            let _ = tx.send(()).await;
+            handle.await
+        }
+    };
+    result.map_err(Error::custom)?.map_err(Error::custom)
 }
 
 fn backup_config_from_args(
@@ -1208,7 +1205,8 @@ async fn version<P: AsRef<Path>>(config: Config<P>) -> Result<()> {
 
     // Initialize a signer and scheduler with default credentials.
     let creds = gl_client::credentials::Nobody::new();
-    let signer = gl_client::signer::Signer::new(seed, config.network, creds.clone())
+    let storage = util::device_storage(config.data_dir.as_ref())?;
+    let signer = Signer::new(seed, config.network, creds, storage)
         .map_err(|e| Error::custom(format!("Failed to create signer: {}", e)))?;
     println!("{}", signer.version());
     Ok(())

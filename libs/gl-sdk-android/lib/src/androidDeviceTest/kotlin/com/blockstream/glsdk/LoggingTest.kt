@@ -50,7 +50,7 @@ class LoggingTest {
         captured.clear()
         setLogLevel(LogLevel.TRACE)
 
-        val config = Config()
+        val config = signerConfig()
         val mnemonic = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong"
         try {
             NodeBuilder(config).registerOrRecover(mnemonic, null)

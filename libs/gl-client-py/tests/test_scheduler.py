@@ -1,16 +1,14 @@
 from fixtures import *
-from glclient import Signer, Scheduler, Node, Credentials
+from glclient import Scheduler, Node, Credentials
 from binascii import hexlify
 import unittest
 
 
-def test_connect(scheduler, creds):
+def test_connect(signer, creds):
     """Test that we can connect to the scheduler."""
-    sig = Signer(b"\x00" * 32, network="regtest", creds=creds)
-    node_id = sig.node_id()
     s = Scheduler(network="regtest", creds=creds)
     with pytest.raises(ValueError):
-        s.recover(sig)
+        s.recover(signer)
 
 
 def test_register(sclient, signer):

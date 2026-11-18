@@ -13,10 +13,15 @@ def creds(nobody_id):
 
 
 @pytest.fixture
-def signer(scheduler, creds):
+def signer(scheduler, creds, tmp_path):
     secret = b"\x00" * 32
     network = "regtest"
-    return Signer(secret, network=network, creds=creds)
+    return Signer(
+        secret,
+        network=network,
+        creds=creds,
+        device_storage_path=str(tmp_path / "device-state"),
+    )
 
 
 @pytest.fixture

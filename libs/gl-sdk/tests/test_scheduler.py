@@ -5,8 +5,8 @@ import glsdk
 from gltesting.fixtures import *
 
 
-def test_register(scheduler, clients):
-    signer = glsdk.Signer(" ".join(["abandon"] * 11 + ["about"]))
+def test_register(scheduler, clients, tmp_path):
+    signer = glsdk.Signer(" ".join(["abandon"] * 11 + ["about"]), str(tmp_path / "device-state"))
     signer.start()
 
     # Check that the derived node_id matches the Signer seed phrase.

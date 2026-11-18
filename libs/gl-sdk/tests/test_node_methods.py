@@ -303,10 +303,8 @@ class TestNodeStateMethod:
     def test_node_has_node_state_method(self):
         assert hasattr(glsdk.Node, "node_state")
 
-    def test_node_state_returns_valid_snapshot(self, scheduler, nobody_id):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
+    def test_node_state_returns_valid_snapshot(self, scheduler, sdk_config):
+        node = glsdk.NodeBuilder(sdk_config).register_or_recover(MNEMONIC, None)
         state = node.node_state()
         assert isinstance(state, glsdk.NodeState)
         # Node id is a lowercase hex pubkey (33 bytes → 66 chars).
@@ -330,11 +328,9 @@ class TestGenerateDiagnosticData:
         assert hasattr(glsdk.Node, "generate_diagnostic_data")
 
     def test_generate_diagnostic_data_returns_well_formed_envelope(
-        self, scheduler, nobody_id
+        self, scheduler, sdk_config
     ):
-        dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-        config = glsdk.Config().with_developer_cert(dev_cert)
-        node = glsdk.NodeBuilder(config).register_or_recover(MNEMONIC, None)
+        node = glsdk.NodeBuilder(sdk_config).register_or_recover(MNEMONIC, None)
 
         blob = node.generate_diagnostic_data()
         assert isinstance(blob, str)

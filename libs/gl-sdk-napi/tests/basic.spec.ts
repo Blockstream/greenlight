@@ -1,3 +1,4 @@
+import { signerStoragePath } from './test.helper.js';
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
 import { Credentials, Scheduler, Signer, Node } from '../index.js';
@@ -7,7 +8,7 @@ describe('Greenlight node', () => {
     const scheduler = new Scheduler('regtest');
     const rand: Buffer = crypto.randomBytes(16);
     const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    const signer = new Signer(MNEMONIC);
+    const signer = new Signer(MNEMONIC, signerStoragePath());
     const handle = await signer.start();
     const nodeId = signer.nodeId();
     expect(Buffer.isBuffer(nodeId)).toBe(true);

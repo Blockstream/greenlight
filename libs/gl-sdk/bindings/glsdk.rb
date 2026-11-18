@@ -1010,7 +1010,7 @@ module UniFFILib
     [:pointer, RustCallStatus.by_ref],
     :void
   attach_function :uniffi_glsdk_fn_constructor_signer_new,
-    [RustBuffer.by_value, RustCallStatus.by_ref],
+    [RustBuffer.by_value, RustBuffer.by_value, RustCallStatus.by_ref],
     :pointer
   attach_function :uniffi_glsdk_fn_method_signer_authenticate,
     [:pointer, :pointer, RustCallStatus.by_ref],
@@ -1631,10 +1631,11 @@ end
   def self.uniffi_lower(inst)
     return inst.uniffi_clone_pointer()
   end
-  def initialize(phrase)
+  def initialize(phrase, device_storage_path)
         phrase = Glsdk::uniffi_utf8(phrase)
-        
-    pointer = Glsdk.rust_call_with_error(Error,:uniffi_glsdk_fn_constructor_signer_new,RustBuffer.allocFromString(phrase))
+        device_storage_path = Glsdk::uniffi_utf8(device_storage_path)
+
+    pointer = Glsdk.rust_call_with_error(Error,:uniffi_glsdk_fn_constructor_signer_new,RustBuffer.allocFromString(phrase),RustBuffer.allocFromString(device_storage_path))
     @pointer = pointer
     ObjectSpace.define_finalizer(self, self.class.uniffi_define_finalizer_by_pointer(pointer, self.object_id))
   end

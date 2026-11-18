@@ -65,7 +65,7 @@ def load_developer_creds():
 
 def register_node(seed: bytes, developer_creds: Credentials):
     # ---8<--- [start: init_signer]
-    signer = Signer(seed, NETWORK, developer_creds)
+    signer = Signer(seed, NETWORK, developer_creds, device_storage_path=str(Path(TEST_NODE_DATA_DIR_1) / "device-state"))
     # ---8<--- [end: init_signer]
 
     # ---8<--- [start: register_node]
@@ -106,7 +106,7 @@ def start_node(device_creds_file_path: str) -> None:
 
     # ---8<--- [start: start_signer]
     seed = read_file("hsm_secret")
-    signer = Signer(seed, NETWORK, device_creds)
+    signer = Signer(seed, NETWORK, device_creds, device_storage_path=str(Path(TEST_NODE_DATA_DIR_1) / "device-state"))
 
     signer.run_in_thread()
     # ---8<--- [end: start_signer]
@@ -125,7 +125,7 @@ def recover_node(developer_cert: bytes, developer_key: bytes) -> None:
     # ---8<--- [start: recover_node]
     seed = read_file("hsm_secret")
     signer_creds = Credentials.nobody_with(developer_cert, developer_key)
-    signer = Signer(seed, NETWORK, signer_creds)
+    signer = Signer(seed, NETWORK, signer_creds, device_storage_path=str(Path(TEST_NODE_DATA_DIR_1) / "device-state"))
     scheduler = Scheduler(NETWORK, signer_creds)
     recover_response = scheduler.recover(signer)
     # ---8<--- [end: recover_node]

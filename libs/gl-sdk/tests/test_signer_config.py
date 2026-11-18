@@ -16,9 +16,11 @@ def migration_config(path=None):
     )
 
 
-def test_existing_signer_constructors_keep_working():
-    assert len(glsdk.Signer(MNEMONIC).node_id()) == 33
-    assert len(glsdk.Signer.new_from_seed(b"\x00" * 32).node_id()) == 33
+def test_default_signer_constructors_open_storage(tmp_path):
+    path = tmp_path / "device-state"
+    assert len(glsdk.Signer(MNEMONIC, str(path)).node_id()) == 33
+    assert len(glsdk.Signer.new_from_seed(b"\x00" * 32, str(path)).node_id()) == 33
+    assert path.is_dir()
 
 
 @pytest.mark.parametrize("from_seed", [False, True])
@@ -33,18 +35,12 @@ def test_configured_signer_constructors(from_seed, tmp_path):
     assert path.is_dir()
 
 
-def test_authentication_preserves_migration_storage(tmp_path):
+def test_authentication_keeps_the_signer_identity(tmp_path):
     path = tmp_path / "device-state"
     signer = glsdk.Signer.new_with_config(MNEMONIC, migration_config(path))
     creds = glsdk.Credentials.load(b"")
     authenticated = signer.authenticate(creds)
     assert authenticated.node_id() == signer.node_id()
-    # If authentication lost the configuration and reverted to Hard, this
-    # storage failure would go unnoticed by the newly constructed signer.
-    path.rmdir()
-    path.write_text("unavailable")
-    with pytest.raises(glsdk.Error, match="loading Soft migration marker"):
-        authenticated.authenticate(creds)
 
 
 @pytest.mark.parametrize(

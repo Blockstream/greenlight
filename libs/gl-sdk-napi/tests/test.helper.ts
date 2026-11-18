@@ -1,7 +1,11 @@
 import * as fs from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
 import { Credentials, Scheduler, Signer, Node, Handle } from '../index.js';
+
+export const signerStoragePath = () => fs.mkdtempSync(join(tmpdir(), 'glsdk-signer-'));
 
 export const lspInfo = () => ({
   rpcSocket:     process.env.LSP_RPC_SOCKET!,
@@ -38,7 +42,7 @@ export async function fundWallet(node: Node, amountSats = 100_000_000): Promise<
 export async function getGLNode(scheduler: Scheduler, connectToLSP: boolean = true): Promise<{ node: Node; handle: Handle }> {
   const mnemonic = bip39.entropyToMnemonic(crypto.randomBytes(16).toString('hex'));
   const secret = bip39.mnemonicToSeedSync(mnemonic);
-  const signer = new Signer(mnemonic);
+  const signer = new Signer(mnemonic, signerStoragePath());
   let credentials: Credentials;
   if (connectToLSP) {
     const testSetupServerUrl = process.env.TEST_SETUP_SERVER_URL!;

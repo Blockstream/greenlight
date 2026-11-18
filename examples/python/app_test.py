@@ -16,11 +16,11 @@ class GetInfoApp:
     (run it from the host).
     `pytest -s -v app_test.py::test_getinfoapp`.
     """
-    def __init__(self, secret: bytes, network: str, tls: TlsConfig):
+    def __init__(self, secret: bytes, network: str, tls: TlsConfig, device_storage_path: str):
         self.secret: bytes = secret
         self.network = network
         self.tls: TlsConfig = tls
-        self.signer: Signer = Signer(secret, network, tls) # signer needs to keep running
+        self.signer: Signer = Signer(secret, network, tls, device_storage_path=device_storage_path) # signer needs to keep running
         self.node_id: bytes = self.signer.node_id()
 
     def scheduler(self) -> Scheduler:
@@ -51,7 +51,7 @@ class GetInfoApp:
         return node.get_info()
 
 
-def test_getinfoapp():
+def test_getinfoapp(tmp_path):
     # These are normally persisted on disk and need to be loaded and
     # passed to the glclient library by the application. In this 
     # example we store them directly in the "app".
@@ -60,7 +60,7 @@ def test_getinfoapp():
     tls = TlsConfig()
 
     # Register a node
-    giap = GetInfoApp(secret, network, tls)
+    giap = GetInfoApp(secret, network, tls, str(tmp_path / "device-state"))
     giap.register_or_recover()
 
     # GetInfo

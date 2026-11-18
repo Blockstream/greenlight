@@ -28,15 +28,6 @@ MNEMONIC = (
 CHANNEL_SATS = 1_000_000  # 1M sats
 
 
-def make_sdk_node(nobody_id, scheduler):
-    """Register a GL node via the SDK and return it with signer running."""
-    dev_cert = glsdk.DeveloperCert(nobody_id.cert_chain, nobody_id.private_key)
-    config = glsdk.Config().with_developer_cert(dev_cert)
-    config = config.with_network(glsdk.Network.REGTEST)
-    node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
-    return node, config
-
-
 def fund_and_connect(node_factory, bitcoind, lnurl_service):
     """Create a relay node with channels to the LNURL service node.
 
@@ -262,9 +253,10 @@ def test_lnurl_pay_with_message_success_action(
 
 
 @pytest.fixture
-def funded_sdk_node(scheduler, nobody_id, node_factory, bitcoind, lnurl_service):
+def funded_sdk_node(scheduler, sdk_config, node_factory, bitcoind, lnurl_service):
     relay = fund_and_connect(node_factory, bitcoind, lnurl_service)
-    node, _ = make_sdk_node(nobody_id, scheduler)
+    config = sdk_config.with_network(glsdk.Network.REGTEST)
+    node = glsdk.NodeBuilder(config).register(MNEMONIC, None)
     credentials = glclient.Credentials.from_bytes(node.credentials())
     gl_node = glclient.Scheduler(network="regtest", creds=credentials).node()
     relay_id = relay.info["id"]

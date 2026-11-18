@@ -72,6 +72,8 @@ pub mod model;
 mod report;
 mod resolve;
 mod splice_policy;
+mod watermark;
+use watermark::WatermarkRuntime;
 
 const VERSION: &str = "v26.06";
 const GITHASH: &str = env!("GIT_HASH");
@@ -123,7 +125,7 @@ pub struct SignerConfig {
     pub state_signature_mode: StateSignatureMode,
     pub state_signature_override: Option<StateSignatureOverrideConfig>,
     pub fee_budget_limits: FeeBudgetLimits,
-    /// Device-local metadata storage, required for a one-time Soft migration.
+    /// Persistent device-local metadata storage, required in Hard and Soft modes.
     pub device_storage: Option<Arc<dyn DeviceStorage>>,
     #[cfg(feature = "backup")]
     pub backup: Option<SignerBackupConfig>,
@@ -153,6 +155,7 @@ pub struct Signer {
     state_signing_pubkey: PublicKey,
     state_signature_mode: StateSignatureMode,
     soft_migration: Arc<Mutex<Option<SoftMigration>>>,
+    watermark: Arc<Mutex<Option<WatermarkRuntime>>>,
     state_signature_override_enabled: bool,
     state_signature_override_note: Option<String>,
     fee_budget_limits: FeeBudgetLimits,
@@ -208,6 +211,12 @@ pub enum Error {
     #[error("hard fee budget rejected request: {0}")]
     FeeBudget(#[source] anyhow::Error),
 
+    #[error("{0:#}")]
+    WatermarkStorage(#[source] anyhow::Error),
+
+    #[error("{0:#}")]
+    WatermarkViolation(#[source] anyhow::Error),
+
     #[error("preapproval declined: {cause}")]
     PreapprovalDeclined {
         #[source]
@@ -228,12 +237,34 @@ pub enum Error {
     ApprovePairingRequestError(String),
 }
 
+impl Error {
+    fn is_fatal_watermark_error(&self) -> bool {
+        matches!(
+            self,
+            Self::WatermarkStorage(_) | Self::WatermarkViolation(_)
+        )
+    }
+}
+
 impl Signer {
-    pub fn new<T>(secret: Vec<u8>, network: Network, creds: T) -> Result<Signer, anyhow::Error>
+    pub fn new<T>(
+        secret: Vec<u8>,
+        network: Network,
+        creds: T,
+        device_storage: Arc<dyn DeviceStorage>,
+    ) -> Result<Signer, anyhow::Error>
     where
         T: TlsConfigProvider,
     {
-        Self::new_with_config(secret, network, creds, SignerConfig::default())
+        Self::new_with_config(
+            secret,
+            network,
+            creds,
+            SignerConfig {
+                device_storage: Some(device_storage),
+                ..Default::default()
+            },
+        )
     }
 
     pub fn new_with_config<T>(
@@ -251,7 +282,15 @@ impl Signer {
 
         info!("Initializing signer for {VERSION} ({GITHASH}) (VLS)");
         let state_signature_mode = config.state_signature_mode;
-        let device_storage = config.device_storage;
+        let device_storage = match (state_signature_mode, config.device_storage) {
+            (StateSignatureMode::Off, _) => None,
+            (_, Some(store)) => Some(store),
+            (_, None) => {
+                return Err(anyhow!(
+                    "{state_signature_mode:?} mode requires persistent device storage"
+                ))
+            }
+        };
         #[cfg(feature = "backup")]
         let backup_config = {
             if let Some(backup) = &config.backup {
@@ -375,24 +414,27 @@ impl Signer {
         let state_signing_pubkey =
             PublicKey::from_secret_key(&Secp256k1::signing_only(), &state_signing_secret);
 
+        let device_key = format!("signer/{network}/{}", hex::encode(&id));
+        let watermark = device_storage
+            .as_ref()
+            .map(|store| WatermarkRuntime::load(store.clone(), format!("{device_key}/watermark")))
+            .transpose()?;
         let soft_migration = match (state_signature_mode, device_storage) {
             (StateSignatureMode::Soft, Some(store)) => {
-                let key = format!("signer/{network}/{}/soft-migration", hex::encode(&id));
+                let key = format!("{device_key}/soft-migration");
                 if store
                     .load(&key)
                     .context("loading Soft migration marker")?
                     .is_some()
+                    || watermark
+                        .as_ref()
+                        .is_some_and(WatermarkRuntime::has_checkpoint)
                 {
-                    warn!("Soft state migration has already been used on this device for this node; using Hard mode");
+                    warn!("Device storage already has a Soft migration marker or watermark for this node; using Hard mode");
                     None
                 } else {
                     Some(SoftMigration { store, key })
                 }
-            }
-            (StateSignatureMode::Soft, None) => {
-                return Err(anyhow!(
-                    "Soft state signature mode requires persistent device state storage"
-                ));
             }
             _ => None,
         };
@@ -410,6 +452,7 @@ impl Signer {
             state_signing_pubkey,
             state_signature_mode,
             soft_migration: Arc::new(Mutex::new(soft_migration)),
+            watermark: Arc::new(Mutex::new(watermark)),
             state_signature_override_enabled,
             state_signature_override_note,
             fee_budget_limits: config.fee_budget_limits,
@@ -427,6 +470,14 @@ impl Signer {
                     .unwrap_or_default(),
             )),
         })
+    }
+
+    /// Use different TLS credentials while keeping the shared signer state.
+    pub fn with_credentials(&self, creds: impl TlsConfigProvider) -> Self {
+        Self {
+            tls: creds.tls_config(),
+            ..self.clone()
+        }
     }
 
     fn init_handler(&self) -> Result<handler::InitHandler, anyhow::Error> {
@@ -808,6 +859,7 @@ impl Signer {
                         .await
                         .map_err(|e| Error::NodeDisconnect(e))?;
                 }
+                Err(e) if e.is_fatal_watermark_error() => return Err(e),
                 Err(e) => {
                     let rejection = crate::pb::scheduler::SignerRejection {
                         msg: format!("Error in run_once loop: {:?}", e),
@@ -842,7 +894,12 @@ impl Signer {
                     warn!(
                         "Rejected request {} with error: {}. State: {:?}",
                         hex_req, e, signer_state,
-                    )
+                    );
+                    if !signer_state.is_empty() {
+                        // The node advances its delta baseline on send. Request a full
+                        // snapshot on reconnect when we discarded incoming state.
+                        return Err(e);
+                    }
                 }
             };
         }
@@ -881,6 +938,7 @@ impl Signer {
             .process_request_with_message(req, msg, decline.is_some())
             .await;
         match (result, decline) {
+            (Err(e), _) if e.is_fatal_watermark_error() => Err(e),
             (Err(cause), Some(reply)) => Err(Error::PreapprovalDeclined {
                 cause: Box::new(cause),
                 reply,
@@ -953,29 +1011,37 @@ impl Signer {
             .state
             .lock()
             .map_err(|e| Error::Other(anyhow!("Failed to acquire state lock: {:?}", e)))?;
-        let mut candidate = live_state.clone();
-        let prestate_log = {
-            debug!("Merging incoming signer state into a scratch copy");
-            let state = &mut candidate;
-            let merge_res = state
-                .merge(&incoming_state)
-                .map_err(|e| Error::Other(anyhow!("Failed to merge signer state: {:?}", e)))?;
+        let mut watermark = self
+            .watermark
+            .lock()
+            .map_err(|_| Error::WatermarkStorage(anyhow!("watermark runtime lock poisoned")))?;
+        let first_snapshot = watermark
+            .as_ref()
+            .map_or(Ok(false), |runtime| runtime.admit(&incoming_state))?;
+        let candidate = if first_snapshot {
+            live_state.restore_snapshot(incoming_state, &self.id)
+        } else {
+            let mut candidate = live_state.clone();
+            let merge_res = candidate.merge(&incoming_state).map_err(Error::Other)?;
             if merge_res.has_conflicts() {
                 debug!(
                     "State merge ignored stale versions (count={})",
                     merge_res.conflict_count
                 );
             }
-            trace!("Processing request {}", hex::encode(&req.raw));
-            #[cfg(feature = "backup")]
-            {
-                pre_backup_state = state.clone();
-            }
-            let prestate_log = serde_json::to_string(&*state).map_err(|e| {
-                Error::Other(anyhow!("Failed to serialize signer state for logging: {:?}", e))
-            })?;
-            prestate_log
+            candidate
         };
+        candidate
+            .validate_signer_state(&self.id)
+            .map_err(Error::Other)?;
+        trace!("Processing request {}", hex::encode(&req.raw));
+        #[cfg(feature = "backup")]
+        {
+            pre_backup_state = candidate.clone();
+        }
+        let prestate_log = serde_json::to_string(&candidate)
+            .context("serializing signer state for logging")
+            .map_err(Error::Other)?;
 
         let persister = Arc::new(crate::persist::MemoryPersister::from_state(candidate));
         let state = persister.state();
@@ -1089,7 +1155,31 @@ impl Signer {
         let response = match req.context.clone() {
             Some(HsmRequestContext { dbid: 0, .. }) | None => {
                 // This is the main daemon talking to us.
-                root_handler.handle(msg)
+                if let vls_protocol::msgs::Message::NewChannel(message) = &msg {
+                    let node = root_handler.node();
+                    let id = lightning_signer::channel::ChannelId::new_from_peer_id_and_oid(
+                        &message.peer_id.0,
+                        message.dbid,
+                    );
+                    if state
+                        .lock()
+                        .map_err(|_| Error::Other(anyhow!("scratch state lock poisoned")))?
+                        .channel_is_tombstoned(&node.get_id(), &id)
+                    {
+                        return Err(Error::Other(anyhow!(
+                            "cannot recreate a deleted signer channel"
+                        )));
+                    }
+                    if node.get_channels().contains_key(&id) {
+                        // An existing channel is a retry, even if forgetting a different
+                        // channel raised the dbid high-water mark above this id.
+                        Ok(Box::new(vls_protocol::msgs::NewChannelReply {}) as Box<dyn SerBolt>)
+                    } else {
+                        root_handler.handle(msg)
+                    }
+                } else {
+                    root_handler.handle(msg)
+                }
             }
             Some(c) => {
                 let node_id_len = c.node_id.len();
@@ -1189,9 +1279,12 @@ impl Signer {
                 .context("persisting one-time Soft migration marker")
                 .map_err(Error::Other)?;
         }
-        // The marker is durable before any migrated state or signatures can
-        // leave this transaction. Rejected requests never publish their state.
+        if let Some(runtime) = watermark.as_mut() {
+            runtime.advance(&committed_state)?;
+        }
+        // Device metadata is durable before any state or signature leaves the transaction.
         *live_state = committed_state;
+        drop(watermark);
         drop(live_state);
 
         #[cfg(feature = "backup")]
@@ -1455,7 +1548,11 @@ impl Signer {
                 .run_once(Uri::from_maybe_shared(node_info.grpc_uri)?)
                 .await
             {
+                if e.is_fatal_watermark_error() {
+                    return Err(e.into());
+                }
                 warn!("Error running against node: {e}");
+                sleep(Duration::from_secs(1)).await;
             }
         }
     }
@@ -1468,7 +1565,7 @@ impl Signer {
         let scheduler = self.init_scheduler(scheduler_uri).await?;
         tokio::select! {
             run_forever_inner_res = self.run_forever_inner(scheduler.clone()) => {
-                error!("Inner signer loop exited unexpectedly: {run_forever_inner_res:?}");
+                run_forever_inner_res?;
             },
             run_forever_scheduler_res = self.run_forever_scheduler(scheduler) => {
                 error!("Scheduler signer loop exited unexpectedly: {run_forever_scheduler_res:?}")
@@ -2255,25 +2352,27 @@ mod tests {
     }
 
     #[test]
-    fn hard_is_the_default_and_soft_requires_storage() {
+    fn hard_is_the_default_and_both_production_modes_require_storage() {
         assert_eq!(
             SignerConfig::default().state_signature_mode,
             StateSignatureMode::Hard
         );
-        let err = Signer::new_with_config(
-            vec![0; 32],
-            Network::Bitcoin,
-            credentials::Nobody::default(),
-            SignerConfig {
-                state_signature_mode: StateSignatureMode::Soft,
-                ..SignerConfig::default()
-            },
-        )
-        .err()
-        .unwrap();
-        assert!(err
-            .to_string()
-            .contains("requires persistent device state storage"));
+        for mode in [StateSignatureMode::Hard, StateSignatureMode::Soft] {
+            let err = Signer::new_with_config(
+                vec![0; 32],
+                Network::Bitcoin,
+                credentials::Nobody::default(),
+                SignerConfig {
+                    state_signature_mode: mode,
+                    ..SignerConfig::default()
+                },
+            )
+            .err()
+            .unwrap();
+            assert!(err
+                .to_string()
+                .contains("requires persistent device storage"));
+        }
     }
 
     #[tokio::test]
@@ -2393,11 +2492,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn default_hard_signer_signs_its_own_initial_state_without_device_storage() {
+    async fn default_hard_signer_signs_its_own_initial_state() {
         let signer = Signer::new(
             vec![0; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
         let response = signer
@@ -2441,21 +2541,25 @@ mod tests {
     #[derive(Debug)]
     struct FailingDeviceStorage {
         fail_load: bool,
-        // Some filesystems can report an error after the new bytes are written.
-        saved: Mutex<Option<Vec<u8>>>,
+        fail_suffix: &'static str,
+        saved: MemoryDeviceStorage,
     }
 
     impl DeviceStorage for FailingDeviceStorage {
-        fn load(&self, _: &str) -> anyhow::Result<Option<Vec<u8>>> {
+        fn load(&self, key: &str) -> anyhow::Result<Option<Vec<u8>>> {
             if self.fail_load {
                 return Err(anyhow!("device storage unavailable"));
             }
-            Ok(self.saved.lock().unwrap().clone())
+            self.saved.load(key)
         }
 
-        fn save(&self, _: &str, value: &[u8]) -> anyhow::Result<()> {
-            *self.saved.lock().unwrap() = Some(value.to_vec());
-            Err(anyhow!("device storage sync failed"))
+        fn save(&self, key: &str, value: &[u8]) -> anyhow::Result<()> {
+            self.saved.save(key, value)?;
+            // A filesystem can report an error after replacing the old bytes.
+            if key.ends_with(self.fail_suffix) {
+                return Err(anyhow!("device storage sync failed"));
+            }
+            Ok(())
         }
     }
 
@@ -2463,13 +2567,15 @@ mod tests {
     async fn storage_failures_never_merge_unsigned_state_or_reopen_a_spent_migration() {
         let unavailable: Arc<dyn DeviceStorage> = Arc::new(FailingDeviceStorage {
             fail_load: true,
-            saved: Mutex::new(None),
+            fail_suffix: "/soft-migration",
+            saved: MemoryDeviceStorage::default(),
         });
         assert!(signer_with_device_storage(unavailable, 0, Network::Bitcoin).is_err());
 
         let store: Arc<dyn DeviceStorage> = Arc::new(FailingDeviceStorage {
             fail_load: false,
-            saved: Mutex::new(None),
+            fail_suffix: "/soft-migration",
+            saved: MemoryDeviceStorage::default(),
         });
         let signer = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
         let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
@@ -2503,6 +2609,214 @@ mod tests {
         assert!(err.to_string().contains("missing state signature"));
         let restarted = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
         assert_eq!(restarted.current_mode(), StateSignatureMode::Hard);
+    }
+
+    fn hard_signer_with_storage(device_storage: Arc<dyn DeviceStorage>) -> Signer {
+        Signer::new_with_config(
+            vec![0; 32],
+            Network::Bitcoin,
+            credentials::Nobody::default(),
+            SignerConfig {
+                device_storage: Some(device_storage),
+                ..Default::default()
+            },
+        )
+        .unwrap()
+    }
+
+    fn signed_state_entry(
+        signer: &Signer,
+        key: &str,
+        version: u64,
+        value: serde_json::Value,
+    ) -> SignerStateEntry {
+        let mut entry = mk_state_entry(key, version, value);
+        entry.signature = signer
+            .sign_state_payload(key, version, &entry.value)
+            .unwrap();
+        entry
+    }
+
+    #[cfg(feature = "file-storage")]
+    #[tokio::test]
+    async fn watermark_survives_restart_and_checks_full_snapshots_before_merge() {
+        let dir = tempfile::tempdir().unwrap();
+        let open =
+            || hard_signer_with_storage(Arc::new(FileDeviceStorage::new(dir.path()).unwrap()));
+        let signer = open();
+        let live = signed_state_entry(&signer, "state/live", 2, json!(2));
+        let deleted = signed_state_entry(&signer, "state/deleted", u64::MAX, json!(null));
+        let hint = mk_state_entry(
+            "peers/02aa",
+            0,
+            json!({"peer_id": "02aa", "addr": "127.0.0.1:9735", "direction": "out"}),
+        );
+        let mut full = signer
+            .process_request(heartbeat_request(vec![live.clone(), deleted.clone(), hint]))
+            .await
+            .unwrap()
+            .signer_state;
+        assert!(full.iter().all(|entry| !entry.key.starts_with(PEER_PREFIX)));
+        full.extend([live, deleted]);
+        let stale = signed_state_entry(&signer, "state/live", 1, json!(1));
+        // Stale entries and omitted keys in an incremental update are safe in a warm runtime.
+        signer
+            .process_request(heartbeat_request(vec![stale.clone()]))
+            .await
+            .unwrap();
+        drop(signer);
+
+        let restarted = open();
+        for (key, replacement, message) in [
+            ("state/live", Some(stale), "fell from version"),
+            ("state/live", None, "missing state entry"),
+            (
+                "state/live",
+                Some(signed_state_entry(&restarted, "state/live", 2, json!(9))),
+                "differs at version",
+            ),
+            (
+                "state/deleted",
+                Some(signed_state_entry(&restarted, "state/deleted", 3, json!(1))),
+                "fell from version",
+            ),
+        ] {
+            let mut candidate: Vec<_> = full
+                .iter()
+                .filter(|entry| entry.key != key)
+                .cloned()
+                .collect();
+            candidate.extend(replacement);
+            let error = restarted
+                .process_request(heartbeat_request(candidate))
+                .await
+                .unwrap_err();
+            assert!(matches!(error, Error::WatermarkViolation(_)));
+            assert!(error.to_string().contains(message), "{error}");
+        }
+        let newer = signed_state_entry(&restarted, "state/live", 3, json!(3));
+        *full
+            .iter_mut()
+            .find(|entry| entry.key == "state/live")
+            .unwrap() = newer;
+        restarted
+            .process_request(heartbeat_request(full))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn partial_node_snapshot_is_not_repaired_with_seed_defaults() {
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let state: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+        let entry = state
+            .into_iter()
+            .find(|entry| entry.key.starts_with("nodestates/"))
+            .unwrap();
+        let signed = signed_state_entry(
+            &signer,
+            &entry.key,
+            entry.version,
+            serde_json::from_slice(&entry.value).unwrap(),
+        );
+        let error = signer
+            .process_request(heartbeat_request(vec![signed]))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("incomplete signer node records"));
+    }
+
+    #[tokio::test]
+    async fn restored_channel_ids_distinguish_retries_from_new_channels() {
+        use vls_protocol::{
+            model::PubKey,
+            msgs::{ForgetChannel, NewChannel},
+        };
+
+        let store = Arc::new(MemoryDeviceStorage::default());
+        let open = || hard_signer_with_storage(store.clone());
+        let signer = open();
+        let peer = PubKey(signer.node_id().try_into().unwrap());
+        let create = |dbid| HsmRequest {
+            raw: NewChannel {
+                peer_id: peer.clone(),
+                dbid,
+            }
+            .as_vec(),
+            ..Default::default()
+        };
+        signer
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap();
+        signer.process_request(create(1)).await.unwrap();
+        signer.process_request(create(3)).await.unwrap();
+        signer
+            .process_request(HsmRequest {
+                raw: ForgetChannel {
+                    node_id: peer.clone(),
+                    dbid: 3,
+                }
+                .as_vec(),
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+
+        let snapshot: Vec<SignerStateEntry> = signer.state.lock().unwrap().clone().into();
+        drop(signer);
+        let restarted = open();
+        restarted
+            .process_request(heartbeat_request(snapshot))
+            .await
+            .unwrap();
+        assert!(restarted.process_request(create(1)).await.is_ok());
+        assert!(restarted.process_request(create(2)).await.is_err());
+        assert!(restarted.process_request(create(3)).await.is_err());
+        assert!(restarted.process_request(create(4)).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn ambiguous_watermark_write_blocks_clones_and_keeps_soft_spent() {
+        let store = Arc::new(FailingDeviceStorage {
+            fail_load: false,
+            fail_suffix: "/watermark",
+            saved: MemoryDeviceStorage::default(),
+        });
+        let signer = signer_with_device_storage(store.clone(), 0, Network::Bitcoin).unwrap();
+        let before = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+        let request = heartbeat_request(vec![mk_state_entry("state/legacy", 1, json!(1))]);
+        let error = signer.process_request(request).await.unwrap_err();
+        assert!(matches!(error, Error::WatermarkStorage(_)));
+        assert_eq!(
+            serde_json::to_value(&*signer.state.lock().unwrap()).unwrap(),
+            before
+        );
+        let error = signer
+            .clone()
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, Error::WatermarkStorage(_)));
+        let restarted = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
+        assert_eq!(restarted.current_mode(), StateSignatureMode::Hard);
+        let error = restarted
+            .process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("watermark: missing state entry"));
+    }
+
+    #[tokio::test]
+    async fn existing_watermark_prevents_switching_from_hard_to_soft() {
+        let store = Arc::new(MemoryDeviceStorage::default());
+        let hard = hard_signer_with_storage(store.clone());
+        hard.process_request(heartbeat_request(vec![]))
+            .await
+            .unwrap();
+        drop(hard);
+        let signer = signer_with_device_storage(store, 0, Network::Bitcoin).unwrap();
+        assert_eq!(signer.current_mode(), StateSignatureMode::Hard);
     }
 
     #[tokio::test]
@@ -2570,6 +2884,7 @@ mod tests {
                 state_signature_mode: StateSignatureMode::Soft,
                 state_signature_override: None,
                 fee_budget_limits: FeeBudgetLimits::default(),
+                device_storage: Some(Arc::new(MemoryDeviceStorage::default())),
                 backup: Some(SignerBackupConfig {
                     path: "backup.json".into(),
                     strategy: SignerBackupStrategy::Periodic { updates: 0 },
@@ -2596,6 +2911,7 @@ mod tests {
             vec![0 as u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -2619,6 +2935,7 @@ mod tests {
             vec![0 as u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -2922,6 +3239,7 @@ mod tests {
                     ack: "WRONG".to_string(),
                     note: None,
                 }),
+                device_storage: Some(Arc::new(MemoryDeviceStorage::default())),
                 ..SignerConfig::default()
             },
         );
@@ -2958,6 +3276,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -2979,6 +3298,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3003,6 +3323,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3030,6 +3351,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
         let rune = "wjEjvKoFJToMLBv4QVbJpSbMoGFlnYVxs8yy40PIBgs9MC1nbDAmcHVia2V5PTAwMDAwMA==";
@@ -3047,6 +3369,7 @@ mod tests {
             vec![0u8; 32],
             Network::Bitcoin,
             credentials::Nobody::default(),
+            Arc::new(MemoryDeviceStorage::default()),
         )
         .unwrap();
 
@@ -3113,7 +3436,13 @@ mod tests {
     #[test]
     fn test_empty_rune_is_valid() {
         let creds = credentials::Nobody::default();
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, creds).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            creds,
+            Arc::new(MemoryDeviceStorage::default()),
+        )
+        .unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();
@@ -3136,7 +3465,13 @@ mod tests {
     #[test]
     fn test_empty_rune_checks_pubkey() {
         let creds = credentials::Nobody::default();
-        let signer = Signer::new(vec![0u8; 32], Network::Bitcoin, creds).unwrap();
+        let signer = Signer::new(
+            vec![0u8; 32],
+            Network::Bitcoin,
+            creds,
+            Arc::new(MemoryDeviceStorage::default()),
+        )
+        .unwrap();
 
         // This is just a placeholder public key, could also be a different one;
         let pubkey = signer.node_id();

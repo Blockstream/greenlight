@@ -472,7 +472,7 @@ impl Node for PluginNodeServer {
 
                 let state_snapshot = signer_state.lock().await.clone();
                 let state_entries: Vec<gl_client::pb::SignerStateEntry> =
-                    state_snapshot.omit_tombstones().into();
+                    state_snapshot.clone().into();
                 let state_wire_bytes = signer_state_request_wire_bytes(&state_entries);
                 let state_entries: Vec<pb::SignerStateEntry> = state_entries
                     .into_iter()
@@ -528,7 +528,7 @@ impl Node for PluginNodeServer {
                 let state_snapshot = signer_state.lock().await.clone();
                 // Estimate the size of the full state to calculate the bandwidth savings of sending diffs
                 let full_entries: Vec<gl_client::pb::SignerStateEntry> =
-                    state_snapshot.omit_tombstones().into();
+                    state_snapshot.clone().into();
                 let full_wire_bytes = signer_state_request_wire_bytes(&full_entries);
 
                 // Send only the changes since the last time we sent state to this signer.

@@ -1,3 +1,4 @@
+import { signerStoragePath } from './test.helper.js';
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
 import { Credentials, Scheduler, Signer, Node } from '../index.js';
@@ -20,14 +21,14 @@ describe('Signer', () => {
   it('can be constructed from a mnemonic', async () => {
     const rand: Buffer = crypto.randomBytes(16);
     const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    const signer = new Signer(MNEMONIC);
+    const signer = new Signer(MNEMONIC, signerStoragePath());
     expect(signer).toBeTruthy();
   });
 
   it('can return a node id', async () => {
     const rand: Buffer = crypto.randomBytes(16);
     const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    const signer = new Signer(MNEMONIC);
+    const signer = new Signer(MNEMONIC, signerStoragePath());
     const nodeId = signer.nodeId();
 
     expect(Buffer.isBuffer(nodeId)).toBe(true);
@@ -37,8 +38,8 @@ describe('Signer', () => {
   it('returns consistent node id for same mnemonic', async () => {
     const rand: Buffer = crypto.randomBytes(16);
     const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
-    const signer1 = new Signer(MNEMONIC);
-    const signer2 = new Signer(MNEMONIC);
+    const signer1 = new Signer(MNEMONIC, signerStoragePath());
+    const signer2 = new Signer(MNEMONIC, signerStoragePath());
 
     const nodeId1 = signer1.nodeId();
     const nodeId2 = signer2.nodeId();
@@ -49,7 +50,7 @@ describe('Signer', () => {
   it('can be constructed with different mnemonics', async () => {
     const rand2: Buffer = crypto.randomBytes(16);
     const MNEMONIC2: string = bip39.entropyToMnemonic(rand2.toString("hex"));
-    const signer = new Signer(MNEMONIC2);
+    const signer = new Signer(MNEMONIC2, signerStoragePath());
     expect(signer).toBeTruthy();
 
     const nodeId = signer.nodeId();
@@ -79,7 +80,7 @@ describe('Integration: scheduler and signer', () => {
     const rand: Buffer = crypto.randomBytes(16);
     const MNEMONIC: string = bip39.entropyToMnemonic(rand.toString("hex"));
     scheduler = new Scheduler('regtest');
-    signer = new Signer(MNEMONIC);
+    signer = new Signer(MNEMONIC, signerStoragePath());
     credentials = await scheduler.register(signer);
     node = new Node(credentials);
   });

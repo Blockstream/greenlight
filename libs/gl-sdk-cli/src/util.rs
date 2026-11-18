@@ -46,15 +46,21 @@ pub fn read_secret(data_dir: &DataDir) -> Result<Secret> {
     Ok(Secret::Seed(raw))
 }
 
-pub fn signer_from_secret(secret: Secret) -> Result<glsdk::Signer> {
+pub fn signer_from_secret(secret: Secret, data_dir: &DataDir) -> Result<glsdk::Signer> {
+    let path = data_dir
+        .0
+        .join("device-state")
+        .into_os_string()
+        .into_string()
+        .map_err(|_| Error::Other("device storage path must be valid UTF-8".into()))?;
     match secret {
-        Secret::Phrase(phrase) => glsdk::Signer::new(phrase).map_err(Error::Sdk),
-        Secret::Seed(seed) => glsdk::Signer::new_from_seed(seed).map_err(Error::Sdk),
+        Secret::Phrase(phrase) => glsdk::Signer::new(phrase, path).map_err(Error::Sdk),
+        Secret::Seed(seed) => glsdk::Signer::new_from_seed(seed, path).map_err(Error::Sdk),
     }
 }
 
 pub fn make_signer(data_dir: &DataDir) -> Result<glsdk::Signer> {
-    signer_from_secret(read_secret(data_dir)?)
+    signer_from_secret(read_secret(data_dir)?, data_dir)
 }
 
 pub fn write_phrase(data_dir: &DataDir, phrase: &str) -> Result<()> {

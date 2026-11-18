@@ -584,9 +584,9 @@ impl Signer {
     /// # Arguments
     /// * `phrase` - BIP39 mnemonic phrase (12 or 24 words)
     #[napi(constructor)]
-    pub fn new(phrase: String) -> Result<Self> {
-        // Constructor stays sync — pure key derivation, no I/O
-        let inner = GlSigner::new(phrase).map_err(|e| Error::from_reason(e.to_string()))?;
+    pub fn new(phrase: String, device_storage_path: String) -> Result<Self> {
+        let inner = GlSigner::new(phrase, device_storage_path)
+            .map_err(|e| Error::from_reason(e.to_string()))?;
 
         Ok(Self { inner })
     }

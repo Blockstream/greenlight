@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as bip39 from 'bip39';
 import { Credentials, Scheduler, Signer, Node, NodeEventStream, NodeEvent, InvoicePaidEvent, Handle } from '../index.js';
-import { fundWallet, getGLNode } from './test.helper.js';
+import { fundWallet, getGLNode, signerStoragePath } from './test.helper.js';
 
 describe('NodeEvent (type contract)', () => {
   it('NodeEvent and InvoicePaidEvent are assignable from NAPI-generated types', () => {
@@ -92,7 +92,7 @@ describe('NodeEventStream (integration)', () => {
 
   it('next returns null after the node is stopped', async () => {
     const mnemonic2 = bip39.entropyToMnemonic(crypto.randomBytes(16).toString('hex'));
-    const signer2 = new Signer(mnemonic2);
+    const signer2 = new Signer(mnemonic2, signerStoragePath());
     const handle2 = await signer2.start();
     const credentials2 = await scheduler.register(signer2);
     let node2 = new Node(credentials2);

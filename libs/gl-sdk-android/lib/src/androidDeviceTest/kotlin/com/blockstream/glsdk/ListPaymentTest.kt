@@ -62,7 +62,7 @@ class ListPaymentTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun created_invoice_appears_in_list_invoices() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).registerOrRecover(testMnemonic, null).use { node ->
             val label = Uuid.random().toString()
             node.receive(label = label, description = "Coffee", amountMsat = 10_000_000uL)
@@ -83,7 +83,7 @@ class ListPaymentTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun unpaid_invoices_excluded() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).registerOrRecover(testMnemonic, null).use { node ->
             val label = Uuid.random().toString()
             node.receive(label = label, description = "Tea", amountMsat = 5_000_000uL)
@@ -106,7 +106,7 @@ class ListPaymentTest {
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun type_filter_received_only() {
-        val config = Config()
+        val config = signerConfig()
         NodeBuilder(config).registerOrRecover(testMnemonic, null).use { node ->
             val label = Uuid.random().toString()
             node.receive(label = label, description = "Tea", amountMsat = 5_000_000uL)

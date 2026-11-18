@@ -52,17 +52,17 @@ section.
 ## Client &rlarr; Signer Authentication
 
 The signer cannot rely on the mTLS CA structure, since that is under
-control of the Greenlight team. Instead, Greenlight employs an 
-attestation scheme in which the signer identity attests to itself and 
-other signers that a particular client is authorized to perform 
+control of the Greenlight team. Instead, Greenlight employs an
+attestation scheme in which the signer identity attests to itself and
+other signers that a particular client is authorized to perform
 certain operations.
 
 When registering a new client, the signer will submit a [`rune`][rune]
-as an access token. The rune serves mainly as an authentication while the 
-client's identity in form of a mTLS key-pair provides authorization. 
-The run is bound to the client's identity; it is presented to the signer 
-on each request. This will allow multiple signers to recognize which 
-clients are authorized, even if the signer who carved the rune is not the 
+as an access token. The rune serves mainly as an authentication while the
+client's identity in form of a mTLS key-pair provides authorization.
+The run is bound to the client's identity; it is presented to the signer
+on each request. This will allow multiple signers to recognize which
+clients are authorized, even if the signer who carved the rune is not the
 signer verifying the authorization.
 
 Before signing a request the signer independently verifies that:
@@ -82,11 +82,11 @@ preventing read-access that doesn't involve the signer, while the
 latter ensures funds are not moved without a client authorizing it.
 
 The client-identity pubkey, its signature of the command payload, and
-the rune are all passed to the node via grpc headers. The node 
-extracts them, alongside the call itself, and adds it to a request 
+the rune are all passed to the node via grpc headers. The node
+extracts them, alongside the call itself, and adds it to a request
 context which will itself be attached to requests that are sent to the
-signer, so it can verify the validity and authenticity of the 
-operations. An attacker that gains access to the node is unable to 
+signer, so it can verify the validity and authenticity of the
+operations. An attacker that gains access to the node is unable to
 provide either these signatures and will therefore fail to convince
 the signer of its injected commands.
 
@@ -104,7 +104,7 @@ operational limitations.
 
 ## Signer State Integrity
 
-The signer does not store its own state. The node stores the
+The node stores the full
 [signer state](signer-state.md) (channel states, allowed on-chain
 destinations, known invoices) and attaches it to every request. An
 attacker with access to the node infrastructure can therefore read,
@@ -115,38 +115,38 @@ must not trust it blindly.
 |-------|--------------|------------------|
 | Node infrastructure | Storing and returning the state | The content, age or completeness of the state |
 | Signer | Writing and signing state entries | |
-| Application embedding the signer | Keeping the state anchor, choosing enforcement options | |
+| Application embedding the signer | Persisting signer metadata, choosing enforcement options | |
 
  - **Authenticity:** every state entry is signed with a key derived
    from the node secret. In `hard` state signature mode the signer
    refuses entries with missing or invalid signatures, so the node
    cannot inject or alter state.
- - **Freshness and completeness** (planned): a small _state anchor_
-   kept on the device records the latest version of every key the
-   signer has seen. On start, the signer refuses state that is older
-   than its anchor, is missing keys, or brings back deleted keys.
- - **Enforcement options belong to the application.** The state
-   signature mode and anchor enforcement are set where the signer is
-   embedded; the node cannot change them, and there is no way for the
-   node to reset an anchor.
+ - **Freshness and completeness:** the signer keeps a _watermark_ in
+   device storage with a version and value hash for each signer-owned
+   entry it has committed. It saves the watermark before releasing
+   signatures. A newly started signer refuses older or missing entries,
+   resurrected entries, and values that differ at the same version.
+ - **Configuration belongs to the application.** The application chooses
+   the signature mode and controls the local storage. The node cannot
+   reset the watermark.
 
-A signer without an anchor, for example right after pairing or
-recovery, trusts the first state it receives. See
-[Signer State](signer-state.md) for the details and the configuration
-options.
+A signer without a watermark, for example on first use, trusts the first
+snapshot it accepts. See
+[Signer State](signer-state.md#freshness-and-completeness-the-watermark)
+for configuration, recovery and limits.
 
 ## Client &rlarr; Signer Authorization
 
-The [`rune`][rune]-based signer authentication verifies a client's 
-identity and their authorization to execute commands. To achieve more 
-granular control over command authorization for individual clients, a 
-rune can be created with specific restrictions. When verifying client 
-identity, the signer additionally ensures that specific conditions, 
+The [`rune`][rune]-based signer authentication verifies a client's
+identity and their authorization to execute commands. To achieve more
+granular control over command authorization for individual clients, a
+rune can be created with specific restrictions. When verifying client
+identity, the signer additionally ensures that specific conditions,
 such as the requested command, align with the limitations of the given
 rune.
 
-This enables a user to share access to the signer across multiple 
-clients that are restricted to a subset of commands, for example 
+This enables a user to share access to the signer across multiple
+clients that are restricted to a subset of commands, for example
 read-only clients, or invoice-only clients, or clients that can only
 create on-chain addresses and so on.
 
