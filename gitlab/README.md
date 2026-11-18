@@ -1,19 +1,21 @@
 ## Gitlab Pipelines
-There are 5 Greenlight packaged binaries/libraries that are published - 1 Python packages and 4 Rust crates. 
 
-The builds are triggered by certain tag formats. Make sure to include a patch as well since the Rust compiler requires that (applicable to `gl-client-py` as well).
+The internal GitLab mirror of this repository only builds and publishes
+the Android/JVM library, `com.blockstream:glsdk`, to Maven Central.
+Every other package is published from GitHub Actions, see
+[the release docs](../docs/src/reference/releases.md).
 
-Packages and tag formats
----
-If a tagged release doesn't work, it can be retried by adding an `_N` suffix after the date part. For example: `..YYYYMMDD_1-x.x.x` or `..YYYYMMDD_25-x.x.x`.
+The mirror is updated by pushing `main` and the release tags to it.
 
-**Note:** The last part of the tag (after the `-`) is used to change the version to be pushed. If different from what's in the respective `pyproject.toml`/`Cargo.toml`, the TOML files will be overwritten via `sed` by the Gitlab job.
+### Maven Central
 
-### PyPI
-* gl-client-py - `glclientpy_YYYYMMDD-x.x.x`
+* `build_kotlin` runs on every tag and on `main`, on the `m4` macOS runner.
+* `publish_to_maven` is a manual job on tag pipelines. It publishes the
+  version in `libs/gl-sdk-android/gradle.properties` (`libraryVersion`),
+  not the version in the tag, so run it once per release, on the
+  `gl-sdk-vX.Y.Z` tag's pipeline.
+* `publish_snapshot_to_maven` publishes a `-SNAPSHOT` build on every
+  branch pipeline.
 
-### crates.io
-* gl-client - `glclient_YYYYMMDD-x.x.x`
-* gl-plugin - `glplugin_YYYYMMDD-x.x.x`
-* gl-signerproxy - `glsignerproxy_YYYYMMDD-x.x.x`
-* gl-cli -`glcli_YYYYMMDD-x.x.x`
+The Maven Central credentials and the GPG signing key are configured in
+the runner's `~/.gradle/gradle.properties`.
