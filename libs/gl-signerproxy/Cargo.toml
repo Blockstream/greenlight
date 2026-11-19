@@ -23,7 +23,7 @@ env_logger = { workspace = true }
 tokio = { version = "1", features = ["rt", "net", "io-util"] }
 tonic = { version = "0.11", features = ["tls", "transport"] }
 prost = "0.12"
-log = "*"
+log = "0.4"
 tower = "0.4"
 which = "4.4.2"
 libc = "0.2"
