@@ -106,13 +106,15 @@ impl Node {
         description: String,
         amount_msat: Option<u64>,
         token: Option<String>,
+        expiry: Option<u64>,
     ) -> PyResult<Vec<u8>> {
         let req = pb::LspInvoiceRequest {
             amount_msat: amount_msat.unwrap_or_default(),
-            description: description,
-            label: label,
+            description,
+            label,
             lsp_id: "".to_owned(),
             token: token.unwrap_or_default(),
+            expiry,
         };
 
         let res = exec(async { self.client.clone().lsp_invoice(req).await })

@@ -265,7 +265,7 @@ impl Node for PluginNodeServer {
                     ),
                     description: req.description.clone(),
                     label: req.label.clone(),
-                    expiry: None,
+                    expiry: req.expiry,
                     fallbacks: None,
                     preimage: None,
                     cltv: Some(144),
@@ -338,7 +338,7 @@ impl Node for PluginNodeServer {
                 .div_ceil(1_000_000);
             std::cmp::max(min_fee, proportional_fee)
         };
-        
+
         let requested_amount_msat = req.amount_msat.clone();
         let invoice_label = req.label.clone();
 
@@ -879,27 +879,24 @@ impl Node for PluginNodeServer {
 
 /// Writes `LspInvoiceMeta` using datastore request. `LspInvoiceMeta` is useful for defining
 /// some additional information regarding invoice being requested trough Greenlight.
-async fn write_lsp_invoice_meta(rpc: &mut ClnRpc, meta: JitRequestMeta)
-                                -> Result<()> {
+async fn write_lsp_invoice_meta(rpc: &mut ClnRpc, meta: JitRequestMeta) -> Result<()> {
     let record_serialized =
         serde_json::to_string(&meta).context("failed to serialize LspInvoiceMeta")?;
 
     let datastore_req = cln_rpc::model::requests::DatastoreRequest {
-        key: vec![
-            "gl".to_string(),
-            "jit_channels".to_string(),
-            meta.label,
-        ],
+        key: vec!["gl".to_string(), "jit_channels".to_string(), meta.label],
         string: Some(record_serialized),
         hex: None,
         mode: Some(cln_rpc::model::requests::DatastoreMode::CREATE_OR_REPLACE),
         generation: None,
     };
 
-    rpc.call_typed(&datastore_req).await.map_err(
-        |e|
-            anyhow!("Failed to store JIT channel negotiation data in datastore: {}", e)
-    )?;
+    rpc.call_typed(&datastore_req).await.map_err(|e| {
+        anyhow!(
+            "Failed to store JIT channel negotiation data in datastore: {}",
+            e
+        )
+    })?;
 
     Ok(())
 }
@@ -914,19 +911,17 @@ struct Lsps2Offer {
 }
 
 /// Select the LSP and opening fee params to use for an LSPS2 invoice
-/// negotiation.
-///
-/// We flatten the params across all LSPs and pick the first available
-/// pair. This way an LSP that got selected but returned an empty param
-/// set is skipped in favor of the next LSP that actually returned
-/// usable params, rather than ending up without valid opening params.
-/// Returns `None` if no LSP returned any params at all.
+/// negotiation. Returns `None` if no LSP returned any params at all.
 fn select_opening_params(
     lsps: Vec<Lsps2Offer>,
 ) -> Option<(String, crate::responses::OpeningFeeParams)> {
     lsps.into_iter()
         .flat_map(|l| l.params.into_iter().map(move |p| (l.node_id.clone(), p)))
-        .next()
+        .max_by_key(|(_, p)| {
+            p.valid_until
+                .parse::<chrono::DateTime<chrono::FixedOffset>>()
+                .ok()
+        })
 }
 
 impl PluginNodeServer {
@@ -989,7 +984,10 @@ impl PluginNodeServer {
                             tokio::time::timeout(RECONNECT_TIMEOUT, rpc.call_typed(&r)).await
                         }
                         Err(e) => {
-                            warn!("Could not open RPC to connect to {}: {:?} (plugin)", &r.id, e);
+                            warn!(
+                                "Could not open RPC to connect to {}: {:?} (plugin)",
+                                &r.id, e
+                            );
                             return;
                         }
                     };
@@ -1355,6 +1353,19 @@ mod test {
         }
     }
 
+    fn param_with_time(min_fee_msat: &str, valid_until: String) -> OpeningFeeParams {
+        OpeningFeeParams {
+            min_fee_msat: min_fee_msat.to_string(),
+            proportional: 0,
+            valid_until,
+            min_lifetime: 144,
+            max_client_to_self_delay: 1024,
+            min_payment_size_msat: "0".to_string(),
+            max_payment_size_msat: "1000000000".to_string(),
+            promise: "promise".to_string(),
+        }
+    }
+
     #[test]
     fn test_select_opening_params_empty() {
         // No LSPs at all -> nothing to select.
@@ -1400,21 +1411,27 @@ mod test {
     }
 
     #[test]
-    fn test_select_opening_params_prefers_first_nonempty() {
+    fn test_select_opening_params_prefers_max_valid_until() {
         // When the first LSP does return params we keep using it.
         let lsps = vec![
             Lsps2Offer {
                 node_id: "lsp_first".to_string(),
-                params: vec![param("1"), param("2")],
+                params: vec![
+                    param_with_time("1", "2150-01-01T00:00:00Z".to_string()),
+                    param_with_time("2", "2100-01-01T00:00:00Z".to_string()),
+                ],
             },
             Lsps2Offer {
                 node_id: "lsp_second".to_string(),
-                params: vec![param("3")],
+                params: vec![
+                    param_with_time("3", "2150-07-01T00:00:00Z".to_string()),
+                    param_with_time("4", "2100-02-01T00:00:00Z".to_string()),
+                ],
             },
         ];
 
-        let (lsp_id, p) = select_opening_params(lsps).expect("first LSP has params");
-        assert_eq!(lsp_id, "lsp_first");
-        assert_eq!(p.min_fee_msat, "1");
+        let (lsp_id, p) = select_opening_params(lsps).expect("expect valid offer");
+        assert_eq!(lsp_id, "lsp_second");
+        assert_eq!(p.min_fee_msat, "3");
     }
 }

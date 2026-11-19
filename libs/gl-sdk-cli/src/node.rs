@@ -26,6 +26,9 @@ pub enum Command {
         /// Amount in millisatoshis (omit for any-amount invoice)
         #[arg(long)]
         amount_msat: Option<u64>,
+        /// Desired BOLT11 invoice expiry (default: node's default)
+        #[arg(long)]
+        expiry: Option<u64>,
     },
     /// Pay a lightning invoice
     Send {
@@ -65,7 +68,8 @@ pub fn handle(cmd: Command, data_dir: &DataDir) -> Result<()> {
             label,
             description,
             amount_msat,
-        } => receive(&node, label, description, amount_msat),
+            expiry,
+        } => receive(&node, label, description, amount_msat, expiry),
         Command::Send {
             invoice,
             amount_msat,
@@ -109,8 +113,9 @@ fn receive(
     label: String,
     description: String,
     amount_msat: Option<u64>,
+    expiry: Option<u64>,
 ) -> Result<()> {
-    let res = node.receive(label, description, amount_msat)?;
+    let res = node.receive(label, description, amount_msat, expiry)?;
     output::print_json(&ReceiveOutput::from(res));
     Ok(())
 }

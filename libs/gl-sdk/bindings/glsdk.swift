@@ -1360,7 +1360,7 @@ public protocol NodeProtocol: AnyObject, Sendable {
      * opening, and when/if executed the payment will cause a channel
      * to be created, and the incoming payment to be forwarded.
      */
-    func receive(label: String, description: String, amountMsat: UInt64?) throws  -> ReceiveResponse
+    func receive(label: String, description: String, amountMsat: UInt64?, expiry: UInt64?) throws  -> ReceiveResponse
     
     func send(invoice: String, amountMsat: UInt64?) throws  -> SendResponse
     
@@ -1781,12 +1781,13 @@ open func prepareOnchainSend(destination: String, amountOrAll: String, satPerVby
      * opening, and when/if executed the payment will cause a channel
      * to be created, and the incoming payment to be forwarded.
      */
-open func receive(label: String, description: String, amountMsat: UInt64?)throws  -> ReceiveResponse  {
+open func receive(label: String, description: String, amountMsat: UInt64?, expiry: UInt64? = nil)throws  -> ReceiveResponse  {
     return try  FfiConverterTypeReceiveResponse_lift(try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_glsdk_fn_method_node_receive(self.uniffiClonePointer(),
         FfiConverterString.lower(label),
         FfiConverterString.lower(description),
-        FfiConverterOptionUInt64.lower(amountMsat),$0
+        FfiConverterOptionUInt64.lower(amountMsat),
+        FfiConverterOptionUInt64.lower(expiry),$0
     )
 })
 }
@@ -2335,8 +2336,12 @@ public protocol SchedulerProtocol: AnyObject, Sendable {
      * before it creates a node. It needs no credentials, and the
      * `node_id` is passed explicitly.
      *
-     * The answer is advisory and may change over time. Treat an
-     * error as "unknown" rather than as a negative answer.
+     * The answer is monotonic: once the node has been registered
+     * it is reported as available, and stays available regardless
+     * of the node's status or the provider's current capacity.
+     * Before registration the answer is advisory and may change
+     * over time. Treat an error as "unknown" rather than as a
+     * negative answer.
      */
     func lightningAvailable(nodeId: Data) throws  -> Bool
     
@@ -2434,8 +2439,12 @@ public convenience init(network: Network)throws  {
      * before it creates a node. It needs no credentials, and the
      * `node_id` is passed explicitly.
      *
-     * The answer is advisory and may change over time. Treat an
-     * error as "unknown" rather than as a negative answer.
+     * The answer is monotonic: once the node has been registered
+     * it is reported as available, and stays available regardless
+     * of the node's status or the provider's current capacity.
+     * Before registration the answer is advisory and may change
+     * over time. Treat an error as "unknown" rather than as a
+     * negative answer.
      */
 open func lightningAvailable(nodeId: Data)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeError_lift) {
@@ -9690,7 +9699,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_method_node_prepare_onchain_send() != 37850) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_method_node_receive() != 39761) {
+    if (uniffi_glsdk_checksum_method_node_receive() != 16076) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_node_send() != 4348) {
@@ -9720,7 +9729,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327) {
+    if (uniffi_glsdk_checksum_method_scheduler_lightning_available() != 8721) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_glsdk_checksum_method_scheduler_recover() != 55514) {

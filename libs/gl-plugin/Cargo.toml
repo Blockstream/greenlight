@@ -42,6 +42,7 @@ tokio-util = { version = "0.7", features = ["codec"] }
 tonic = { version = "0.11", features = ["tls", "transport"] }
 tower = { version = "0.4" }
 vls-protocol = { workspace = true }
+chrono = { version = "0.4" }
 
 [build-dependencies]
 tonic-build = "0.11"

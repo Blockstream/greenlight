@@ -464,7 +464,7 @@ RustBuffer uniffi_glsdk_fn_method_node_prepare_onchain_send(void*_Nonnull ptr, R
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_RECEIVE
 #define UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_RECEIVE
-RustBuffer uniffi_glsdk_fn_method_node_receive(void*_Nonnull ptr, RustBuffer label, RustBuffer description, RustBuffer amount_msat, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_glsdk_fn_method_node_receive(void*_Nonnull ptr, RustBuffer label, RustBuffer description, RustBuffer amount_msat, RustBuffer expiry, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GLSDK_FN_METHOD_NODE_SEND

@@ -259,3 +259,78 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     # the LSPS2 fee parameters (min_fee_msat=1000, proportional=1000).
     # For 31337 msat: max(1000, ceil(31337 * 1000 / 1_000_000)) = 1000
     assert res.opening_fee_msat == 1000
+
+
+def test_lsp_invoice_expiry(clients, bitcoind, node_factory, lsps_server):
+    """An invoice created with an `expiry` carries that expiry.
+
+    ```ditaa
+    Payer --- LSP --- GL
+    ```
+
+    First the GL node receives a payment over a JIT channel opened by
+    the LSP. That gives it inbound capacity, so the next `lsp_invoice`
+    takes the plain-invoice path (no JIT negotiation), where the
+    requested `expiry` is passed to CLN's `invoice`.
+    """
+    lsp = lsps_server
+    lsp.fundwallet(sats=2 * 10**6)
+
+    # The payer has a channel to the LSP, so it can reach the GL node
+    # through the LSP via the invoice's route hint.
+    payer = node_factory.get_node()
+    payer.connect(lsp)
+    payer.fundchannel(lsp, 10**6)
+
+    # The GL node, connected to the LSP but without any channel yet.
+    c = clients.new()
+    c.register()
+    signer = c.signer()
+    signer.run_in_thread()
+    gl = c.node()
+    gl.connect_peer(lsp.info["id"], f"localhost:{lsp.port}")
+
+    # 1. Receive over a JIT channel. With no inbound capacity the plugin
+    #    has to negotiate one with the LSP.
+    jit_amount_msat = 50_000_000
+    jit = gl.lsp_invoice(
+        label="jit", description="jit", amount_msat=jit_amount_msat
+    )
+    # Cheapest menu entry: max(1000, 50_000_000 * 1000 / 1_000_000) msat.
+    assert jit.opening_fee_msat == 50_000
+    assert payer.rpc.pay(jit.bolt11)["status"] == "complete"
+
+    bitcoind.generate_block(10)
+    # # 2. Wait until the JIT channel is usable for receiving, so the
+    # #    plugin skips JIT negotiation. It requires 5% on top of the
+    # #    invoice amount.
+    amount_msat = 10_000_000
+    #
+    # def receivable_msat():
+    #     return sum(
+    #         ch.receivable_msat.msat
+    #         for ch in gl.list_peer_channels().channels
+    #         if ch.peer_connected and ch.state == 2  # CHANNELD_NORMAL
+    #     )
+    #
+    # wait_for(lambda: receivable_msat() >= amount_msat * 105 // 100)
+
+    # 3. The requested expiry ends up in the invoice.
+    expiry = 3600
+    res = gl.lsp_invoice(
+        label="with-expiry",
+        description="with-expiry",
+        amount_msat=amount_msat,
+        expiry=expiry,
+    )
+    assert res.opening_fee_msat == 0  # plain invoice, no JIT channel
+    assert payer.rpc.decode(res.bolt11)["expiry"] == expiry
+
+    # 4. Without an expiry, CLN's default (one week) still applies.
+    res = gl.lsp_invoice(
+        label="default-expiry",
+        description="default-expiry",
+        amount_msat=amount_msat,
+    )
+    assert res.opening_fee_msat == 0
+    assert payer.rpc.decode(res.bolt11)["expiry"] == 7 * 24 * 3600
