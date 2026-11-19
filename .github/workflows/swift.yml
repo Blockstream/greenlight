@@ -1,11 +1,18 @@
 name: Swift
 
-# Builds the gl-sdk XCFramework and Swift bindings. On a gl-sdk-vX.Y.Z
-# tag they are attached to this repository's gl-sdk-vX.Y.Z release, where
-# Blockstream/gl-sdk-swift picks them up: its publish workflow commits the
-# bindings and a Package.swift pointing at the zip here, and tags X.Y.Z.
-# Each repository only writes to itself, so no cross-repository token is
-# needed.
+# Builds the gl-sdk XCFramework and Swift bindings, and checks them with
+# Blockstream/gl-sdk-swift's own publish scripts from its main branch:
+# scripts/prepare.sh renders Package.swift for the build and commits and
+# tags it locally, scripts/check-package.sh compiles that package against
+# the fresh XCFramework. Nothing leaves the runner, so every build is a
+# dry run of the Swift release.
+#
+# When release.yml calls it for a real release, it also attaches the zip,
+# its checksum and glsdk.swift to the gl-sdk-vX.Y.Z release here, where
+# gl-sdk-swift's hourly publish.yml picks them up. It then waits for the
+# X.Y.Z tag in gl-sdk-swift and verifies it the way SwiftPM installs it,
+# so the outcome shows on this repository's Actions page. Neither
+# repository writes to the other, so no cross-repository token is needed.
 
 on:
   push:
@@ -18,8 +25,6 @@ on:
       - 'libs/gl-sdk/**'
       - 'libs/proto/**'
       - 'Cargo.lock'
-    tags:
-      - 'gl-sdk-v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     paths:
       - '.github/workflows/swift.yml'
@@ -29,18 +34,35 @@ on:
       - 'libs/proto/**'
       - 'Cargo.lock'
   workflow_dispatch:
+  # Publishing runs only when release.yml calls this workflow.
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+      dry_run:
+        type: boolean
+        default: true
 
+# A called workflow sees the caller's github.workflow, so the group names
+# this workflow itself, or it would share the group with the other
+# workflows release.yml calls.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: swift-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+
+env:
+  SWIFT_REPO: Blockstream/gl-sdk-swift
 
 jobs:
   build:
     name: Build XCFramework
     runs-on: macos-15
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,14 +71,12 @@ jobs:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
 
       - name: Determine the version
+        id: version
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/gl-sdk-v* ]]; then
-            VERSION="${GITHUB_REF_NAME#gl-sdk-v}"
-          else
-            VERSION=$(cargo metadata --no-deps --format-version 1 | \
-              jq -r '.packages[] | select(.name == "gl-sdk") | .version')
-          fi
+          VERSION=$(cargo metadata --no-deps --format-version 1 | \
+            jq -r '.packages[] | select(.name == "gl-sdk") | .version')
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building gl-sdk $VERSION"
 
       - uses: Swatinem/rust-cache@v2
@@ -89,46 +109,36 @@ jobs:
           cp target/swift/glsdk.swift dist/glsdk.swift
           # SwiftPM verifies the zip against this checksum, the SHA-256.
           swift package compute-checksum dist/glsdkFFI.xcframework.zip > dist/glsdkFFI.xcframework.zip.checksum
-          shasum -a 256 dist/glsdkFFI.xcframework.zip
-          cat dist/glsdkFFI.xcframework.zip.checksum
           ls -la dist
 
-      # Compiles the bindings against the framework as a Swift package,
-      # the way gl-sdk-swift ships them, for the iOS simulator.
-      - name: Compile the Swift package
-        run: |
-          PKG="$RUNNER_TEMP/GreenlightSDK"
-          mkdir -p "$PKG/Sources/GreenlightSDK"
-          cp dist/glsdk.swift "$PKG/Sources/GreenlightSDK/GreenlightSDK.swift"
-          (cd "$PKG" && unzip -q "$GITHUB_WORKSPACE/dist/glsdkFFI.xcframework.zip")
-          cat > "$PKG/Package.swift" <<'EOF'
-          // swift-tools-version:5.5
-          import PackageDescription
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SWIFT_REPO }}
+          ref: main
+          path: gl-sdk-swift
+          fetch-depth: 0
 
-          let package = Package(
-              name: "glsdk",
-              platforms: [.macOS(.v12), .iOS(.v13)],
-              products: [
-                  .library(name: "GreenlightSDK", targets: ["glsdkFFI", "GreenlightSDK"]),
-              ],
-              targets: [
-                  .binaryTarget(name: "glsdkFFI", path: "glsdkFFI.xcframework"),
-                  .target(name: "GreenlightSDK", dependencies: ["glsdkFFI"]),
-              ]
-          )
-          EOF
-          cd "$PKG"
-          # Xcode derives the schemes from the package, list them and
-          # build the library product's, or the whole package's.
-          SCHEMES=$(xcodebuild -list -json | jq -r '(.workspace // .project).schemes[]')
-          echo "Schemes: $(echo $SCHEMES)"
-          SCHEME=$(grep -xE 'GreenlightSDK|glsdk-Package|glsdk' <<<"$SCHEMES" | head -n1)
-          if [ -z "$SCHEME" ]; then
-            echo "::error::No GreenlightSDK or glsdk scheme in the package"
-            exit 1
+      # What gl-sdk-swift's publish.yml does with these assets, short of
+      # pushing: render and commit Package.swift, tag the version, and
+      # compile the package against the zip.
+      - name: Prepare the Swift package
+        working-directory: gl-sdk-swift
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # A version that is published already cannot be tagged again,
+          # prepare it as a pre-release of itself instead.
+          V="$VERSION"
+          if git rev-parse -q --verify "refs/tags/$V" >/dev/null; then
+            V="$VERSION-check.$GITHUB_RUN_NUMBER"
+            echo "::notice::$VERSION is published in gl-sdk-swift already, preparing it as $V"
           fi
-          xcodebuild build -scheme "$SCHEME" \
-            -destination 'generic/platform=iOS Simulator' -quiet
+          scripts/prepare.sh "$V" "$GITHUB_WORKSPACE/dist" \
+            "https://github.com/$GITHUB_REPOSITORY/releases/download/gl-sdk-v$VERSION/glsdkFFI.xcframework.zip"
+          cat Package.swift
+
+      - name: Compile the Swift package
+        run: gl-sdk-swift/scripts/check-package.sh dist/glsdkFFI.xcframework.zip
 
       - uses: actions/upload-artifact@v4
         with:
@@ -136,11 +146,9 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  # release.yml creates the gl-sdk-vX.Y.Z release once the crate is
-  # published. Whichever runs first creates it, the other updates it.
   attach:
     name: Attach to the gl-sdk release
-    if: startsWith(github.ref, 'refs/tags/gl-sdk-v')
+    if: inputs.release && !inputs.dry_run
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -148,22 +156,59 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      TAG: gl-sdk-v${{ needs.build.outputs.version }}
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: swift
           path: dist
 
+      # publish-crates.yml creates the release when it publishes the gl-sdk
+      # crate. A Swift-only release creates it here.
       - name: Upload the release assets
         run: |
-          TAG="$GITHUB_REF_NAME"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --verify-tag --title "gl-sdk ${TAG#gl-sdk-v}" \
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "gl-sdk ${TAG#gl-sdk-v}" \
               --notes "See the [gl-sdk changelog](https://github.com/$GH_REPO/blob/$TAG/libs/gl-sdk/CHANGELOG.md)." \
-              || gh release view "$TAG" >/dev/null  # lost the race to release.yml
+              || gh release view "$TAG" >/dev/null  # created concurrently
           fi
           gh release upload "$TAG" --clobber \
             dist/glsdkFFI.xcframework.zip \
             dist/glsdkFFI.xcframework.zip.checksum \
             dist/glsdk.swift
           gh release view "$TAG" --json assets --jq '.assets[].name'
+
+  # gl-sdk-swift publishes within the hour, at 17 past, and GitHub can
+  # delay scheduled runs. Running its publish.yml by hand is quicker.
+  published:
+    name: Wait for gl-sdk-swift
+    needs: [build, attach]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SWIFT_REPO }}
+          ref: main
+          path: gl-sdk-swift
+
+      - name: Wait for the tag
+        run: |
+          echo "::notice::Waiting for $VERSION in https://github.com/$SWIFT_REPO, run its publish.yml to skip the wait"
+          until git ls-remote --exit-code --tags "https://github.com/$SWIFT_REPO" "refs/tags/$VERSION" >/dev/null; do
+            sleep 120
+          done
+
+      - name: Verify the package
+        run: |
+          gl-sdk-swift/scripts/verify.sh "$VERSION"
+          # The package must download the zip attached by this run.
+          URL=$(curl -fsSL "https://raw.githubusercontent.com/$SWIFT_REPO/refs/tags/$VERSION/Package.swift" \
+            | sed -nE 's/.*url: "([^"]+)".*/\1/p')
+          WANT="https://github.com/$GITHUB_REPOSITORY/releases/download/gl-sdk-v$VERSION/glsdkFFI.xcframework.zip"
+          if [ "$URL" != "$WANT" ]; then
+            echo "::error::Package.swift at $VERSION downloads $URL, not $WANT"
+            exit 1
+          fi
