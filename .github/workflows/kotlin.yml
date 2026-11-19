@@ -1,10 +1,29 @@
+# Builds and tests the Kotlin Multiplatform library (Android, JVM, iOS).
+#
+# Called by release.yml, it also builds the Maven Central bundle of
+# com.blockstream:glsdk: the publications in the Maven repository layout,
+# unsigned. contrib/maven-central/check-bundle.sh checks it and signs it
+# with a throwaway key, the way Central requires. A real release attaches
+# the unsigned bundle to the gl-sdk-vX.Y.Z release, where Blockstream's
+# release infrastructure picks it up within the hour, signs it with
+# Blockstream's key and uploads it. No Maven credentials are on GitHub.
+# The release then waits until the version is on repo1.maven.org.
+
 on:
   push:
     branches:
-      - master
-    tags:
-      - 'gl-sdk-*'
+      - main
   pull_request: {}
+  workflow_dispatch:
+  # Publishing runs only when release.yml calls this workflow.
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+      dry_run:
+        type: boolean
+        default: true
 
 name: Kotlin library
 
@@ -12,6 +31,8 @@ jobs:
 
   build:
     runs-on: macos-26
+    outputs:
+      version: ${{ steps.bundle.outputs.version }}
     steps:
       - name: "Show default version of NDK"
         run: echo $ANDROID_NDK_ROOT
@@ -63,10 +84,41 @@ jobs:
         run: |
           ./gradlew :lib:jvmTest --console=plain
 
-      - name: "Puiblish to Maven"
+      - name: "Publish to Maven Local"
         working-directory: libs/gl-sdk-android
         run: |
           ./gradlew :lib:publishToMavenLocal
+
+      - name: "Build the Maven Central bundle"
+        id: bundle
+        if: inputs.release
+        working-directory: libs/gl-sdk-android
+        run: |
+          VERSION=$(sed -n 's/^libraryVersion=//p' gradle.properties)
+          ./gradlew :lib:publishAllPublicationsToBundleRepository --console=plain
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          ZIP="$GITHUB_WORKSPACE/dist/glsdk-maven-$VERSION.zip"
+          (cd lib/build/maven-bundle && zip -q -r "$ZIP" com)
+          shasum -a 256 "$ZIP" | cut -d' ' -f1 > "$ZIP.sha256"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # What Central checks, with a throwaway key.
+      - name: "Check the bundle"
+        if: inputs.release
+        run: |
+          VERSION=${{ steps.bundle.outputs.version }}
+          GNUPGHOME=$(mktemp -d)
+          export GNUPGHOME
+          gpg --batch --passphrase '' --quick-gen-key "glsdk release dry run <noreply@blockstream.com>" ed25519 sign never
+          KEY=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          contrib/maven-central/check-bundle.sh "dist/glsdk-maven-$VERSION.zip" "$VERSION" "$KEY" "$RUNNER_TEMP/signed.zip"
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.release
+        with:
+          name: maven-bundle
+          path: dist/
+          if-no-files-found: error
 
       - name: Temporarily save artifact
         uses: actions/upload-artifact@v4
@@ -74,3 +126,49 @@ jobs:
           name: glsdk-artifact
           path: libs/gl-sdk-android/lib/build/outputs/
           retention-days: 14
+
+  attach:
+    name: Attach the Maven bundle to the gl-sdk release
+    if: inputs.release && !inputs.dry_run
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: gl-sdk-v${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: maven-bundle
+          path: dist
+
+      # publish-crates.yml creates the release when it publishes the gl-sdk
+      # crate. A Maven-only release creates it here.
+      - name: Upload the bundle
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "gl-sdk ${TAG#gl-sdk-v}" \
+              --notes "See the [gl-sdk changelog](https://github.com/$GH_REPO/blob/$TAG/libs/gl-sdk/CHANGELOG.md)." \
+              || gh release view "$TAG" >/dev/null  # created concurrently
+          fi
+          gh release upload "$TAG" --clobber dist/glsdk-maven-*.zip dist/glsdk-maven-*.zip.sha256
+          gh release view "$TAG" --json assets --jq '.assets[].name'
+
+  # The bundle is picked up within the hour, then Central validates,
+  # publishes and syncs to repo1.maven.org.
+  published:
+    name: Wait for Maven Central
+    needs: [build, attach]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Wait for the release on repo1.maven.org
+        run: |
+          echo "::notice::Waiting for com.blockstream:glsdk:$VERSION on Maven Central, usually within 90 minutes"
+          URL="https://repo1.maven.org/maven2/com/blockstream/glsdk/$VERSION/glsdk-$VERSION.pom"
+          until curl -fsI "$URL" >/dev/null; do sleep 120; done
+          echo "com.blockstream:glsdk:$VERSION is on Maven Central"

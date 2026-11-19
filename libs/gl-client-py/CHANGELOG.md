@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- Wheels are published to PyPI from GitHub Actions again, for Linux (x86_64, i686), macOS (x86_64, arm64) and Windows (x64, x86). 0.3.4 had shipped only a Linux x86_64 wheel.
+
 ## [0.4.1] - 2026-11-18
 
 ### Changed

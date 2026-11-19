@@ -2,6 +2,7 @@
 name = "uniffi-bindgen"
 version = "0.1.0"
 edition = "2024"
+publish = false  # build tool; crates.io's uniffi-bindgen is a different crate
 
 [[bin]]
 # This can be whatever name makes sense for your project, but the rest of this tutorial assumes uniffi-bindgen.

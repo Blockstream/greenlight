@@ -138,12 +138,30 @@ extensions.configure<SigningExtension> {
     useGpgCmd()
 }
 
-// Do not require signing when publishing to Maven Local
+// The release bundle: the publications in the Maven repository layout,
+// with checksums but unsigned, under build/maven-bundle. The Release
+// workflow builds it with `./gradlew :lib:publishAllPublicationsToBundleRepository`
+// and checks it with contrib/maven-central/check-bundle.sh. It is signed
+// and uploaded to Maven Central where the signing key is.
+publishing {
+    repositories {
+        maven {
+            name = "Bundle"
+            url = uri(layout.buildDirectory.dir("maven-bundle"))
+        }
+    }
+}
+
+// Do not require signing when publishing to Maven Local or the bundle
 // Allows `./gradlew publishToMavenLocal` (or `publishToLocalMaven`) without GPG setup
 tasks.withType<Sign>().configureEach {
     onlyIf {
         val taskNames = gradle.startParameter.taskNames
-        // Skip signing if the build is targeting the local Maven repository
-        taskNames.none { it.contains("publishToMavenLocal", ignoreCase = true) || it.contains("publishToLocalMaven", ignoreCase = true) }
+        // Skip signing if the build is targeting the local Maven repository or the bundle
+        taskNames.none {
+            it.contains("publishToMavenLocal", ignoreCase = true) ||
+                it.contains("publishToLocalMaven", ignoreCase = true) ||
+                it.contains("BundleRepository", ignoreCase = true)
+        }
     }
 }

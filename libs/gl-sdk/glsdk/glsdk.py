@@ -534,7 +534,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327:
+    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 8721:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -8616,8 +8616,12 @@ class SchedulerProtocol(typing.Protocol):
         before it creates a node. It needs no credentials, and the
         `node_id` is passed explicitly.
 
-        The answer is advisory and may change over time. Treat an
-        error as "unknown" rather than as a negative answer.
+        The answer is monotonic: once the node has been registered
+        it is reported as available, and stays available regardless
+        of the node's status or the provider's current capacity.
+        Before registration the answer is advisory and may change
+        over time. Treat an error as "unknown" rather than as a
+        negative answer.
         """
 
         raise NotImplementedError
@@ -8685,8 +8689,12 @@ class Scheduler():
         before it creates a node. It needs no credentials, and the
         `node_id` is passed explicitly.
 
-        The answer is advisory and may change over time. Treat an
-        error as "unknown" rather than as a negative answer.
+        The answer is monotonic: once the node has been registered
+        it is reported as available, and stays available regardless
+        of the node's status or the provider's current capacity.
+        Before registration the answer is advisory and may change
+        over time. Treat an error as "unknown" rather than as a
+        negative answer.
         """
 
         _UniffiConverterBytes.check_lower(node_id)

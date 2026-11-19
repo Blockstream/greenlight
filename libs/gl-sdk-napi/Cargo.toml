@@ -1,6 +1,7 @@
 [package]
 name = "gl-sdk-node"
 version = "0.3.1"
+publish = false  # released to npm as `@greenlightcln/glsdk`, see typescript.yml
 edition = "2021"
 license = "MIT"
 

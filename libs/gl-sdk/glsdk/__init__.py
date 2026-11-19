@@ -6,4 +6,9 @@ client library, generated using Mozilla's UniFFI framework.
 
 from .glsdk import *  # noqa: F401, F403
 
-__version__ = "0.4.0"
+from importlib.metadata import PackageNotFoundError, version as _version
+
+try:
+    __version__ = _version("gl-sdk")
+except PackageNotFoundError:  # imported from a source checkout
+    __version__ = "unknown"
