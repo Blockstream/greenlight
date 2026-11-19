@@ -7,20 +7,23 @@ on:
       - main
   pull_request: {}
   workflow_dispatch:
+  # Publishing runs only when release.yml calls this workflow.
+  workflow_call:
     inputs:
-      shouldPublish:
-        description: 'Publish to NPM'
+      release:
+        type: boolean
+        default: false
+      dry_run:
         type: boolean
         default: true
 
 name: Typescript Library
 
 jobs:
-  # Build, test and publish only when the version in package.json is not
-  # on npm yet. Comparing against the registry rather than against the
-  # parent commit keeps this correct for rebase-merges, where the version
-  # bump is not the tip commit, and lets a re-run publish a version that
-  # an earlier run failed to publish.
+  # Whether the version in package.json is on npm yet. Comparing against
+  # the registry rather than against the parent commit stays correct for
+  # rebase-merges, where the version bump is not the tip commit, and lets
+  # a re-run publish a version that an earlier run failed to publish.
   check-version:
     runs-on: ubuntu-latest
     outputs:
@@ -42,13 +45,11 @@ jobs:
             echo "${NAME}@${VERSION} is not on npm yet"
             echo "unpublished=true" >> $GITHUB_OUTPUT
           else
-            echo "::notice::${NAME}@${VERSION} is already on npm, skipping build and publish"
+            echo "${NAME}@${VERSION} is already on npm"
             echo "unpublished=false" >> $GITHUB_OUTPUT
           fi
 
   build:
-    needs: check-version
-    if: needs.check-version.outputs.unpublished == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -241,11 +242,13 @@ jobs:
           shell: bash
           command: cd libs/gl-sdk-napi && npm test -- tests/basic.spec.ts
 
+  # A dry run packs and checks the package like a release and stops before
+  # the upload. It also runs for a version npm already has.
   publish:
     name: Publish to NPM
     runs-on: ubuntu-latest
-    needs: test
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.shouldPublish == true)
+    needs: [check-version, test]
+    if: inputs.release && (inputs.dry_run || needs.check-version.outputs.unpublished == 'true')
     
     defaults:
       run:
@@ -266,6 +269,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: bindings-*
           path: artifacts
       
       - name: Move artifacts to package directory
@@ -278,12 +282,7 @@ jobs:
           done
           ls -la *.*
       
-      - name: List package contents
-        run: npm pack --dry-run
-      
       - name: Publish to NPM
-        run: |
-          echo "Token length: ${#NODE_AUTH_TOKEN}"
-          npm publish --access public
+        run: npm publish --access public ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
