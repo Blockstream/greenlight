@@ -4,22 +4,35 @@ on:
   push:
     branches:
       - main
-    # Release tags. `gl-client-py-vX.Y.Z` publishes the `gl-client`
-    # package and `gl-sdk-vX.Y.Z` the `gl-sdk` package to PyPI, see the
-    # publish jobs at the end. `gl-sdk-v*` also publishes the gl-sdk crate
-    # through release.yml.
-    tags:
-      - 'gl-client-py-v[0-9]+.[0-9]+.[0-9]+'
-      - 'gl-sdk-v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     types:
       - synchronize
       - opened
   workflow_dispatch:
+  # Publishing runs only when release.yml calls this workflow.
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+      dry_run:
+        type: boolean
+        default: true
+      gl_client:
+        description: 'Publish the gl-client package'
+        type: boolean
+        default: false
+      gl_sdk:
+        description: 'Publish the gl-sdk package'
+        type: boolean
+        default: false
 
+# A called workflow sees the caller's github.workflow, so the group names
+# this workflow itself, or it would share the group with the other
+# workflows release.yml calls.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: python-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   source:
@@ -323,41 +336,79 @@ jobs:
 
   # Publishing uses PyPI trusted publishing: PyPI accepts the GitHub OIDC
   # token of this workflow in the `pypi` environment, no API token needed.
-  publish-gl-client:
-    name: Publish gl-client to PyPI
-    if: startsWith(github.ref, 'refs/tags/gl-client-py-v')
+  # The token names the workflow that started the run, release.yml, so
+  # that is the workflow each PyPI trusted publisher has to name.
+  #
+  # A dry run checks the same files and stops before the upload, without
+  # the `pypi` environment, so it needs no approval.
+  check-gl-client:
+    name: Check gl-client for PyPI
+    if: inputs.release && inputs.gl_client
     needs: [source, linux, macos, windows]
     runs-on: ubuntu-24.04
-    environment:
-      name: pypi
-      url: https://pypi.org/project/gl-client/
-    permissions:
-      contents: read
-      id-token: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: wheels-*
           path: dist
           merge-multiple: true
+      - name: Check the version and metadata
+        run: .github/scripts/check-dist.sh gl_client "$(sed -n 's/^version = "\(.*\)"/\1/p' libs/gl-client-py/pyproject.toml)" dist
 
-      - name: Check the version matches the tag
-        run: |
-          VERSION=${GITHUB_REF_NAME#gl-client-py-v}
-          ls -la dist
-          for f in dist/*; do
-            case "$(basename "$f")" in
-              gl_client-"$VERSION"-*.whl|gl_client-"$VERSION".tar.gz) ;;
-              *) echo "::error::$f does not match version $VERSION from the tag"; exit 1 ;;
-            esac
-          done
-
+  publish-gl-client:
+    name: Publish gl-client to PyPI
+    if: inputs.release && inputs.gl_client && !inputs.dry_run
+    needs: [check-gl-client]
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/gl-client/
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # A re-run after a partial upload.
+          skip-existing: true
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' libs/gl-client-py/pyproject.toml)
+          TAG="gl-client-py-v$VERSION"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" \
+            --title "gl-client (Python) v$VERSION" \
+            --notes "Published gl-client $VERSION to [PyPI](https://pypi.org/project/gl-client/$VERSION/). See the [changelog](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/libs/gl-client-py/CHANGELOG.md)."
 
+  check-gl-sdk:
+    name: Check gl-sdk for PyPI
+    if: inputs.release && inputs.gl_sdk
+    needs: [gl-sdk-wheels]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gl-sdk-wheel-*
+          path: dist
+          merge-multiple: true
+      - name: Check the version and metadata
+        run: .github/scripts/check-dist.sh gl_sdk "$(sed -n 's/^version = "\(.*\)"/\1/p' libs/gl-sdk/pyproject.toml)" dist
+
+  # The gl-sdk-vX.Y.Z GitHub release comes from the crate, in
+  # publish-crates.yml.
   publish-gl-sdk:
     name: Publish gl-sdk to PyPI
-    if: startsWith(github.ref, 'refs/tags/gl-sdk-v')
-    needs: [gl-sdk-wheels]
+    if: inputs.release && inputs.gl_sdk && !inputs.dry_run
+    needs: [check-gl-sdk]
     runs-on: ubuntu-24.04
     environment:
       name: pypi
@@ -371,16 +422,6 @@ jobs:
           pattern: gl-sdk-wheel-*
           path: dist
           merge-multiple: true
-
-      - name: Check the version matches the tag
-        run: |
-          VERSION=${GITHUB_REF_NAME#gl-sdk-v}
-          ls -la dist
-          for f in dist/*; do
-            case "$(basename "$f")" in
-              gl_sdk-"$VERSION"-*.whl) ;;
-              *) echo "::error::$f does not match version $VERSION from the tag"; exit 1 ;;
-            esac
-          done
-
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
