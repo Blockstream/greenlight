@@ -1,0 +1,153 @@
+# Publishes workspace crates to crates.io. Called by release.yml, which
+# passes the crates in dependency order.
+#
+# crates.io never deletes a version, it can only be yanked, so every crate
+# passes these checks first, in a dry run too:
+#
+#   1. a Keep a Changelog CHANGELOG.md with an entry for the version
+#   2. cargo-semver-checks against the latest published version, unless
+#      the bump allows breaking changes (X.0.0, or 0.X.0 before 1.0)
+#   3. its tests
+#   4. `cargo publish --dry-run` for all of them together
+#
+# Step 4 packages each crate and builds it against the others' packages.
+# Cargo overlays the unpublished ones as a local registry, so a dry run
+# passes before any of them is on crates.io. A real run uploads in that
+# order, skips versions crates.io already has, and creates a
+# `<crate>-vX.Y.Z` GitHub release for each crate.
+
+name: Crates
+
+on:
+  workflow_call:
+    inputs:
+      crates:
+        description: 'Space-separated crates, in dependency order'
+        required: true
+        type: string
+      dry_run:
+        required: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      CRATES: ${{ inputs.crates }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # cargo-semver-checks compares against the published versions.
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install python-kacl
+        run: pip install python-kacl
+
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall --no-confirm cargo-semver-checks
+
+      - name: Check the changelogs
+        run: |
+          META=$(cargo metadata --no-deps --format-version 1)
+          for CRATE in $CRATES; do
+            PKG=$(jq -c --arg c "$CRATE" '.packages[] | select(.name == $c)' <<<"$META")
+            VERSION=$(jq -r .version <<<"$PKG")
+            DIR=$(dirname "$(jq -r .manifest_path <<<"$PKG")")
+            if [ ! -f "$DIR/CHANGELOG.md" ]; then
+              echo "::error::$CRATE has no CHANGELOG.md in $DIR"
+              exit 1
+            fi
+            # kacl-cli reads CHANGELOG.md from the working directory.
+            if ! (cd "$DIR" && kacl-cli verify --json) > kacl.json 2>&1; then
+              echo "::error::$DIR/CHANGELOG.md does not follow Keep a Changelog"
+              jq -r '.errors[] | "Line \(.line_number): \(.error_message)\n  \(.line)"' kacl.json || cat kacl.json
+              exit 1
+            fi
+            if ! grep -qE "^##? \[?v?${VERSION//./\\.}\]?" "$DIR/CHANGELOG.md"; then
+              echo "::error::$DIR/CHANGELOG.md has no entry for $CRATE $VERSION"
+              exit 1
+            fi
+            echo "$CRATE $VERSION: changelog ok"
+          done
+
+      - name: Check semver compatibility
+        run: |
+          META=$(cargo metadata --no-deps --format-version 1)
+          for CRATE in $CRATES; do
+            VERSION=$(jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version' <<<"$META")
+            IFS=. read -r MAJOR MINOR PATCH <<<"$VERSION"
+            if ! cargo info "$CRATE" --registry crates-io >/dev/null 2>&1; then
+              echo "$CRATE: not on crates.io yet, nothing to compare against"
+            elif [ "$MAJOR" != 0 ] && [ "$MINOR.$PATCH" = 0.0 ]; then
+              echo "$CRATE $VERSION: major bump, breaking changes allowed"
+            elif [ "$MAJOR" = 0 ] && [ "$PATCH" = 0 ]; then
+              echo "$CRATE $VERSION: 0.x minor bump, breaking changes allowed"
+            elif ! cargo semver-checks check-release -p "$CRATE"; then
+              echo "::error::$CRATE $VERSION breaks the API of its last release, bump the version accordingly"
+              exit 1
+            fi
+          done
+
+      - name: Run the tests
+        run: |
+          ARGS=()
+          for CRATE in $CRATES; do ARGS+=(-p "$CRATE"); done
+          cargo test "${ARGS[@]}"
+
+      - name: Publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          ARGS=()
+          META=$(cargo metadata --no-deps --format-version 1)
+          for CRATE in $CRATES; do
+            VERSION=$(jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version' <<<"$META")
+            if [ "$DRY_RUN" != true ] && cargo info "$CRATE@$VERSION" --registry crates-io >/dev/null 2>&1; then
+              echo "::notice::$CRATE $VERSION is already on crates.io, skipping it"
+              continue
+            fi
+            ARGS+=(-p "$CRATE")
+          done
+          if [ ${#ARGS[@]} = 0 ]; then
+            echo "Nothing to publish"
+          elif [ "$DRY_RUN" = true ]; then
+            cargo publish --dry-run "${ARGS[@]}"
+          else
+            cargo publish "${ARGS[@]}"
+          fi
+
+      - name: Create the GitHub releases
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          META=$(cargo metadata --no-deps --format-version 1)
+          for CRATE in $CRATES; do
+            VERSION=$(jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version' <<<"$META")
+            TAG="$CRATE-v$VERSION"
+            DIR=$(dirname "$(jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .manifest_path' <<<"$META")")
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "$TAG: release exists"
+              continue
+            fi
+            # swift.yml may create gl-sdk-vX.Y.Z concurrently, losing the
+            # race is fine.
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$CRATE v$VERSION" \
+              --notes "Published $CRATE $VERSION to [crates.io](https://crates.io/crates/$CRATE/$VERSION). See the [changelog](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/${DIR#"$GITHUB_WORKSPACE"/}/CHANGELOG.md)." \
+              || gh release view "$TAG" >/dev/null
+          done
