@@ -319,9 +319,10 @@ impl Node for PluginNodeServer {
             ));
         }
 
-        let (lsp_id, param) = select_opening_params(lsps).ok_or_else(|| {
-            Status::not_found("No opening params returned by any LSP, cannot create invoice.")
-        })?;
+        let (lsp_id, param) = select_opening_params(lsps, chrono::Utc::now(), req.expiry)
+            .ok_or_else(|| {
+                Status::not_found("No opening params returned by any LSP, cannot create invoice.")
+            })?;
 
         log::info!(
             "Selecting LSP {} with params {:?} for invoice negotiation",
@@ -912,15 +913,20 @@ struct Lsps2Offer {
 
 /// Select the LSP and opening fee params to use for an LSPS2 invoice
 /// negotiation. Returns `None` if no LSP returned any params at all.
+/// Mirrors the lsps-client logic.
 fn select_opening_params(
     lsps: Vec<Lsps2Offer>,
+    now: chrono::DateTime<chrono::Utc>,
+    expiry: Option<u64>,
 ) -> Option<(String, crate::responses::OpeningFeeParams)> {
+    let fut_now = now + chrono::Duration::seconds(expiry.unwrap_or(60) as i64);
+
     lsps.into_iter()
         .flat_map(|l| l.params.into_iter().map(move |p| (l.node_id.clone(), p)))
-        .max_by_key(|(_, p)| {
+        .find(|(_, p)| {
             p.valid_until
                 .parse::<chrono::DateTime<chrono::FixedOffset>>()
-                .ok()
+                .is_ok_and(|t| t > fut_now)
         })
 }
 
@@ -1369,7 +1375,7 @@ mod test {
     #[test]
     fn test_select_opening_params_empty() {
         // No LSPs at all -> nothing to select.
-        assert!(select_opening_params(vec![]).is_none());
+        assert!(select_opening_params(vec![], chrono::Utc::now(), None).is_none());
     }
 
     #[test]
@@ -1388,7 +1394,8 @@ mod test {
             },
         ];
 
-        let (lsp_id, p) = select_opening_params(lsps).expect("should fall back to second LSP");
+        let (lsp_id, p) = select_opening_params(lsps, chrono::Utc::now(), None)
+            .expect("should fall back to second LSP");
         assert_eq!(lsp_id, "lsp_good");
         assert_eq!(p.min_fee_msat, "100");
     }
@@ -1407,30 +1414,46 @@ mod test {
             },
         ];
 
-        assert!(select_opening_params(lsps).is_none());
+        assert!(select_opening_params(lsps, chrono::Utc::now(), None).is_none());
     }
 
     #[test]
-    fn test_select_opening_params_prefers_max_valid_until() {
+    fn test_select_opening_params_with_expiry() {
+        let now = chrono::Utc::now();
+
         // When the first LSP does return params we keep using it.
         let lsps = vec![
             Lsps2Offer {
                 node_id: "lsp_first".to_string(),
                 params: vec![
-                    param_with_time("1", "2150-01-01T00:00:00Z".to_string()),
-                    param_with_time("2", "2100-01-01T00:00:00Z".to_string()),
+                    param_with_time("1", (now + chrono::Duration::hours(5)).to_string()),
+                    param_with_time("2", (now + chrono::Duration::hours(3)).to_string()),
                 ],
             },
             Lsps2Offer {
                 node_id: "lsp_second".to_string(),
                 params: vec![
-                    param_with_time("3", "2150-07-01T00:00:00Z".to_string()),
-                    param_with_time("4", "2100-02-01T00:00:00Z".to_string()),
+                    param_with_time("3", (now + chrono::Duration::hours(7)).to_string()),
+                    param_with_time("4", (now + chrono::Duration::hours(10)).to_string()),
                 ],
             },
         ];
 
-        let (lsp_id, p) = select_opening_params(lsps).expect("expect valid offer");
+        // No expiry
+        let (lsp_id, p) =
+            select_opening_params(lsps.clone(), chrono::Utc::now(), None).expect("expect offer exists");
+        assert_eq!(lsp_id, "lsp_first");
+        assert_eq!(p.min_fee_msat, "1");
+
+        // first valid more than 4 hors
+        let (lsp_id, p) =
+            select_opening_params(lsps.clone(), chrono::Utc::now(), Some(60*60*4)).expect("expect offer exists");
+        assert_eq!(lsp_id, "lsp_first");
+        assert_eq!(p.min_fee_msat, "1");
+
+        // first valid more than 5 hours (also - rime range non inclusion)
+        let (lsp_id, p) =
+            select_opening_params(lsps.clone(), chrono::Utc::now(), Some(60*60*5)).expect("expect offer exists");
         assert_eq!(lsp_id, "lsp_second");
         assert_eq!(p.min_fee_msat, "3");
     }
