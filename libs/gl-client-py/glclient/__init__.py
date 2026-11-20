@@ -569,10 +569,10 @@ class Node(object):
         res = clnpb.WaitResponse
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))
 
-    def lsp_invoice(self, label: str, description: str, amount_msat: int | None = None):
+    def lsp_invoice(self, label: str, description: str, amount_msat: int | None = None, expiry: int | None = None):
         uri = "/greenlight.Node/LspInvoice"
         req = nodepb.LspInvoiceRequest(
-            label=label, description=description, amount_msat=amount_msat
+            label=label, description=description, amount_msat=amount_msat, expiry=expiry
         ).SerializeToString()
         res = nodepb.LspInvoiceResponse
         return res.FromString(bytes(self.inner.call(uri, bytes(req))))

@@ -704,18 +704,21 @@ impl Node {
     /// * `label` - Unique label for this invoice
     /// * `description` - Invoice description
     /// * `amount_msat` - Optional amount in millisatoshis
+    /// * `expiry` - A desired BOLT11 invoice expiry in seconds
     #[napi]
     pub async fn receive(
         &self,
         label: String,
         description: String,
         amount_msat: Option<i64>,
+        expiry: Option<i64>,
     ) -> Result<ReceiveResponse> {
         let inner = self.inner.clone();
         let amount = amount_msat.map(|a| a as u64);
+        let expiry = expiry.map(|a| a as u64);
         let response = tokio::task::spawn_blocking(move || {
             inner
-                .receive(label, description, amount)
+                .receive(label, description, amount, expiry)
                 .map_err(|e| Error::from_reason(e.to_string()))
         })
         .await

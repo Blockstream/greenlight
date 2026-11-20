@@ -536,6 +536,7 @@ class LspInvoiceRequest(_message.Message):
     AMOUNT_MSAT_FIELD_NUMBER: _builtins.int
     DESCRIPTION_FIELD_NUMBER: _builtins.int
     LABEL_FIELD_NUMBER: _builtins.int
+    EXPIRY_FIELD_NUMBER: _builtins.int
     lsp_id: _builtins.str
     """len=0 => None, let the server decide."""
     token: _builtins.str
@@ -548,6 +549,7 @@ class LspInvoiceRequest(_message.Message):
     """
     description: _builtins.str
     label: _builtins.str
+    expiry: _builtins.int
     def __init__(
         self,
         *,
@@ -556,9 +558,15 @@ class LspInvoiceRequest(_message.Message):
         amount_msat: _builtins.int = ...,
         description: _builtins.str = ...,
         label: _builtins.str = ...,
+        expiry: _builtins.int | None = ...,
     ) -> None: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["amount_msat", b"amount_msat", "description", b"description", "label", b"label", "lsp_id", b"lsp_id", "token", b"token"]  # noqa: Y015
+    _HasFieldArgType: _TypeAlias = _typing.Literal["_expiry", b"_expiry", "expiry", b"expiry"]  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["_expiry", b"_expiry", "amount_msat", b"amount_msat", "description", b"description", "expiry", b"expiry", "label", b"label", "lsp_id", b"lsp_id", "token", b"token"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    _WhichOneofReturnType__expiry: _TypeAlias = _typing.Literal["expiry"]  # noqa: Y015
+    _WhichOneofArgType__expiry: _TypeAlias = _typing.Literal["_expiry", b"_expiry"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType__expiry) -> _WhichOneofReturnType__expiry | None: ...
 
 Global___LspInvoiceRequest: _TypeAlias = LspInvoiceRequest  # noqa: Y015
 

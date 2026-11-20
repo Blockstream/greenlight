@@ -244,7 +244,9 @@ message LspInvoiceRequest {
   uint64 amount_msat = 3; // 0 => Any
   string description = 4;
   string label = 5;
+  optional uint64 expiry = 6;
 }
+
 message LspInvoiceResponse {
   string bolt11 = 1;
   uint32 created_index = 2;

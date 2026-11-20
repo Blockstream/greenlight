@@ -259,3 +259,54 @@ def test_lsps_plugin_calls(clients, bitcoind, node_factory, lsps_server):
     # the LSPS2 fee parameters (min_fee_msat=1000, proportional=1000).
     # For 31337 msat: max(1000, ceil(31337 * 1000 / 1_000_000)) = 1000
     assert res.opening_fee_msat == 1000
+
+
+def test_lsp_invoice_expiry(clients, bitcoind, node_factory, lsps_server):
+    """An invoice created with an `expiry` carries that expiry.
+
+    ```ditaa
+    LSP --- GL
+    ```
+
+    Assume we already have a channel between LSP and GL node, which gives it
+    inbound capacity, so `lsp_invoice` takes the plain-invoice path (no
+    JIT negotiation), where the requested `expiry` is passed to CLN's
+    `invoice`.
+    """
+    lsp = lsps_server
+    lsp.fundwallet(sats=2 * 10**6)
+
+    c = clients.new()
+    c.register()
+    signer = c.signer()
+    signer.run_in_thread()
+    gl = c.node()
+    gl.connect_peer(lsp.info["id"], f"localhost:{lsp.port}")
+    gl_id = gl.get_info().id.hex()
+
+    # Fund channel between LSP and GL node (liquidity is on LSP side)
+    lsp.rpc.fundchannel(gl_id, 10**6)
+    bitcoind.generate_block(6, wait_for_mempool=1)
+    wait_for(lambda: lsp.rpc.listpeerchannels(gl_id)["channels"][0]["state"] == "CHANNELD_NORMAL")
+
+    amount_msat = 10_000_000
+
+    # The requested expiry ends up in the invoice.
+    expiry = 3600
+    res = gl.lsp_invoice(
+        label="with-expiry",
+        description="with-expiry",
+        amount_msat=amount_msat,
+        expiry=expiry,
+    )
+    assert res.opening_fee_msat == 0  # plain invoice, no JIT channel
+    assert lsp.rpc.decode(res.bolt11)["expiry"] == expiry
+
+    # Without an expiry, CLN's default (one week) still applies.
+    res = gl.lsp_invoice(
+        label="default-expiry",
+        description="default-expiry",
+        amount_msat=amount_msat,
+    )
+    assert res.opening_fee_msat == 0
+    assert lsp.rpc.decode(res.bolt11)["expiry"] == 7 * 24 * 3600

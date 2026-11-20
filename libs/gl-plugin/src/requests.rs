@@ -216,6 +216,8 @@ pub struct LspInvoiceRequest {
     pub amount_msat: cln_rpc::primitives::AmountOrAny,
     pub description: String,
     pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -226,6 +228,8 @@ pub struct LspInvoiceRequestV2 {
     pub amount_msat: cln_rpc::primitives::AmountOrAny,
     pub description: String,
     pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -253,6 +257,7 @@ impl From<crate::pb::LspInvoiceRequest> for LspInvoiceRequest {
             },
             description: o.description,
             label: o.label,
+            expiry: o.expiry,
         }
     }
 }
@@ -273,6 +278,7 @@ impl From<crate::pb::LspInvoiceRequest> for LspInvoiceRequestV2 {
             },
             description: o.description,
             label: o.label,
+            expiry: o.expiry,
         }
     }
 }
@@ -300,7 +306,6 @@ impl TypedRequest for LspGetinfoRequest {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     #[test]
     fn test_invoice_response() {
         let tests = vec![
@@ -310,6 +315,7 @@ mod test {
                 amount_msat: 0,
                 description: "description".to_owned(),
                 label: "label".to_owned(),
+                expiry: None,
             }),
             crate::pb::LspInvoiceRequest {
                 lsp_id: "lsp_id".to_owned(),
@@ -317,6 +323,7 @@ mod test {
                 amount_msat: 1337,
                 description: "description".to_owned(),
                 label: "label".to_owned(),
+                expiry: Some(101010),
             },
         ];
 

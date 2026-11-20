@@ -514,7 +514,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_prepare_onchain_send() != 37850:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_node_receive() != 39761:
+    if lib.uniffi_glsdk_checksum_method_node_receive() != 16076:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_node_send() != 4348:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -534,7 +534,7 @@ def _uniffi_check_api_checksums(lib):
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_nodeeventstream_next() != 12635:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 7327:
+    if lib.uniffi_glsdk_checksum_method_scheduler_lightning_available() != 8721:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     if lib.uniffi_glsdk_checksum_method_scheduler_recover() != 55514:
         raise InternalError("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
@@ -895,6 +895,7 @@ _UniffiLib.uniffi_glsdk_fn_method_node_prepare_onchain_send.argtypes = (
 _UniffiLib.uniffi_glsdk_fn_method_node_prepare_onchain_send.restype = _UniffiRustBuffer
 _UniffiLib.uniffi_glsdk_fn_method_node_receive.argtypes = (
     ctypes.c_void_p,
+    _UniffiRustBuffer,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
     _UniffiRustBuffer,
@@ -7638,7 +7639,7 @@ class NodeProtocol(typing.Protocol):
         """
 
         raise NotImplementedError
-    def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]"):
+    def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]",expiry: "typing.Union[object, typing.Optional[int]]" = _DEFAULT):
         """
         Receive an off-chain payment.
 
@@ -8136,7 +8137,7 @@ class Node():
 
 
 
-    def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]") -> "ReceiveResponse":
+    def receive(self, label: "str",description: "str",amount_msat: "typing.Optional[int]",expiry: "typing.Union[object, typing.Optional[int]]" = _DEFAULT) -> "ReceiveResponse":
         """
         Receive an off-chain payment.
 
@@ -8156,11 +8157,16 @@ class Node():
         
         _UniffiConverterOptionalUInt64.check_lower(amount_msat)
         
+        if expiry is _DEFAULT:
+            expiry = None
+        _UniffiConverterOptionalUInt64.check_lower(expiry)
+        
         return _UniffiConverterTypeReceiveResponse.lift(
             _uniffi_rust_call_with_error(_UniffiConverterTypeError,_UniffiLib.uniffi_glsdk_fn_method_node_receive,self._uniffi_clone_pointer(),
         _UniffiConverterString.lower(label),
         _UniffiConverterString.lower(description),
-        _UniffiConverterOptionalUInt64.lower(amount_msat))
+        _UniffiConverterOptionalUInt64.lower(amount_msat),
+        _UniffiConverterOptionalUInt64.lower(expiry))
         )
 
 
@@ -8616,8 +8622,12 @@ class SchedulerProtocol(typing.Protocol):
         before it creates a node. It needs no credentials, and the
         `node_id` is passed explicitly.
 
-        The answer is advisory and may change over time. Treat an
-        error as "unknown" rather than as a negative answer.
+        The answer is monotonic: once the node has been registered
+        it is reported as available, and stays available regardless
+        of the node's status or the provider's current capacity.
+        Before registration the answer is advisory and may change
+        over time. Treat an error as "unknown" rather than as a
+        negative answer.
         """
 
         raise NotImplementedError
@@ -8685,8 +8695,12 @@ class Scheduler():
         before it creates a node. It needs no credentials, and the
         `node_id` is passed explicitly.
 
-        The answer is advisory and may change over time. Treat an
-        error as "unknown" rather than as a negative answer.
+        The answer is monotonic: once the node has been registered
+        it is reported as available, and stays available regardless
+        of the node's status or the provider's current capacity.
+        Before registration the answer is advisory and may change
+        over time. Treat an error as "unknown" rather than as a
+        negative answer.
         """
 
         _UniffiConverterBytes.check_lower(node_id)
