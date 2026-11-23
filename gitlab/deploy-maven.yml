@@ -5,6 +5,9 @@ build_kotlin:
   rules:
     - if: "$CI_COMMIT_TAG"
     - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    # The runner's default toolchain is 1.88.0, cargo-xwin requires rustc 1.89 or newer
+    RUSTUP_TOOLCHAIN: "1.91.0"
   before_script:
     # The desktop libraries bundled in the jvm jar
     - rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu aarch64-pc-windows-msvc x86_64-pc-windows-msvc
