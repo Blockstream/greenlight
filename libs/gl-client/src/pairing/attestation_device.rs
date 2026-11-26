@@ -1,6 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::{into_approve_pairing_error, into_verify_pairing_data_error, Error};
+use super::{
+    into_approve_pairing_error, into_verify_pairing_data_error, parse_restrictions, Error,
+};
 use crate::{
     credentials::{NodeIdProvider, RuneProvider, TlsConfigProvider},
     pb::{
@@ -102,6 +104,8 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> 
         device_name: &str,
         restrs: &str,
     ) -> Result<pb::greenlight::Empty> {
+        parse_restrictions(device_id, restrs).map_err(into_approve_pairing_error)?;
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(into_approve_pairing_error)?
@@ -172,52 +176,20 @@ impl<C: TlsConfigProvider + RuneProvider + NodeIdProvider> Client<Connected, C> 
         let sub_pk_info: SubjectPublicKeyInfo =
             picky_asn1_der::from_bytes(&sub_pk_der).map_err(into_verify_pairing_data_error)?;
 
-        if let PublicKey::Ec(bs) = sub_pk_info.subject_public_key {
-            let pk = hex::encode(bs.0.payload_view());
-
-            if pk == data.device_id
-                && Self::restriction_contains_pubkey_exactly_once(
-                    &data.restrictions,
-                    &data.device_id,
-                )
-            {
-                Ok(())
-            } else {
-                Err(Error::VerifyPairingDataError(format!(
-                    "device id {} does not match public key {}",
-                    data.device_id, pk
-                )))
-            }
-        } else {
-            Err(Error::VerifyPairingDataError(format!(
-                "public key is not ecdsa"
-            )))
+        let PublicKey::Ec(pk) = sub_pk_info.subject_public_key else {
+            return Err(into_verify_pairing_data_error("public key is not ecdsa"));
+        };
+        let pk = hex::encode(pk.0.payload_view());
+        if pk != data.device_id {
+            return Err(into_verify_pairing_data_error(format!(
+                "device id {} does not match public key {}",
+                data.device_id, pk
+            )));
         }
-    }
 
-    /// Checks that a restriction string only contains a pubkey field exactly
-    /// once that is not preceded or followed by a '|' to ensure that it is
-    /// not part of an alternative but a restriction by itself.
-    fn restriction_contains_pubkey_exactly_once(s: &str, pubkey: &str) -> bool {
-        let search_field = format!("pubkey={}", pubkey);
-        match s.find(&search_field) {
-            Some(index) => {
-                // Check if 'pubkey=<pubkey>' is not preceded by '|'
-                if index > 0 && s.chars().nth(index - 1) == Some('|') {
-                    return false;
-                }
-
-                // Check if 'pubkey=<pubkey>' is not followed by '|'
-                let end_index = index + search_field.len();
-                if end_index < s.len() && s.chars().nth(end_index) == Some('|') {
-                    return false;
-                }
-
-                // Check if 'pubkey=<pubkey>' appears exactly once
-                s.matches(&search_field).count() == 1
-            }
-            None => false,
-        }
+        parse_restrictions(&data.device_id, &data.restrictions)
+            .map_err(into_verify_pairing_data_error)?;
+        Ok(())
     }
 }
 

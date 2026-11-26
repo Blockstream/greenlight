@@ -1,5 +1,6 @@
 use crate::credentials::{RuneProvider, TlsConfigProvider};
 use crate::metrics::{savings_percent, signer_state_response_wire_bytes};
+use crate::pairing;
 use crate::pb::scheduler::{scheduler_client::SchedulerClient, NodeInfoRequest, UpgradeRequest};
 use crate::pb::scheduler::{
     signer_request, signer_response, ApprovePairingRequest, ApprovePairingResponse, SignerResponse,
@@ -1444,14 +1445,9 @@ impl Signer {
             rune,
         })?;
 
-        let restrs: Vec<Vec<&str>> = req
-            .restrictions
-            .split('&')
-            .map(|s| s.split('|').collect::<Vec<&str>>())
-            .collect();
-
-        // Create the rune that approves pairing
-        let rune = self.create_rune(None, restrs)?;
+        let restrictions = pairing::parse_restrictions(&req.device_id, &req.restrictions)
+            .map_err(|e| Error::ApprovePairingRequestError(e.to_string()))?;
+        let rune = self.mint_rune(restrictions)?;
 
         let _ = stream
             .send(SignerResponse {
@@ -1609,10 +1605,6 @@ impl Signer {
                 })
                 .collect::<Result<Vec<Restriction>, RuneError>>()?;
 
-            // New rune, we need a unique id.
-            // FIXME: Add a counter that persists in SSS.
-            let unique_id = 0;
-
             // Check that at least one restriction has a `pubkey` field set.
             let has_pubkey_field = res.iter().any(|r: &Restriction| {
                 r.alternatives
@@ -1623,14 +1615,20 @@ impl Signer {
                 return Err(anyhow!("Missing a restriction on the pubkey"));
             }
 
-            let rune = Rune::new(
-                self.master_rune.authcode(),
-                res,
-                Some(unique_id.to_string()),
-                Some(RUNE_VERSION.to_string()),
-            )?;
-            Ok(rune.to_base64())
+            Ok(self.mint_rune(res)?)
         }
+    }
+
+    fn mint_rune(&self, restrictions: Vec<Restriction>) -> Result<String, RuneError> {
+        // FIXME: Add a counter that persists in SSS.
+        let unique_id = 0;
+        let rune = Rune::new(
+            self.master_rune.authcode(),
+            restrictions,
+            Some(unique_id.to_string()),
+            Some(RUNE_VERSION.to_string()),
+        )?;
+        Ok(rune.to_base64())
     }
 }
 
@@ -2323,6 +2321,88 @@ mod tests {
         assert!(signer
             .create_rune(None, vec![vec![wrong_alt], vec![wrong_alt, alt]])
             .is_ok());
+    }
+
+    #[tokio::test]
+    async fn pairing_approval_mints_a_device_bound_rune_with_the_approved_methods() {
+        use ring::rand::SystemRandom;
+        use ring::signature::{EcdsaKeyPair, KeyPair, ECDSA_P256_SHA256_FIXED_SIGNING};
+
+        let signer = mk_signer(StateSignatureMode::Off);
+        let rng = SystemRandom::new();
+        let algorithm = &ECDSA_P256_SHA256_FIXED_SIGNING;
+        let pkcs8 = EcdsaKeyPair::generate_pkcs8(algorithm, &rng).unwrap();
+        let attester = EcdsaKeyPair::from_pkcs8(algorithm, pkcs8.as_ref(), &rng).unwrap();
+        let attester_key = attester.public_key().as_ref();
+        let attester_binding = format!("pubkey={}", hex::encode(attester_key));
+        let attester_rune = signer
+            .create_rune(None, vec![vec![&attester_binding]])
+            .unwrap();
+
+        let device_key = crate::tls::generate_ecdsa_key_pair();
+        let device_id = hex::encode(device_key.public_key_raw());
+        let binding = format!("pubkey={device_id}");
+        let request = |restrictions: String| {
+            let timestamp = 0;
+            let device_name = "paired device";
+            let mut data = vec![];
+            data.put(device_id.as_bytes());
+            data.put_u64(timestamp);
+            data.put(signer.node_id().as_slice());
+            data.put(device_name.as_bytes());
+            data.put(restrictions.as_bytes());
+            let sig = attester.sign(&rng, &data).unwrap().as_ref().to_vec();
+            ApprovePairingRequest {
+                device_id: device_id.clone(),
+                timestamp,
+                device_name: device_name.to_string(),
+                restrictions,
+                sig,
+                pubkey: attester_key.to_vec(),
+                rune: attester_rune.clone(),
+            }
+        };
+
+        let (tx, mut rx) = mpsc::channel(1);
+        let restrictions = format!("{binding}&method^list|method=getinfo");
+        signer
+            .process_pairing_approval(1, request(restrictions), tx.clone())
+            .await
+            .unwrap();
+        let Some(signer_response::Response::ApprovePairing(approval)) =
+            rx.recv().await.unwrap().response
+        else {
+            panic!("expected a pairing approval");
+        };
+        assert_eq!(approval.device_id, device_id);
+
+        let rune = general_purpose::URL_SAFE.decode(approval.rune).unwrap();
+        let verify = |uri: &str, pubkey: &[u8]| {
+            signer.verify_rune(PendingRequest {
+                uri: uri.to_string(),
+                pubkey: pubkey.to_vec(),
+                rune: rune.clone(),
+                ..Default::default()
+            })
+        };
+        assert!(verify("/cln.Node/ListFunds", device_key.public_key_raw()).is_ok());
+        assert!(verify("/cln.Node/Getinfo", device_key.public_key_raw()).is_ok());
+        assert!(verify("/cln.Node/Pay", device_key.public_key_raw()).is_err());
+        assert!(verify("/cln.Node/ListFunds", attester_key).is_err());
+
+        let wrong_device_binding = request(attester_binding);
+        let error = signer
+            .process_pairing_approval(2, wrong_device_binding, tx.clone())
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<Error>(),
+            Some(Error::ApprovePairingRequestError(_))
+        ));
+        assert!(matches!(
+            rx.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        ));
     }
 
     #[test]
