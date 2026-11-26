@@ -379,7 +379,7 @@ pub(super) fn check_request(
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use crate::signer::{auth, model, record_invoice, Signer};
     use lightning_signer::bitcoin::hashes::{sha256, Hash};
@@ -407,7 +407,7 @@ mod tests {
         (signer, node)
     }
 
-    fn channel_fixture() -> (Signer, Arc<Node>, HsmRequestContext) {
+    pub(in crate::signer) fn channel_fixture() -> (Signer, Arc<Node>, HsmRequestContext) {
         use lightning_signer::bitcoin::{bip32::DerivationPath, OutPoint};
         use lightning_signer::channel::{ChannelSetup, CommitmentType};
         let (signer, node) = fixture();
@@ -443,6 +443,38 @@ mod tests {
                 capabilities: 0,
             },
         )
+    }
+
+    #[tokio::test]
+    async fn restores_a_ready_channel_and_its_listener_on_attach() {
+        use crate::pb::HsmRequest;
+        use vls_protocol::msgs::{GetHeartbeat, SerBolt};
+
+        let (signer, _, _) = channel_fixture();
+        let heartbeat = || HsmRequest {
+            raw: GetHeartbeat {}.as_vec(),
+            ..Default::default()
+        };
+        let snapshot = signer
+            .process_request(heartbeat())
+            .await
+            .unwrap()
+            .signer_state;
+        assert!(snapshot
+            .iter()
+            .any(|entry| entry.key.starts_with("channels/")));
+
+        let (restarted, _) = fixture();
+        restarted
+            .process_request(HsmRequest {
+                signer_state: snapshot,
+                ..heartbeat()
+            })
+            .await
+            .unwrap();
+        let handler = restarted.handler().unwrap();
+        assert_eq!(handler.node().get_tracker().listeners.len(), 1);
+        assert_eq!(handler.node().get_channels().len(), 1);
     }
 
     fn tx(output_sat: u64) -> Transaction {

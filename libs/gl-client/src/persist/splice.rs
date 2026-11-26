@@ -400,14 +400,11 @@ impl State {
 
         let key_prefix = format!("{CHANNEL_PREFIX}/{node_id_hex}");
         let mut matches = Vec::new();
-        for (key, entry) in self.values.iter() {
+        for key in self.values.keys() {
             if !key.starts_with(&key_prefix) || self.is_tombstone(key) {
                 continue;
             }
-            let channel: lightning_signer::persist::model::ChannelEntry =
-                serde_json::from_value(entry.value.clone()).map_err(|e| {
-                    anyhow!("failed to decode channel state value for key {key}: {e}")
-                })?;
+            let channel = self.read_channel_entry(key)?;
             let Some(setup) = channel.channel_setup else {
                 continue;
             };
