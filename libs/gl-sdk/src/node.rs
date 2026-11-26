@@ -119,11 +119,13 @@ impl Node {
     /// receive the requested funds, the node will negotiate an
     /// opening, and when/if executed the payment will cause a channel
     /// to be created, and the incoming payment to be forwarded.
+    #[uniffi::method(default(expiry = None))]
     pub fn receive(
         &self,
         label: String,
         description: String,
         amount_msat: Option<u64>,
+        expiry: Option<u64>,
     ) -> Result<ReceiveResponse, Error> {
         self.check_connected()?;
         let mut gl_client = exec(self.get_gl_client())?.clone();
@@ -134,6 +136,7 @@ impl Node {
             label: label,
             lsp_id: "".to_owned(),
             token: "".to_owned(),
+            expiry: expiry,
         };
         let res = exec(gl_client.lsp_invoice(req))
             .map_err(|s| Error::rpc(s.to_string()))?
@@ -1101,6 +1104,7 @@ impl Node {
             format!("lnurl-withdraw-{}", request.data.k1),
             description,
             Some(request.amount_msat),
+            None,
         )?;
 
         // Step 2: Build callback URL and submit invoice to service
