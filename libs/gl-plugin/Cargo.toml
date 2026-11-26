@@ -45,3 +45,6 @@ vls-protocol = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.11"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }

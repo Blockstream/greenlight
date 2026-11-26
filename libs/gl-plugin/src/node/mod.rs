@@ -532,7 +532,17 @@ impl Node for PluginNodeServer {
             }
 
             loop {
-                let mut req = match stream.next().await {
+                // Also watch for the signer going away, so the stage
+                // marks it silent at once rather than on the next
+                // request we fail to send it.
+                let next = tokio::select! {
+                    next = stream.next() => next,
+                    _ = tx.closed() => {
+                        info!("Signer hsm_id={} closed its request stream", hsm_id);
+                        break;
+                    }
+                };
+                let mut req = match next {
                     Err(e) => {
                         error!(
                             "Could not get next request from stage: {:?} for hsm_id={}",
@@ -625,6 +635,8 @@ impl Node for PluginNodeServer {
         request: Request<pb::HsmResponse>,
     ) -> Result<Response<pb::Empty>, Status> {
         let req = request.into_inner();
+        // Any reply, even an error, shows the signer is answering.
+        self.stage.note_reply();
 
         if req.error != "" {
             log::error!("Signer reports an error: {}", req.error);

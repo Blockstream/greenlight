@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+
+- Signer presence on the `Stage`: a `watch` of `Presence::Answering` or `Presence::Silent` that can go back to `Silent`. A signer is answering after its first reply following an attach, and silent once its stream exits or a request stays unanswered for 10 s. `Stage::check_answering` gates dials: a reply within 10 s answers at once, otherwise it sends a `GetHeartbeat` probe and waits up to 5 s. `Stage::await_answering` waits for a signer within a deadline.
+
+### Changed
+
+- An unanswered ECDH request now marks the node as stuck, since it freezes all of `connectd`.
+- The signer request stream ends as soon as the signer drops it, instead of on the next request.
+
 ## [0.4.0] - 2026-11-18
 
 ### Added
