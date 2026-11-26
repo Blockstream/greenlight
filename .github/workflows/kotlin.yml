@@ -1,10 +1,29 @@
+# The full build cross compiles the sdk for eleven release targets and
+# then runs the gradle build, 75 to 115 minutes on a macOS runner, and
+# publishes nothing on a PR. So PRs pay for it only when they touch the
+# bindings or the build itself, and every other PR is not gated by this
+# check at all; branch protection requires just `linux`, not this check.
+# The build runs always for pushes to main, the gl-sdk release tags and
+# manual runs. The push trigger used to name `master`, a branch this
+# repository no longer has, so a merged PR was never built afterwards;
+# `main` below closes that gap.
+
 on:
   push:
     branches:
-      - master
+      - main
     tags:
       - 'gl-sdk-*'
-  pull_request: {}
+  pull_request:
+    paths:
+      - 'libs/gl-sdk*/**'
+      - 'libs/uniffi-bindgen/**'
+      - 'libs/proto/**'
+      - 'build/**'
+      - 'Cargo.toml'
+      - 'Taskfile.yml'
+      - '.github/workflows/kotlin.yml'
+  workflow_dispatch:
 
 name: Kotlin library
 
@@ -63,7 +82,7 @@ jobs:
         run: |
           ./gradlew :lib:jvmTest --console=plain
 
-      - name: "Puiblish to Maven"
+      - name: "Publish to Maven"
         working-directory: libs/gl-sdk-android
         run: |
           ./gradlew :lib:publishToMavenLocal
