@@ -25,7 +25,7 @@ use lightning_signer::bitcoin::secp256k1::{
 };
 use lightning_signer::bitcoin::Network;
 use lightning_signer::lightning::types::payment::PaymentHash;
-use lightning_signer::node::{Node, NodeServices};
+use lightning_signer::node::{Node, NodeConfig, NodeServices};
 use lightning_signer::policy::filter::FilterRule;
 use lightning_signer::util::crypto_utils;
 use log::{debug, error, info, trace, warn};
@@ -1032,7 +1032,7 @@ impl Signer {
             candidate
         };
         candidate
-            .validate_signer_state(&self.id)
+            .validate_signer_state(&self.id, NodeConfig::new(self.network).key_derivation_style)
             .map_err(Error::Other)?;
         trace!("Processing request {}", hex::encode(&req.raw));
         #[cfg(feature = "backup")]
@@ -1093,19 +1093,16 @@ impl Signer {
             return Err(e);
         };
 
+        let node_id = PublicKey::from_slice(&self.id)
+            .context("invalid signer node ID")
+            .map_err(Error::Other)?;
         // If present, add the close_to_addr to the allowlist
         for parsed_request in ctxrequests.iter() {
             match parsed_request {
                 model::Request::GlConfig(gl_config) => {
-                    let pubkey = PublicKey::from_slice(&self.id);
-                    match pubkey {
-                        Ok(p) => {
-                            let _ = services
-                                .persister
-                                .update_node_allowlist(&p, vec![gl_config.close_to_addr.clone()]);
-                        }
-                        Err(e) => debug!("Could not parse public key {:?}: {:?}", self.id, e),
-                    }
+                    persister
+                        .set_close_to_address(&node_id, &gl_config.close_to_addr)
+                        .map_err(Error::Other)?;
                 }
                 _ => {}
             }
@@ -2703,6 +2700,141 @@ mod tests {
             .process_request(heartbeat_request(full))
             .await
             .unwrap();
+    }
+
+    #[test]
+    fn signer_state_validation_rejects_invalid_records() {
+        use lightning_signer::node::{PaymentState, PaymentType};
+        use lightning_signer::signer::derive::KeyDerivationStyle;
+
+        let (signer, node, _) = fee_budget::tests::channel_fixture();
+        let node_id = hex::encode(&signer.id);
+        let style = NodeConfig::new(signer.network).key_derivation_style;
+        let hash = [1; 32];
+        let payment = PaymentState {
+            invoice_hash: hash,
+            amount_msat: 1000,
+            payee: node.get_id(),
+            duration_since_epoch: Duration::from_secs(100),
+            expiry_duration: Duration::from_secs(60),
+            is_fulfilled: false,
+            payment_type: PaymentType::Invoice,
+        };
+        let mut snapshot = serde_json::to_value(&*signer.state.lock().unwrap()).unwrap();
+        snapshot["values"][format!("nodestates/{node_id}")][1]["invoices"] =
+            json!([[hex::encode(hash), payment]]);
+        snapshot["values"][format!("allowlists/{node_id}")] = json!([0, []]);
+        let channel_key = snapshot["values"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .find(|key| key.starts_with("channels/"))
+            .unwrap();
+        let healthy: crate::persist::State = serde_json::from_value(snapshot.clone()).unwrap();
+        healthy.validate_signer_state(&signer.id, style).unwrap();
+
+        for (prefix, path, value, expected) in [
+            ("nodes", "/1", json!(null), "invalid signer state entry"),
+            (
+                "nodestates",
+                "/1",
+                json!(null),
+                "invalid signer state entry",
+            ),
+            ("trackers", "/1", json!(null), "invalid signer state entry"),
+            (
+                "nodes",
+                "/1/key_derivation_style",
+                json!(KeyDerivationStyle::Ldk as u8),
+                "unexpected key derivation style",
+            ),
+            (
+                "nodestates",
+                "/1/invoices/0/1/expiry_duration/0",
+                json!(1u64 << 62),
+                "payment duration out of range",
+            ),
+            (
+                "nodestates",
+                "/1/invoices/0/0",
+                json!(hex::encode(&hash[..31])),
+                "invalid payment hash length",
+            ),
+            (
+                "channels",
+                "/1/channel_setup/funding_outpoint",
+                json!({"vout": 0}),
+                "missing funding txid",
+            ),
+            (
+                "trackers",
+                "/1/headers",
+                json!([""]),
+                "invalid tracker headers",
+            ),
+            (
+                "trackers",
+                "/1/listeners",
+                json!([]),
+                "missing chain tracker listener",
+            ),
+            (
+                "channels",
+                "/0",
+                json!(u64::MAX),
+                "unmatched chain tracker listeners",
+            ),
+            ("allowlists", "/1", json!(["invalid"]), "invalid address"),
+            (
+                "nodes",
+                "/0",
+                json!(u64::MAX),
+                "incomplete signer node records",
+            ),
+        ] {
+            let key = if prefix == "channels" {
+                channel_key.clone()
+            } else {
+                format!("{prefix}/{node_id}")
+            };
+            let mut invalid = snapshot.clone();
+            *invalid["values"][&key].pointer_mut(path).unwrap() = value;
+            let state: crate::persist::State = serde_json::from_value(invalid).unwrap();
+            let error = state.validate_signer_state(&signer.id, style).unwrap_err();
+            assert!(error.to_string().contains(expected), "{key}{path}: {error}");
+        }
+    }
+
+    #[test]
+    fn configure_rejects_invalid_close_to_address_before_writing() {
+        use lightning_signer::persist::Persist;
+
+        let signer = mk_signer(StateSignatureMode::Hard);
+        let node_id = PublicKey::from_slice(&signer.id).unwrap();
+        let persister =
+            crate::persist::MemoryPersister::from_state(signer.state.lock().unwrap().clone());
+        let error = persister
+            .set_close_to_address(&node_id, "invalid")
+            .unwrap_err();
+        assert!(error.to_string().contains("invalid close-to address"));
+        assert!(persister.get_node_allowlist(&node_id).unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn legacy_wrong_typed_allowlist_keeps_the_empty_fallback() {
+        let signer = mk_signer(StateSignatureMode::Off);
+        let key = format!("allowlists/{}", hex::encode(signer.node_id()));
+        signer
+            .process_request(heartbeat_request(vec![mk_state_entry(&key, 1, json!({}))]))
+            .await
+            .unwrap();
+        assert!(signer
+            .handler()
+            .unwrap()
+            .node()
+            .allowlist()
+            .unwrap()
+            .is_empty());
     }
 
     #[tokio::test]

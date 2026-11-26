@@ -1,5 +1,6 @@
 mod canonical;
 mod splice;
+mod tracker;
 
 pub use splice::{
     candidate_funding_facts_from_psbt, parse_base64_psbt, wallet_inputs_from_psbt, FeePolicy,
@@ -13,27 +14,28 @@ pub(crate) use splice::{SpliceOrigin, SplicePhase, SpliceSessionV1};
 
 use anyhow::{anyhow, bail};
 use lightning_signer::bitcoin::hashes::{sha256, Hash};
-use lightning_signer::bitcoin::secp256k1::PublicKey;
+use lightning_signer::bitcoin::{secp256k1::PublicKey, Network, Txid};
 use lightning_signer::chain::tracker::ChainTracker;
-use lightning_signer::channel::ChannelId;
-use lightning_signer::channel::ChannelStub;
-use lightning_signer::node::NodeConfig;
-use lightning_signer::node::NodeState;
+use lightning_signer::channel::{ChannelId, ChannelStub};
+use lightning_signer::node::{Allowable, NodeConfig, NodeState};
+use lightning_signer::persist::model::{ChannelEntry, NodeEntry};
 use lightning_signer::persist::ChainTrackerListenerEntry;
 use lightning_signer::persist::{Error, Persist, SignerId};
 use lightning_signer::policy::validator::ValidatorFactory;
+use lightning_signer::signer::derive::KeyDerivationStyle;
 use lightning_signer::SendSync;
 use log::{trace, warn};
-use serde::de::{self, SeqAccess, Visitor};
+use serde::de::{self, DeserializeOwned, SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
+use vls_persist::model::ChainTrackerEntry;
 
 use self::canonical::{canonical_json_bytes, CanonicalJsonValue};
+use self::tracker::TrackerEntry;
 
 const NODE_PREFIX: &str = "nodes";
 const NODE_STATE_PREFIX: &str = "nodestates";
@@ -42,6 +44,58 @@ const ALLOWLIST_PREFIX: &str = "allowlists";
 const TRACKER_PREFIX: &str = "trackers";
 pub(crate) const PEER_PREFIX: &str = "peers/";
 const TOMBSTONE_VERSION: u64 = u64::MAX;
+
+// VLS hex-encodes these txids in their internal byte order.
+#[derive(Deserialize)]
+struct StoredTxid(#[serde(deserialize_with = "deserialize_stored_txid")] Txid);
+
+fn deserialize_stored_txid<'de, D: Deserializer<'de>>(de: D) -> Result<Txid, D::Error> {
+    let bytes = hex::decode(String::deserialize(de)?).map_err(de::Error::custom)?;
+    Txid::from_slice(&bytes).map_err(de::Error::custom)
+}
+
+fn validate_channel_funding_txid(value: &serde_json::Value, key: &str) -> Result<(), Error> {
+    // VLS's outpoint deserializer assumes a well-formed txid.
+    if let Some(setup) = value.get("channel_setup").filter(|setup| !setup.is_null()) {
+        let txid = setup
+            .pointer("/funding_outpoint/txid")
+            .ok_or_else(|| Error::Internal(format!("missing funding txid in {key}")))?;
+        StoredTxid::deserialize(txid)
+            .map_err(|e| Error::Internal(format!("invalid funding txid in {key}: {e}")))?;
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct StoredPaymentTimes {
+    #[serde(rename = "duration_since_epoch", deserialize_with = "check_duration")]
+    _duration_since_epoch: (),
+    #[serde(rename = "expiry_duration", deserialize_with = "check_duration")]
+    _expiry_duration: (),
+}
+
+#[derive(Deserialize)]
+struct NodePaymentTimes {
+    #[serde(rename = "invoices")]
+    _invoices: Vec<(de::IgnoredAny, StoredPaymentTimes)>,
+    #[serde(rename = "issued_invoices")]
+    _issued_invoices: Vec<(de::IgnoredAny, StoredPaymentTimes)>,
+}
+
+fn check_duration<'de, D: Deserializer<'de>>(de: D) -> Result<(), D::Error> {
+    let (secs, _) = <(u64, u32)>::deserialize(de)?;
+    // Leave room for nanosecond normalization, the other duration, and VLS's pruning grace period.
+    if secs >= 1 << 62 {
+        return Err(de::Error::custom("payment duration out of range"));
+    }
+    Ok(())
+}
+
+fn parse_node_network(network: &str, key: &str) -> Result<Network, Error> {
+    network
+        .parse()
+        .map_err(|e| Error::Internal(format!("invalid network in {key}: {e}")))
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PeerEntry {
@@ -141,6 +195,27 @@ pub struct State {
 }
 
 impl State {
+    fn live_value(&self, key: &str) -> Option<&serde_json::Value> {
+        self.values
+            .get(key)
+            .filter(|entry| entry.version != TOMBSTONE_VERSION)
+            .map(|entry| &entry.value)
+    }
+
+    fn read_entry<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>, Error> {
+        self.live_value(key)
+            .map(|value| {
+                T::deserialize(value)
+                    .map_err(|e| Error::Internal(format!("invalid signer state entry {key}: {e}")))
+            })
+            .transpose()
+    }
+
+    fn require_entry<T: DeserializeOwned>(&self, key: &str) -> Result<T, Error> {
+        self.read_entry(key)?
+            .ok_or_else(|| Error::Internal(format!("missing signer state entry {key}")))
+    }
+
     fn insert_node(
         &mut self,
         key: &str,
@@ -180,7 +255,7 @@ impl State {
         let v = self
             .values
             .get_mut(&key)
-            .expect("attempting to update non-existent node");
+            .ok_or_else(|| Error::Internal(format!("missing signer state entry {key}")))?;
         *v = StateEntry::new(v.version + 1, serde_json::to_value(node_state).unwrap());
         Ok(())
     }
@@ -242,7 +317,7 @@ impl State {
         let v = self
             .values
             .get_mut(&key)
-            .expect("attempting to update non-existent channel");
+            .ok_or_else(|| Error::Internal(format!("missing signer state entry {key}")))?;
         *v = StateEntry::new(v.version + 1, serde_json::to_value(channel_entry).unwrap());
         Ok(())
     }
@@ -263,49 +338,103 @@ impl State {
         Ok(())
     }
 
-    fn get_channel(
-        &self,
-        key: &str,
-    ) -> Result<lightning_signer::persist::model::ChannelEntry, Error> {
+    fn get_channel(&self, key: &str) -> Result<ChannelEntry, Error> {
         let key = format!("{CHANNEL_PREFIX}/{key}");
-        if self.is_tombstone(&key) {
-            return Err(Error::Internal(format!("channel {} has been deleted", key)));
-        }
-        let value = self
-            .values
-            .get(&key)
-            .ok_or_else(|| Error::Internal(format!("missing channel state for key {}", key)))?;
-        let entry: lightning_signer::persist::model::ChannelEntry =
-            serde_json::from_value(value.value.clone()).unwrap();
-        Ok(entry.into())
+        self.read_channel_entry(&key)
     }
 
-    fn get_node_channels(
-        &self,
-        node_id: &PublicKey,
-    ) -> Result<
-        Vec<(
-            lightning_signer::channel::ChannelId,
-            lightning_signer::persist::model::ChannelEntry,
-        )>,
-        Error,
-    > {
-        let prefix = hex::encode(node_id.serialize());
-        let prefix = format!("{CHANNEL_PREFIX}/{prefix}");
-        Ok(self
-            .values
-            .iter()
-            .filter(|(k, _)| k.starts_with(&prefix))
-            .filter(|(k, _)| !self.is_tombstone(k))
-            .map(|(k, v)| {
-                let key = k.split('/').last().unwrap();
-                let key = vls_persist::model::NodeChannelId(hex::decode(&key).unwrap());
+    fn read_channel_entry(&self, key: &str) -> Result<ChannelEntry, Error> {
+        let value = self
+            .live_value(key)
+            .ok_or_else(|| Error::Internal(format!("missing signer state entry {key}")))?;
+        if !value.is_object() {
+            return Err(Error::Internal(format!("invalid channel state in {key}")));
+        }
+        validate_channel_funding_txid(value, key)?;
+        self.require_entry(key)
+    }
 
-                let value: lightning_signer::persist::model::ChannelEntry =
-                    serde_json::from_value(v.value.clone()).unwrap();
-                (key.channel_id(), value.into())
+    fn get_node_channels(&self, id: &str) -> Result<Vec<(ChannelId, ChannelEntry)>, Error> {
+        let prefix = format!("{CHANNEL_PREFIX}/{id}");
+        self.values
+            .keys()
+            .filter(|key| key.starts_with(&prefix) && !self.is_tombstone(key))
+            .map(|key| {
+                let encoded = key.rsplit('/').next().unwrap_or_default();
+                let bytes = hex::decode(encoded)
+                    .map_err(|e| Error::Internal(format!("invalid channel key {key}: {e}")))?;
+                let channel_id = bytes
+                    .get(33..)
+                    .ok_or_else(|| Error::Internal(format!("invalid channel key {key}")))?;
+                Ok((ChannelId::new(channel_id), self.read_channel_entry(key)?))
             })
-            .collect())
+            .collect()
+    }
+
+    fn get_node_allowlist(&self, id: &str) -> Vec<String> {
+        // Keep the empty allowlist fallback for absent and wrong-typed records.
+        self.read_entry(&format!("{ALLOWLIST_PREFIX}/{id}"))
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
+
+    fn read_node_state(&self, key: &str) -> Result<vls_persist::model::NodeStateEntry, Error> {
+        // Check the durations before VLS normalizes them in its deserializer.
+        let _: NodePaymentTimes = self.require_entry(key)?;
+        let state: vls_persist::model::NodeStateEntry = self.require_entry(key)?;
+        if state
+            .invoices
+            .iter()
+            .chain(&state.issued_invoices)
+            .any(|(hash, _)| hash.len() != 32)
+        {
+            return Err(Error::Internal(format!(
+                "invalid payment hash length in {key}"
+            )));
+        }
+        Ok(state)
+    }
+
+    fn parse_allowlist(&self, id: &str, network: Network) -> Result<Vec<Allowable>, Error> {
+        self.get_node_allowlist(id)
+            .iter()
+            .map(|address| {
+                Allowable::from_str(address, network).map_err(|e| {
+                    Error::Internal(format!("invalid address in {ALLOWLIST_PREFIX}/{id}: {e}"))
+                })
+            })
+            .collect()
+    }
+
+    fn get_node(&self, id: &str) -> Result<NodeEntry, Error> {
+        let node_key = format!("{NODE_PREFIX}/{id}");
+        let node: vls_persist::model::NodeEntry = self.require_entry(&node_key)?;
+        let network = parse_node_network(&node.network, &node_key)?;
+        let state = self.read_node_state(&format!("{NODE_STATE_PREFIX}/{id}"))?;
+        let allowlist = self.parse_allowlist(id, network)?;
+        Ok(NodeEntry {
+            key_derivation_style: node.key_derivation_style,
+            network: node.network,
+            state: NodeState::restore(
+                state.invoices,
+                state.issued_invoices,
+                state.preimages,
+                0,
+                state.velocity_control.into(),
+                state.fee_velocity_control.into(),
+                state.dbid_high_water_mark,
+                allowlist,
+            ),
+        })
+    }
+
+    fn read_tracker_entry(&self, key: &str) -> Result<(TrackerEntry, ChainTrackerEntry), Error> {
+        let checks: TrackerEntry = self.require_entry(key)?;
+        checks
+            .validate_headers()
+            .map_err(|e| Error::Internal(format!("invalid tracker headers in {key}: {e}")))?;
+        Ok((checks, self.require_entry(key)?))
     }
 
     fn new_chain_tracker(
@@ -458,17 +587,16 @@ impl State {
         snapshot
     }
 
-    pub(crate) fn validate_signer_state(&self, node_id: &[u8]) -> anyhow::Result<()> {
+    pub(crate) fn validate_signer_state(
+        &self,
+        node_id: &[u8],
+        derivation_style: KeyDerivationStyle,
+    ) -> anyhow::Result<()> {
         let id = hex::encode(node_id);
         let node_key = format!("{NODE_PREFIX}/{id}");
         let state_key = format!("{NODE_STATE_PREFIX}/{id}");
         let tracker_key = format!("{TRACKER_PREFIX}/{id}");
-        let is_live = |key: &str| {
-            self.values
-                .get(key)
-                .is_some_and(|entry| entry.version != TOMBSTONE_VERSION)
-        };
-        if !is_live(&node_key) || !is_live(&state_key) {
+        if self.live_value(&node_key).is_none() || self.live_value(&state_key).is_none() {
             bail!("incomplete signer node records for {id}");
         }
         if self.values.keys().any(|key| {
@@ -477,10 +605,20 @@ impl State {
         }) {
             bail!("signer state contains an unexpected node");
         }
-        if !is_live(&tracker_key) {
-            bail!("signer state is missing required entry {tracker_key}");
+        let node: vls_persist::model::NodeEntry = self.require_entry(&node_key)?;
+        if node.key_derivation_style != derivation_style as u8 {
+            bail!("unexpected key derivation style in {node_key}");
         }
-        Ok(())
+        self.read_node_state(&state_key)?;
+        self.parse_allowlist(&id, parse_node_network(&node.network, &node_key)?)?;
+        let (tracker, _) = self.read_tracker_entry(&tracker_key)?;
+        let channels = self.get_node_channels(&id)?;
+        tracker.validate_listeners(channels.iter().filter_map(|(_, channel)| {
+            channel
+                .channel_setup
+                .as_ref()
+                .map(|setup| setup.funding_outpoint)
+        }))
     }
 
     pub(crate) fn channel_is_tombstoned(
@@ -805,6 +943,25 @@ impl MemoryPersister {
     pub fn state(&self) -> Arc<Mutex<State>> {
         self.state.clone()
     }
+
+    pub(crate) fn set_close_to_address(
+        &self,
+        node_id: &PublicKey,
+        address: &str,
+    ) -> anyhow::Result<()> {
+        self.validate_allowlist_address(node_id, address)?;
+        let _ = self.update_node_allowlist(node_id, vec![address.to_owned()]);
+        Ok(())
+    }
+
+    fn validate_allowlist_address(&self, node_id: &PublicKey, address: &str) -> anyhow::Result<()> {
+        let key = format!("{NODE_PREFIX}/{node_id}");
+        let node: vls_persist::model::NodeEntry = self.state.lock().unwrap().require_entry(&key)?;
+        let network = parse_node_network(&node.network, &key)?;
+        Allowable::from_str(address, network)
+            .map_err(|e| anyhow!("invalid close-to address: {e}"))?;
+        Ok(())
+    }
 }
 
 impl SendSync for MemoryPersister {}
@@ -921,7 +1078,10 @@ impl Persist for MemoryPersister {
 
         let mut state = self.state.lock().unwrap();
         state.ensure_not_tombstone(&key)?;
-        let v = state.values.get_mut(&key).unwrap();
+        let v = state
+            .values
+            .get_mut(&key)
+            .ok_or_else(|| Error::Internal(format!("missing signer state entry {key}")))?;
         let tracker: vls_persist::model::ChainTrackerEntry = tracker.into();
         *v = StateEntry::new(v.version + 1, serde_json::to_value(tracker).unwrap());
         Ok(())
@@ -941,28 +1101,16 @@ impl Persist for MemoryPersister {
         let key = hex::encode(node_id.serialize());
         let key = format!("{TRACKER_PREFIX}/{key}");
 
-        let state = self.state.lock().unwrap();
-        if state.is_tombstone(&key) {
-            return Err(Error::Internal(format!("tracker {} has been deleted", key)));
-        }
-        let v: vls_persist::model::ChainTrackerEntry = serde_json::from_value(
-            state
-                .values
-                .get(&key)
-                .ok_or_else(|| Error::Internal(format!("missing tracker state {}", key)))?
-                .value
-                .clone(),
-        )
-        .unwrap();
-
-        Ok(v.into_tracker(node_id, validator_factory))
+        let (_, entry) = self.state.lock().unwrap().read_tracker_entry(&key)?;
+        Ok(entry.into_tracker(node_id, validator_factory))
     }
 
     fn get_node_channels(
         &self,
         node_id: &PublicKey,
-    ) -> Result<Vec<(ChannelId, lightning_signer::persist::model::ChannelEntry)>, Error> {
-        self.state.lock().unwrap().get_node_channels(node_id)
+    ) -> Result<Vec<(ChannelId, ChannelEntry)>, Error> {
+        let id = hex::encode(node_id.serialize());
+        self.state.lock().unwrap().get_node_channels(&id)
     }
 
     fn update_node_allowlist(
@@ -990,106 +1138,28 @@ impl Persist for MemoryPersister {
         Ok(())
     }
 
-    fn get_node_allowlist(&self, node_id: &PublicKey) -> Result<Vec<std::string::String>, Error> {
-        let state = self.state.lock().unwrap();
-        let key = hex::encode(node_id.serialize());
-        let key = format!("{ALLOWLIST_PREFIX}/{key}");
-        if state.is_tombstone(&key) {
-            return Ok(Vec::new());
-        }
-
-        // If allowlist doesn't exist (e.g., node created before VLS 0.14), default to empty
-        let allowlist: Vec<String> = match state.values.get(&key) {
-            Some(value) => serde_json::from_value(value.value.clone()).unwrap_or_default(),
-            None => Vec::new(),
-        };
-
-        Ok(allowlist)
+    fn get_node_allowlist(&self, node_id: &PublicKey) -> Result<Vec<String>, Error> {
+        let id = hex::encode(node_id.serialize());
+        Ok(self.state.lock().unwrap().get_node_allowlist(&id))
     }
 
-    fn get_nodes(
-        &self,
-    ) -> Result<Vec<(PublicKey, lightning_signer::persist::model::NodeEntry)>, Error> {
-        use lightning_signer::node::NodeState as CoreNodeState;
-
+    fn get_nodes(&self) -> Result<Vec<(PublicKey, NodeEntry)>, Error> {
         let state = self.state.lock().unwrap();
-        let node_ids: Vec<&str> = state
+        state
             .values
             .keys()
-            .filter(|k| k.starts_with(&format!("{NODE_PREFIX}/")))
-            .filter(|k| !state.is_tombstone(k))
-            .filter_map(|k| k.split('/').last())
-            .collect();
-
-        let mut res = Vec::new();
-        for node_id in node_ids.iter() {
-            let node_key = format!("{NODE_PREFIX}/{node_id}");
-            let state_key = format!("{NODE_STATE_PREFIX}/{node_id}");
-            let allowlist_key = format!("{ALLOWLIST_PREFIX}/{node_id}");
-
-            if state.is_tombstone(&node_key) || state.is_tombstone(&state_key) {
-                continue;
-            }
-
-            let node: vls_persist::model::NodeEntry = match state.values.get(&node_key) {
-                Some(value) => serde_json::from_value(value.value.clone()).unwrap(),
-                None => continue,
-            };
-            let state_e: vls_persist::model::NodeStateEntry = match state.values.get(&state_key) {
-                Some(value) => serde_json::from_value(value.value.clone()).unwrap(),
-                None => continue,
-            };
-
-            // Load allowlist, defaulting to empty if not found (for nodes created before VLS 0.14)
-            let allowlist_strings: Vec<String> = if state.is_tombstone(&allowlist_key) {
-                Vec::new()
-            } else {
-                match state.values.get(&allowlist_key) {
-                    Some(value) => serde_json::from_value(value.value.clone()).unwrap_or_default(),
-                    None => Vec::new(),
-                }
-            };
-
-            // Parse allowlist strings into Allowable objects
-            use lightning_signer::node::Allowable;
-            let network = lightning_signer::bitcoin::Network::from_str(&node.network)
-                .map_err(|e| Error::Internal(format!("Invalid network: {}", e)))?;
-
-            let allowlist: Vec<Allowable> = allowlist_strings
-                .into_iter()
-                .filter_map(|s| match Allowable::from_str(&s, network) {
-                    Ok(a) => Some(a),
-                    Err(e) => {
-                        warn!("Failed to parse allowlist entry '{}': {}", s, e);
-                        None
-                    }
-                })
-                .collect();
-
-            let state = CoreNodeState::restore(
-                state_e.invoices,
-                state_e.issued_invoices,
-                state_e.preimages,
-                0,
-                state_e.velocity_control.into(),
-                state_e.fee_velocity_control.into(),
-                state_e.dbid_high_water_mark,
-                allowlist,
-            );
-
-            let entry = lightning_signer::persist::model::NodeEntry {
-                key_derivation_style: node.key_derivation_style,
-                network: node.network,
-                state,
-            };
-
-            let key: Vec<u8> = hex::decode(node_id).unwrap();
-            res.push((PublicKey::from_slice(key.as_slice()).unwrap(), entry));
-        }
-
-        let nodes = res;
-        Ok(nodes)
+            .filter(|key| !state.is_tombstone(key))
+            .filter_map(|key| key.strip_prefix("nodes/"))
+            .map(|id| {
+                let bytes = hex::decode(id)
+                    .map_err(|e| Error::Internal(format!("invalid signer node ID {id}: {e}")))?;
+                let node_id = PublicKey::from_slice(&bytes)
+                    .map_err(|e| Error::Internal(format!("invalid signer node ID {id}: {e}")))?;
+                Ok((node_id, state.get_node(id)?))
+            })
+            .collect()
     }
+
     fn clear_database(&self) -> Result<(), Error> {
         self.state.lock().unwrap().clear()
     }
@@ -1145,6 +1215,12 @@ mod tests {
 
     fn assert_tombstone(state: &State, key: &str) {
         assert_entry(state, key, TOMBSTONE_VERSION, serde_json::Value::Null);
+    }
+
+    #[test]
+    fn channel_funding_txid_rejects_an_incomplete_hash() {
+        let channel = json!({"channel_setup": {"funding_outpoint": {"txid": ""}}});
+        assert!(super::validate_channel_funding_txid(&channel, "channel").is_err());
     }
 
     #[test]
