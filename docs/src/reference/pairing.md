@@ -159,6 +159,8 @@ The new device, which lacks access to the signer's private key, initiates the pa
 - **Device Description**: A human-readable description about the purpose of the device that is meant to be presented to the user during the pairing process.
 - **Restrictions**: A set of restrictions that will be used to construct the rune for the device, which will provide authorization to issue node commands.
 
+The pairing restrictions start with `pubkey=<device_id>`, which binds the rune to the new device's TLS key. Additional clauses are joined with `&`. A method clause can contain `method=<name>` or `method^<prefix>` alternatives joined with `|`. An expiry clause uses `time<` followed by a Unix timestamp in seconds and has no alternatives. Use lowercase RPC method names and prefixes. Sending only the key clause grants access to all methods for that device.
+
 ### 2. Share the Pairing Request
 
 To get attestation from an already known device, the new device needs to share some data with a trusted device. This is typically done by presenting a QR code that the trusted device can scan. The data that has to be shared is in the following format:
@@ -181,10 +183,7 @@ The trusted device retrieves the pairing session data from Greenlight via a `Get
 
 #### Signer Provides Rune
 
-The signer, upon receiving the `ApprovePairingRequest`, checks the data integrity and verifies that the trusted device is allowed to attest pairing requests. After that, it generates a **rune**, which is an authorization token defining the restrictions for the new device. The rune:
-
-- **Is Cryptographically Signed**: Ensures authenticity and integrity.
-- **Contains Restrictions**: Specifies what actions the new device is allowed to perform.
+The signer checks the signature and verifies that the trusted device is allowed to approve pairing. It checks the approved restrictions against the same policy as the trusted device, including the exact match between the key clause and the new device's identifier. The resulting **rune** carries the approved restrictions and a cryptographic authenticator.
 
 #### Greenlight Supplies Credentials
 
